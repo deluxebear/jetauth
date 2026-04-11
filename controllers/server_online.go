@@ -24,11 +24,11 @@ import (
 const onlineServerListUrl = "https://mcp.casdoor.org/registry.json"
 
 // GetOnlineServers
-// @Title GetOnlineServers
-// @Tag Server API
+// @Summary GetOnlineServers
+// @Tags Server API
 // @Description get online MCP server list
-// @Success 200 {object} controllers.Response The Response object
-// @router /get-online-servers [get]
+// @Success 200 {object} controllers.Response "The Response object"
+// @Router /get-online-servers [get]
 func (c *ApiController) GetOnlineServers() {
 	httpClient := &http.Client{Timeout: 10 * time.Second}
 	resp, err := httpClient.Get(onlineServerListUrl)

@@ -22,17 +22,40 @@ import (
 	"github.com/deluxebear/casdoor/util"
 )
 
+// EnforceResponse represents the response for the Enforce API
+type EnforceResponse struct {
+	Status string   `json:"status" example:"ok"`
+	Msg    string   `json:"msg" example:""`
+	Data   []bool   `json:"data"`
+	Data2  []string `json:"data2"`
+}
+
+// BatchEnforceResponse represents the response for the BatchEnforce API
+type BatchEnforceResponse struct {
+	Status string   `json:"status" example:"ok"`
+	Msg    string   `json:"msg" example:""`
+	Data   [][]bool `json:"data"`
+	Data2  []string `json:"data2"`
+}
+
+// StringListResponse represents a response containing a list of strings
+type StringListResponse struct {
+	Status string   `json:"status" example:"ok"`
+	Msg    string   `json:"msg" example:""`
+	Data   []string `json:"data"`
+}
+
 // Enforce
-// @Title Enforce
-// @Tag Enforcer API
+// @Summary Enforce
+// @Tags Enforcer API
 // @Description Call Casbin Enforce API
 // @Param   body    body   []string  true   "Casbin request"
 // @Param   permissionId    query   string  false   "permission id"
 // @Param   modelId    query   string  false   "model id"
 // @Param   resourceId    query   string  false   "resource id"
-// @Param   owner    query   string  false   "owner"
-// @Success 200 {object} controllers.Response The Response object
-// @router /enforce [post]
+// @Param   owner    query   string  false  "   0"
+// @Success 200 {object} controllers.EnforceResponse "The Response object"
+// @Router /enforce [post]
 func (c *ApiController) Enforce() {
 	permissionId := c.Ctx.Input.Query("permissionId")
 	modelId := c.Ctx.Input.Query("modelId")
@@ -172,15 +195,15 @@ func (c *ApiController) Enforce() {
 }
 
 // BatchEnforce
-// @Title BatchEnforce
-// @Tag Enforcer API
+// @Summary BatchEnforce
+// @Tags Enforcer API
 // @Description Call Casbin BatchEnforce API
 // @Param   body    body   []string  true   "array of casbin requests"
 // @Param   permissionId    query   string  false   "permission id"
 // @Param   modelId    query   string  false   "model id"
-// @Param   owner    query   string  false   "owner"
-// @Success 200 {object} controllers.Response The Response object
-// @router /batch-enforce [post]
+// @Param   owner    query   string  false  "   0"
+// @Success 200 {object} controllers.BatchEnforceResponse "The Response object"
+// @Router /batch-enforce [post]
 func (c *ApiController) BatchEnforce() {
 	permissionId := c.Ctx.Input.Query("permissionId")
 	modelId := c.Ctx.Input.Query("modelId")
@@ -307,12 +330,12 @@ func (c *ApiController) BatchEnforce() {
 }
 
 // GetAllObjects
-// @Title GetAllObjects
-// @Tag Enforcer API
+// @Summary GetAllObjects
+// @Tags Enforcer API
 // @Description Get all objects for a user (Casbin API)
 // @Param   userId    query   string  false   "user id like built-in/admin"
-// @Success 200 {object} controllers.Response The Response object
-// @router /get-all-objects [get]
+// @Success 200 {object} controllers.StringListResponse "The Response object"
+// @Router /get-all-objects [get]
 func (c *ApiController) GetAllObjects() {
 	userId := c.Ctx.Input.Query("userId")
 	if userId == "" {
@@ -333,12 +356,12 @@ func (c *ApiController) GetAllObjects() {
 }
 
 // GetAllActions
-// @Title GetAllActions
-// @Tag Enforcer API
+// @Summary GetAllActions
+// @Tags Enforcer API
 // @Description Get all actions for a user (Casbin API)
 // @Param   userId    query   string  false   "user id like built-in/admin"
-// @Success 200 {object} controllers.Response The Response object
-// @router /get-all-actions [get]
+// @Success 200 {object} controllers.StringListResponse "The Response object"
+// @Router /get-all-actions [get]
 func (c *ApiController) GetAllActions() {
 	userId := c.Ctx.Input.Query("userId")
 	if userId == "" {
@@ -359,12 +382,12 @@ func (c *ApiController) GetAllActions() {
 }
 
 // GetAllRoles
-// @Title GetAllRoles
-// @Tag Enforcer API
+// @Summary GetAllRoles
+// @Tags Enforcer API
 // @Description Get all roles for a user (Casbin API)
 // @Param   userId    query   string  false   "user id like built-in/admin"
-// @Success 200 {object} controllers.Response The Response object
-// @router /get-all-roles [get]
+// @Success 200 {object} controllers.StringListResponse "The Response object"
+// @Router /get-all-roles [get]
 func (c *ApiController) GetAllRoles() {
 	userId := c.Ctx.Input.Query("userId")
 	if userId == "" {

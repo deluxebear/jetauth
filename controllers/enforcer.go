@@ -24,13 +24,29 @@ import (
 	xormadapter "github.com/casdoor/xorm-adapter/v3"
 )
 
+// EnforcerListResponse represents the response for enforcer list APIs
+type EnforcerListResponse struct {
+	Status string        `json:"status" example:"ok"`
+	Msg    string        `json:"msg" example:""`
+	Data   []object.Enforcer `json:"data"`
+	Data2  int           `json:"data2" example:"10"`
+}
+
+// EnforcerResponse represents the response for single enforcer APIs
+type EnforcerResponse struct {
+	Status string       `json:"status" example:"ok"`
+	Msg    string       `json:"msg" example:""`
+	Data   object.Enforcer  `json:"data"`
+}
+
+
 // GetEnforcers
-// @Title GetEnforcers
-// @Tag Enforcer API
+// @Summary GetEnforcers
+// @Tags Enforcer API
 // @Description get enforcers
 // @Param   owner     query    string  true        "The owner of enforcers"
 // @Success 200 {array} object.Enforcer
-// @router /get-enforcers [get]
+// @Router /get-enforcers [get]
 func (c *ApiController) GetEnforcers() {
 	owner := c.Ctx.Input.Query("owner")
 	limit := c.Ctx.Input.Query("pageSize")
@@ -68,12 +84,12 @@ func (c *ApiController) GetEnforcers() {
 }
 
 // GetEnforcer
-// @Title GetEnforcer
-// @Tag Enforcer API
+// @Summary GetEnforcer
+// @Tags Enforcer API
 // @Description get enforcer
 // @Param   id     query    string  true        "The id ( owner/name )  of enforcer"
 // @Success 200 {object} object.Enforcer
-// @router /get-enforcer [get]
+// @Router /get-enforcer [get]
 func (c *ApiController) GetEnforcer() {
 	id := c.Ctx.Input.Query("id")
 	loadModelCfg := c.Ctx.Input.Query("loadModelCfg")
@@ -97,13 +113,13 @@ func (c *ApiController) GetEnforcer() {
 }
 
 // UpdateEnforcer
-// @Title UpdateEnforcer
-// @Tag Enforcer API
+// @Summary UpdateEnforcer
+// @Tags Enforcer API
 // @Description update enforcer
 // @Param   id     query    string  true        "The id ( owner/name )  of enforcer"
 // @Param   enforcer     body    object  true        "The enforcer object"
 // @Success 200 {object} object.Enforcer
-// @router /update-enforcer [post]
+// @Router /update-enforcer [post]
 func (c *ApiController) UpdateEnforcer() {
 	id := c.Ctx.Input.Query("id")
 
@@ -121,12 +137,12 @@ func (c *ApiController) UpdateEnforcer() {
 }
 
 // AddEnforcer
-// @Title AddEnforcer
-// @Tag Enforcer API
+// @Summary AddEnforcer
+// @Tags Enforcer API
 // @Description add enforcer
 // @Param   enforcer     body    object  true        "The enforcer object"
 // @Success 200 {object} object.Enforcer
-// @router /add-enforcer [post]
+// @Router /add-enforcer [post]
 func (c *ApiController) AddEnforcer() {
 	enforcer := object.Enforcer{}
 	err := json.Unmarshal(c.Ctx.Input.RequestBody, &enforcer)
@@ -140,12 +156,12 @@ func (c *ApiController) AddEnforcer() {
 }
 
 // DeleteEnforcer
-// @Title DeleteEnforcer
-// @Tag Enforcer API
+// @Summary DeleteEnforcer
+// @Tags Enforcer API
 // @Description delete enforcer
 // @Param   body    body    object.Enforcer  true      "The enforcer object"
 // @Success 200 {object} object.Enforcer
-// @router /delete-enforcer [post]
+// @Router /delete-enforcer [post]
 func (c *ApiController) DeleteEnforcer() {
 	var enforcer object.Enforcer
 	err := json.Unmarshal(c.Ctx.Input.RequestBody, &enforcer)
@@ -159,13 +175,13 @@ func (c *ApiController) DeleteEnforcer() {
 }
 
 // GetPolicies
-// @Title GetPolicies
-// @Tag Enforcer API
+// @Summary GetPolicies
+// @Tags Enforcer API
 // @Description get policies
 // @Param   id     query    string  true        "The id ( owner/name )  of enforcer"
 // @Param   adapterId     query    string  false        "The adapter id"
 // @Success 200 {array} xormadapter.CasbinRule
-// @router /get-policies [get]
+// @Router /get-policies [get]
 func (c *ApiController) GetPolicies() {
 	id := c.Ctx.Input.Query("id")
 	adapterId := c.Ctx.Input.Query("adapterId")
@@ -201,13 +217,13 @@ func (c *ApiController) GetPolicies() {
 }
 
 // GetFilteredPolicies
-// @Title GetFilteredPolicies
-// @Tag Enforcer API
+// @Summary GetFilteredPolicies
+// @Tags Enforcer API
 // @Description get filtered policies with support for multiple filters via POST body
 // @Param   id     query    string  true        "The id ( owner/name )  of enforcer"
 // @Param   body   body    []object.Filter  true        "Array of filter objects for multiple filters"
 // @Success 200 {array} xormadapter.CasbinRule
-// @router /get-filtered-policies [post]
+// @Router /get-filtered-policies [post]
 func (c *ApiController) GetFilteredPolicies() {
 	id := c.Ctx.Input.Query("id")
 
@@ -228,13 +244,13 @@ func (c *ApiController) GetFilteredPolicies() {
 }
 
 // UpdatePolicy
-// @Title UpdatePolicy
-// @Tag Enforcer API
+// @Summary UpdatePolicy
+// @Tags Enforcer API
 // @Description update policy
 // @Param   id     query    string  true        "The id ( owner/name )  of enforcer"
 // @Param   body     body    []xormadapter.CasbinRule  true        "Array containing old and new policy"
 // @Success 200 {object} Response
-// @router /update-policy [post]
+// @Router /update-policy [post]
 func (c *ApiController) UpdatePolicy() {
 	id := c.Ctx.Input.Query("id")
 
@@ -255,13 +271,13 @@ func (c *ApiController) UpdatePolicy() {
 }
 
 // AddPolicy
-// @Title AddPolicy
-// @Tag Enforcer API
+// @Summary AddPolicy
+// @Tags Enforcer API
 // @Description add policy
 // @Param   id     query    string  true        "The id ( owner/name )  of enforcer"
 // @Param   body     body    xormadapter.CasbinRule  true        "The policy to add"
 // @Success 200 {object} Response
-// @router /add-policy [post]
+// @Router /add-policy [post]
 func (c *ApiController) AddPolicy() {
 	id := c.Ctx.Input.Query("id")
 
@@ -282,13 +298,13 @@ func (c *ApiController) AddPolicy() {
 }
 
 // RemovePolicy
-// @Title RemovePolicy
-// @Tag Enforcer API
+// @Summary RemovePolicy
+// @Tags Enforcer API
 // @Description remove policy
 // @Param   id     query    string  true        "The id ( owner/name )  of enforcer"
 // @Param   body     body    xormadapter.CasbinRule  true        "The policy to remove"
 // @Success 200 {object} Response
-// @router /remove-policy [post]
+// @Router /remove-policy [post]
 func (c *ApiController) RemovePolicy() {
 	id := c.Ctx.Input.Query("id")
 

@@ -22,13 +22,37 @@ import (
 	"github.com/deluxebear/casdoor/util"
 )
 
+// GroupListResponse represents the response for group list APIs
+type GroupListResponse struct {
+	Status string         `json:"status" example:"ok"`
+	Msg    string         `json:"msg" example:""`
+	Data   []object.Group `json:"data"`
+	Data2  int            `json:"data2" example:"10"`
+}
+
+// GroupResponse represents the response for single group APIs
+type GroupResponse struct {
+	Status string       `json:"status" example:"ok"`
+	Msg    string       `json:"msg" example:""`
+	Data   object.Group `json:"data"`
+}
+
 // GetGroups
-// @Title GetGroups
-// @Tag Group API
-// @Description get groups
-// @Param   owner     query    string  true        "The owner of groups"
-// @Success 200 {array} object.Group The Response object
-// @router /get-groups [get]
+// @Summary List all groups
+// @Description Get groups for the specified owner. Supports pagination, sorting, filtering, and tree view.
+// @Tags Group API
+// @Produce json
+// @Param   owner      query    string  true   "Organization name that owns the groups"
+// @Param   pageSize   query    int     false  "Number of results per page"
+// @Param   p          query    int     false  "Page number (1-based)"
+// @Param   field      query    string  false  "Field name to filter by"
+// @Param   value      query    string  false  "Value to filter by"
+// @Param   sortField  query    string  false  "Field name to sort by"
+// @Param   sortOrder  query    string  false  "Sort order: ascend or descend"
+// @Param   withTree   query    string  false  "Set to 'true' to return tree structure"
+// @Success 200 {object} GroupListResponse "Groups list with optional pagination count in data2"
+// @Failure 500 {object} Response "Error message"
+// @Router /get-groups [get]
 func (c *ApiController) GetGroups() {
 	owner := c.Ctx.Input.Query("owner")
 	limit := c.Ctx.Input.Query("pageSize")
@@ -102,12 +126,14 @@ func (c *ApiController) GetGroups() {
 }
 
 // GetGroup
-// @Title GetGroup
-// @Tag Group API
-// @Description get group
-// @Param   id     query    string  true        "The id ( owner/name ) of the group"
-// @Success 200 {object} object.Group The Response object
-// @router /get-group [get]
+// @Summary Get a group
+// @Description Get the detail of a group by its id (owner/name)
+// @Tags Group API
+// @Produce json
+// @Param   id   query   string  true  "The id of the group, format: owner/name"
+// @Success 200 {object} GroupResponse "Group detail with user list"
+// @Failure 500 {object} Response "Error message"
+// @Router /get-group [get]
 func (c *ApiController) GetGroup() {
 	id := c.Ctx.Input.Query("id")
 
@@ -127,13 +153,16 @@ func (c *ApiController) GetGroup() {
 }
 
 // UpdateGroup
-// @Title UpdateGroup
-// @Tag Group API
-// @Description update group
-// @Param   id     query    string  true        "The id ( owner/name ) of the group"
-// @Param   body    body   object.Group  true        "The details of the group"
-// @Success 200 {object} controllers.Response The Response object
-// @router /update-group [post]
+// @Summary Update a group
+// @Description Update the group specified by id with the provided group object
+// @Tags Group API
+// @Accept json
+// @Produce json
+// @Param   id     query    string        true  "The id of the group, format: owner/name"
+// @Param   body   body     object.Group  true  "The group object with updated fields"
+// @Success 200 {object} ActionResponse "Action result"
+// @Failure 500 {object} Response "Error message"
+// @Router /update-group [post]
 func (c *ApiController) UpdateGroup() {
 	id := c.Ctx.Input.Query("id")
 
@@ -151,12 +180,15 @@ func (c *ApiController) UpdateGroup() {
 }
 
 // AddGroup
-// @Title AddGroup
-// @Tag Group API
-// @Description add group
-// @Param   body    body   object.Group  true      "The details of the group"
-// @Success 200 {object} controllers.Response The Response object
-// @router /add-group [post]
+// @Summary Add a group
+// @Description Create a new group
+// @Tags Group API
+// @Accept json
+// @Produce json
+// @Param   body   body   object.Group  true  "The group object to create"
+// @Success 200 {object} ActionResponse "Action result"
+// @Failure 500 {object} Response "Error message"
+// @Router /add-group [post]
 func (c *ApiController) AddGroup() {
 	var group object.Group
 	err := json.Unmarshal(c.Ctx.Input.RequestBody, &group)
@@ -170,12 +202,15 @@ func (c *ApiController) AddGroup() {
 }
 
 // DeleteGroup
-// @Title DeleteGroup
-// @Tag Group API
-// @Description delete group
-// @Param   body    body   object.Group  true        "The details of the group"
-// @Success 200 {object} controllers.Response The Response object
-// @router /delete-group [post]
+// @Summary Delete a group
+// @Description Delete the specified group
+// @Tags Group API
+// @Accept json
+// @Produce json
+// @Param   body   body   object.Group  true  "The group object to delete (owner and name required)"
+// @Success 200 {object} ActionResponse "Action result"
+// @Failure 500 {object} Response "Error message"
+// @Router /delete-group [post]
 func (c *ApiController) DeleteGroup() {
 	var group object.Group
 	err := json.Unmarshal(c.Ctx.Input.RequestBody, &group)

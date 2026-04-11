@@ -25,12 +25,28 @@ import (
 	"github.com/deluxebear/casdoor/util"
 )
 
+// UserListResponse represents the response for user list APIs
+type UserListResponse struct {
+	Status string        `json:"status" example:"ok"`
+	Msg    string        `json:"msg" example:""`
+	Data   []object.User `json:"data"`
+	Data2  int           `json:"data2" example:"10"`
+}
+
+// UserResponse represents the response for single user APIs
+type UserResponse struct {
+	Status string       `json:"status" example:"ok"`
+	Msg    string       `json:"msg" example:""`
+	Data   object.User  `json:"data"`
+}
+
+
 // GetGlobalUsers
-// @Title GetGlobalUsers
-// @Tag User API
+// @Summary GetGlobalUsers
+// @Tags User API
 // @Description get global users
-// @Success 200 {array} object.User The Response object
-// @router /get-global-users [get]
+// @Success 200 {array} object.User "The Response object"
+// @Router /get-global-users [get]
 func (c *ApiController) GetGlobalUsers() {
 	limit := c.Ctx.Input.Query("pageSize")
 	page := c.Ctx.Input.Query("p")
@@ -73,12 +89,12 @@ func (c *ApiController) GetGlobalUsers() {
 }
 
 // GetUsers
-// @Title GetUsers
-// @Tag User API
+// @Summary GetUsers
+// @Tags User API
 // @Description
 // @Param   owner     query    string  true        "The owner of users"
-// @Success 200 {array} object.User The Response object
-// @router /get-users [get]
+// @Success 200 {array} object.User "The Response object"
+// @Router /get-users [get]
 func (c *ApiController) GetUsers() {
 	owner := c.Ctx.Input.Query("owner")
 	groupName := c.Ctx.Input.Query("groupName")
@@ -133,16 +149,16 @@ func (c *ApiController) GetUsers() {
 }
 
 // GetUser
-// @Title GetUser
-// @Tag User API
+// @Summary GetUser
+// @Tags User API
 // @Description get user
 // @Param   id     query    string  false        "The id ( owner/name ) of the user"
 // @Param   owner  query    string  false        "The owner of the user"
 // @Param   email  query    string  false 	     "The email of the user"
 // @Param   phone  query    string  false 	     "The phone of the user"
 // @Param   userId query    string  false 	     "The userId of the user"
-// @Success 200 {object} object.User The Response object
-// @router /get-user [get]
+// @Success 200 {object} object.User "The Response object"
+// @Router /get-user [get]
 func (c *ApiController) GetUser() {
 	id := c.Ctx.Input.Query("id")
 	email := c.Ctx.Input.Query("email")
@@ -249,15 +265,15 @@ func (c *ApiController) GetUser() {
 }
 
 // UpdateUser
-// @Title UpdateUser
-// @Tag User API
+// @Summary UpdateUser
+// @Tags User API
 // @Description update user
 // @Param   id     query    string  false        "The id ( owner/name ) of the user"
 // @Param   userId query    string  false        "The userId (UUID) of the user"
 // @Param   owner  query    string  false        "The owner of the user (required when using userId)"
 // @Param   body    body   object.User  true        "The details of the user"
-// @Success 200 {object} controllers.Response The Response object
-// @router /update-user [post]
+// @Success 200 {object} ActionResponse "Action result"
+// @Router /update-user [post]
 func (c *ApiController) UpdateUser() {
 	id := c.Ctx.Input.Query("id")
 	userId := c.Ctx.Input.Query("userId")
@@ -368,12 +384,12 @@ func (c *ApiController) UpdateUser() {
 }
 
 // AddUser
-// @Title AddUser
-// @Tag User API
+// @Summary AddUser
+// @Tags User API
 // @Description add user
 // @Param   body    body   object.User  true        "The details of the user"
-// @Success 200 {object} controllers.Response The Response object
-// @router /add-user [post]
+// @Success 200 {object} ActionResponse "Action result"
+// @Router /add-user [post]
 func (c *ApiController) AddUser() {
 	var user object.User
 	err := json.Unmarshal(c.Ctx.Input.RequestBody, &user)
@@ -410,12 +426,12 @@ func (c *ApiController) AddUser() {
 }
 
 // DeleteUser
-// @Title DeleteUser
-// @Tag User API
+// @Summary DeleteUser
+// @Tags User API
 // @Description delete user
 // @Param   body    body   object.User  true        "The details of the user"
-// @Success 200 {object} controllers.Response The Response object
-// @router /delete-user [post]
+// @Success 200 {object} ActionResponse "Action result"
+// @Router /delete-user [post]
 func (c *ApiController) DeleteUser() {
 	var user object.User
 	err := json.Unmarshal(c.Ctx.Input.RequestBody, &user)
@@ -434,13 +450,13 @@ func (c *ApiController) DeleteUser() {
 }
 
 // GetEmailAndPhone
-// @Title GetEmailAndPhone
-// @Tag User API
+// @Summary GetEmailAndPhone
+// @Tags User API
 // @Description get email and phone by username
 // @Param   username    formData   string  true        "The username of the user"
 // @Param   organization    formData   string  true        "The organization of the user"
-// @Success 200 {object} controllers.Response The Response object
-// @router /get-email-and-phone [get]
+// @Success 200 {object} UserResponse "User detail"
+// @Router /get-email-and-phone [get]
 func (c *ApiController) GetEmailAndPhone() {
 	organization := c.Ctx.Request.Form.Get("organization")
 	username := c.Ctx.Request.Form.Get("username")
@@ -481,15 +497,15 @@ func (c *ApiController) GetEmailAndPhone() {
 }
 
 // SetPassword
-// @Title SetPassword
-// @Tag Account API
+// @Summary SetPassword
+// @Tags Account API
 // @Description set password
 // @Param   userOwner   formData    string  true        "The owner of the user"
 // @Param   userName   formData    string  true        "The name of the user"
 // @Param   oldPassword   formData    string  true        "The old password of the user"
 // @Param   newPassword   formData    string  true        "The new password of the user"
-// @Success 200 {object} controllers.Response The Response object
-// @router /set-password [post]
+// @Success 200 {object} ActionResponse "Action result"
+// @Router /set-password [post]
 func (c *ApiController) SetPassword() {
 	userOwner := c.Ctx.Request.Form.Get("userOwner")
 	userName := c.Ctx.Request.Form.Get("userName")
@@ -658,10 +674,10 @@ func (c *ApiController) SetPassword() {
 }
 
 // CheckUserPassword
-// @Title CheckUserPassword
-// @router /check-user-password [post]
-// @Tag User API
-// @Success 200 {object} object.Userinfo The Response object
+// @Summary CheckUserPassword
+// @Router /check-user-password [post]
+// @Tags User API
+// @Success 200 {object} object.Userinfo "The Response object"
 func (c *ApiController) CheckUserPassword() {
 	var user object.User
 	err := json.Unmarshal(c.Ctx.Input.RequestBody, &user)
@@ -683,14 +699,14 @@ func (c *ApiController) CheckUserPassword() {
 }
 
 // GetSortedUsers
-// @Title GetSortedUsers
-// @Tag User API
+// @Summary GetSortedUsers
+// @Tags User API
 // @Description
 // @Param   owner     query    string  true        "The owner of users"
 // @Param   sorter     query    string  true        "The DB column name to sort by, e.g., created_time"
 // @Param   limit     query    string  true        "The count of users to return, e.g., 25"
-// @Success 200 {array} object.User The Response object
-// @router /get-sorted-users [get]
+// @Success 200 {array} object.User "The Response object"
+// @Router /get-sorted-users [get]
 func (c *ApiController) GetSortedUsers() {
 	owner := c.Ctx.Input.Query("owner")
 	sorter := c.Ctx.Input.Query("sorter")
@@ -706,13 +722,13 @@ func (c *ApiController) GetSortedUsers() {
 }
 
 // GetUserCount
-// @Title GetUserCount
-// @Tag User API
+// @Summary GetUserCount
+// @Tags User API
 // @Description
 // @Param   owner     query    string  true        "The owner of users"
 // @Param   isOnline     query    string  true        "The filter for query, 1 for online, 0 for offline, empty string for all users"
-// @Success 200 {int} int The count of filtered users for an organization
-// @router /get-user-count [get]
+// @Success 200 {int} int "The count of filtered users for an organization"
+// @Router /get-user-count [get]
 func (c *ApiController) GetUserCount() {
 	owner := c.Ctx.Input.Query("owner")
 	isOnline := c.Ctx.Input.Query("isOnline")
@@ -758,12 +774,12 @@ func (c *ApiController) RemoveUserFromGroup() {
 }
 
 // ImpersonateUser
-// @Title ImpersonateUser
-// @Tag User API
+// @Summary ImpersonateUser
+// @Tags User API
 // @Description set impersonation user for current admin session
 // @Param   username    formData   string  true        "The username to impersonate (owner/name)"
-// @Success 200 {object} controllers.Response The Response object
-// @router /impersonation-user [post]
+// @Success 200 {object} ActionResponse "Action result"
+// @Router /impersonation-user [post]
 func (c *ApiController) ImpersonateUser() {
 	org, ok := c.RequireAdmin()
 	if !ok {
@@ -808,11 +824,11 @@ func (c *ApiController) ImpersonateUser() {
 }
 
 // ExitImpersonateUser
-// @Title ExitImpersonateUser
-// @Tag User API
+// @Summary ExitImpersonateUser
+// @Tags User API
 // @Description clear impersonation info for current session
-// @Success 200 {object} controllers.Response The Response object
-// @router /exit-impersonation-user [post]
+// @Success 200 {object} ActionResponse "Action result"
+// @Router /exit-impersonation-user [post]
 func (c *ApiController) ExitImpersonateUser() {
 	_, ok := c.Ctx.Input.GetData("impersonating").(bool)
 	if !ok {
@@ -830,14 +846,14 @@ func (c *ApiController) ExitImpersonateUser() {
 }
 
 // VerifyIdentification
-// @Title VerifyIdentification
-// @Tag User API
+// @Summary VerifyIdentification
+// @Tags User API
 // @Description verify user's real identity using ID Verification provider
 // @Param   owner     query    string  false  "The owner of the user (optional, defaults to logged-in user)"
 // @Param   name      query    string  false  "The name of the user (optional, defaults to logged-in user)"
 // @Param   provider  query    string  false  "The name of the ID Verification provider (optional, auto-selected if not provided)"
-// @Success 200 {object} controllers.Response The Response object
-// @router /verify-identification [post]
+// @Success 200 {object} ActionResponse "Action result"
+// @Router /verify-identification [post]
 func (c *ApiController) VerifyIdentification() {
 	owner := c.Ctx.Input.Query("owner")
 	name := c.Ctx.Input.Query("name")

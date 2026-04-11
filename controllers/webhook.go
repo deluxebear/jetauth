@@ -22,13 +22,29 @@ import (
 	"github.com/deluxebear/casdoor/util"
 )
 
+// WebhookListResponse represents the response for webhook list APIs
+type WebhookListResponse struct {
+	Status string        `json:"status" example:"ok"`
+	Msg    string        `json:"msg" example:""`
+	Data   []object.Webhook `json:"data"`
+	Data2  int           `json:"data2" example:"10"`
+}
+
+// WebhookResponse represents the response for single webhook APIs
+type WebhookResponse struct {
+	Status string       `json:"status" example:"ok"`
+	Msg    string       `json:"msg" example:""`
+	Data   object.Webhook  `json:"data"`
+}
+
+
 // GetWebhooks
-// @Title GetWebhooks
-// @Tag Webhook API
+// @Summary GetWebhooks
+// @Tags Webhook API
 // @Description get webhooks
-// @Param   owner     query    string  built-in/admin	true        "The owner of webhooks"
-// @Success 200 {array} object.Webhook The Response object
-// @router /get-webhooks [get]
+// @Param   owner     query    string true        "The owner of webhooks"
+// @Success 200 {array} object.Webhook "The Response object"
+// @Router /get-webhooks [get]
 // @Security test_apiKey
 func (c *ApiController) GetWebhooks() {
 	owner := c.Ctx.Input.Query("owner")
@@ -69,12 +85,12 @@ func (c *ApiController) GetWebhooks() {
 }
 
 // GetWebhook
-// @Title GetWebhook
-// @Tag Webhook API
+// @Summary GetWebhook
+// @Tags Webhook API
 // @Description get webhook
-// @Param   id     query    string  built-in/admin	true        "The id ( owner/name ) of the webhook"
-// @Success 200 {object} object.Webhook The Response object
-// @router /get-webhook [get]
+// @Param   id     query    string true        "The id ( owner/name ) of the webhook"
+// @Success 200 {object} object.Webhook "The Response object"
+// @Router /get-webhook [get]
 func (c *ApiController) GetWebhook() {
 	id := c.Ctx.Input.Query("id")
 
@@ -88,13 +104,13 @@ func (c *ApiController) GetWebhook() {
 }
 
 // UpdateWebhook
-// @Title UpdateWebhook
-// @Tag Webhook API
+// @Summary UpdateWebhook
+// @Tags Webhook API
 // @Description update webhook
-// @Param   id     query    string  built-in/admin true        "The id ( owner/name ) of the webhook"
+// @Param   id     query    string true        "The id ( owner/name ) of the webhook"
 // @Param   body    body   object.Webhook  true        "The details of the webhook"
-// @Success 200 {object} controllers.Response The Response object
-// @router /update-webhook [post]
+// @Success 200 {object} ActionResponse "Action result"
+// @Router /update-webhook [post]
 func (c *ApiController) UpdateWebhook() {
 	id := c.Ctx.Input.Query("id")
 
@@ -112,12 +128,12 @@ func (c *ApiController) UpdateWebhook() {
 }
 
 // AddWebhook
-// @Title AddWebhook
-// @Tag Webhook API
+// @Summary AddWebhook
+// @Tags Webhook API
 // @Description add webhook
 // @Param   body    body   object.Webhook  true        "The details of the webhook"
-// @Success 200 {object} controllers.Response The Response object
-// @router /add-webhook [post]
+// @Success 200 {object} ActionResponse "Action result"
+// @Router /add-webhook [post]
 func (c *ApiController) AddWebhook() {
 	var webhook object.Webhook
 	err := json.Unmarshal(c.Ctx.Input.RequestBody, &webhook)
@@ -131,12 +147,12 @@ func (c *ApiController) AddWebhook() {
 }
 
 // DeleteWebhook
-// @Title DeleteWebhook
-// @Tag Webhook API
+// @Summary DeleteWebhook
+// @Tags Webhook API
 // @Description delete webhook
 // @Param   body    body   object.Webhook  true        "The details of the webhook"
-// @Success 200 {object} controllers.Response The Response object
-// @router /delete-webhook [post]
+// @Success 200 {object} ActionResponse "Action result"
+// @Router /delete-webhook [post]
 func (c *ApiController) DeleteWebhook() {
 	var webhook object.Webhook
 	err := json.Unmarshal(c.Ctx.Input.RequestBody, &webhook)

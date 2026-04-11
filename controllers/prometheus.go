@@ -20,11 +20,11 @@ import (
 )
 
 // GetPrometheusInfo
-// @Title GetPrometheusInfo
-// @Tag System API
+// @Summary GetPrometheusInfo
+// @Tags System API
 // @Description get Prometheus Info
-// @Success 200 {object} object.PrometheusInfo The Response object
-// @router /get-prometheus-info [get]
+// @Success 200 {object} object.PrometheusInfo "The Response object"
+// @Router /get-prometheus-info [get]
 func (c *ApiController) GetPrometheusInfo() {
 	_, ok := c.RequireAdmin()
 	if !ok {
@@ -40,11 +40,11 @@ func (c *ApiController) GetPrometheusInfo() {
 }
 
 // GetMetrics
-// @Title GetMetrics
-// @Tag System API
+// @Summary GetMetrics
+// @Tags System API
 // @Description get Prometheus metrics
-// @Success 200 {string} Prometheus metrics in text format
-// @router /metrics [get]
+// @Success 200 {string} Prometheus "metrics in text format"
+// @Router /metrics [get]
 func (c *ApiController) GetMetrics() {
 	_, ok := c.RequireAdmin()
 	if !ok {

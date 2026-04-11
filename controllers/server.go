@@ -22,13 +22,29 @@ import (
 	"github.com/deluxebear/casdoor/util"
 )
 
+// ServerListResponse represents the response for server list APIs
+type ServerListResponse struct {
+	Status string        `json:"status" example:"ok"`
+	Msg    string        `json:"msg" example:""`
+	Data   []object.Server `json:"data"`
+	Data2  int           `json:"data2" example:"10"`
+}
+
+// ServerResponse represents the response for single server APIs
+type ServerResponse struct {
+	Status string       `json:"status" example:"ok"`
+	Msg    string       `json:"msg" example:""`
+	Data   object.Server  `json:"data"`
+}
+
+
 // GetServers
-// @Title GetServers
-// @Tag Server API
+// @Summary GetServers
+// @Tags Server API
 // @Description get servers
 // @Param   owner     query    string  true        "The owner of servers"
-// @Success 200 {array} object.Server The Response object
-// @router /get-servers [get]
+// @Success 200 {array} object.Server "The Response object"
+// @Router /get-servers [get]
 func (c *ApiController) GetServers() {
 	owner := c.Ctx.Input.Query("owner")
 	if owner == "admin" {
@@ -70,12 +86,12 @@ func (c *ApiController) GetServers() {
 }
 
 // GetServer
-// @Title GetServer
-// @Tag Server API
+// @Summary GetServer
+// @Tags Server API
 // @Description get server
 // @Param   id     query    string  true        "The id ( owner/name ) of the server"
-// @Success 200 {object} object.Server The Response object
-// @router /get-server [get]
+// @Success 200 {object} object.Server "The Response object"
+// @Router /get-server [get]
 func (c *ApiController) GetServer() {
 	id := c.Ctx.Input.Query("id")
 
@@ -89,13 +105,13 @@ func (c *ApiController) GetServer() {
 }
 
 // UpdateServer
-// @Title UpdateServer
-// @Tag Server API
+// @Summary UpdateServer
+// @Tags Server API
 // @Description update server
 // @Param   id     query    string  true        "The id ( owner/name ) of the server"
 // @Param   body    body   object.Server  true        "The details of the server"
-// @Success 200 {object} controllers.Response The Response object
-// @router /update-server [post]
+// @Success 200 {object} ActionResponse "Action result"
+// @Router /update-server [post]
 func (c *ApiController) UpdateServer() {
 	id := c.Ctx.Input.Query("id")
 
@@ -113,14 +129,14 @@ func (c *ApiController) UpdateServer() {
 }
 
 // SyncMcpTool
-// @Title SyncMcpTool
-// @Tag Server API
+// @Summary SyncMcpTool
+// @Tags Server API
 // @Description sync MCP tools for a server and return sync errors directly
 // @Param   id     query    string  true        "The id ( owner/name ) of the server"
 // @Param   isCleared  query    bool    false       "Whether to clear all tools instead of syncing"
 // @Param   body    body   object.Server  true        "The details of the server"
-// @Success 200 {object} controllers.Response The Response object
-// @router /sync-mcp-tool [post]
+// @Success 200 {object} ActionResponse "Action result"
+// @Router /sync-mcp-tool [post]
 func (c *ApiController) SyncMcpTool() {
 	id := c.Ctx.Input.Query("id")
 	isCleared := c.Ctx.Input.Query("isCleared") == "1"
@@ -137,12 +153,12 @@ func (c *ApiController) SyncMcpTool() {
 }
 
 // AddServer
-// @Title AddServer
-// @Tag Server API
+// @Summary AddServer
+// @Tags Server API
 // @Description add server
 // @Param   body    body   object.Server  true        "The details of the server"
-// @Success 200 {object} controllers.Response The Response object
-// @router /add-server [post]
+// @Success 200 {object} ActionResponse "Action result"
+// @Router /add-server [post]
 func (c *ApiController) AddServer() {
 	var server object.Server
 	err := json.Unmarshal(c.Ctx.Input.RequestBody, &server)
@@ -156,12 +172,12 @@ func (c *ApiController) AddServer() {
 }
 
 // DeleteServer
-// @Title DeleteServer
-// @Tag Server API
+// @Summary DeleteServer
+// @Tags Server API
 // @Description delete server
 // @Param   body    body   object.Server  true        "The details of the server"
-// @Success 200 {object} controllers.Response The Response object
-// @router /delete-server [post]
+// @Success 200 {object} ActionResponse "Action result"
+// @Router /delete-server [post]
 func (c *ApiController) DeleteServer() {
 	var server object.Server
 	err := json.Unmarshal(c.Ctx.Input.RequestBody, &server)

@@ -22,13 +22,29 @@ import (
 	"github.com/deluxebear/casdoor/util"
 )
 
+// EntryListResponse represents the response for entry list APIs
+type EntryListResponse struct {
+	Status string        `json:"status" example:"ok"`
+	Msg    string        `json:"msg" example:""`
+	Data   []object.Entry `json:"data"`
+	Data2  int           `json:"data2" example:"10"`
+}
+
+// EntryResponse represents the response for single entry APIs
+type EntryResponse struct {
+	Status string       `json:"status" example:"ok"`
+	Msg    string       `json:"msg" example:""`
+	Data   object.Entry  `json:"data"`
+}
+
+
 // GetEntries
-// @Title GetEntries
-// @Tag Entry API
+// @Summary GetEntries
+// @Tags Entry API
 // @Description get entries
 // @Param   owner     query    string  true        "The owner of entries"
-// @Success 200 {array} object.Entry The Response object
-// @router /get-entries [get]
+// @Success 200 {array} object.Entry "The Response object"
+// @Router /get-entries [get]
 func (c *ApiController) GetEntries() {
 	owner := c.Ctx.Input.Query("owner")
 	if owner == "admin" {
@@ -70,12 +86,12 @@ func (c *ApiController) GetEntries() {
 }
 
 // GetEntry
-// @Title GetEntry
-// @Tag Entry API
+// @Summary GetEntry
+// @Tags Entry API
 // @Description get entry
 // @Param   id     query    string  true        "The id ( owner/name ) of the entry"
-// @Success 200 {object} object.Entry The Response object
-// @router /get-entry [get]
+// @Success 200 {object} object.Entry "The Response object"
+// @Router /get-entry [get]
 func (c *ApiController) GetEntry() {
 	id := c.Ctx.Input.Query("id")
 
@@ -89,12 +105,12 @@ func (c *ApiController) GetEntry() {
 }
 
 // GetOpenClawSessionGraph
-// @Title GetOpenClawSessionGraph
-// @Tag Entry API
+// @Summary GetOpenClawSessionGraph
+// @Tags Entry API
 // @Description get OpenClaw session graph
 // @Param   id     query    string  true        "The id ( owner/name ) of the entry"
-// @Success 200 {object} object.OpenClawSessionGraph The Response object
-// @router /get-openclaw-session-graph [get]
+// @Success 200 {object} object.OpenClawSessionGraph "The Response object"
+// @Router /get-openclaw-session-graph [get]
 func (c *ApiController) GetOpenClawSessionGraph() {
 	id := c.Ctx.Input.Query("id")
 
@@ -108,13 +124,13 @@ func (c *ApiController) GetOpenClawSessionGraph() {
 }
 
 // UpdateEntry
-// @Title UpdateEntry
-// @Tag Entry API
+// @Summary UpdateEntry
+// @Tags Entry API
 // @Description update entry
 // @Param   id     query    string  true        "The id ( owner/name ) of the entry"
 // @Param   body    body   object.Entry  true        "The details of the entry"
-// @Success 200 {object} controllers.Response The Response object
-// @router /update-entry [post]
+// @Success 200 {object} ActionResponse "Action result"
+// @Router /update-entry [post]
 func (c *ApiController) UpdateEntry() {
 	id := c.Ctx.Input.Query("id")
 
@@ -132,12 +148,12 @@ func (c *ApiController) UpdateEntry() {
 }
 
 // AddEntry
-// @Title AddEntry
-// @Tag Entry API
+// @Summary AddEntry
+// @Tags Entry API
 // @Description add entry
 // @Param   body    body   object.Entry  true        "The details of the entry"
-// @Success 200 {object} controllers.Response The Response object
-// @router /add-entry [post]
+// @Success 200 {object} ActionResponse "Action result"
+// @Router /add-entry [post]
 func (c *ApiController) AddEntry() {
 	var entry object.Entry
 	err := json.Unmarshal(c.Ctx.Input.RequestBody, &entry)
@@ -151,12 +167,12 @@ func (c *ApiController) AddEntry() {
 }
 
 // DeleteEntry
-// @Title DeleteEntry
-// @Tag Entry API
+// @Summary DeleteEntry
+// @Tags Entry API
 // @Description delete entry
 // @Param   body    body   object.Entry  true        "The details of the entry"
-// @Success 200 {object} controllers.Response The Response object
-// @router /delete-entry [post]
+// @Success 200 {object} ActionResponse "Action result"
+// @Router /delete-entry [post]
 func (c *ApiController) DeleteEntry() {
 	var entry object.Entry
 	err := json.Unmarshal(c.Ctx.Input.RequestBody, &entry)

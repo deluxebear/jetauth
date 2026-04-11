@@ -22,14 +22,30 @@ import (
 	"github.com/deluxebear/casdoor/util"
 )
 
+// RecordListResponse represents the response for record list APIs
+type RecordListResponse struct {
+	Status string        `json:"status" example:"ok"`
+	Msg    string        `json:"msg" example:""`
+	Data   []object.Record `json:"data"`
+	Data2  int           `json:"data2" example:"10"`
+}
+
+// RecordResponse represents the response for single record APIs
+type RecordResponse struct {
+	Status string       `json:"status" example:"ok"`
+	Msg    string       `json:"msg" example:""`
+	Data   object.Record  `json:"data"`
+}
+
+
 // GetRecords
-// @Title GetRecords
-// @Tag Record API
+// @Summary GetRecords
+// @Tags Record API
 // @Description get all records
 // @Param   pageSize     query    string  true        "The size of each page"
 // @Param   p     query    string  true        "The number of the page"
-// @Success 200 {object} object.Record The Response object
-// @router /get-records [get]
+// @Success 200 {object} object.Record "The Response object"
+// @Router /get-records [get]
 func (c *ApiController) GetRecords() {
 	organization, ok := c.RequireAdmin()
 	if !ok {
@@ -76,12 +92,12 @@ func (c *ApiController) GetRecords() {
 }
 
 // GetRecordsByFilter
-// @Tag Record API
-// @Title GetRecordsByFilter
+// @Tags Record API
+// @Summary GetRecordsByFilter
 // @Description get records by filter
 // @Param   filter  body string     true  "filter Record message"
-// @Success 200 {object} object.Record The Response object
-// @router /get-records-filter [post]
+// @Success 200 {object} object.Record "The Response object"
+// @Router /get-records-filter [post]
 func (c *ApiController) GetRecordsByFilter() {
 	_, ok := c.RequireAdmin()
 	if !ok {
@@ -107,12 +123,12 @@ func (c *ApiController) GetRecordsByFilter() {
 }
 
 // AddRecord
-// @Title AddRecord
-// @Tag Record API
+// @Summary AddRecord
+// @Tags Record API
 // @Description add a record
 // @Param   body    body   object.Record  true        "The details of the record"
-// @Success 200 {object} controllers.Response The Response object
-// @router /add-record [post]
+// @Success 200 {object} ActionResponse "Action result"
+// @Router /add-record [post]
 func (c *ApiController) AddRecord() {
 	var record object.Record
 	err := json.Unmarshal(c.Ctx.Input.RequestBody, &record)

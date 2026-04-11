@@ -22,14 +22,14 @@ import (
 )
 
 // DynamicClientRegister
-// @Title DynamicClientRegister
-// @Tag OAuth API
+// @Summary DynamicClientRegister
+// @Tags OAuth API
 // @Description Register a new OAuth 2.0 client dynamically (RFC 7591)
 // @Param   organization     query    string  false        "The organization name (defaults to built-in)"
 // @Param   body    body   object.DynamicClientRegistrationRequest  true        "Client registration request"
 // @Success 201 {object} object.DynamicClientRegistrationResponse
 // @Failure 400 {object} object.DcrError
-// @router /api/oauth/register [post]
+// @Router /api/oauth/register [post]
 func (c *ApiController) DynamicClientRegister() {
 	var req object.DynamicClientRegistrationRequest
 	err := json.Unmarshal(c.Ctx.Input.RequestBody, &req)

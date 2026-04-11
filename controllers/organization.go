@@ -22,13 +22,29 @@ import (
 	"github.com/deluxebear/casdoor/util"
 )
 
+// OrganizationListResponse represents the response for organization list APIs
+type OrganizationListResponse struct {
+	Status string        `json:"status" example:"ok"`
+	Msg    string        `json:"msg" example:""`
+	Data   []object.Organization `json:"data"`
+	Data2  int           `json:"data2" example:"10"`
+}
+
+// OrganizationResponse represents the response for single organization APIs
+type OrganizationResponse struct {
+	Status string       `json:"status" example:"ok"`
+	Msg    string       `json:"msg" example:""`
+	Data   object.Organization  `json:"data"`
+}
+
+
 // GetOrganizations ...
-// @Title GetOrganizations
-// @Tag Organization API
+// @Summary GetOrganizations
+// @Tags Organization API
 // @Description get organizations
-// @Param   owner     query    string  true        "owner"
-// @Success 200 {array} object.Organization The Response object
-// @router /get-organizations [get]
+// @Param   owner     query    string  true       "   0"
+// @Success 200 {array} object.Organization "The Response object"
+// @Router /get-organizations [get]
 func (c *ApiController) GetOrganizations() {
 	owner := c.Ctx.Input.Query("owner")
 	limit := c.Ctx.Input.Query("pageSize")
@@ -84,12 +100,12 @@ func (c *ApiController) GetOrganizations() {
 }
 
 // GetOrganization ...
-// @Title GetOrganization
-// @Tag Organization API
+// @Summary GetOrganization
+// @Tags Organization API
 // @Description get organization
 // @Param   id     query    string  true        "organization id"
-// @Success 200 {object} object.Organization The Response object
-// @router /get-organization [get]
+// @Success 200 {object} object.Organization "The Response object"
+// @Router /get-organization [get]
 func (c *ApiController) GetOrganization() {
 	id := c.Ctx.Input.Query("id")
 	organization, err := object.GetMaskedOrganization(object.GetOrganization(id))
@@ -106,13 +122,13 @@ func (c *ApiController) GetOrganization() {
 }
 
 // UpdateOrganization ...
-// @Title UpdateOrganization
-// @Tag Organization API
+// @Summary UpdateOrganization
+// @Tags Organization API
 // @Description update organization
 // @Param   id     query    string  true        "The id ( owner/name ) of the organization"
 // @Param   body    body   object.Organization  true        "The details of the organization"
-// @Success 200 {object} controllers.Response The Response object
-// @router /update-organization [post]
+// @Success 200 {object} ActionResponse "Action result"
+// @Router /update-organization [post]
 func (c *ApiController) UpdateOrganization() {
 	id := c.Ctx.Input.Query("id")
 
@@ -141,12 +157,12 @@ func (c *ApiController) UpdateOrganization() {
 }
 
 // AddOrganization ...
-// @Title AddOrganization
-// @Tag Organization API
+// @Summary AddOrganization
+// @Tags Organization API
 // @Description add organization
 // @Param   body    body   object.Organization  true        "The details of the organization"
-// @Success 200 {object} controllers.Response The Response object
-// @router /add-organization [post]
+// @Success 200 {object} ActionResponse "Action result"
+// @Router /add-organization [post]
 func (c *ApiController) AddOrganization() {
 	var organization object.Organization
 	err := json.Unmarshal(c.Ctx.Input.RequestBody, &organization)
@@ -180,12 +196,12 @@ func (c *ApiController) AddOrganization() {
 }
 
 // DeleteOrganization ...
-// @Title DeleteOrganization
-// @Tag Organization API
+// @Summary DeleteOrganization
+// @Tags Organization API
 // @Description delete organization
 // @Param   body    body   object.Organization  true        "The details of the organization"
-// @Success 200 {object} controllers.Response The Response object
-// @router /delete-organization [post]
+// @Success 200 {object} ActionResponse "Action result"
+// @Router /delete-organization [post]
 func (c *ApiController) DeleteOrganization() {
 	var organization object.Organization
 	err := json.Unmarshal(c.Ctx.Input.RequestBody, &organization)
@@ -199,12 +215,12 @@ func (c *ApiController) DeleteOrganization() {
 }
 
 // GetDefaultApplication ...
-// @Title GetDefaultApplication
-// @Tag Organization API
+// @Summary GetDefaultApplication
+// @Tags Organization API
 // @Description get default application
 // @Param   id     query    string  true        "organization id"
-// @Success 200 {object} controllers.Response The Response object
-// @router /get-default-application [get]
+// @Success 200 {object} OrganizationResponse "Organization detail"
+// @Router /get-default-application [get]
 func (c *ApiController) GetDefaultApplication() {
 	userId := c.GetSessionUsername()
 	id := c.Ctx.Input.Query("id")
@@ -220,12 +236,12 @@ func (c *ApiController) GetDefaultApplication() {
 }
 
 // GetOrganizationNames ...
-// @Title GetOrganizationNames
-// @Tag Organization API
-// @Param   owner     query    string    true   "owner"
+// @Summary GetOrganizationNames
+// @Tags Organization API
+// @Param   owner     query    string    true  "   0"
 // @Description get all organization name and displayName
-// @Success 200 {array} object.Organization The Response object
-// @router /get-organization-names [get]
+// @Success 200 {array} object.Organization "The Response object"
+// @Router /get-organization-names [get]
 func (c *ApiController) GetOrganizationNames() {
 	owner := c.Ctx.Input.Query("owner")
 	organizationNames, err := object.GetOrganizationsByFields(owner, []string{"name", "display_name"}...)

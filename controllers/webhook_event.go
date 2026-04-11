@@ -22,6 +22,22 @@ import (
 	"github.com/deluxebear/casdoor/util"
 )
 
+// WebhookEventListResponse represents the response for webhookevent list APIs
+type WebhookEventListResponse struct {
+	Status string        `json:"status" example:"ok"`
+	Msg    string        `json:"msg" example:""`
+	Data   []object.WebhookEvent `json:"data"`
+	Data2  int           `json:"data2" example:"10"`
+}
+
+// WebhookEventResponse represents the response for single webhookevent APIs
+type WebhookEventResponse struct {
+	Status string       `json:"status" example:"ok"`
+	Msg    string       `json:"msg" example:""`
+	Data   object.WebhookEvent  `json:"data"`
+}
+
+
 const defaultWebhookEventListLimit = 100
 
 func (c *ApiController) getScopedWebhookEventQuery() (string, string, bool) {
@@ -57,15 +73,15 @@ func (c *ApiController) checkWebhookEventAccess(event *object.WebhookEvent, orga
 }
 
 // GetWebhookEvents
-// @Title GetWebhookEvents
-// @Tag Webhook Event API
+// @Summary GetWebhookEvents
+// @Tags Webhook Event API
 // @Description get webhook events with filtering
 // @Param   owner     query    string  false       "The owner of webhook events"
 // @Param   organization     query    string  false       "The organization"
 // @Param   webhookName     query    string  false       "The webhook name"
 // @Param   status     query    string  false       "Event status (pending, success, failed, retrying)"
-// @Success 200 {array} object.WebhookEvent The Response object
-// @router /get-webhook-events [get]
+// @Success 200 {array} object.WebhookEvent "The Response object"
+// @Router /get-webhook-events [get]
 func (c *ApiController) GetWebhookEvents() {
 	owner, organization, ok := c.getScopedWebhookEventQuery()
 	if !ok {
@@ -106,12 +122,12 @@ func (c *ApiController) GetWebhookEvents() {
 }
 
 // GetWebhookEvent
-// @Title GetWebhookEvent
-// @Tag Webhook Event API
+// @Summary GetWebhookEvent
+// @Tags Webhook Event API
 // @Description get webhook event
 // @Param   id     query    string  true        "The id ( owner/name ) of the webhook event"
-// @Success 200 {object} object.WebhookEvent The Response object
-// @router /get-webhook-event-detail [get]
+// @Success 200 {object} object.WebhookEvent "The Response object"
+// @Router /get-webhook-event-detail [get]
 func (c *ApiController) GetWebhookEvent() {
 	organization, ok := c.RequireAdmin()
 	if !ok {
@@ -134,12 +150,12 @@ func (c *ApiController) GetWebhookEvent() {
 }
 
 // ReplayWebhookEvent
-// @Title ReplayWebhookEvent
-// @Tag Webhook Event API
+// @Summary ReplayWebhookEvent
+// @Tags Webhook Event API
 // @Description replay a webhook event
 // @Param   id     query    string  true        "The id ( owner/name ) of the webhook event"
-// @Success 200 {object} controllers.Response The Response object
-// @router /replay-webhook-event [post]
+// @Success 200 {object} ActionResponse "Action result"
+// @Router /replay-webhook-event [post]
 func (c *ApiController) ReplayWebhookEvent() {
 	organization, ok := c.RequireAdmin()
 	if !ok {
@@ -168,12 +184,12 @@ func (c *ApiController) ReplayWebhookEvent() {
 }
 
 // DeleteWebhookEvent
-// @Title DeleteWebhookEvent
-// @Tag Webhook Event API
+// @Summary DeleteWebhookEvent
+// @Tags Webhook Event API
 // @Description delete webhook event
 // @Param   body    body   object.WebhookEvent  true        "The details of the webhook event"
-// @Success 200 {object} controllers.Response The Response object
-// @router /delete-webhook-event [post]
+// @Success 200 {object} ActionResponse "Action result"
+// @Router /delete-webhook-event [post]
 func (c *ApiController) DeleteWebhookEvent() {
 	organization, ok := c.RequireAdmin()
 	if !ok {

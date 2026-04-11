@@ -24,15 +24,31 @@ import (
 	"github.com/deluxebear/casdoor/util"
 )
 
+// TokenListResponse represents the response for token list APIs
+type TokenListResponse struct {
+	Status string        `json:"status" example:"ok"`
+	Msg    string        `json:"msg" example:""`
+	Data   []object.Token `json:"data"`
+	Data2  int           `json:"data2" example:"10"`
+}
+
+// TokenResponse represents the response for single token APIs
+type TokenResponse struct {
+	Status string       `json:"status" example:"ok"`
+	Msg    string       `json:"msg" example:""`
+	Data   object.Token  `json:"data"`
+}
+
+
 // GetTokens
-// @Title GetTokens
-// @Tag Token API
+// @Summary GetTokens
+// @Tags Token API
 // @Description get tokens
 // @Param   owner     query    string  true        "The organization name (e.g., built-in)"
 // @Param   pageSize     query    string  true        "The size of each page"
 // @Param   p     query    string  true        "The number of the page"
-// @Success 200 {array} object.Token The Response object
-// @router /get-tokens [get]
+// @Success 200 {array} object.Token "The Response object"
+// @Router /get-tokens [get]
 func (c *ApiController) GetTokens() {
 	owner := c.Ctx.Input.Query("owner")
 	limit := c.Ctx.Input.Query("pageSize")
@@ -70,12 +86,12 @@ func (c *ApiController) GetTokens() {
 }
 
 // GetToken
-// @Title GetToken
-// @Tag Token API
+// @Summary GetToken
+// @Tags Token API
 // @Description get token
 // @Param   id     query    string  true        "The token ID in format: organization/token-name (e.g., built-in/token-123456)"
-// @Success 200 {object} object.Token The Response object
-// @router /get-token [get]
+// @Success 200 {object} object.Token "The Response object"
+// @Router /get-token [get]
 func (c *ApiController) GetToken() {
 	id := c.Ctx.Input.Query("id")
 	token, err := object.GetToken(id)
@@ -88,13 +104,13 @@ func (c *ApiController) GetToken() {
 }
 
 // UpdateToken
-// @Title UpdateToken
-// @Tag Token API
+// @Summary UpdateToken
+// @Tags Token API
 // @Description update token
 // @Param   id     query    string  true        "The token ID in format: organization/token-name (e.g., built-in/token-123456)"
 // @Param   body    body   object.Token  true        "Details of the token"
-// @Success 200 {object} controllers.Response The Response object
-// @router /update-token [post]
+// @Success 200 {object} ActionResponse "Action result"
+// @Router /update-token [post]
 func (c *ApiController) UpdateToken() {
 	id := c.Ctx.Input.Query("id")
 
@@ -112,12 +128,12 @@ func (c *ApiController) UpdateToken() {
 }
 
 // AddToken
-// @Title AddToken
-// @Tag Token API
+// @Summary AddToken
+// @Tags Token API
 // @Description add token
 // @Param   body    body   object.Token  true        "Details of the token"
-// @Success 200 {object} controllers.Response The Response object
-// @router /add-token [post]
+// @Success 200 {object} ActionResponse "Action result"
+// @Router /add-token [post]
 func (c *ApiController) AddToken() {
 	var token object.Token
 	err := json.Unmarshal(c.Ctx.Input.RequestBody, &token)
@@ -131,12 +147,12 @@ func (c *ApiController) AddToken() {
 }
 
 // DeleteToken
-// @Tag Token API
-// @Title DeleteToken
+// @Tags Token API
+// @Summary DeleteToken
 // @Description delete token
 // @Param   body    body   object.Token  true        "Details of the token"
-// @Success 200 {object} controllers.Response The Response object
-// @router /delete-token [post]
+// @Success 200 {object} ActionResponse "Action result"
+// @Router /delete-token [post]
 func (c *ApiController) DeleteToken() {
 	var token object.Token
 	err := json.Unmarshal(c.Ctx.Input.RequestBody, &token)
@@ -150,17 +166,17 @@ func (c *ApiController) DeleteToken() {
 }
 
 // GetOAuthToken
-// @Title GetOAuthToken
-// @Tag Token API
+// @Summary GetOAuthToken
+// @Tags Token API
 // @Description get OAuth access token
 // @Param   grant_type     query    string  true        "OAuth grant type"
 // @Param   client_id     query    string  true        "OAuth client id"
 // @Param   client_secret     query    string  true        "OAuth client secret"
 // @Param   code     query    string  true        "OAuth code"
-// @Success 200 {object} object.TokenWrapper The Response object
-// @Success 400 {object} object.TokenError The Response object
-// @Success 401 {object} object.TokenError The Response object
-// @router /login/oauth/access_token [post]
+// @Success 200 {object} object.TokenWrapper "The Response object"
+// @Success 400 {object} object.TokenError "The Response object"
+// @Success 401 {object} object.TokenError "The Response object"
+// @Router /login/oauth/access_token [post]
 func (c *ApiController) GetOAuthToken() {
 	clientId := c.Ctx.Input.Query("client_id")
 	clientSecret := c.Ctx.Input.Query("client_secret")
@@ -308,18 +324,18 @@ func (c *ApiController) GetOAuthToken() {
 }
 
 // RefreshToken
-// @Title RefreshToken
-// @Tag Token API
+// @Summary RefreshToken
+// @Tags Token API
 // @Description refresh OAuth access token
 // @Param   grant_type     query    string  true        "OAuth grant type"
 // @Param	refresh_token	query	string	true		"OAuth refresh token"
 // @Param   scope     query    string  true        "OAuth scope"
 // @Param   client_id     query    string  true        "OAuth client id"
 // @Param   client_secret     query    string  false        "OAuth client secret"
-// @Success 200 {object} object.TokenWrapper The Response object
-// @Success 400 {object} object.TokenError The Response object
-// @Success 401 {object} object.TokenError The Response object
-// @router /login/oauth/refresh_token [post]
+// @Success 200 {object} object.TokenWrapper "The Response object"
+// @Success 400 {object} object.TokenError "The Response object"
+// @Success 401 {object} object.TokenError "The Response object"
+// @Router /login/oauth/refresh_token [post]
 func (c *ApiController) RefreshToken() {
 	grantType := c.Ctx.Input.Query("grant_type")
 	refreshToken := c.Ctx.Input.Query("refresh_token")
@@ -431,8 +447,8 @@ func (c *ApiController) ValidateOAuth(ignoreValidSecret bool) (ok bool, applicat
 }
 
 // IntrospectToken
-// @Title IntrospectToken
-// @Tag Login API
+// @Summary IntrospectToken
+// @Tags Login API
 // @Description The introspection endpoint is an OAuth 2.0 endpoint that takes a
 // parameter representing an OAuth 2.0 token and returns a JSON document
 // representing the meta information surrounding the
@@ -441,10 +457,10 @@ func (c *ApiController) ValidateOAuth(ignoreValidSecret bool) (ok bool, applicat
 //
 // @Param token formData string true "access_token's value or refresh_token's value"
 // @Param token_type_hint formData string true "the token type access_token or refresh_token"
-// @Success 200 {object} object.IntrospectionResponse The Response object
-// @Success 400 {object} object.TokenError The Response object
-// @Success 401 {object} object.TokenError The Response object
-// @router /login/oauth/introspect [post]
+// @Success 200 {object} object.IntrospectionResponse "The Response object"
+// @Success 400 {object} object.TokenError "The Response object"
+// @Success 401 {object} object.TokenError "The Response object"
+// @Router /login/oauth/introspect [post]
 func (c *ApiController) IntrospectToken() {
 	tokenValue := c.Ctx.Input.Query("token")
 

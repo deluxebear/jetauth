@@ -25,6 +25,14 @@ import (
 	"github.com/deluxebear/casdoor/util"
 )
 
+// ActionResponse is the common response for add/update/delete operations.
+type ActionResponse struct {
+	Status string `json:"status" example:"ok"`
+	Msg    string `json:"msg" example:""`
+	Data   string `json:"data" example:"Affected"`
+	Data2  bool   `json:"data2" example:"true"`
+}
+
 // ResponseJsonData ...
 func (c *ApiController) ResponseJsonData(resp *Response, data ...interface{}) {
 	switch len(data) {

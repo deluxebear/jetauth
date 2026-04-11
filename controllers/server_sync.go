@@ -53,13 +53,20 @@ type SyncInnerServersResult struct {
 	Servers      []*mcp.InnerMcpServer `json:"servers"`
 }
 
+// SyncInnerServersResponse is the response for SyncIntranetServers API.
+type SyncInnerServersResponse struct {
+	Status string                   `json:"status" example:"ok"`
+	Msg    string                   `json:"msg" example:""`
+	Data   SyncInnerServersResult   `json:"data"`
+}
+
 // SyncIntranetServers
-// @Title SyncIntranetServers
-// @Tag Server API
+// @Summary SyncIntranetServers
+// @Tags Server API
 // @Description scan intranet IP/CIDR targets and detect MCP servers by probing common ports and paths
 // @Param   body    body   controllers.SyncInnerServersRequest  true  "Intranet MCP server scan request"
-// @Success 200 {object} controllers.Response The Response object
-// @router /sync-intranet-servers [post]
+// @Success 200 {object} controllers.SyncInnerServersResponse "The Response object"
+// @Router /sync-intranet-servers [post]
 func (c *ApiController) SyncIntranetServers() {
 	_, ok := c.RequireAdmin()
 	if !ok {

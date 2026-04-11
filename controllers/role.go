@@ -22,13 +22,29 @@ import (
 	"github.com/deluxebear/casdoor/util"
 )
 
+// RoleListResponse represents the response for role list APIs
+type RoleListResponse struct {
+	Status string        `json:"status" example:"ok"`
+	Msg    string        `json:"msg" example:""`
+	Data   []object.Role `json:"data"`
+	Data2  int           `json:"data2" example:"10"`
+}
+
+// RoleResponse represents the response for single role APIs
+type RoleResponse struct {
+	Status string       `json:"status" example:"ok"`
+	Msg    string       `json:"msg" example:""`
+	Data   object.Role  `json:"data"`
+}
+
+
 // GetRoles
-// @Title GetRoles
-// @Tag Role API
+// @Summary GetRoles
+// @Tags Role API
 // @Description get roles
 // @Param   owner     query    string  true        "The owner of roles"
-// @Success 200 {array} object.Role The Response object
-// @router /get-roles [get]
+// @Success 200 {array} object.Role "The Response object"
+// @Router /get-roles [get]
 func (c *ApiController) GetRoles() {
 	owner := c.Ctx.Input.Query("owner")
 	limit := c.Ctx.Input.Query("pageSize")
@@ -66,12 +82,12 @@ func (c *ApiController) GetRoles() {
 }
 
 // GetRole
-// @Title GetRole
-// @Tag Role API
+// @Summary GetRole
+// @Tags Role API
 // @Description get role
 // @Param   id     query    string  true        "The id ( owner/name ) of the role"
-// @Success 200 {object} object.Role The Response object
-// @router /get-role [get]
+// @Success 200 {object} object.Role "The Response object"
+// @Router /get-role [get]
 func (c *ApiController) GetRole() {
 	id := c.Ctx.Input.Query("id")
 
@@ -85,13 +101,13 @@ func (c *ApiController) GetRole() {
 }
 
 // UpdateRole
-// @Title UpdateRole
-// @Tag Role API
+// @Summary UpdateRole
+// @Tags Role API
 // @Description update role
 // @Param   id     query    string  true        "The id ( owner/name ) of the role"
 // @Param   body    body   object.Role  true        "The details of the role"
-// @Success 200 {object} controllers.Response The Response object
-// @router /update-role [post]
+// @Success 200 {object} ActionResponse "Action result"
+// @Router /update-role [post]
 func (c *ApiController) UpdateRole() {
 	id := c.Ctx.Input.Query("id")
 
@@ -109,12 +125,12 @@ func (c *ApiController) UpdateRole() {
 }
 
 // AddRole
-// @Title AddRole
-// @Tag Role API
+// @Summary AddRole
+// @Tags Role API
 // @Description add role
 // @Param   body    body   object.Role  true        "The details of the role"
-// @Success 200 {object} controllers.Response The Response object
-// @router /add-role [post]
+// @Success 200 {object} ActionResponse "Action result"
+// @Router /add-role [post]
 func (c *ApiController) AddRole() {
 	var role object.Role
 	err := json.Unmarshal(c.Ctx.Input.RequestBody, &role)
@@ -128,12 +144,12 @@ func (c *ApiController) AddRole() {
 }
 
 // DeleteRole
-// @Title DeleteRole
-// @Tag Role API
+// @Summary DeleteRole
+// @Tags Role API
 // @Description delete role
 // @Param   body    body   object.Role  true        "The details of the role"
-// @Success 200 {object} controllers.Response The Response object
-// @router /delete-role [post]
+// @Success 200 {object} ActionResponse "Action result"
+// @Router /delete-role [post]
 func (c *ApiController) DeleteRole() {
 	var role object.Role
 	err := json.Unmarshal(c.Ctx.Input.RequestBody, &role)

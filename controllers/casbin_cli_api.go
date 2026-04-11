@@ -81,12 +81,7 @@ func cleanOldMEIFolders() {
 	}
 }
 
-// getCLIVersion
-// @Title getCLIVersion
-// @Description Get CLI version with cache mechanism
-// @Param language string The language of CLI (go/java/rust etc.)
-// @Return string The version string of CLI
-// @Return error Error if CLI execution fails
+// getCLIVersion gets CLI version with cache mechanism.
 func getCLIVersion(language string) (string, error) {
 	binaryName := fmt.Sprintf("casbin-%s-cli", language)
 
@@ -160,11 +155,11 @@ func processArgsToTempFiles(args []string) ([]string, []string, error) {
 }
 
 // RunCasbinCommand
-// @Title RunCasbinCommand
-// @Tag Enforcer API
+// @Summary RunCasbinCommand
+// @Tags Enforcer API
 // @Description Call Casbin CLI commands
-// @Success 200 {object} controllers.Response The Response object
-// @router /run-casbin-command [get]
+// @Success 200 {object} controllers.ActionResponse "Command output"
+// @Router /run-casbin-command [get]
 func (c *ApiController) RunCasbinCommand() {
 	if !conf.IsDemoMode() && !c.IsAdmin() {
 		c.ResponseError(c.T("auth:Unauthorized operation"))
@@ -263,11 +258,7 @@ func (c *ApiController) RunCasbinCommand() {
 	c.ResponseOk(output)
 }
 
-// validateIdentifier
-// @Title validateIdentifier
-// @Description Validate the request hash and timestamp
-// @Param hash string The SHA-256 hash string
-// @Return error Returns error if validation fails, nil if successful
+// validateIdentifier validates the request hash and timestamp.
 func validateIdentifier(c *ApiController) error {
 	language := c.Ctx.Input.Query("language")
 	args := c.Ctx.Input.Query("args")

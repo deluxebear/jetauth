@@ -22,13 +22,29 @@ import (
 	"github.com/deluxebear/casdoor/util"
 )
 
+// PlanListResponse represents the response for plan list APIs
+type PlanListResponse struct {
+	Status string        `json:"status" example:"ok"`
+	Msg    string        `json:"msg" example:""`
+	Data   []object.Plan `json:"data"`
+	Data2  int           `json:"data2" example:"10"`
+}
+
+// PlanResponse represents the response for single plan APIs
+type PlanResponse struct {
+	Status string       `json:"status" example:"ok"`
+	Msg    string       `json:"msg" example:""`
+	Data   object.Plan  `json:"data"`
+}
+
+
 // GetPlans
-// @Title GetPlans
-// @Tag Plan API
+// @Summary GetPlans
+// @Tags Plan API
 // @Description get plans
 // @Param   owner     query    string  true        "The owner of plans"
-// @Success 200 {array} object.Plan The Response object
-// @router /get-plans [get]
+// @Success 200 {array} object.Plan "The Response object"
+// @Router /get-plans [get]
 func (c *ApiController) GetPlans() {
 	owner := c.Ctx.Input.Query("owner")
 	limit := c.Ctx.Input.Query("pageSize")
@@ -66,13 +82,13 @@ func (c *ApiController) GetPlans() {
 }
 
 // GetPlan
-// @Title GetPlan
-// @Tag Plan API
+// @Summary GetPlan
+// @Tags Plan API
 // @Description get plan
 // @Param   id     query    string  true        "The id ( owner/name ) of the plan"
 // @Param   includeOption     query    bool  false        "Should include plan's option"
-// @Success 200 {object} object.Plan The Response object
-// @router /get-plan [get]
+// @Success 200 {object} object.Plan "The Response object"
+// @Router /get-plan [get]
 func (c *ApiController) GetPlan() {
 	id := c.Ctx.Input.Query("id")
 	includeOption := c.Ctx.Input.Query("includeOption") == "true"
@@ -99,13 +115,13 @@ func (c *ApiController) GetPlan() {
 }
 
 // UpdatePlan
-// @Title UpdatePlan
-// @Tag Plan API
+// @Summary UpdatePlan
+// @Tags Plan API
 // @Description update plan
 // @Param   id     query    string  true        "The id ( owner/name ) of the plan"
 // @Param   body    body   object.Plan  true        "The details of the plan"
-// @Success 200 {object} controllers.Response The Response object
-// @router /update-plan [post]
+// @Success 200 {object} ActionResponse "Action result"
+// @Router /update-plan [post]
 func (c *ApiController) UpdatePlan() {
 	id := c.Ctx.Input.Query("id")
 	owner := util.GetOwnerFromId(id)
@@ -139,12 +155,12 @@ func (c *ApiController) UpdatePlan() {
 }
 
 // AddPlan
-// @Title AddPlan
-// @Tag Plan API
+// @Summary AddPlan
+// @Tags Plan API
 // @Description add plan
 // @Param   body    body   object.Plan  true        "The details of the plan"
-// @Success 200 {object} controllers.Response The Response object
-// @router /add-plan [post]
+// @Success 200 {object} ActionResponse "Action result"
+// @Router /add-plan [post]
 func (c *ApiController) AddPlan() {
 	var plan object.Plan
 	err := json.Unmarshal(c.Ctx.Input.RequestBody, &plan)
@@ -165,12 +181,12 @@ func (c *ApiController) AddPlan() {
 }
 
 // DeletePlan
-// @Title DeletePlan
-// @Tag Plan API
+// @Summary DeletePlan
+// @Tags Plan API
 // @Description delete plan
 // @Param   body    body   object.Plan  true        "The details of the plan"
-// @Success 200 {object} controllers.Response The Response object
-// @router /delete-plan [post]
+// @Success 200 {object} ActionResponse "Action result"
+// @Router /delete-plan [post]
 func (c *ApiController) DeletePlan() {
 	var plan object.Plan
 	err := json.Unmarshal(c.Ctx.Input.RequestBody, &plan)

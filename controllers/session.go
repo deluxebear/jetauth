@@ -24,13 +24,29 @@ import (
 	"github.com/deluxebear/casdoor/util"
 )
 
+// SessionListResponse represents the response for session list APIs
+type SessionListResponse struct {
+	Status string        `json:"status" example:"ok"`
+	Msg    string        `json:"msg" example:""`
+	Data   []object.Session `json:"data"`
+	Data2  int           `json:"data2" example:"10"`
+}
+
+// SessionResponse represents the response for single session APIs
+type SessionResponse struct {
+	Status string       `json:"status" example:"ok"`
+	Msg    string       `json:"msg" example:""`
+	Data   object.Session  `json:"data"`
+}
+
+
 // GetSessions
-// @Title GetSessions
-// @Tag Session API
+// @Summary GetSessions
+// @Tags Session API
 // @Description Get organization user sessions.
 // @Param   owner     query    string  true        "The organization name"
-// @Success 200 {array} string The Response object
-// @router /get-sessions [get]
+// @Success 200 {array} string "The Response object"
+// @Router /get-sessions [get]
 func (c *ApiController) GetSessions() {
 	limit := c.Ctx.Input.Query("pageSize")
 	page := c.Ctx.Input.Query("p")
@@ -67,12 +83,12 @@ func (c *ApiController) GetSessions() {
 }
 
 // GetSingleSession
-// @Title GetSingleSession
-// @Tag Session API
+// @Summary GetSingleSession
+// @Tags Session API
 // @Description Get session for one user in one application.
 // @Param   sessionPkId     query    string  true        "The session ID in format: organization/user/application (e.g., built-in/admin/app-built-in)"
-// @Success 200 {array} string The Response object
-// @router /get-session [get]
+// @Success 200 {array} string "The Response object"
+// @Router /get-session [get]
 func (c *ApiController) GetSingleSession() {
 	id := c.Ctx.Input.Query("sessionPkId")
 
@@ -86,12 +102,12 @@ func (c *ApiController) GetSingleSession() {
 }
 
 // UpdateSession
-// @Title UpdateSession
-// @Tag Session API
+// @Summary UpdateSession
+// @Tags Session API
 // @Description Update session for one user in one application.
 // @Param   body     body    object.Session  true        "The session object to update"
-// @Success 200 {object} controllers.Response The Response object
-// @router /update-session [post]
+// @Success 200 {object} ActionResponse "Action result"
+// @Router /update-session [post]
 func (c *ApiController) UpdateSession() {
 	var session object.Session
 	err := json.Unmarshal(c.Ctx.Input.RequestBody, &session)
@@ -108,12 +124,12 @@ func (c *ApiController) UpdateSession() {
 }
 
 // AddSession
-// @Title AddSession
-// @Tag Session API
+// @Summary AddSession
+// @Tags Session API
 // @Description Add session for one user in one application. If there are other existing sessions, join the session into the list.
 // @Param   body     body    object.Session  true        "The session object to add"
-// @Success 200 {object} controllers.Response The Response object
-// @router /add-session [post]
+// @Success 200 {object} ActionResponse "Action result"
+// @Router /add-session [post]
 func (c *ApiController) AddSession() {
 	var session object.Session
 	err := json.Unmarshal(c.Ctx.Input.RequestBody, &session)
@@ -127,12 +143,12 @@ func (c *ApiController) AddSession() {
 }
 
 // DeleteSession
-// @Title DeleteSession
-// @Tag Session API
+// @Summary DeleteSession
+// @Tags Session API
 // @Description Delete session for one user in one application.
 // @Param   body     body    object.Session  true        "The session object to delete"
-// @Success 200 {object} controllers.Response The Response object
-// @router /delete-session [post]
+// @Success 200 {object} ActionResponse "Action result"
+// @Router /delete-session [post]
 func (c *ApiController) DeleteSession() {
 	var session object.Session
 	err := json.Unmarshal(c.Ctx.Input.RequestBody, &session)
@@ -160,13 +176,13 @@ func (c *ApiController) DeleteSession() {
 }
 
 // IsSessionDuplicated
-// @Title IsSessionDuplicated
-// @Tag Session API
+// @Summary IsSessionDuplicated
+// @Tags Session API
 // @Description Check if there are other different sessions for one user in one application.
 // @Param   sessionPkId     query    string  true        "The session ID in format: organization/user/application (e.g., built-in/admin/app-built-in)"
 // @Param   sessionId     query    string  true        "The specific session ID to check"
-// @Success 200 {array} string The Response object
-// @router /is-session-duplicated [get]
+// @Success 200 {array} string "The Response object"
+// @Router /is-session-duplicated [get]
 func (c *ApiController) IsSessionDuplicated() {
 	id := c.Ctx.Input.Query("sessionPkId")
 	sessionId := c.Ctx.Input.Query("sessionId")

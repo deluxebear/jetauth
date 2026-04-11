@@ -24,11 +24,11 @@ import (
 	"github.com/deluxebear/casdoor/util"
 )
 
-// @Title AddOtlpTrace
-// @Tag OTLP API
+// @Summary AddOtlpTrace
+// @Tags OTLP API
 // @Description receive otlp trace protobuf
 // @Success 200 {object} string
-// @router /api/v1/traces [post]
+// @Router /api/v1/traces [post]
 func (c *ApiController) AddOtlpTrace() {
 	body := readProtobufBody(c.Ctx)
 	if body == nil {
@@ -65,11 +65,11 @@ func (c *ApiController) AddOtlpTrace() {
 	c.Ctx.Output.Body(resp)
 }
 
-// @Title AddOtlpMetrics
-// @Tag OTLP API
+// @Summary AddOtlpMetrics
+// @Tags OTLP API
 // @Description receive otlp metrics protobuf
 // @Success 200 {object} string
-// @router /api/v1/metrics [post]
+// @Router /api/v1/metrics [post]
 func (c *ApiController) AddOtlpMetrics() {
 	body := readProtobufBody(c.Ctx)
 	if body == nil {
@@ -106,11 +106,11 @@ func (c *ApiController) AddOtlpMetrics() {
 	c.Ctx.Output.Body(resp)
 }
 
-// @Title AddOtlpLogs
-// @Tag OTLP API
+// @Summary AddOtlpLogs
+// @Tags OTLP API
 // @Description receive otlp logs protobuf
 // @Success 200 {object} string
-// @router /api/v1/logs [post]
+// @Router /api/v1/logs [post]
 func (c *ApiController) AddOtlpLogs() {
 	body := readProtobufBody(c.Ctx)
 	if body == nil {

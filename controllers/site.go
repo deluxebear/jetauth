@@ -22,12 +22,28 @@ import (
 	"github.com/deluxebear/casdoor/util"
 )
 
+// SiteListResponse represents the response for site list APIs
+type SiteListResponse struct {
+	Status string        `json:"status" example:"ok"`
+	Msg    string        `json:"msg" example:""`
+	Data   []object.Site `json:"data"`
+	Data2  int           `json:"data2" example:"10"`
+}
+
+// SiteResponse represents the response for single site APIs
+type SiteResponse struct {
+	Status string       `json:"status" example:"ok"`
+	Msg    string       `json:"msg" example:""`
+	Data   object.Site  `json:"data"`
+}
+
+
 // GetGlobalSites
-// @Title GetGlobalSites
-// @Tag Site API
+// @Summary GetGlobalSites
+// @Tags Site API
 // @Description get global sites
-// @Success 200 {array} object.Site The Response object
-// @router /get-global-sites [get]
+// @Success 200 {array} object.Site "The Response object"
+// @Router /get-global-sites [get]
 func (c *ApiController) GetGlobalSites() {
 	sites, err := object.GetGlobalSites()
 	if err != nil {
@@ -39,12 +55,12 @@ func (c *ApiController) GetGlobalSites() {
 }
 
 // GetSites
-// @Title GetSites
-// @Tag Site API
+// @Summary GetSites
+// @Tags Site API
 // @Description get sites
 // @Param   owner     query    string  true        "The owner of sites"
-// @Success 200 {array} object.Site The Response object
-// @router /get-sites [get]
+// @Success 200 {array} object.Site "The Response object"
+// @Router /get-sites [get]
 func (c *ApiController) GetSites() {
 	owner := c.Ctx.Input.Query("owner")
 	if owner == "admin" {
@@ -86,12 +102,12 @@ func (c *ApiController) GetSites() {
 }
 
 // GetSite
-// @Title GetSite
-// @Tag Site API
+// @Summary GetSite
+// @Tags Site API
 // @Description get site
 // @Param   id     query    string  true        "The id ( owner/name ) of the site"
-// @Success 200 {object} object.Site The Response object
-// @router /get-site [get]
+// @Success 200 {object} object.Site "The Response object"
+// @Router /get-site [get]
 func (c *ApiController) GetSite() {
 	id := c.Ctx.Input.Query("id")
 
@@ -105,13 +121,13 @@ func (c *ApiController) GetSite() {
 }
 
 // UpdateSite
-// @Title UpdateSite
-// @Tag Site API
+// @Summary UpdateSite
+// @Tags Site API
 // @Description update site
 // @Param   id     query    string  true        "The id ( owner/name ) of the site"
 // @Param   body    body   object.Site  true        "The details of the site"
-// @Success 200 {object} controllers.Response The Response object
-// @router /update-site [post]
+// @Success 200 {object} ActionResponse "Action result"
+// @Router /update-site [post]
 func (c *ApiController) UpdateSite() {
 	id := c.Ctx.Input.Query("id")
 
@@ -129,12 +145,12 @@ func (c *ApiController) UpdateSite() {
 }
 
 // AddSite
-// @Title AddSite
-// @Tag Site API
+// @Summary AddSite
+// @Tags Site API
 // @Description add site
 // @Param   body    body   object.Site  true        "The details of the site"
-// @Success 200 {object} controllers.Response The Response object
-// @router /add-site [post]
+// @Success 200 {object} ActionResponse "Action result"
+// @Router /add-site [post]
 func (c *ApiController) AddSite() {
 	var site object.Site
 	err := json.Unmarshal(c.Ctx.Input.RequestBody, &site)
@@ -148,12 +164,12 @@ func (c *ApiController) AddSite() {
 }
 
 // DeleteSite
-// @Title DeleteSite
-// @Tag Site API
+// @Summary DeleteSite
+// @Tags Site API
 // @Description delete site
 // @Param   body    body   object.Site  true        "The details of the site"
-// @Success 200 {object} controllers.Response The Response object
-// @router /delete-site [post]
+// @Success 200 {object} ActionResponse "Action result"
+// @Router /delete-site [post]
 func (c *ApiController) DeleteSite() {
 	var site object.Site
 	err := json.Unmarshal(c.Ctx.Input.RequestBody, &site)

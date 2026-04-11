@@ -21,15 +21,29 @@ import (
 	"github.com/deluxebear/casdoor/util"
 )
 
+// MfaPropsResponse represents the response for MFA setup initiation
+type MfaPropsResponse struct {
+	Status string          `json:"status" example:"ok"`
+	Msg    string          `json:"msg" example:""`
+	Data   object.MfaProps `json:"data"`
+}
+
+// MfaPropsListResponse represents the response containing a list of MFA properties
+type MfaPropsListResponse struct {
+	Status string            `json:"status" example:"ok"`
+	Msg    string            `json:"msg" example:""`
+	Data   []object.MfaProps `json:"data"`
+}
+
 // MfaSetupInitiate
-// @Title MfaSetupInitiate
-// @Tag MFA API
+// @Summary MfaSetupInitiate
+// @Tags MFA API
 // @Description setup MFA
-// @param owner	form	string	true	"owner of user"
-// @param name	form	string	true	"name of user"
-// @param type	form	string	true	"MFA auth type"
-// @Success 200 {object} controllers.Response The Response object
-// @router /mfa/setup/initiate [post]
+// @Param owner	formData	string	true	"owner of user"
+// @Param name	formData	string	true	"name of user"
+// @Param type	formData	string	true	"MFA auth type"
+// @Success 200 {object} controllers.MfaPropsResponse "The Response object"
+// @Router /mfa/setup/initiate [post]
 func (c *ApiController) MfaSetupInitiate() {
 	owner := c.Ctx.Request.Form.Get("owner")
 	name := c.Ctx.Request.Form.Get("name")
@@ -85,13 +99,13 @@ func (c *ApiController) MfaSetupInitiate() {
 }
 
 // MfaSetupVerify
-// @Title MfaSetupVerify
-// @Tag MFA API
+// @Summary MfaSetupVerify
+// @Tags MFA API
 // @Description setup verify totp
-// @param	secret		form	string	true	"MFA secret"
-// @param	passcode	form 	string 	true	"MFA passcode"
-// @Success 200 {object} controllers.Response The Response object
-// @router /mfa/setup/verify [post]
+// @Param	secret		formData	string	true	"MFA secret"
+// @Param	passcode	formData 	string 	true	"MFA passcode"
+// @Success 200 {object} controllers.ActionResponse "The Response object"
+// @Router /mfa/setup/verify [post]
 func (c *ApiController) MfaSetupVerify() {
 	mfaType := c.Ctx.Request.Form.Get("mfaType")
 	passcode := c.Ctx.Request.Form.Get("passcode")
@@ -169,14 +183,14 @@ func (c *ApiController) MfaSetupVerify() {
 }
 
 // MfaSetupEnable
-// @Title MfaSetupEnable
-// @Tag MFA API
+// @Summary MfaSetupEnable
+// @Tags MFA API
 // @Description enable totp
-// @param owner	form	string	true	"owner of user"
-// @param name	form	string	true	"name of user"
-// @param type	form	string	true	"MFA auth type"
-// @Success 200 {object} controllers.Response The Response object
-// @router /mfa/setup/enable [post]
+// @Param owner	formData	string	true	"owner of user"
+// @Param name	formData	string	true	"name of user"
+// @Param type	formData	string	true	"MFA auth type"
+// @Success 200 {object} controllers.ActionResponse "The Response object"
+// @Router /mfa/setup/enable [post]
 func (c *ApiController) MfaSetupEnable() {
 	owner := c.Ctx.Request.Form.Get("owner")
 	name := c.Ctx.Request.Form.Get("name")
@@ -274,13 +288,13 @@ func (c *ApiController) MfaSetupEnable() {
 }
 
 // DeleteMfa
-// @Title DeleteMfa
-// @Tag MFA API
+// @Summary DeleteMfa
+// @Tags MFA API
 // @Description: Delete MFA
-// @param owner	form	string	true	"owner of user"
-// @param name	form	string	true	"name of user"
-// @Success 200 {object} controllers.Response The Response object
-// @router /delete-mfa/ [post]
+// @Param owner	formData	string	true	"owner of user"
+// @Param name	formData	string	true	"name of user"
+// @Success 200 {object} controllers.MfaPropsListResponse "The Response object"
+// @Router /delete-mfa/ [post]
 func (c *ApiController) DeleteMfa() {
 	owner := c.Ctx.Request.Form.Get("owner")
 	name := c.Ctx.Request.Form.Get("name")
@@ -306,14 +320,14 @@ func (c *ApiController) DeleteMfa() {
 }
 
 // SetPreferredMfa
-// @Title SetPreferredMfa
-// @Tag MFA API
+// @Summary SetPreferredMfa
+// @Tags MFA API
 // @Description: Set specific Mfa Preferred
-// @param owner	form	string	true	"owner of user"
-// @param name	form	string	true	"name of user"
-// @param id	form	string	true	"id of user's MFA props"
-// @Success 200 {object} controllers.Response The Response object
-// @router /set-preferred-mfa [post]
+// @Param owner	formData	string	true	"owner of user"
+// @Param name	formData	string	true	"name of user"
+// @Param id	formData	string	true	"id of user's MFA props"
+// @Success 200 {object} controllers.MfaPropsListResponse "The Response object"
+// @Router /set-preferred-mfa [post]
 func (c *ApiController) SetPreferredMfa() {
 	mfaType := c.Ctx.Request.Form.Get("mfaType")
 	owner := c.Ctx.Request.Form.Get("owner")

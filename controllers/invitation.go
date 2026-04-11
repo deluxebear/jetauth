@@ -24,13 +24,29 @@ import (
 	"github.com/deluxebear/casdoor/util"
 )
 
+// InvitationListResponse represents the response for invitation list APIs
+type InvitationListResponse struct {
+	Status string        `json:"status" example:"ok"`
+	Msg    string        `json:"msg" example:""`
+	Data   []object.Invitation `json:"data"`
+	Data2  int           `json:"data2" example:"10"`
+}
+
+// InvitationResponse represents the response for single invitation APIs
+type InvitationResponse struct {
+	Status string       `json:"status" example:"ok"`
+	Msg    string       `json:"msg" example:""`
+	Data   object.Invitation  `json:"data"`
+}
+
+
 // GetInvitations
-// @Title GetInvitations
-// @Tag Invitation API
+// @Summary GetInvitations
+// @Tags Invitation API
 // @Description get invitations
 // @Param   owner     query    string  true        "The owner of invitations"
-// @Success 200 {array} object.Invitation The Response object
-// @router /get-invitations [get]
+// @Success 200 {array} object.Invitation "The Response object"
+// @Router /get-invitations [get]
 func (c *ApiController) GetInvitations() {
 	owner := c.Ctx.Input.Query("owner")
 	limit := c.Ctx.Input.Query("pageSize")
@@ -68,12 +84,12 @@ func (c *ApiController) GetInvitations() {
 }
 
 // GetInvitation
-// @Title GetInvitation
-// @Tag Invitation API
+// @Summary GetInvitation
+// @Tags Invitation API
 // @Description get invitation
 // @Param   id     query    string  true        "The id ( owner/name ) of the invitation"
-// @Success 200 {object} object.Invitation The Response object
-// @router /get-invitation [get]
+// @Success 200 {object} object.Invitation "The Response object"
+// @Router /get-invitation [get]
 func (c *ApiController) GetInvitation() {
 	id := c.Ctx.Input.Query("id")
 
@@ -87,12 +103,12 @@ func (c *ApiController) GetInvitation() {
 }
 
 // GetInvitationCodeInfo
-// @Title GetInvitationCodeInfo
-// @Tag Invitation API
+// @Summary GetInvitationCodeInfo
+// @Tags Invitation API
 // @Description get invitation code information
 // @Param   code     query    string  true        "Invitation code"
-// @Success 200 {object} object.Invitation The Response object
-// @router /get-invitation-info [get]
+// @Success 200 {object} object.Invitation "The Response object"
+// @Router /get-invitation-info [get]
 func (c *ApiController) GetInvitationCodeInfo() {
 	code := c.Ctx.Input.Query("code")
 	applicationId := c.Ctx.Input.Query("applicationId")
@@ -117,13 +133,13 @@ func (c *ApiController) GetInvitationCodeInfo() {
 }
 
 // UpdateInvitation
-// @Title UpdateInvitation
-// @Tag Invitation API
+// @Summary UpdateInvitation
+// @Tags Invitation API
 // @Description update invitation
 // @Param   id     query    string  true        "The id ( owner/name ) of the invitation"
 // @Param   body    body   object.Invitation  true        "The details of the invitation"
-// @Success 200 {object} controllers.Response The Response object
-// @router /update-invitation [post]
+// @Success 200 {object} ActionResponse "Action result"
+// @Router /update-invitation [post]
 func (c *ApiController) UpdateInvitation() {
 	id := c.Ctx.Input.Query("id")
 
@@ -141,12 +157,12 @@ func (c *ApiController) UpdateInvitation() {
 }
 
 // AddInvitation
-// @Title AddInvitation
-// @Tag Invitation API
+// @Summary AddInvitation
+// @Tags Invitation API
 // @Description add invitation
 // @Param   body    body   object.Invitation  true        "The details of the invitation"
-// @Success 200 {object} controllers.Response The Response object
-// @router /add-invitation [post]
+// @Success 200 {object} ActionResponse "Action result"
+// @Router /add-invitation [post]
 func (c *ApiController) AddInvitation() {
 	var invitation object.Invitation
 	err := json.Unmarshal(c.Ctx.Input.RequestBody, &invitation)
@@ -160,12 +176,12 @@ func (c *ApiController) AddInvitation() {
 }
 
 // DeleteInvitation
-// @Title DeleteInvitation
-// @Tag Invitation API
+// @Summary DeleteInvitation
+// @Tags Invitation API
 // @Description delete invitation
 // @Param   body    body   object.Invitation  true        "The details of the invitation"
-// @Success 200 {object} controllers.Response The Response object
-// @router /delete-invitation [post]
+// @Success 200 {object} ActionResponse "Action result"
+// @Router /delete-invitation [post]
 func (c *ApiController) DeleteInvitation() {
 	var invitation object.Invitation
 	err := json.Unmarshal(c.Ctx.Input.RequestBody, &invitation)
@@ -179,12 +195,12 @@ func (c *ApiController) DeleteInvitation() {
 }
 
 // VerifyInvitation
-// @Title VerifyInvitation
-// @Tag Invitation API
+// @Summary VerifyInvitation
+// @Tags Invitation API
 // @Description verify invitation
 // @Param   id     query    string  true        "The id ( owner/name ) of the invitation"
-// @Success 200 {object} controllers.Response The Response object
-// @router /verify-invitation [get]
+// @Success 200 {object} ActionResponse "Action result"
+// @Router /verify-invitation [get]
 func (c *ApiController) VerifyInvitation() {
 	id := c.Ctx.Input.Query("id")
 
@@ -198,13 +214,13 @@ func (c *ApiController) VerifyInvitation() {
 }
 
 // SendInvitation
-// @Title VerifyInvitation
-// @Tag Invitation API
+// @Summary VerifyInvitation
+// @Tags Invitation API
 // @Description verify invitation
 // @Param   id     query    string	true        "The id ( owner/name ) of the invitation"
 // @Param   body    body	[]string  true        "The details of the invitation"
-// @Success 200 {object} controllers.Response The Response object
-// @router /send-invitation [post]
+// @Success 200 {object} ActionResponse "Action result"
+// @Router /send-invitation [post]
 func (c *ApiController) SendInvitation() {
 	id := c.Ctx.Input.Query("id")
 

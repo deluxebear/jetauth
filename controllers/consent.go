@@ -21,12 +21,12 @@ import (
 )
 
 // RevokeConsent revokes a consent record
-// @Title RevokeConsent
-// @Tag Consent API
+// @Summary RevokeConsent
+// @Tags Consent API
 // @Description revoke a consent record
 // @Param body body object.ConsentRecord true "The consent object"
-// @Success 200 {object} controllers.Response The Response object
-// @router /revoke-consent [post]
+// @Success 200 {object} BoolResponse "The Response object"
+// @Router /revoke-consent [post]
 func (c *ApiController) RevokeConsent() {
 	userId := c.GetSessionUsername()
 	if userId == "" {
@@ -98,12 +98,12 @@ func (c *ApiController) RevokeConsent() {
 }
 
 // GrantConsent grants consent for an OAuth application and returns authorization code
-// @Title GrantConsent
-// @Tag Consent API
+// @Summary GrantConsent
+// @Tags Consent API
 // @Description grant consent for an OAuth application and get authorization code
 // @Param body body object.ConsentRecord true "The consent object with OAuth parameters"
-// @Success 200 {object} controllers.Response The Response object
-// @router /grant-consent [post]
+// @Success 200 {object} ActionResponse "Authorization code"
+// @Router /grant-consent [post]
 func (c *ApiController) GrantConsent() {
 	userId := c.GetSessionUsername()
 	if userId == "" {

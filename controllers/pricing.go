@@ -22,13 +22,29 @@ import (
 	"github.com/deluxebear/casdoor/util"
 )
 
+// PricingListResponse represents the response for pricing list APIs
+type PricingListResponse struct {
+	Status string        `json:"status" example:"ok"`
+	Msg    string        `json:"msg" example:""`
+	Data   []object.Pricing `json:"data"`
+	Data2  int           `json:"data2" example:"10"`
+}
+
+// PricingResponse represents the response for single pricing APIs
+type PricingResponse struct {
+	Status string       `json:"status" example:"ok"`
+	Msg    string       `json:"msg" example:""`
+	Data   object.Pricing  `json:"data"`
+}
+
+
 // GetPricings
-// @Title GetPricings
-// @Tag Pricing API
+// @Summary GetPricings
+// @Tags Pricing API
 // @Description get pricings
 // @Param   owner     query    string  true        "The owner of pricings"
-// @Success 200 {array} object.Pricing The Response object
-// @router /get-pricings [get]
+// @Success 200 {array} object.Pricing "The Response object"
+// @Router /get-pricings [get]
 func (c *ApiController) GetPricings() {
 	owner := c.Ctx.Input.Query("owner")
 	limit := c.Ctx.Input.Query("pageSize")
@@ -66,12 +82,12 @@ func (c *ApiController) GetPricings() {
 }
 
 // GetPricing
-// @Title GetPricing
-// @Tag Pricing API
+// @Summary GetPricing
+// @Tags Pricing API
 // @Description get pricing
 // @Param   id     query    string  true        "The id ( owner/name ) of the pricing"
-// @Success 200 {object} object.Pricing The Response object
-// @router /get-pricing [get]
+// @Success 200 {object} object.Pricing "The Response object"
+// @Router /get-pricing [get]
 func (c *ApiController) GetPricing() {
 	id := c.Ctx.Input.Query("id")
 
@@ -85,13 +101,13 @@ func (c *ApiController) GetPricing() {
 }
 
 // UpdatePricing
-// @Title UpdatePricing
-// @Tag Pricing API
+// @Summary UpdatePricing
+// @Tags Pricing API
 // @Description update pricing
 // @Param   id     query    string  true        "The id ( owner/name ) of the pricing"
 // @Param   body    body   object.Pricing  true        "The details of the pricing"
-// @Success 200 {object} controllers.Response The Response object
-// @router /update-pricing [post]
+// @Success 200 {object} ActionResponse "Action result"
+// @Router /update-pricing [post]
 func (c *ApiController) UpdatePricing() {
 	id := c.Ctx.Input.Query("id")
 
@@ -109,12 +125,12 @@ func (c *ApiController) UpdatePricing() {
 }
 
 // AddPricing
-// @Title AddPricing
-// @Tag Pricing API
+// @Summary AddPricing
+// @Tags Pricing API
 // @Description add pricing
 // @Param   body    body   object.Pricing  true        "The details of the pricing"
-// @Success 200 {object} controllers.Response The Response object
-// @router /add-pricing [post]
+// @Success 200 {object} ActionResponse "Action result"
+// @Router /add-pricing [post]
 func (c *ApiController) AddPricing() {
 	var pricing object.Pricing
 	err := json.Unmarshal(c.Ctx.Input.RequestBody, &pricing)
@@ -128,12 +144,12 @@ func (c *ApiController) AddPricing() {
 }
 
 // DeletePricing
-// @Title DeletePricing
-// @Tag Pricing API
+// @Summary DeletePricing
+// @Tags Pricing API
 // @Description delete pricing
 // @Param   body    body   object.Pricing  true        "The details of the pricing"
-// @Success 200 {object} controllers.Response The Response object
-// @router /delete-pricing [post]
+// @Success 200 {object} ActionResponse "Action result"
+// @Router /delete-pricing [post]
 func (c *ApiController) DeletePricing() {
 	var pricing object.Pricing
 	err := json.Unmarshal(c.Ctx.Input.RequestBody, &pricing)

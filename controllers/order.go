@@ -22,13 +22,29 @@ import (
 	"github.com/deluxebear/casdoor/util"
 )
 
+// OrderListResponse represents the response for order list APIs
+type OrderListResponse struct {
+	Status string        `json:"status" example:"ok"`
+	Msg    string        `json:"msg" example:""`
+	Data   []object.Order `json:"data"`
+	Data2  int           `json:"data2" example:"10"`
+}
+
+// OrderResponse represents the response for single order APIs
+type OrderResponse struct {
+	Status string       `json:"status" example:"ok"`
+	Msg    string       `json:"msg" example:""`
+	Data   object.Order  `json:"data"`
+}
+
+
 // GetOrders
-// @Title GetOrders
-// @Tag Order API
+// @Summary GetOrders
+// @Tags Order API
 // @Description get orders
 // @Param   owner     query    string  true        "The owner of orders"
-// @Success 200 {array} object.Order The Response object
-// @router /get-orders [get]
+// @Success 200 {array} object.Order "The Response object"
+// @Router /get-orders [get]
 func (c *ApiController) GetOrders() {
 	owner := c.Ctx.Input.Query("owner")
 	limit := c.Ctx.Input.Query("pageSize")
@@ -95,13 +111,13 @@ func (c *ApiController) GetOrders() {
 }
 
 // GetUserOrders
-// @Title GetUserOrders
-// @Tag Order API
+// @Summary GetUserOrders
+// @Tags Order API
 // @Description get orders for a user
 // @Param   owner     query    string  true        "The owner of orders"
 // @Param   user    query   string  true           "The username of the user"
-// @Success 200 {array} object.Order The Response object
-// @router /get-user-orders [get]
+// @Success 200 {array} object.Order "The Response object"
+// @Router /get-user-orders [get]
 func (c *ApiController) GetUserOrders() {
 	owner := c.Ctx.Input.Query("owner")
 	user := c.Ctx.Input.Query("user")
@@ -116,12 +132,12 @@ func (c *ApiController) GetUserOrders() {
 }
 
 // GetOrder
-// @Title GetOrder
-// @Tag Order API
+// @Summary GetOrder
+// @Tags Order API
 // @Description get order
 // @Param   id     query    string  true        "The id ( owner/name ) of the order"
-// @Success 200 {object} object.Order The Response object
-// @router /get-order [get]
+// @Success 200 {object} object.Order "The Response object"
+// @Router /get-order [get]
 func (c *ApiController) GetOrder() {
 	id := c.Ctx.Input.Query("id")
 
@@ -135,13 +151,13 @@ func (c *ApiController) GetOrder() {
 }
 
 // UpdateOrder
-// @Title UpdateOrder
-// @Tag Order API
+// @Summary UpdateOrder
+// @Tags Order API
 // @Description update order
 // @Param   id     query    string  true        "The id ( owner/name ) of the order"
 // @Param   body    body   object.Order  true        "The details of the order"
-// @Success 200 {object} controllers.Response The Response object
-// @router /update-order [post]
+// @Success 200 {object} ActionResponse "Action result"
+// @Router /update-order [post]
 func (c *ApiController) UpdateOrder() {
 	id := c.Ctx.Input.Query("id")
 
@@ -159,12 +175,12 @@ func (c *ApiController) UpdateOrder() {
 }
 
 // AddOrder
-// @Title AddOrder
-// @Tag Order API
+// @Summary AddOrder
+// @Tags Order API
 // @Description add order
 // @Param   body    body   object.Order  true        "The details of the order"
-// @Success 200 {object} controllers.Response The Response object
-// @router /add-order [post]
+// @Success 200 {object} ActionResponse "Action result"
+// @Router /add-order [post]
 func (c *ApiController) AddOrder() {
 	var order object.Order
 	err := json.Unmarshal(c.Ctx.Input.RequestBody, &order)
@@ -178,12 +194,12 @@ func (c *ApiController) AddOrder() {
 }
 
 // DeleteOrder
-// @Title DeleteOrder
-// @Tag Order API
+// @Summary DeleteOrder
+// @Tags Order API
 // @Description delete order
 // @Param   body    body   object.Order  true        "The details of the order"
-// @Success 200 {object} controllers.Response The Response object
-// @router /delete-order [post]
+// @Success 200 {object} ActionResponse "Action result"
+// @Router /delete-order [post]
 func (c *ApiController) DeleteOrder() {
 	var order object.Order
 	err := json.Unmarshal(c.Ctx.Input.RequestBody, &order)

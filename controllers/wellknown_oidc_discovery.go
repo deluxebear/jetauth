@@ -21,11 +21,11 @@ import (
 )
 
 // GetOidcDiscovery
-// @Title GetOidcDiscovery
-// @Tag OIDC API
+// @Summary GetOidcDiscovery
+// @Tags OIDC API
 // @Description Get Oidc Discovery
 // @Success 200 {object} object.OidcDiscovery
-// @router /.well-known/openid-configuration [get]
+// @Router /.well-known/openid-configuration [get]
 func (c *RootController) GetOidcDiscovery() {
 	host := c.Ctx.Request.Host
 	c.Data["json"] = object.GetOidcDiscovery(host, "")
@@ -33,12 +33,12 @@ func (c *RootController) GetOidcDiscovery() {
 }
 
 // GetOidcDiscoveryByApplication
-// @Title GetOidcDiscoveryByApplication
-// @Tag OIDC API
+// @Summary GetOidcDiscoveryByApplication
+// @Tags OIDC API
 // @Description Get Oidc Discovery for specific application
 // @Param application path string true "application name"
 // @Success 200 {object} object.OidcDiscovery
-// @router /.well-known/:application/openid-configuration [get]
+// @Router /.well-known/:application/openid-configuration [get]
 func (c *RootController) GetOidcDiscoveryByApplication() {
 	application := c.Ctx.Input.Param(":application")
 	host := c.Ctx.Request.Host
@@ -47,10 +47,10 @@ func (c *RootController) GetOidcDiscoveryByApplication() {
 }
 
 // GetJwks
-// @Title GetJwks
-// @Tag OIDC API
-// @Success 200 {object} jose.JSONWebKey
-// @router /.well-known/jwks [get]
+// @Summary GetJwks
+// @Tags OIDC API
+// @Success 200 {object} controllers.Response
+// @Router /.well-known/jwks [get]
 func (c *RootController) GetJwks() {
 	jwks, err := object.GetJsonWebKeySet("")
 	if err != nil {
@@ -62,11 +62,11 @@ func (c *RootController) GetJwks() {
 }
 
 // GetJwksByApplication
-// @Title GetJwksByApplication
-// @Tag OIDC API
+// @Summary GetJwksByApplication
+// @Tags OIDC API
 // @Param application path string true "application name"
-// @Success 200 {object} jose.JSONWebKey
-// @router /.well-known/:application/jwks [get]
+// @Success 200 {object} controllers.Response
+// @Router /.well-known/:application/jwks [get]
 func (c *RootController) GetJwksByApplication() {
 	application := c.Ctx.Input.Param(":application")
 	jwks, err := object.GetJsonWebKeySet(application)
@@ -79,11 +79,11 @@ func (c *RootController) GetJwksByApplication() {
 }
 
 // GetWebFinger
-// @Title GetWebFinger
-// @Tag OIDC API
+// @Summary GetWebFinger
+// @Tags OIDC API
 // @Param resource query string true "resource"
 // @Success 200 {object} object.WebFinger
-// @router /.well-known/webfinger [get]
+// @Router /.well-known/webfinger [get]
 func (c *RootController) GetWebFinger() {
 	resource := c.Ctx.Input.Query("resource")
 	rels := []string{}
@@ -108,12 +108,12 @@ func (c *RootController) GetWebFinger() {
 }
 
 // GetWebFingerByApplication
-// @Title GetWebFingerByApplication
-// @Tag OIDC API
+// @Summary GetWebFingerByApplication
+// @Tags OIDC API
 // @Param application path string true "application name"
 // @Param resource query string true "resource"
 // @Success 200 {object} object.WebFinger
-// @router /.well-known/:application/webfinger [get]
+// @Router /.well-known/:application/webfinger [get]
 func (c *RootController) GetWebFingerByApplication() {
 	application := c.Ctx.Input.Param(":application")
 	resource := c.Ctx.Input.Query("resource")
@@ -139,11 +139,11 @@ func (c *RootController) GetWebFingerByApplication() {
 }
 
 // GetOAuthServerMetadata
-// @Title GetOAuthServerMetadata
-// @Tag OAuth API
+// @Summary GetOAuthServerMetadata
+// @Tags OAuth API
 // @Description Get OAuth 2.0 Authorization Server Metadata (RFC 8414)
 // @Success 200 {object} object.OidcDiscovery
-// @router /.well-known/oauth-authorization-server [get]
+// @Router /.well-known/oauth-authorization-server [get]
 func (c *RootController) GetOAuthServerMetadata() {
 	host := c.Ctx.Request.Host
 	c.Data["json"] = object.GetOidcDiscovery(host, "")
@@ -151,12 +151,12 @@ func (c *RootController) GetOAuthServerMetadata() {
 }
 
 // GetOAuthServerMetadataByApplication
-// @Title GetOAuthServerMetadataByApplication
-// @Tag OAuth API
+// @Summary GetOAuthServerMetadataByApplication
+// @Tags OAuth API
 // @Description Get OAuth 2.0 Authorization Server Metadata for specific application (RFC 8414)
 // @Param application path string true "application name"
 // @Success 200 {object} object.OidcDiscovery
-// @router /.well-known/:application/oauth-authorization-server [get]
+// @Router /.well-known/:application/oauth-authorization-server [get]
 func (c *RootController) GetOAuthServerMetadataByApplication() {
 	application := c.Ctx.Input.Param(":application")
 	host := c.Ctx.Request.Host

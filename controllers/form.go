@@ -22,12 +22,28 @@ import (
 	"github.com/deluxebear/casdoor/util"
 )
 
+// FormListResponse represents the response for form list APIs
+type FormListResponse struct {
+	Status string        `json:"status" example:"ok"`
+	Msg    string        `json:"msg" example:""`
+	Data   []object.Form `json:"data"`
+	Data2  int           `json:"data2" example:"10"`
+}
+
+// FormResponse represents the response for single form APIs
+type FormResponse struct {
+	Status string       `json:"status" example:"ok"`
+	Msg    string       `json:"msg" example:""`
+	Data   object.Form  `json:"data"`
+}
+
+
 // GetGlobalForms
-// @Title GetGlobalForms
-// @Tag Form API
+// @Summary GetGlobalForms
+// @Tags Form API
 // @Description get global forms
-// @Success 200 {array} object.Form The Response object
-// @router /get-global-forms [get]
+// @Success 200 {array} object.Form "The Response object"
+// @Router /get-global-forms [get]
 func (c *ApiController) GetGlobalForms() {
 	forms, err := object.GetGlobalForms()
 	if err != nil {
@@ -39,12 +55,12 @@ func (c *ApiController) GetGlobalForms() {
 }
 
 // GetForms
-// @Title GetForms
-// @Tag Form API
+// @Summary GetForms
+// @Tags Form API
 // @Description get forms
 // @Param owner query string true "The owner of form"
-// @Success 200 {array} object.Form The Response object
-// @router /get-forms [get]
+// @Success 200 {array} object.Form "The Response object"
+// @Router /get-forms [get]
 func (c *ApiController) GetForms() {
 	owner := c.Ctx.Input.Query("owner")
 	limit := c.Ctx.Input.Query("pageSize")
@@ -81,12 +97,12 @@ func (c *ApiController) GetForms() {
 }
 
 // GetForm
-// @Title GetForm
-// @Tag Form API
+// @Summary GetForm
+// @Tags Form API
 // @Description get form
 // @Param id query string true "The id (owner/name) of form"
-// @Success 200 {object} object.Form The Response object
-// @router /get-form [get]
+// @Success 200 {object} object.Form "The Response object"
+// @Router /get-form [get]
 func (c *ApiController) GetForm() {
 	id := c.Ctx.Input.Query("id")
 
@@ -100,13 +116,13 @@ func (c *ApiController) GetForm() {
 }
 
 // UpdateForm
-// @Title UpdateForm
-// @Tag Form API
+// @Summary UpdateForm
+// @Tags Form API
 // @Description update form
 // @Param id query string true "The id (owner/name) of the form"
 // @Param body body object.Form true "The details of the form"
-// @Success 200 {object} controllers.Response The Response object
-// @router /update-form [post]
+// @Success 200 {object} ActionResponse "Action result"
+// @Router /update-form [post]
 func (c *ApiController) UpdateForm() {
 	id := c.Ctx.Input.Query("id")
 
@@ -129,12 +145,12 @@ func (c *ApiController) UpdateForm() {
 }
 
 // AddForm
-// @Title AddForm
-// @Tag Form API
+// @Summary AddForm
+// @Tags Form API
 // @Description add form
 // @Param body body object.Form true "The details of the form"
-// @Success 200 {object} controllers.Response The Response object
-// @router /add-form [post]
+// @Success 200 {object} ActionResponse "Action result"
+// @Router /add-form [post]
 func (c *ApiController) AddForm() {
 	var form object.Form
 	err := json.Unmarshal(c.Ctx.Input.RequestBody, &form)
@@ -153,12 +169,12 @@ func (c *ApiController) AddForm() {
 }
 
 // DeleteForm
-// @Title DeleteForm
-// @Tag Form API
+// @Summary DeleteForm
+// @Tags Form API
 // @Description delete form
 // @Param body body object.Form true "The details of the form"
-// @Success 200 {object} controllers.Response The Response object
-// @router /delete-form [post]
+// @Success 200 {object} ActionResponse "Action result"
+// @Router /delete-form [post]
 func (c *ApiController) DeleteForm() {
 	var form object.Form
 	err := json.Unmarshal(c.Ctx.Input.RequestBody, &form)
