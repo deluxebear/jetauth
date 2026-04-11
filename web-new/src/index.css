@@ -1,0 +1,119 @@
+@import "tailwindcss";
+
+/* ── Light theme (default) ── */
+:root,
+[data-theme="light"] {
+  --surface-0: #ffffff;
+  --surface-1: #f8f9fb;
+  --surface-2: #f0f2f5;
+  --surface-3: #e4e7ed;
+  --surface-4: #d1d5de;
+  --border: #dfe2ea;
+  --border-subtle: #eceef2;
+  --text-primary: #111827;
+  --text-secondary: #4b5563;
+  --text-muted: #9ca3af;
+  --accent: #0891b2;
+  --accent-hover: #0e7490;
+  --accent-subtle: rgba(8, 145, 178, 0.08);
+  --success: #059669;
+  --warning: #d97706;
+  --danger: #e11d48;
+  --info: #2563eb;
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-elevated: 0 8px 30px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.04);
+  --shadow-glow: 0 0 20px rgba(8, 145, 178, 0.08);
+  --dot-grid-color: rgba(0, 0, 0, 0.06);
+  --glass-bg: rgba(255, 255, 255, 0.8);
+}
+
+/* ── Dark theme ── */
+[data-theme="dark"] {
+  --surface-0: #08090d;
+  --surface-1: #0f1117;
+  --surface-2: #161923;
+  --surface-3: #1e2231;
+  --surface-4: #272d3f;
+  --border: #2a3040;
+  --border-subtle: #1e2231;
+  --text-primary: #e8eaf0;
+  --text-secondary: #8b93a8;
+  --text-muted: #555d73;
+  --accent: #06b6d4;
+  --accent-hover: #22d3ee;
+  --accent-subtle: rgba(6, 182, 212, 0.12);
+  --success: #34d399;
+  --warning: #f59e0b;
+  --danger: #f43f5e;
+  --info: #60a5fa;
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.4), 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-elevated: 0 8px 30px rgba(0, 0, 0, 0.5), 0 2px 8px rgba(0, 0, 0, 0.3);
+  --shadow-glow: 0 0 20px rgba(6, 182, 212, 0.15);
+  --dot-grid-color: var(--surface-4);
+  --glass-bg: rgba(15, 17, 23, 0.7);
+}
+
+/* ── Tailwind theme tokens ── */
+@theme {
+  --color-surface-0: var(--surface-0);
+  --color-surface-1: var(--surface-1);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
+  --color-surface-4: var(--surface-4);
+  --color-border: var(--border);
+  --color-border-subtle: var(--border-subtle);
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-muted: var(--text-muted);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-subtle: var(--accent-subtle);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-danger: var(--danger);
+  --color-info: var(--info);
+  --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+}
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--surface-4); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+
+/* ── Base ── */
+html {
+  background: var(--surface-0);
+  color: var(--text-primary);
+  -webkit-font-smoothing: antialiased;
+  transition: background-color 0.25s ease, color 0.25s ease;
+}
+body { margin: 0; min-height: 100vh; }
+
+.bg-dot-grid {
+  background-image: radial-gradient(circle, var(--dot-grid-color) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+.glass {
+  background: var(--glass-bg);
+  backdrop-filter: blur(16px);
+  border: 1px solid var(--border);
+}
+
+*:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Ensure all buttons show pointer cursor */
+button:not(:disabled) {
+  cursor: pointer;
+}
+
+/* Prevent accidental text selection on page headers and nav elements */
+h1, h2, h3, nav, [data-no-select] {
+  -webkit-user-select: none;
+  user-select: none;
+}
