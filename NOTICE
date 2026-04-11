@@ -1,0 +1,12 @@
+JetAuth
+Copyright 2025 JetAuth Contributors
+
+This product is based on Casdoor (https://github.com/casdoor/casdoor),
+originally developed by the Casdoor Authors, licensed under the Apache License 2.0.
+
+Major modifications from the original Casdoor project:
+- Rebranded as JetAuth - Unified Auth for the AI Era
+- Go module path changed to github.com/deluxebear/casdoor
+- New frontend (web-new) built with React, Vite, and Tailwind CSS
+- Enhanced multi-organization access control
+- Security fix: prevent owner field tampering in entity update APIs
