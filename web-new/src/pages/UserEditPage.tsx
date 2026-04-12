@@ -142,6 +142,9 @@ export default function UserEditPage() {
     return true;
   };
 
+  /** Check if at least one field in the list is visible — used to hide empty sections */
+  const anySectionFieldVisible = (...names: string[]) => names.some(isFieldVisible);
+
   const isFieldDisabled = (name: string): boolean => {
     const item = getAccountItem(name);
     if (!item) return false;
@@ -512,6 +515,7 @@ export default function UserEditPage() {
   // Tab 3: Security & Finance
   const securityTab = (
     <div className="space-y-5">
+      {anySectionFieldVisible("Password", "IP whitelist") && (
       <FormSection title={t("users.section.security" as any)}>
         {dynField("Password", undefined, <div className="flex gap-2 items-center">
             <div className="relative flex-1">
@@ -530,7 +534,9 @@ export default function UserEditPage() {
           </div>)}
         {dynField("IP whitelist", undefined, <input value={user.ipWhitelist ?? ""} onChange={(e) => set("ipWhitelist", e.target.value)} disabled={isFieldDisabled("IP whitelist")} className={inputClass} placeholder="192.168.1.1, 10.0.0.0/8" />)}
       </FormSection>
+      )}
 
+      {anySectionFieldVisible("3rd-party logins") && (
       <FormSection title={t("users.section.thirdPartyLogins" as any)}>
         {dynField("3rd-party logins", "full",
           <div className="flex flex-wrap gap-1.5">
@@ -542,7 +548,9 @@ export default function UserEditPage() {
           </div>
         )}
       </FormSection>
+      )}
 
+      {anySectionFieldVisible("Multi-factor authentication", "MFA accounts", "MFA items", "WebAuthn credentials", "Last change password time", "Managed accounts", "Face ID") && (
       <FormSection title={t("users.section.mfa" as any)}>
         {dynField("Multi-factor authentication", "full",
           ((user as any).multiFactorAuths ?? (user as any).mfaProps ?? []).length > 0 ? (
@@ -596,6 +604,7 @@ export default function UserEditPage() {
           />
         )}
       </FormSection>
+      )}
 
     </div>
   );
@@ -603,36 +612,43 @@ export default function UserEditPage() {
   // Tab 4: Finance
   const financeTab = (
     <div className="space-y-5">
-      <FormSection title={t("users.section.finance" as any)}>
-        {dynField("Balance", undefined, <input type="number" value={user.balance ?? 0} onChange={(e) => set("balance", Number(e.target.value))} disabled={isFieldDisabled("Balance")} className={monoInputClass} />)}
-        {dynField("Balance credit", undefined, <input type="number" value={user.balanceCredit ?? 0} onChange={(e) => set("balanceCredit", Number(e.target.value))} disabled={isFieldDisabled("Balance credit")} className={monoInputClass} />)}
-        {dynField("Balance currency", undefined, <select value={user.balanceCurrency ?? "USD"} onChange={(e) => set("balanceCurrency", e.target.value)} disabled={isFieldDisabled("Balance currency")} className={inputClass}>
-            {CURRENCIES.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
-          </select>)}
-      </FormSection>
+      {anySectionFieldVisible("Balance", "Balance credit", "Balance currency") && (
+        <FormSection title={t("users.section.finance" as any)}>
+          {dynField("Balance", undefined, <input type="number" value={user.balance ?? 0} onChange={(e) => set("balance", Number(e.target.value))} disabled={isFieldDisabled("Balance")} className={monoInputClass} />)}
+          {dynField("Balance credit", undefined, <input type="number" value={user.balanceCredit ?? 0} onChange={(e) => set("balanceCredit", Number(e.target.value))} disabled={isFieldDisabled("Balance credit")} className={monoInputClass} />)}
+          {dynField("Balance currency", undefined, <select value={user.balanceCurrency ?? "CNY"} onChange={(e) => set("balanceCurrency", e.target.value)} disabled={isFieldDisabled("Balance currency")} className={inputClass}>
+              {CURRENCIES.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
+            </select>)}
+        </FormSection>
+      )}
 
-      <FormSection title={t("users.section.cart" as any)}>
-        {dynField("Cart", "full",
-          <SimpleTable data={(user as any).cart ?? []} columns={["name", "price", "quantity", "currency"]} emptyText={t("common.noData")} />
-        )}
-        {dynField("Transactions", "full",
-          <SimpleTable data={(user as any).transactions ?? []} columns={["name", "amount", "currency", "createdTime"]} emptyText={t("common.noData")} />
-        )}
-      </FormSection>
+      {anySectionFieldVisible("Cart", "Transactions") && (
+        <FormSection title={t("users.section.cart" as any)}>
+          {dynField("Cart", "full",
+            <SimpleTable data={(user as any).cart ?? []} columns={["name", "price", "quantity", "currency"]} emptyText={t("common.noData")} />
+          )}
+          {dynField("Transactions", "full",
+            <SimpleTable data={(user as any).transactions ?? []} columns={["name", "amount", "currency", "createdTime"]} emptyText={t("common.noData")} />
+          )}
+        </FormSection>
+      )}
 
-      <FormSection title={t("users.section.registration" as any)}>
-        {dynField("Score", undefined, <input type="number" value={user.score ?? 0} onChange={(e) => set("score", Number(e.target.value))} disabled={isFieldDisabled("Score")} className={monoInputClass} />)}
-        {dynField("Karma", undefined, <input type="number" value={user.karma ?? 0} onChange={(e) => set("karma", Number(e.target.value))} disabled={isFieldDisabled("Karma")} className={monoInputClass} />)}
-        {dynField("Ranking", undefined, <input type="number" value={user.ranking ?? 0} onChange={(e) => set("ranking", Number(e.target.value))} disabled={isFieldDisabled("Ranking")} className={monoInputClass} />)}
-        {dynField("Register type", undefined, <input value={user.registerType ?? ""} disabled className={inputClass} />)}
-        {dynField("Register source", undefined, <input value={user.registerSource ?? ""} disabled className={inputClass} />)}
-      </FormSection>
+      {anySectionFieldVisible("Score", "Karma", "Ranking", "Register type", "Register source") && (
+        <FormSection title={t("users.section.registration" as any)}>
+          {dynField("Score", undefined, <input type="number" value={user.score ?? 0} onChange={(e) => set("score", Number(e.target.value))} disabled={isFieldDisabled("Score")} className={monoInputClass} />)}
+          {dynField("Karma", undefined, <input type="number" value={user.karma ?? 0} onChange={(e) => set("karma", Number(e.target.value))} disabled={isFieldDisabled("Karma")} className={monoInputClass} />)}
+          {dynField("Ranking", undefined, <input type="number" value={user.ranking ?? 0} onChange={(e) => set("ranking", Number(e.target.value))} disabled={isFieldDisabled("Ranking")} className={monoInputClass} />)}
+          {dynField("Register type", undefined, <input value={user.registerType ?? ""} disabled className={inputClass} />)}
+          {dynField("Register source", undefined, <input value={user.registerSource ?? ""} disabled className={inputClass} />)}
+        </FormSection>
+      )}
     </div>
   );
 
   // Tab 5: Administration
   const adminTab = (
     <div className="space-y-5">
+      {anySectionFieldVisible("Is admin", "Is forbidden", "Is deleted", "Need update password", "Is online") && (
       <FormSection title={t("users.section.admin" as any)}>
         {dynField("Is admin", undefined, <Switch checked={!!user.isAdmin} onChange={(v) => set("isAdmin", v)} disabled={isFieldDisabled("Is admin")} />)}
         {dynField("Is forbidden", undefined, <Switch checked={!!user.isForbidden} onChange={(v) => set("isForbidden", v)} disabled={isFieldDisabled("Is forbidden")} />)}
@@ -643,7 +659,9 @@ export default function UserEditPage() {
         <FormField label={t("field.createdTime")}><input value={user.createdTime ?? ""} disabled className={monoInputClass} /></FormField>
         <FormField label={t("users.field.updatedTime" as any)}><input value={String((user as any).updatedTime ?? "")} disabled className={monoInputClass} /></FormField>
       </FormSection>
+      )}
 
+      {anySectionFieldVisible("Roles", "Permissions") && (
       <FormSection title={t("users.section.roles" as any)}>
         {dynField("Roles", "full",
           <div className="flex flex-wrap gap-1.5">
@@ -660,13 +678,17 @@ export default function UserEditPage() {
           </div>
         )}
       </FormSection>
+      )}
 
+      {anySectionFieldVisible("Consents") && (
       <FormSection title={t("users.section.consents" as any)}>
         {dynField("Consents", "full",
           <SimpleTable data={(user as any).consents ?? []} columns={["application", "grantedScopes"]} emptyText={t("common.noData")} />
         )}
       </FormSection>
+      )}
 
+      {anySectionFieldVisible("Properties") && (
       <FormSection title={t("users.section.properties" as any)}>
         {dynField("Properties", "full",
           user.properties && Object.keys(user.properties).length > 0 ? (
@@ -691,6 +713,7 @@ export default function UserEditPage() {
           ) : <span className="text-[12px] text-text-muted">—</span>
         )}
       </FormSection>
+      )}
     </div>
   );
 

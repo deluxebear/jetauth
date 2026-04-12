@@ -217,6 +217,6 @@ export function newUser(orgName: string): Partial<User> {
     properties: {},
     signupApplication: "",
     registerType: "Add User",
-    balanceCurrency: "USD",
+    balanceCurrency: "CNY",
   };
 }

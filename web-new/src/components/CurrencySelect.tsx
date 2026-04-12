@@ -28,8 +28,8 @@ export default function CurrencySelect({ value, onChange, disabled }: {
   onChange: (v: string) => void;
   disabled?: boolean;
 }) {
-  const locale = localStorage.getItem("locale") ?? "en";
-  const isZh = locale.startsWith("zh");
+  const locale = localStorage.getItem("locale") ?? navigator.language ?? "en";
+  const isZh = locale.toLowerCase().startsWith("zh");
 
   return (
     <select

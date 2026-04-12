@@ -131,7 +131,7 @@ export function newOrganization(randomName: string): Organization {
     enableTour: true,
     disableSignin: false,
     mfaRememberInHours: 12,
-    balanceCurrency: "USD",
+    balanceCurrency: "CNY",
     orgBalance: 0,
     userBalance: 0,
     balanceCredit: 0,

@@ -1,1 +1,0 @@
-import{s as e}from"./index-Df2sgF5S.js";export{e as uploadResource};

@@ -312,7 +312,7 @@ export default function OrganizationEditPage() {
                 <FormField label={t("field.displayName")}>
                   <input value={org.displayName ?? ""} onChange={(e) => set("displayName", e.target.value)} disabled={!canEditField("displayName")} className={inputClass} />
                 </FormField>
-                <FormField label={t("orgs.field.enableDarkLogo" as any)}>
+                <FormField label={t("orgs.field.enableDarkLogo" as any)} help={t("orgs.help.enableDarkLogo" as any)}>
                   <Switch checked={!!org.enableDarkLogo} onChange={(v) => set("enableDarkLogo", v)} disabled={!canEditField("logoDark")} />
                 </FormField>
                 <div />
@@ -330,7 +330,7 @@ export default function OrganizationEditPage() {
                 <FormField label={t("orgs.field.websiteUrl" as any)}>
                   <input value={org.websiteUrl ?? ""} onChange={(e) => set("websiteUrl", e.target.value)} disabled={!canEditField("websiteUrl")} className={inputClass} placeholder="https://example.com" />
                 </FormField>
-                <FormField label={t("orgs.field.defaultAvatar" as any)} span="full">
+                <FormField label={t("orgs.field.defaultAvatar" as any)} help={t("orgs.help.defaultAvatar" as any)} span="full">
                   <ImageUrlInput value={org.defaultAvatar ?? ""} onChange={(v) => set("defaultAvatar", v)} owner={org.name ?? ""} tag="org-avatar" outputWidth={200} outputHeight={200} previewClass="h-12 w-12 rounded-full border border-border object-cover bg-surface-2" disabled={!canEditField("defaultAvatar")} />
                 </FormField>
                 {isBuiltIn && (
@@ -343,7 +343,7 @@ export default function OrganizationEditPage() {
               </FormSection>
 
               <FormSection title={t("orgs.section.defaults" as any)}>
-                <FormField label={t("orgs.field.defaultApplication" as any)}>
+                <FormField label={t("orgs.field.defaultApplication" as any)} help={t("orgs.help.defaultApplication" as any)}>
                   <div className={!canEditField("defaultApplication") ? "pointer-events-none opacity-60" : ""}>
                     <SearchableSelect
                       value={org.defaultApplication ?? ""}
@@ -353,7 +353,7 @@ export default function OrganizationEditPage() {
                     />
                   </div>
                 </FormField>
-                <FormField label={t("orgs.field.initScore" as any)}>
+                <FormField label={t("orgs.field.initScore" as any)} help={t("orgs.help.initScore" as any)}>
                   <input type="number" value={org.initScore ?? 0} onChange={(e) => set("initScore", Number(e.target.value))} disabled={!canEditField("initScore")} className={monoInputClass} />
                 </FormField>
                 <FormField label={t("orgs.field.userTypes" as any)} span="full">
@@ -379,22 +379,22 @@ export default function OrganizationEditPage() {
               </FormSection>
 
               <FormSection title={t("orgs.section.features" as any)}>
-                <FormField label={t("orgs.field.enableSoftDeletion" as any)}>
+                <FormField label={t("orgs.field.enableSoftDeletion" as any)} help={t("orgs.help.enableSoftDeletion" as any)}>
                   <Switch checked={!!org.enableSoftDeletion} onChange={(v) => set("enableSoftDeletion", v)} disabled={!canEditField("enableSoftDeletion")} />
                 </FormField>
-                <FormField label={t("orgs.field.isProfilePublic" as any)}>
+                <FormField label={t("orgs.field.isProfilePublic" as any)} help={t("orgs.help.isProfilePublic" as any)}>
                   <Switch checked={!!org.isProfilePublic} onChange={(v) => set("isProfilePublic", v)} disabled={!canEditField("isProfilePublic")} />
                 </FormField>
-                <FormField label={t("orgs.field.useEmailAsUsername" as any)}>
+                <FormField label={t("orgs.field.useEmailAsUsername" as any)} help={t("orgs.help.useEmailAsUsername" as any)}>
                   <Switch checked={!!org.useEmailAsUsername} onChange={(v) => set("useEmailAsUsername", v)} disabled={!canEditField("useEmailAsUsername")} />
                 </FormField>
-                <FormField label={t("orgs.field.enableTour" as any)}>
+                <FormField label={t("orgs.field.enableTour" as any)} help={t("orgs.help.enableTour" as any)}>
                   <Switch checked={!!org.enableTour} onChange={(v) => set("enableTour", v)} disabled={!canEditField("enableTour")} />
                 </FormField>
-                <FormField label={t("orgs.field.disableSignin" as any)}>
+                <FormField label={t("orgs.field.disableSignin" as any)} help={t("orgs.help.disableSignin" as any)}>
                   <Switch checked={!!org.disableSignin} onChange={(v) => set("disableSignin", v)} disabled={!canEditField("disableSignin")} />
                 </FormField>
-                <FormField label={t("orgs.field.usePermanentAvatar" as any)}>
+                <FormField label={t("orgs.field.usePermanentAvatar" as any)} help={t("orgs.help.usePermanentAvatar" as any)}>
                   <Switch checked={!!org.usePermanentAvatar} onChange={(v) => set("usePermanentAvatar", v)} disabled={!canEditField("usePermanentAvatar")} />
                 </FormField>
               </FormSection>
@@ -408,15 +408,15 @@ export default function OrganizationEditPage() {
           content: (
             <div className="space-y-5">
               <FormSection title={t("orgs.section.password" as any)}>
-                <FormField label={t("orgs.field.passwordType" as any)}>
+                <FormField label={t("orgs.field.passwordType" as any)} help={t("orgs.help.passwordType" as any)}>
                   <select value={org.passwordType ?? "bcrypt"} onChange={(e) => set("passwordType", e.target.value)} disabled={!canEditField("passwordType")} className={inputClass}>
                     {PASSWORD_TYPES.map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}
                   </select>
                 </FormField>
-                <FormField label={t("orgs.field.passwordSalt" as any)}>
+                <FormField label={t("orgs.field.passwordSalt" as any)} help={t("orgs.help.passwordSalt" as any)}>
                   <input value={org.passwordSalt ?? ""} onChange={(e) => set("passwordSalt", e.target.value)} disabled={!canEditField("passwordSalt")} className={monoInputClass} />
                 </FormField>
-                <FormField label={t("orgs.field.passwordOptions" as any)} span="full">
+                <FormField label={t("orgs.field.passwordOptions" as any)} help={t("orgs.help.passwordOptions" as any)} span="full">
                   <div className={!canEditField("passwordOptions") ? "pointer-events-none opacity-60" : ""}>
                     <MultiSelectDropdown
                       selected={org.passwordOptions ?? []}
@@ -426,7 +426,7 @@ export default function OrganizationEditPage() {
                     />
                   </div>
                 </FormField>
-                <FormField label={t("orgs.field.passwordObfuscatorType" as any)}>
+                <FormField label={t("orgs.field.passwordObfuscatorType" as any)} help={t("orgs.help.passwordObfuscatorType" as any)}>
                   <select value={(org as any).passwordObfuscatorType ?? "Plain"} onChange={(e) => {
                     const v = e.target.value;
                     set("passwordObfuscatorType", v);
@@ -460,13 +460,13 @@ export default function OrganizationEditPage() {
                 <FormField label={t("orgs.field.passwordExpireDays" as any)} help={t("orgs.field.passwordExpireDays.help" as any)}>
                   <input type="number" value={org.passwordExpireDays ?? 0} onChange={(e) => set("passwordExpireDays", Number(e.target.value))} min={0} disabled={!canEditField("passwordExpireDays")} className={monoInputClass} />
                 </FormField>
-                <FormField label={t("orgs.field.masterPassword" as any)}>
+                <FormField label={t("orgs.field.masterPassword" as any)} help={t("orgs.help.masterPassword" as any)}>
                   <input value={org.masterPassword ?? ""} onChange={(e) => set("masterPassword", e.target.value)} type="password" disabled={!canEditField("masterPassword")} className={inputClass} placeholder={org.masterPassword === "***" ? "***" : ""} />
                 </FormField>
-                <FormField label={t("orgs.field.defaultPassword" as any)}>
+                <FormField label={t("orgs.field.defaultPassword" as any)} help={t("orgs.help.defaultPassword" as any)}>
                   <input value={org.defaultPassword ?? ""} onChange={(e) => set("defaultPassword", e.target.value)} type="password" disabled={!canEditField("defaultPassword")} className={inputClass} />
                 </FormField>
-                <FormField label={t("orgs.field.masterVerificationCode" as any)}>
+                <FormField label={t("orgs.field.masterVerificationCode" as any)} help={t("orgs.help.masterVerificationCode" as any)}>
                   <input value={(org as any).masterVerificationCode ?? ""} onChange={(e) => set("masterVerificationCode", e.target.value)} type="password" disabled={!canEditField("masterVerificationCode")} className={inputClass} placeholder={(org as any).masterVerificationCode === "***" ? "***" : ""} />
                 </FormField>
                 <FormField label={t("orgs.field.ipWhitelist" as any)}>
@@ -475,7 +475,7 @@ export default function OrganizationEditPage() {
               </FormSection>
 
               <FormSection title={t("orgs.section.mfa" as any)}>
-                <FormField label={t("orgs.field.mfaRemember" as any)}>
+                <FormField label={t("orgs.field.mfaRemember" as any)} help={t("orgs.help.mfaRememberInHours" as any)}>
                   <input type="number" value={org.mfaRememberInHours ?? 12} onChange={(e) => set("mfaRememberInHours", Number(e.target.value))} min={0} disabled={!canEditField("mfaRememberDuration")} className={monoInputClass} />
                 </FormField>
                 <div />
@@ -553,7 +553,7 @@ export default function OrganizationEditPage() {
           icon: <Wallet size={14} />,
           content: (
             <FormSection title={t("orgs.section.finance" as any)}>
-              <FormField label={t("orgs.field.balanceCurrency" as any)}>
+              <FormField label={t("orgs.field.balanceCurrency" as any)} help={t("orgs.help.balanceCurrency" as any)}>
                 <CurrencySelect value={org.balanceCurrency ?? "USD"} onChange={(v) => set("balanceCurrency", v)} disabled={!canEditField("balanceCurrency")} />
               </FormField>
               <FormField label={t("orgs.field.orgBalance" as any)}>
@@ -592,16 +592,16 @@ export default function OrganizationEditPage() {
 
               <div className={!isGA ? "pointer-events-none opacity-60" : ""}>
               <FormSection title={t("orgs.section.kerberos" as any)}>
-                <FormField label={t("orgs.field.kerberosRealm" as any)}>
+                <FormField label={t("orgs.field.kerberosRealm" as any)} help={t("orgs.help.kerberosRealm" as any)}>
                   <input value={(org as any).kerberosRealm ?? ""} onChange={(e) => set("kerberosRealm", e.target.value)} className={inputClass} />
                 </FormField>
-                <FormField label={t("orgs.field.kerberosKdcHost" as any)}>
+                <FormField label={t("orgs.field.kerberosKdcHost" as any)} help={t("orgs.help.kerberosKdcHost" as any)}>
                   <input value={(org as any).kerberosKdcHost ?? ""} onChange={(e) => set("kerberosKdcHost", e.target.value)} className={inputClass} />
                 </FormField>
-                <FormField label={t("orgs.field.kerberosServiceName" as any)}>
+                <FormField label={t("orgs.field.kerberosServiceName" as any)} help={t("orgs.help.kerberosServiceName" as any)}>
                   <input value={(org as any).kerberosServiceName ?? ""} onChange={(e) => set("kerberosServiceName", e.target.value)} className={inputClass} placeholder="HTTP" />
                 </FormField>
-                <FormField label={t("orgs.field.kerberosKeytab" as any)} span="full">
+                <FormField label={t("orgs.field.kerberosKeytab" as any)} help={t("orgs.help.kerberosKeytab" as any)} span="full">
                   <textarea value={(org as any).kerberosKeytab ?? ""} onChange={(e) => set("kerberosKeytab", e.target.value)} rows={4} className={`${monoInputClass} text-[11px]`} />
                 </FormField>
               </FormSection>
@@ -1164,7 +1164,7 @@ function LdapServersTable({ ldaps, orgName, onUpdate, t, modal }: {
                 <th className="px-4 py-2 text-[11px] font-semibold uppercase tracking-wider text-text-muted">{t("orgs.ldap.baseDn" as any)}</th>
                 <th className="px-4 py-2 text-[11px] font-semibold uppercase tracking-wider text-text-muted">{t("orgs.ldap.autoSync" as any)}</th>
                 <th className="px-4 py-2 text-[11px] font-semibold uppercase tracking-wider text-text-muted">{t("orgs.ldap.lastSync" as any)}</th>
-                <th className="px-4 py-2 text-[11px] font-semibold uppercase tracking-wider text-text-muted w-40">{t("common.action" as any)}</th>
+                <th className="px-4 py-2 text-[11px] font-semibold uppercase tracking-wider text-text-muted w-52">{t("common.action" as any)}</th>
               </tr>
             </thead>
             <tbody>
@@ -1185,11 +1185,11 @@ function LdapServersTable({ ldaps, orgName, onUpdate, t, modal }: {
                   <td className="px-4 py-2">
                     <div className="flex items-center gap-1.5">
                       <Link to={`/ldap/sync/${ldap.owner}/${ldap.id}`}
-                        className="flex items-center gap-1 rounded-lg bg-accent px-2.5 py-1 text-[11px] font-medium text-white hover:bg-accent-hover transition-colors">
+                        className="flex items-center gap-1 rounded-lg bg-accent px-3 py-1.5 text-[11px] font-medium text-white hover:bg-accent-hover transition-colors whitespace-nowrap">
                         <RefreshCw size={11} /> {t("common.sync" as any)}
                       </Link>
                       <Link to={`/ldap/${ldap.owner}/${ldap.id}`}
-                        className="flex items-center gap-1 rounded-lg border border-border px-2.5 py-1 text-[11px] font-medium text-text-secondary hover:bg-surface-2 transition-colors">
+                        className="flex items-center gap-1 rounded-lg border border-border px-3 py-1.5 text-[11px] font-medium text-text-secondary hover:bg-surface-2 transition-colors whitespace-nowrap">
                         <Pencil size={11} /> {t("common.edit")}
                       </Link>
                       <button onClick={() => handleDelete(idx)}
