@@ -50,7 +50,7 @@ export default function GroupEditPage() {
       if (groupRes.status === "ok" && groupRes.data) {
         setGroup(groupRes.data);
       } else {
-        modal.showError(groupRes.msg || "Failed to load group");
+        modal.showError(groupRes.msg || t("groups.error.loadFailed" as any));
         navigate("/groups");
         return;
       }
@@ -81,7 +81,7 @@ export default function GroupEditPage() {
         setGroupUsers(users);
         setUserTotal(total);
       }
-    } catch (e) { console.error(e); }
+    } catch (e: any) { modal.toast(e?.message || t("common.saveFailed" as any), "error"); }
     finally { setUserLoading(false); }
   }, [owner, name, userPage]);
 
@@ -148,11 +148,11 @@ export default function GroupEditPage() {
 
   const handleDelete = async () => {
     if (group.haveChildren) {
-      modal.showError("Cannot delete: this group has sub-groups");
+      modal.showError(t("groups.error.hasSubGroups" as any));
       return;
     }
     if ((group.users ?? []).length > 0) {
-      modal.showError("Cannot delete: this group has users");
+      modal.showError(t("groups.error.hasUsers" as any));
       return;
     }
     modal.showConfirm(`${t("common.confirmDelete")} [${group.displayName || group.name}]`, async () => {
@@ -164,8 +164,8 @@ export default function GroupEditPage() {
       } else {
         modal.showError(res.msg || "Failed to delete");
       }
-    } catch (e) {
-      console.error(e);
+    } catch (e: any) {
+      modal.toast(e?.message || t("common.saveFailed" as any), "error");
     }
     });
   };

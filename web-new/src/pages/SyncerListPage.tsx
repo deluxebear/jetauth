@@ -60,7 +60,7 @@ export default function SyncerListPage() {
     },
     {
       key: "organization", title: t("col.organization" as any), sortable: true, filterable: true, width: "120px",
-      render: (_, r) => <Link to={`/organizations/${r.organization}`} className="text-accent hover:underline" onClick={(e) => e.stopPropagation()}>{r.organization}</Link>,
+      render: (_, r) => <Link to={`/organizations/admin/${r.organization}`} className="text-accent hover:underline" onClick={(e) => e.stopPropagation()}>{r.organization}</Link>,
     },
     {
       key: "createdTime", title: t("col.created" as any), sortable: true, width: "160px",

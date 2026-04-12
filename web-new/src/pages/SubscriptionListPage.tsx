@@ -80,7 +80,7 @@ export default function SubscriptionListPage() {
     },
     {
       key: "user", title: t("subscriptions.field.user" as any), filterable: true, width: "140px",
-      render: (_, r) => r.user ? <Link to={`/users/${r.user}`} className="text-accent hover:underline text-[12px]" onClick={(e) => e.stopPropagation()}>{r.user}</Link> : <span className="text-text-muted">{"\u2014"}</span>,
+      render: (_, r) => r.user ? <Link to={`/users/${r.owner}/${r.user}`} className="text-accent hover:underline text-[12px]" onClick={(e) => e.stopPropagation()}>{r.user}</Link> : <span className="text-text-muted">{"\u2014"}</span>,
     },
     {
       key: "state", title: t("col.state" as any), sortable: true, filterable: true, width: "120px",

@@ -50,7 +50,7 @@ export default function WebhookListPage() {
     },
     {
       key: "organization", title: t("col.organization" as any), sortable: true, filterable: true, width: "110px",
-      render: (_, r) => <Link to={`/organizations/${r.organization}`} className="text-accent hover:underline" onClick={(e) => e.stopPropagation()}>{r.organization}</Link>,
+      render: (_, r) => <Link to={`/organizations/admin/${r.organization}`} className="text-accent hover:underline" onClick={(e) => e.stopPropagation()}>{r.organization}</Link>,
     },
     {
       key: "createdTime", title: t("col.created" as any), sortable: true, width: "150px",

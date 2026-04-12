@@ -63,7 +63,7 @@ export default function TransactionListPage() {
     },
     {
       key: "application", title: t("transactions.field.application" as any), sortable: true, filterable: true, width: "150px",
-      render: (_, r) => r.application ? <Link to={`/applications/${r.owner}/${r.application}`} className="text-accent hover:underline text-[12px]" onClick={(e) => e.stopPropagation()}>{r.application}</Link> : <span className="text-text-muted">{"\u2014"}</span>,
+      render: (_, r) => r.application ? <Link to={`/applications/${r.organization}/${r.application}`} className="text-accent hover:underline text-[12px]" onClick={(e) => e.stopPropagation()}>{r.application}</Link> : <span className="text-text-muted">{"\u2014"}</span>,
     },
     {
       key: "domain", title: t("transactions.field.domain" as any), sortable: true, filterable: true, width: "200px",

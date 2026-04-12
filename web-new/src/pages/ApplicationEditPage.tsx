@@ -66,7 +66,7 @@ export default function ApplicationEditPage() {
         }
         setApp(application);
       }
-    } catch (e) { console.error(e); }
+    } catch (e: any) { modal.toast(e?.message || t("common.saveFailed" as any), "error"); }
     finally { setLoading(false); }
   }, [name, isNew]);
 
@@ -87,7 +87,7 @@ export default function ApplicationEditPage() {
       } else {
         modal.toast(friendlyError(res.msg, t) || t("common.saveFailed" as any), "error");
       }
-    } catch (e) { console.error(e); }
+    } catch (e: any) { modal.toast(e?.message || t("common.saveFailed" as any), "error"); }
     finally { setSaving(false); }
   };
 
@@ -121,9 +121,17 @@ export default function ApplicationEditPage() {
 
   const handleDelete = async () => {
     modal.showConfirm(t("common.confirmDelete"), async () => {
-      await AppBackend.deleteApplication(app as Application);
-      invalidateList();
-      navigate("/applications");
+      try {
+        const res = await AppBackend.deleteApplication(app as Application);
+        if (res.status === "ok") {
+          invalidateList();
+          navigate("/applications");
+        } else {
+          modal.toast(res.msg || t("common.deleteFailed" as any), "error");
+        }
+      } catch (e: any) {
+        modal.toast(e?.message || t("common.deleteFailed" as any), "error");
+      }
     });
   };
 

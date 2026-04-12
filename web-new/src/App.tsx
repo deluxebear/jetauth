@@ -90,7 +90,7 @@ import SystemInfoPage from "./pages/SystemInfoPage";
 import SwaggerPage from "./pages/SwaggerPage";
 import { entityConfigs } from "./pages/entities/entityConfigs";
 import { getAccount, login as apiLogin, logout as apiLogout } from "./api/client";
-import { isLocalAdmin } from "./utils/auth";
+import { isLocalAdmin, isGlobalAdmin } from "./utils/auth";
 
 interface User {
   owner: string;
@@ -397,8 +397,8 @@ export default function App() {
         <Route path="/trees/:organizationName" element={<GroupTreePage />} />
         <Route path="/ldap/sync/:owner/:id" element={<LdapSyncPage />} />
         <Route path="/ldap/:owner/:id" element={<LdapEditPage />} />
-        <Route path="/sysinfo" element={<SystemInfoPage />} />
-        <Route path="/swagger" element={<SwaggerPage />} />
+        <Route path="/sysinfo" element={isGlobalAdmin(user) ? <SystemInfoPage /> : <Navigate to="/" replace />} />
+        <Route path="/swagger" element={isGlobalAdmin(user) ? <SwaggerPage /> : <Navigate to="/" replace />} />
         <Route path="/login" element={<Navigate to="/" replace />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

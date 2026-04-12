@@ -57,7 +57,7 @@ export default function TokenListPage() {
     },
     {
       key: "organization", title: t("col.organization" as any), sortable: true, filterable: true, width: "120px",
-      render: (_, r) => <Link to={`/organizations/${r.organization}`} className="text-accent hover:underline" onClick={(e) => e.stopPropagation()}>{r.organization}</Link>,
+      render: (_, r) => <Link to={`/organizations/admin/${r.organization}`} className="text-accent hover:underline" onClick={(e) => e.stopPropagation()}>{r.organization}</Link>,
     },
     {
       key: "user", title: t("col.user" as any), sortable: true, filterable: true, width: "120px",

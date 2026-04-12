@@ -87,7 +87,7 @@ export default function OrganizationEditPage() {
       if (orgRes.status === "ok" && orgRes.data) {
         setOrg(orgRes.data as Organization);
       } else {
-        modal.showError(orgRes.msg || "Failed to load organization");
+        modal.showError(orgRes.msg || t("orgs.error.loadFailed" as any));
         navigate("/organizations");
       }
       if (appRes.status === "ok" && appRes.data) {
@@ -161,13 +161,13 @@ export default function OrganizationEditPage() {
   };
 
   const handleDelete = async () => {
-    if (isBuiltIn) { modal.showError("Cannot delete built-in organization"); return; }
+    if (isBuiltIn) { modal.showError(t("orgs.error.cannotDeleteBuiltin" as any)); return; }
     modal.showConfirm(`${t("common.confirmDelete")} [${org.displayName || org.name}]`, async () => {
       try {
         const res = await OrgBackend.deleteOrganization(org);
         if (res.status === "ok") { invalidateList(); notifyOrgChange(); navigate("/organizations"); }
         else { modal.showError(res.msg || "Failed to delete"); }
-      } catch (e) { console.error(e); }
+      } catch (e: any) { modal.toast(e?.message || t("common.saveFailed" as any), "error"); }
     });
   };
 

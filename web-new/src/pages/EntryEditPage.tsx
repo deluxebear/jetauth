@@ -157,7 +157,7 @@ export default function EntryEditPage() {
         </FormField>
         <FormField label={t("col.application" as any)}>
           {entry.application ? (
-            <Link to={`/applications/${entry.owner}/${entry.application}`} className="text-accent hover:underline text-[13px]">{entry.application}</Link>
+            <Link to={`/applications/${entry.organization}/${entry.application}`} className="text-accent hover:underline text-[13px]">{entry.application}</Link>
           ) : (
             <span className="text-[13px] text-text-muted">{t("common.none" as any)}</span>
           )}

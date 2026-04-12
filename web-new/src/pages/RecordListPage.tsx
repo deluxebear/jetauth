@@ -56,7 +56,7 @@ export default function RecordListPage() {
     {
       key: "organization", title: t("col.organization" as any), sortable: true, filterable: true, width: "110px",
       render: (_, r) => r.organization ? (
-        <Link to={`/organizations/${r.organization}`} className="text-accent hover:underline text-[12px]" onClick={(e) => e.stopPropagation()}>{r.organization}</Link>
+        <Link to={`/organizations/admin/${r.organization}`} className="text-accent hover:underline text-[12px]" onClick={(e) => e.stopPropagation()}>{r.organization}</Link>
       ) : <span className="text-text-muted">—</span>,
     },
     {

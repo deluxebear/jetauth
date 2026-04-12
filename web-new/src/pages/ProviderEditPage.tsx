@@ -51,7 +51,7 @@ export default function ProviderEditPage() {
     try {
       const res = await ProvBackend.getProvider(owner!, name!);
       if (res.status === "ok" && res.data) setProv(res.data);
-    } catch (e) { console.error(e); }
+    } catch (e: any) { modal.toast(e?.message || t("common.saveFailed" as any), "error"); }
     finally { setLoading(false); }
   }, [owner, name, isNew]);
 
@@ -70,11 +70,10 @@ export default function ProviderEditPage() {
         modal.toast(t("common.saveSuccess" as any));
         setIsAddMode(false);
         invalidateList();
-        navigate("/providers");
       } else {
         modal.toast(friendlyError(res.msg, t) || t("common.saveFailed" as any), "error");
       }
-    } catch (e) { console.error(e); }
+    } catch (e: any) { modal.toast(e?.message || t("common.saveFailed" as any), "error"); }
     finally { setSaving(false); }
   };
   const handleSaveAndExit = async () => {
@@ -105,9 +104,17 @@ export default function ProviderEditPage() {
 
   const handleDelete = async () => {
     modal.showConfirm(t("common.confirmDelete"), async () => {
-      await ProvBackend.deleteProvider(prov as Provider);
-      invalidateList();
-      navigate("/providers");
+      try {
+        const res = await ProvBackend.deleteProvider(prov as Provider);
+        if (res.status === "ok") {
+          invalidateList();
+          navigate("/providers");
+        } else {
+          modal.toast(res.msg || t("common.deleteFailed" as any), "error");
+        }
+      } catch (e: any) {
+        modal.toast(e?.message || t("common.deleteFailed" as any), "error");
+      }
     });
   };
 

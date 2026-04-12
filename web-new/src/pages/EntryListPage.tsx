@@ -45,7 +45,7 @@ export default function EntryListPage() {
   const columns: Column<Entry>[] = [
     {
       key: "owner", title: t("col.organization" as any), sortable: true, filterable: true, width: "130px",
-      render: (_, r) => <Link to={`/organizations/${r.owner}`} className="text-accent hover:underline text-[12px]" onClick={(e) => e.stopPropagation()}>{r.owner}</Link>,
+      render: (_, r) => <Link to={`/organizations/admin/${r.owner}`} className="text-accent hover:underline text-[12px]" onClick={(e) => e.stopPropagation()}>{r.owner}</Link>,
     },
     {
       key: "name", title: t("col.name" as any), sortable: true, filterable: true, fixed: "left" as const, width: "160px",

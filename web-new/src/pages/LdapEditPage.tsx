@@ -38,7 +38,7 @@ export default function LdapEditPage() {
       if (ldapRes.status === "ok" && ldapRes.data) {
         setLdap(ldapRes.data);
       } else {
-        modal.showError(ldapRes.msg || "Failed to load LDAP");
+        modal.showError(ldapRes.msg || t("ldap.error.loadFailed" as any));
         navigate(-1);
       }
       if (groupRes.status === "ok" && groupRes.data) {

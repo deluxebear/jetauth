@@ -58,7 +58,7 @@ export default function PricingListPage() {
     { key: "displayName", title: t("col.displayName" as any), sortable: true, filterable: true, width: "200px" },
     {
       key: "application", title: t("pricings.field.application" as any), sortable: true, filterable: true, width: "170px",
-      render: (_, r) => r.application ? <Link to={`/applications/${r.owner}/${r.application}`} className="text-accent hover:underline text-[12px]" onClick={(e) => e.stopPropagation()}>{r.application}</Link> : <span className="text-text-muted">{"\u2014"}</span>,
+      render: (_, r) => r.application ? <Link to={`/applications/${r.organization}/${r.application}`} className="text-accent hover:underline text-[12px]" onClick={(e) => e.stopPropagation()}>{r.application}</Link> : <span className="text-text-muted">{"\u2014"}</span>,
     },
     {
       key: "plans", title: t("pricings.field.plans" as any), sortable: true, filterable: true, width: "200px",

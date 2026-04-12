@@ -46,7 +46,7 @@ export default function SessionListPage() {
     },
     {
       key: "owner", title: t("col.organization" as any), sortable: true, filterable: true, width: "110px",
-      render: (_, r) => <Link to={`/organizations/${r.owner}`} className="text-accent hover:underline" onClick={(e) => e.stopPropagation()}>{r.owner}</Link>,
+      render: (_, r) => <Link to={`/organizations/admin/${r.owner}`} className="text-accent hover:underline" onClick={(e) => e.stopPropagation()}>{r.owner}</Link>,
     },
     {
       key: "createdTime", title: t("col.created" as any), sortable: true, width: "180px",

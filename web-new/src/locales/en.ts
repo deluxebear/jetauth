@@ -29,6 +29,8 @@ const en = {
   "common.deleteFailed": "Failed to delete",
   "common.addSuccess": "Added successfully",
   "common.addFailed": "Failed to add",
+  "common.loadFailed": "Failed to load",
+  "common.connectFailed": "Failed to connect to server",
   "common.sync": "Sync",
   "common.name": "Name",
   "common.default": "Default",
@@ -470,6 +472,8 @@ const en = {
   "users.idCardType.driversLicense": "Driver's License",
 
   // Organizations
+  "orgs.error.loadFailed": "Failed to load organization",
+  "orgs.error.cannotDeleteBuiltin": "Cannot delete built-in organization",
   "orgs.title": "Organizations",
   "orgs.subtitle": "Manage organizations and tenants",
   "orgs.add": "Add Organization",
@@ -570,6 +574,7 @@ const en = {
   "orgs.rule.Immutable": "Immutable",
 
   // LDAP pages
+  "ldap.error.loadFailed": "Failed to load LDAP",
   "ldap.title": "LDAP Server",
   "ldap.syncLdap": "Sync LDAP",
   "ldap.section.connection": "Connection",
@@ -807,6 +812,9 @@ const en = {
   "invitations.field.sendEmails.help": "One email per line, or comma-separated",
 
   // Groups
+  "groups.error.loadFailed": "Failed to load group",
+  "groups.error.hasSubGroups": "Cannot delete: this group has sub-groups",
+  "groups.error.hasUsers": "Cannot delete: this group has users",
   "groups.title": "Groups",
   "groups.subtitle": "Manage user groups",
   "groups.add": "Add Group",

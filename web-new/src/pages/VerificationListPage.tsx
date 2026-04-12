@@ -21,7 +21,7 @@ export default function VerificationListPage() {
         if (r.owner === "admin") {
           return <span className="text-[12px] text-text-muted">({t("common.empty" as any)})</span>;
         }
-        return <Link to={`/organizations/${r.owner}`} className="text-accent hover:underline" onClick={(e) => e.stopPropagation()}>{r.owner}</Link>;
+        return <Link to={`/organizations/admin/${r.owner}`} className="text-accent hover:underline" onClick={(e) => e.stopPropagation()}>{r.owner}</Link>;
       },
     },
     {
@@ -36,7 +36,7 @@ export default function VerificationListPage() {
     },
     {
       key: "user", title: t("col.user" as any), sortable: true, filterable: true, width: "120px",
-      render: (_, r) => <Link to={`/users/${r.user}`} className="text-accent hover:underline" onClick={(e) => e.stopPropagation()}>{r.user}</Link>,
+      render: (_, r) => <Link to={`/users/${r.owner}/${r.user}`} className="text-accent hover:underline" onClick={(e) => e.stopPropagation()}>{r.user}</Link>,
     },
     {
       key: "provider", title: t("col.provider" as any), sortable: true, filterable: true, width: "150px",

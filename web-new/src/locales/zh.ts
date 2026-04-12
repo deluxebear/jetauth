@@ -29,6 +29,8 @@ const zh: Record<string, string> = {
   "common.deleteFailed": "删除失败",
   "common.addSuccess": "添加成功",
   "common.addFailed": "添加失败",
+  "common.loadFailed": "加载失败",
+  "common.connectFailed": "连接服务器失败",
   "common.sync": "同步",
   "common.name": "名称",
   "common.default": "默认",
@@ -552,6 +554,8 @@ const zh: Record<string, string> = {
   "users.idCardType.driversLicense": "驾驶证",
 
   // Organizations
+  "orgs.error.loadFailed": "加载组织失败",
+  "orgs.error.cannotDeleteBuiltin": "无法删除内置组织",
   "orgs.title": "组织管理",
   "orgs.subtitle": "管理组织与租户",
   "orgs.add": "添加组织",
@@ -652,6 +656,7 @@ const zh: Record<string, string> = {
   "orgs.rule.Immutable": "不可修改",
 
   // LDAP 页面
+  "ldap.error.loadFailed": "加载 LDAP 失败",
   "ldap.title": "LDAP 服务器",
   "ldap.syncLdap": "同步 LDAP",
   "ldap.section.connection": "连接设置",
@@ -888,6 +893,9 @@ const zh: Record<string, string> = {
   "invitations.field.sendEmails.help": "每行一个邮箱，或用逗号分隔",
 
   // Groups
+  "groups.error.loadFailed": "加载分组失败",
+  "groups.error.hasSubGroups": "无法删除：该分组包含子分组",
+  "groups.error.hasUsers": "无法删除：该分组包含用户",
   "groups.title": "分组管理",
   "groups.subtitle": "管理用户分组",
   "groups.add": "添加分组",

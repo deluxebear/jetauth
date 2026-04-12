@@ -52,10 +52,10 @@ export default function WebhookEventListPage() {
         setSortOrder(sOrder);
         setPage(p);
       } else {
-        modal.toast(res.msg || "Failed to load", "error");
+        modal.toast(res.msg || t("common.loadFailed" as any), "error");
       }
     } catch {
-      modal.toast("Failed to connect to server", "error");
+      modal.toast(t("common.connectFailed" as any), "error");
     } finally {
       setLoading(false);
     }
@@ -75,7 +75,7 @@ export default function WebhookEventListPage() {
         modal.toast(res.msg || t("webhookEvents.field.replayFailed" as any), "error");
       }
     } catch {
-      modal.toast("Failed to connect to server", "error");
+      modal.toast(t("common.connectFailed" as any), "error");
     } finally {
       setReplayingId("");
     }
@@ -98,7 +98,7 @@ export default function WebhookEventListPage() {
     },
     {
       key: "organization", title: t("col.organization" as any), width: "160px",
-      render: (_, r) => r.organization ? <Link to={`/organizations/${r.organization}`} className="text-accent hover:underline" onClick={(e) => e.stopPropagation()}>{r.organization}</Link> : <span className="text-text-muted">{"\u2014"}</span>,
+      render: (_, r) => r.organization ? <Link to={`/organizations/admin/${r.organization}`} className="text-accent hover:underline" onClick={(e) => e.stopPropagation()}>{r.organization}</Link> : <span className="text-text-muted">{"\u2014"}</span>,
     },
     {
       key: "status", title: t("webhookEvents.field.status" as any), width: "140px",
