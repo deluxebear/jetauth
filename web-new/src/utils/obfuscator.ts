@@ -13,10 +13,9 @@ export function encryptPassword(
     return password;
   }
 
-  const passwordHex = CryptoJS.enc.Hex.parse(
-    Buffer.from ? Buffer.from(password, "utf-8").toString("hex")
-      : Array.from(new TextEncoder().encode(password)).map(b => b.toString(16).padStart(2, "0")).join("")
-  );
+  const hexStr = Array.from(new TextEncoder().encode(password))
+    .map(b => b.toString(16).padStart(2, "0")).join("");
+  const passwordHex = CryptoJS.enc.Hex.parse(hexStr);
   const key = CryptoJS.enc.Hex.parse(obfuscatorKey);
 
   if (obfuscatorType === "AES") {

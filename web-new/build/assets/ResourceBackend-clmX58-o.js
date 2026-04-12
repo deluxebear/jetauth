@@ -1,1 +1,0 @@
-import{s as e}from"./index-16ORy8RD.js";export{e as uploadResource};
