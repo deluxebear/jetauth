@@ -127,36 +127,29 @@ func getNetworkUsage() (uint64, uint64, uint64, error) {
 }
 
 func GetSystemInfo() (*SystemInfo, error) {
-	cpuUsage, err := getCpuUsage()
-	if err != nil {
-		return nil, err
+	res := &SystemInfo{}
+
+	if cpuUsage, err := getCpuUsage(); err == nil {
+		res.CpuUsage = cpuUsage
 	}
 
-	memoryUsed, memoryTotal, err := getMemoryUsage()
-	if err != nil {
-		return nil, err
+	if memoryUsed, memoryTotal, err := getMemoryUsage(); err == nil {
+		res.MemoryUsed = memoryUsed
+		res.MemoryTotal = memoryTotal
 	}
 
-	diskUsed, diskTotal, err := getDiskUsage()
-	if err != nil {
-		return nil, err
+	if diskUsed, diskTotal, err := getDiskUsage(); err == nil {
+		res.DiskUsed = diskUsed
+		res.DiskTotal = diskTotal
 	}
 
-	networkSent, networkRecv, networkTotal, err := getNetworkUsage()
-	if err != nil {
-		return nil, err
+	// Network I/O may not be supported on all platforms (e.g. macOS).
+	if networkSent, networkRecv, networkTotal, err := getNetworkUsage(); err == nil {
+		res.NetworkSent = networkSent
+		res.NetworkRecv = networkRecv
+		res.NetworkTotal = networkTotal
 	}
 
-	res := &SystemInfo{
-		CpuUsage:     cpuUsage,
-		MemoryUsed:   memoryUsed,
-		MemoryTotal:  memoryTotal,
-		DiskUsed:     diskUsed,
-		DiskTotal:    diskTotal,
-		NetworkSent:  networkSent,
-		NetworkRecv:  networkRecv,
-		NetworkTotal: networkTotal,
-	}
 	return res, nil
 }
 
