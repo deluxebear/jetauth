@@ -150,6 +150,17 @@ func getObject(ctx *context.Context) (string, string, error) {
 		if id := ctx.Input.Query("id"); id != "" {
 			owner, name, err := util.GetOwnerAndNameFromIdWithError(id)
 			if err == nil {
+				// Application/token/syncer/webhook have Owner fixed to
+				// "admin" while the real org is in the Organization field.
+				// Look up the actual Organization from DB so org admins
+				// can manage their own resources without trusting the
+				// request body.
+				if strings.HasSuffix(path, "-application") || strings.HasSuffix(path, "-token") ||
+					strings.HasSuffix(path, "-syncer") || strings.HasSuffix(path, "-webhook") {
+					if org, err := object.GetOrganizationFieldForAuthz(path, owner, name); err == nil && org != "" {
+						return org, name, nil
+					}
+				}
 				return owner, name, nil
 			}
 		}
