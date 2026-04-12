@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate, useLocation, Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Save, ArrowLeft, Trash2, User, Heart, Shield, Settings, ChevronDown, LogOut, Eye, EyeOff } from "lucide-react";
+import { Save, ArrowLeft, Trash2, User, Heart, Shield, Settings, ChevronDown, LogOut, Eye, EyeOff, Wallet } from "lucide-react";
 import { FormField, FormSection, Switch, inputClass, monoInputClass } from "../components/FormSection";
 import { useTranslation } from "../i18n";
 import { useOrganization } from "../OrganizationContext";
@@ -295,6 +295,7 @@ export default function UserEditPage() {
     { key: "basic", label: t("users.tab.basic" as any), icon: <User size={14} /> },
     { key: "profile", label: t("users.tab.profile" as any), icon: <Heart size={14} /> },
     { key: "security", label: t("users.tab.security" as any), icon: <Shield size={14} /> },
+    { key: "finance", label: t("users.tab.finance" as any), icon: <Wallet size={14} /> },
     { key: "admin", label: t("users.tab.admin" as any), icon: <Settings size={14} /> },
   ];
 
@@ -583,6 +584,12 @@ export default function UserEditPage() {
         </FormField>
       </FormSection>
 
+    </div>
+  );
+
+  // Tab 4: Finance
+  const financeTab = (
+    <div className="space-y-5">
       <FormSection title={t("users.section.finance" as any)}>
         {dynField("Balance", undefined, <input type="number" value={user.balance ?? 0} onChange={(e) => set("balance", Number(e.target.value))} disabled={isFieldDisabled("Balance")} className={monoInputClass} />)}
         {dynField("Balance credit", undefined, <input type="number" value={user.balanceCredit ?? 0} onChange={(e) => set("balanceCredit", Number(e.target.value))} disabled={isFieldDisabled("Balance credit")} className={monoInputClass} />)}
@@ -610,7 +617,7 @@ export default function UserEditPage() {
     </div>
   );
 
-  // Tab 4: Administration
+  // Tab 5: Administration
   const adminTab = (
     <div className="space-y-5">
       <FormSection title={t("users.section.admin" as any)}>
@@ -678,6 +685,7 @@ export default function UserEditPage() {
     basic: basicTab,
     profile: profileTab,
     security: securityTab,
+    finance: financeTab,
     admin: adminTab,
   };
 

@@ -1,0 +1,1 @@
+import{d as e}from"./index-BX9dLmEb.js";export{e as getOrganizationNames};
