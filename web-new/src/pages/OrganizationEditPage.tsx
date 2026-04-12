@@ -590,7 +590,7 @@ export default function OrganizationEditPage() {
                 <LdapServersTable ldaps={ldaps} orgName={name!} onUpdate={setLdaps} t={t} modal={modal} />
               </div>
 
-              <div className={!canEditField("masterPassword") ? "pointer-events-none opacity-60" : ""}>
+              <div className={!isGA ? "pointer-events-none opacity-60" : ""}>
               <FormSection title={t("orgs.section.kerberos" as any)}>
                 <FormField label={t("orgs.field.kerberosRealm" as any)}>
                   <input value={(org as any).kerberosRealm ?? ""} onChange={(e) => set("kerberosRealm", e.target.value)} className={inputClass} />

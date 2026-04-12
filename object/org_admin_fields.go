@@ -155,4 +155,22 @@ func EnforceOrgAdminFields(org *Organization, oldOrg *Organization) {
 	if !allowedSet["usePermanentAvatar"] {
 		org.UsePermanentAvatar = oldOrg.UsePermanentAvatar
 	}
+	if !allowedSet["orgBalance"] {
+		org.OrgBalance = oldOrg.OrgBalance
+	}
+	if !allowedSet["balanceCredit"] {
+		org.BalanceCredit = oldOrg.BalanceCredit
+	}
+	if !allowedSet["ldapAttributes"] {
+		org.LdapAttributes = oldOrg.LdapAttributes
+	}
+
+	// Always lock these for org admins — not configurable via OrgAdminEditableFields
+	org.KerberosRealm = oldOrg.KerberosRealm
+	org.KerberosKdcHost = oldOrg.KerberosKdcHost
+	org.KerberosKeytab = oldOrg.KerberosKeytab
+	org.KerberosServiceName = oldOrg.KerberosServiceName
+	org.IpRestriction = oldOrg.IpRestriction
+	org.DcrPolicy = oldOrg.DcrPolicy
+	org.HasPrivilegeConsent = oldOrg.HasPrivilegeConsent
 }
