@@ -63,8 +63,15 @@ func GetDashboard(owner string) (*map[string][]int64, error) {
 			dbQueryAfter := ormer.Engine.Cols("created_time")
 
 			if owner != "" {
-				dbQueryAfter = dbQueryAfter.And("owner = ?", owner)
-				dbQueryBefore = dbQueryBefore.And("owner = ?", owner)
+				// Application/token/syncer/webhook have Owner fixed to "admin";
+				// the real org is in the "organization" column.
+				col := "owner"
+				if tableName == "application" || tableName == "token" ||
+					tableName == "syncer" || tableName == "webhook" {
+					col = "organization"
+				}
+				dbQueryAfter = dbQueryAfter.And(col+" = ?", owner)
+				dbQueryBefore = dbQueryBefore.And(col+" = ?", owner)
 			}
 
 			if countResult, err = dbQueryBefore.And("created_time < ?", time30day).Table(tableFullName).Count(); err != nil {
