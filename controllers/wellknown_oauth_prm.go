@@ -19,11 +19,11 @@ import (
 )
 
 // GetOauthProtectedResourceMetadata
-// @Title GetOauthProtectedResourceMetadata
-// @Tag OAuth 2.0 API
+// @Summary GetOauthProtectedResourceMetadata
+// @Tags OAuth 2.0 API
 // @Description Get OAuth 2.0 Protected Resource Metadata (RFC 9728)
 // @Success 200 {object} object.OauthProtectedResourceMetadata
-// @router /.well-known/oauth-protected-resource [get]
+// @Router /.well-known/oauth-protected-resource [get]
 func (c *RootController) GetOauthProtectedResourceMetadata() {
 	host := c.Ctx.Request.Host
 	c.Data["json"] = object.GetOauthProtectedResourceMetadata(host)
@@ -31,12 +31,12 @@ func (c *RootController) GetOauthProtectedResourceMetadata() {
 }
 
 // GetOauthProtectedResourceMetadataByApplication
-// @Title GetOauthProtectedResourceMetadataByApplication
-// @Tag OAuth 2.0 API
+// @Summary GetOauthProtectedResourceMetadataByApplication
+// @Tags OAuth 2.0 API
 // @Description Get OAuth 2.0 Protected Resource Metadata for specific application (RFC 9728)
 // @Param application path string true "application name"
 // @Success 200 {object} object.OauthProtectedResourceMetadata
-// @router /.well-known/:application/oauth-protected-resource [get]
+// @Router /.well-known/:application/oauth-protected-resource [get]
 func (c *RootController) GetOauthProtectedResourceMetadataByApplication() {
 	application := c.Ctx.Input.Param(":application")
 	host := c.Ctx.Request.Host

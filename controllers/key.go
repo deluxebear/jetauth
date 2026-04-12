@@ -22,13 +22,29 @@ import (
 	"github.com/deluxebear/casdoor/util"
 )
 
+// KeyListResponse represents the response for key list APIs
+type KeyListResponse struct {
+	Status string        `json:"status" example:"ok"`
+	Msg    string        `json:"msg" example:""`
+	Data   []object.Key `json:"data"`
+	Data2  int           `json:"data2" example:"10"`
+}
+
+// KeyResponse represents the response for single key APIs
+type KeyResponse struct {
+	Status string       `json:"status" example:"ok"`
+	Msg    string       `json:"msg" example:""`
+	Data   object.Key  `json:"data"`
+}
+
+
 // GetKeys
-// @Title GetKeys
-// @Tag Key API
+// @Summary GetKeys
+// @Tags Key API
 // @Description get keys
 // @Param   owner     query    string  true        "The owner of keys"
-// @Success 200 {array} object.Key The Response object
-// @router /get-keys [get]
+// @Success 200 {array} object.Key "The Response object"
+// @Router /get-keys [get]
 func (c *ApiController) GetKeys() {
 	owner := c.Ctx.Input.Query("owner")
 	limit := c.Ctx.Input.Query("pageSize")
@@ -76,11 +92,11 @@ func (c *ApiController) GetKeys() {
 }
 
 // GetGlobalKeys
-// @Title GetGlobalKeys
-// @Tag Key API
+// @Summary GetGlobalKeys
+// @Tags Key API
 // @Description get global keys
-// @Success 200 {array} object.Key The Response object
-// @router /get-global-keys [get]
+// @Success 200 {array} object.Key "The Response object"
+// @Router /get-global-keys [get]
 func (c *ApiController) GetGlobalKeys() {
 	limit := c.Ctx.Input.Query("pageSize")
 	page := c.Ctx.Input.Query("p")
@@ -127,12 +143,12 @@ func (c *ApiController) GetGlobalKeys() {
 }
 
 // GetKey
-// @Title GetKey
-// @Tag Key API
+// @Summary GetKey
+// @Tags Key API
 // @Description get key
 // @Param   id     query    string  true        "The id ( owner/name ) of the key"
-// @Success 200 {object} object.Key The Response object
-// @router /get-key [get]
+// @Success 200 {object} object.Key "The Response object"
+// @Router /get-key [get]
 func (c *ApiController) GetKey() {
 	id := c.Ctx.Input.Query("id")
 
@@ -146,13 +162,13 @@ func (c *ApiController) GetKey() {
 }
 
 // UpdateKey
-// @Title UpdateKey
-// @Tag Key API
+// @Summary UpdateKey
+// @Tags Key API
 // @Description update key
 // @Param   id     query    string  true        "The id ( owner/name ) of the key"
 // @Param   body    body   object.Key  true        "The details of the key"
-// @Success 200 {object} controllers.Response The Response object
-// @router /update-key [post]
+// @Success 200 {object} ActionResponse "Action result"
+// @Router /update-key [post]
 func (c *ApiController) UpdateKey() {
 	id := c.Ctx.Input.Query("id")
 
@@ -181,12 +197,12 @@ func (c *ApiController) UpdateKey() {
 }
 
 // AddKey
-// @Title AddKey
-// @Tag Key API
+// @Summary AddKey
+// @Tags Key API
 // @Description add key
 // @Param   body    body   object.Key  true        "The details of the key"
-// @Success 200 {object} controllers.Response The Response object
-// @router /add-key [post]
+// @Success 200 {object} ActionResponse "Action result"
+// @Router /add-key [post]
 func (c *ApiController) AddKey() {
 	var key object.Key
 	err := json.Unmarshal(c.Ctx.Input.RequestBody, &key)
@@ -200,12 +216,12 @@ func (c *ApiController) AddKey() {
 }
 
 // DeleteKey
-// @Title DeleteKey
-// @Tag Key API
+// @Summary DeleteKey
+// @Tags Key API
 // @Description delete key
 // @Param   body    body   object.Key  true        "The details of the key"
-// @Success 200 {object} controllers.Response The Response object
-// @router /delete-key [post]
+// @Success 200 {object} ActionResponse "Action result"
+// @Router /delete-key [post]
 func (c *ApiController) DeleteKey() {
 	var key object.Key
 	err := json.Unmarshal(c.Ctx.Input.RequestBody, &key)

@@ -16,12 +16,19 @@ package controllers
 
 import "github.com/deluxebear/casdoor/object"
 
+// DashboardResponse represents the response for the GetDashboard API
+type DashboardResponse struct {
+	Status string             `json:"status" example:"ok"`
+	Msg    string             `json:"msg" example:""`
+	Data   map[string][]int64 `json:"data"`
+}
+
 // GetDashboard
-// @Title GetDashboard
-// @Tag System API
+// @Summary GetDashboard
+// @Tags System API
 // @Description get information of dashboard
-// @Success 200 {object} controllers.Response The Response object
-// @router /get-dashboard [get]
+// @Success 200 {object} controllers.DashboardResponse "The Response object"
+// @Router /get-dashboard [get]
 func (c *ApiController) GetDashboard() {
 	owner := c.Ctx.Input.Query("owner")
 

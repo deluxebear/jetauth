@@ -38,9 +38,7 @@ type ReleaseInfo struct {
 	} `json:"assets"`
 }
 
-// @Title getBinaryNames
-// @Description Get binary names for different platforms and architectures
-// @Success 200 {map[string]string} map[string]string "Binary names map"
+// getBinaryNames returns binary names for different platforms and architectures.
 func getBinaryNames() map[string]string {
 	const (
 		golang = "go"
@@ -91,10 +89,6 @@ func getBinaryNames() map[string]string {
 	}
 }
 
-// @Title getFinalBinaryName
-// @Description Get final binary name for specific language
-// @Param lang string true "Language type (go/java/rust)"
-// @Success 200 {string} string "Final binary name"
 func getFinalBinaryName(lang string) string {
 	switch lang {
 	case "go":
@@ -124,11 +118,6 @@ func getFinalBinaryName(lang string) string {
 	}
 }
 
-// @Title getLatestCLIURL
-// @Description Get latest CLI download URL from GitHub
-// @Param repoURL string true "GitHub repository URL"
-// @Param language string true "Language type"
-// @Success 200 {string} string "Download URL and version"
 func getLatestCLIURL(repoURL string, language string) (string, string, error) {
 	client := proxy.GetHttpClient(repoURL)
 	resp, err := client.Get(repoURL)
@@ -157,11 +146,6 @@ func getLatestCLIURL(repoURL string, language string) (string, string, error) {
 	return "", "", fmt.Errorf("no suitable binary found for OS: %s, language: %s", runtime.GOOS, language)
 }
 
-// @Title extractGoCliFile
-// @Description Extract the Go CLI file
-// @Param filePath string true "The file path"
-// @Success 200 {string} string "The extracted file path"
-// @router /extractGoCliFile [post]
 func extractGoCliFile(filePath string) error {
 	tempDir := filepath.Join(downloadFolder, "temp")
 	if err := os.MkdirAll(tempDir, 0o755); err != nil {
@@ -204,12 +188,6 @@ func extractGoCliFile(filePath string) error {
 	return os.Remove(filePath)
 }
 
-// @Title unzipFile
-// @Description Unzip the file
-// @Param zipPath string true "The zip file path"
-// @Param destDir string true "The destination directory"
-// @Success 200 {string} string "The extracted file path"
-// @router /unzipFile [post]
 func unzipFile(zipPath, destDir string) error {
 	r, err := zip.OpenReader(zipPath)
 	if err != nil {
@@ -250,12 +228,6 @@ func unzipFile(zipPath, destDir string) error {
 	return nil
 }
 
-// @Title untarFile
-// @Description Untar the file
-// @Param tarPath string true "The tar file path"
-// @Param destDir string true "The destination directory"
-// @Success 200 {string} string "The extracted file path"
-// @router /untarFile [post]
 func untarFile(tarPath, destDir string) error {
 	file, err := os.Open(tarPath)
 	if err != nil {
@@ -302,11 +274,6 @@ func untarFile(tarPath, destDir string) error {
 	return nil
 }
 
-// @Title createJavaCliWrapper
-// @Description Create the Java CLI wrapper
-// @Param binPath string true "The binary path"
-// @Success 200 {string} string "The created file path"
-// @router /createJavaCliWrapper [post]
 func createJavaCliWrapper(binPath string) error {
 	if runtime.GOOS == "windows" {
 		// Create a Windows CMD file
@@ -332,9 +299,6 @@ java -jar "%s/casbin-java-cli.jar" "$@"`, binPath)
 	return nil
 }
 
-// @Title downloadCLI
-// @Description Download and setup CLI tools
-// @Success 200 {error} error "Error if any"
 func downloadCLI() error {
 	pathEnv := os.Getenv("PATH")
 	binPath, err := filepath.Abs(downloadFolder)
@@ -439,13 +403,13 @@ func downloadCLI() error {
 	return nil
 }
 
-// @Title RefreshEngines
-// @Tag CLI API
+// @Summary RefreshEngines
+// @Tags CLI API
 // @Description Refresh all CLI engines
 // @Param m query string true "Hash for request validation"
 // @Param t query string true "Timestamp for request validation"
-// @Success 200 {object} controllers.Response The Response object
-// @router /refresh-engines [post]
+// @Success 200 {object} controllers.ActionResponse "Refresh result"
+// @Router /refresh-engines [post]
 func (c *ApiController) RefreshEngines() {
 	if !conf.IsDemoMode() && !c.IsAdmin() {
 		c.ResponseError(c.T("auth:Unauthorized operation"))
@@ -496,8 +460,6 @@ func (c *ApiController) RefreshEngines() {
 	})
 }
 
-// @Title ScheduleCLIUpdater
-// @Description Start periodic CLI update scheduler
 func ScheduleCLIUpdater() {
 	if !web.AppConfig.DefaultBool("isDemoMode", false) {
 		return
@@ -516,16 +478,10 @@ func ScheduleCLIUpdater() {
 	}
 }
 
-// @Title DownloadCLI
-// @Description Download the CLI
-// @Success 200 {string} string "The downloaded file path"
-// @router /downloadCLI [post]
 func DownloadCLI() error {
 	return downloadCLI()
 }
 
-// @Title InitCLIDownloader
-// @Description Initialize CLI downloader and start update scheduler
 func InitCLIDownloader() {
 	if !web.AppConfig.DefaultBool("isDemoMode", false) {
 		return

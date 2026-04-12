@@ -23,13 +23,29 @@ import (
 	"github.com/deluxebear/casdoor/util"
 )
 
+// ApplicationListResponse represents the response for application list APIs
+type ApplicationListResponse struct {
+	Status string        `json:"status" example:"ok"`
+	Msg    string        `json:"msg" example:""`
+	Data   []object.Application `json:"data"`
+	Data2  int           `json:"data2" example:"10"`
+}
+
+// ApplicationResponse represents the response for single application APIs
+type ApplicationResponse struct {
+	Status string       `json:"status" example:"ok"`
+	Msg    string       `json:"msg" example:""`
+	Data   object.Application  `json:"data"`
+}
+
+
 // GetApplications
-// @Title GetApplications
-// @Tag Application API
+// @Summary GetApplications
+// @Tags Application API
 // @Description get all applications
 // @Param   owner     query    string  true        "The owner of applications."
-// @Success 200 {array} object.Application The Response object
-// @router /get-applications [get]
+// @Success 200 {array} object.Application "The Response object"
+// @Router /get-applications [get]
 func (c *ApiController) GetApplications() {
 	userId := c.GetSessionUsername()
 	owner := c.Ctx.Input.Query("owner")
@@ -74,12 +90,12 @@ func (c *ApiController) GetApplications() {
 }
 
 // GetApplication
-// @Title GetApplication
-// @Tag Application API
+// @Summary GetApplication
+// @Tags Application API
 // @Description get the detail of an application
 // @Param   id     query    string  true        "The id ( owner/name ) of the application."
-// @Success 200 {object} object.Application The Response object
-// @router /get-application [get]
+// @Success 200 {object} object.Application "The Response object"
+// @Router /get-application [get]
 func (c *ApiController) GetApplication() {
 	userId := c.GetSessionUsername()
 	id := c.Ctx.Input.Query("id")
@@ -117,12 +133,12 @@ func (c *ApiController) GetApplication() {
 }
 
 // GetUserApplication
-// @Title GetUserApplication
-// @Tag Application API
+// @Summary GetUserApplication
+// @Tags Application API
 // @Description get the detail of the user's application
 // @Param   id     query    string  true        "The id ( owner/name ) of the user"
-// @Success 200 {object} object.Application The Response object
-// @router /get-user-application [get]
+// @Success 200 {object} object.Application "The Response object"
+// @Router /get-user-application [get]
 func (c *ApiController) GetUserApplication() {
 	userId := c.GetSessionUsername()
 	id := c.Ctx.Input.Query("id")
@@ -151,12 +167,12 @@ func (c *ApiController) GetUserApplication() {
 }
 
 // GetOrganizationApplications
-// @Title GetOrganizationApplications
-// @Tag Application API
+// @Summary GetOrganizationApplications
+// @Tags Application API
 // @Description get the detail of the organization's application
 // @Param   organization     query    string  true        "The organization name"
-// @Success 200 {array} object.Application The Response object
-// @router /get-organization-applications [get]
+// @Success 200 {array} object.Application "The Response object"
+// @Router /get-organization-applications [get]
 func (c *ApiController) GetOrganizationApplications() {
 	userId := c.GetSessionUsername()
 	organization := c.Ctx.Input.Query("organization")
@@ -215,13 +231,13 @@ func (c *ApiController) GetOrganizationApplications() {
 }
 
 // UpdateApplication
-// @Title UpdateApplication
-// @Tag Application API
+// @Summary UpdateApplication
+// @Tags Application API
 // @Description update an application
 // @Param   id     query    string  true        "The id ( owner/name ) of the application"
 // @Param   body    body   object.Application  true        "The details of the application"
-// @Success 200 {object} controllers.Response The Response object
-// @router /update-application [post]
+// @Success 200 {object} ActionResponse "Action result"
+// @Router /update-application [post]
 func (c *ApiController) UpdateApplication() {
 	id := c.Ctx.Input.Query("id")
 
@@ -244,12 +260,12 @@ func (c *ApiController) UpdateApplication() {
 }
 
 // AddApplication
-// @Title AddApplication
-// @Tag Application API
+// @Summary AddApplication
+// @Tags Application API
 // @Description add an application
 // @Param   body    body   object.Application  true        "The details of the application"
-// @Success 200 {object} controllers.Response The Response object
-// @router /add-application [post]
+// @Success 200 {object} ActionResponse "Action result"
+// @Router /add-application [post]
 func (c *ApiController) AddApplication() {
 	var application object.Application
 	err := json.Unmarshal(c.Ctx.Input.RequestBody, &application)
@@ -279,12 +295,12 @@ func (c *ApiController) AddApplication() {
 }
 
 // DeleteApplication
-// @Title DeleteApplication
-// @Tag Application API
+// @Summary DeleteApplication
+// @Tags Application API
 // @Description delete an application
 // @Param   body    body   object.Application  true        "The details of the application"
-// @Success 200 {object} controllers.Response The Response object
-// @router /delete-application [post]
+// @Success 200 {object} ActionResponse "Action result"
+// @Router /delete-application [post]
 func (c *ApiController) DeleteApplication() {
 	var application object.Application
 	err := json.Unmarshal(c.Ctx.Input.RequestBody, &application)

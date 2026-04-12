@@ -22,13 +22,29 @@ import (
 	"github.com/deluxebear/casdoor/util"
 )
 
+// CertListResponse represents the response for cert list APIs
+type CertListResponse struct {
+	Status string        `json:"status" example:"ok"`
+	Msg    string        `json:"msg" example:""`
+	Data   []object.Cert `json:"data"`
+	Data2  int           `json:"data2" example:"10"`
+}
+
+// CertResponse represents the response for single cert APIs
+type CertResponse struct {
+	Status string       `json:"status" example:"ok"`
+	Msg    string       `json:"msg" example:""`
+	Data   object.Cert  `json:"data"`
+}
+
+
 // GetCerts
-// @Title GetCerts
-// @Tag Cert API
+// @Summary GetCerts
+// @Tags Cert API
 // @Description get certs
 // @Param   owner     query    string  true        "The owner of certs"
-// @Success 200 {array} object.Cert The Response object
-// @router /get-certs [get]
+// @Success 200 {array} object.Cert "The Response object"
+// @Router /get-certs [get]
 func (c *ApiController) GetCerts() {
 	owner := c.Ctx.Input.Query("owner")
 	limit := c.Ctx.Input.Query("pageSize")
@@ -66,11 +82,11 @@ func (c *ApiController) GetCerts() {
 }
 
 // GetGlobalCerts
-// @Title GetGlobalCerts
-// @Tag Cert API
+// @Summary GetGlobalCerts
+// @Tags Cert API
 // @Description get global certs
-// @Success 200 {array} object.Cert The Response object
-// @router /get-global-certs [get]
+// @Success 200 {array} object.Cert "The Response object"
+// @Router /get-global-certs [get]
 func (c *ApiController) GetGlobalCerts() {
 	limit := c.Ctx.Input.Query("pageSize")
 	page := c.Ctx.Input.Query("p")
@@ -107,12 +123,12 @@ func (c *ApiController) GetGlobalCerts() {
 }
 
 // GetCert
-// @Title GetCert
-// @Tag Cert API
+// @Summary GetCert
+// @Tags Cert API
 // @Description get cert
 // @Param   id     query    string  true        "The id ( owner/name ) of the cert"
-// @Success 200 {object} object.Cert The Response object
-// @router /get-cert [get]
+// @Success 200 {object} object.Cert "The Response object"
+// @Router /get-cert [get]
 func (c *ApiController) GetCert() {
 	id := c.Ctx.Input.Query("id")
 	cert, err := object.GetCert(id)
@@ -125,13 +141,13 @@ func (c *ApiController) GetCert() {
 }
 
 // UpdateCert
-// @Title UpdateCert
-// @Tag Cert API
+// @Summary UpdateCert
+// @Tags Cert API
 // @Description update cert
 // @Param   id     query    string  true        "The id ( owner/name ) of the cert"
 // @Param   body    body   object.Cert  true        "The details of the cert"
-// @Success 200 {object} controllers.Response The Response object
-// @router /update-cert [post]
+// @Success 200 {object} ActionResponse "Action result"
+// @Router /update-cert [post]
 func (c *ApiController) UpdateCert() {
 	id := c.Ctx.Input.Query("id")
 
@@ -149,12 +165,12 @@ func (c *ApiController) UpdateCert() {
 }
 
 // AddCert
-// @Title AddCert
-// @Tag Cert API
+// @Summary AddCert
+// @Tags Cert API
 // @Description add cert
 // @Param   body    body   object.Cert  true        "The details of the cert"
-// @Success 200 {object} controllers.Response The Response object
-// @router /add-cert [post]
+// @Success 200 {object} ActionResponse "Action result"
+// @Router /add-cert [post]
 func (c *ApiController) AddCert() {
 	var cert object.Cert
 	err := json.Unmarshal(c.Ctx.Input.RequestBody, &cert)
@@ -168,12 +184,12 @@ func (c *ApiController) AddCert() {
 }
 
 // DeleteCert
-// @Title DeleteCert
-// @Tag Cert API
+// @Summary DeleteCert
+// @Tags Cert API
 // @Description delete cert
 // @Param   body    body   object.Cert  true        "The details of the cert"
-// @Success 200 {object} controllers.Response The Response object
-// @router /delete-cert [post]
+// @Success 200 {object} ActionResponse "Action result"
+// @Router /delete-cert [post]
 func (c *ApiController) DeleteCert() {
 	var cert object.Cert
 	err := json.Unmarshal(c.Ctx.Input.RequestBody, &cert)
@@ -187,12 +203,12 @@ func (c *ApiController) DeleteCert() {
 }
 
 // UpdateCertDomainExpire
-// @Title UpdateCertDomainExpire
-// @Tag Cert API
+// @Summary UpdateCertDomainExpire
+// @Tags Cert API
 // @Description update cert domain expire time
 // @Param   id     query   string  true        "The ID of the cert"
-// @Success 200 {object} controllers.Response The Response object
-// @router /update-cert-domain-expire [post]
+// @Success 200 {object} ActionResponse "Action result"
+// @Router /update-cert-domain-expire [post]
 func (c *ApiController) UpdateCertDomainExpire() {
 	if _, ok := c.RequireSignedIn(); !ok {
 		return

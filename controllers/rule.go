@@ -26,13 +26,29 @@ import (
 	"github.com/hsluoyz/modsecurity-go/seclang/parser"
 )
 
+// RuleListResponse represents the response for rule list APIs
+type RuleListResponse struct {
+	Status string        `json:"status" example:"ok"`
+	Msg    string        `json:"msg" example:""`
+	Data   []object.Rule `json:"data"`
+	Data2  int           `json:"data2" example:"10"`
+}
+
+// RuleResponse represents the response for single rule APIs
+type RuleResponse struct {
+	Status string       `json:"status" example:"ok"`
+	Msg    string       `json:"msg" example:""`
+	Data   object.Rule  `json:"data"`
+}
+
+
 // GetRules
-// @Title GetRules
-// @Tag Rule API
+// @Summary GetRules
+// @Tags Rule API
 // @Description get rules
 // @Param   owner     query    string  true        "The owner of rules"
-// @Success 200 {array} object.Rule The Response object
-// @router /get-rules [get]
+// @Success 200 {array} object.Rule "The Response object"
+// @Router /get-rules [get]
 func (c *ApiController) GetRules() {
 	owner := c.Ctx.Input.Query("owner")
 	if owner == "admin" {
@@ -73,12 +89,12 @@ func (c *ApiController) GetRules() {
 }
 
 // GetRule
-// @Title GetRule
-// @Tag Rule API
+// @Summary GetRule
+// @Tags Rule API
 // @Description get rule
 // @Param   id     query    string  true        "The id ( owner/name ) of the rule"
-// @Success 200 {object} object.Rule The Response object
-// @router /get-rule [get]
+// @Success 200 {object} object.Rule "The Response object"
+// @Router /get-rule [get]
 func (c *ApiController) GetRule() {
 	id := c.Ctx.Input.Query("id")
 	rule, err := object.GetRule(id)
@@ -91,12 +107,12 @@ func (c *ApiController) GetRule() {
 }
 
 // AddRule
-// @Title AddRule
-// @Tag Rule API
+// @Summary AddRule
+// @Tags Rule API
 // @Description add rule
 // @Param   body    body   object.Rule  true        "The details of the rule"
-// @Success 200 {object} controllers.Response The Response object
-// @router /add-rule [post]
+// @Success 200 {object} ActionResponse "Action result"
+// @Router /add-rule [post]
 func (c *ApiController) AddRule() {
 	currentTime := util.GetCurrentTime()
 	rule := object.Rule{
@@ -118,13 +134,13 @@ func (c *ApiController) AddRule() {
 }
 
 // UpdateRule
-// @Title UpdateRule
-// @Tag Rule API
+// @Summary UpdateRule
+// @Tags Rule API
 // @Description update rule
 // @Param   id     query    string  true        "The id ( owner/name ) of the rule"
 // @Param   body    body   object.Rule  true        "The details of the rule"
-// @Success 200 {object} controllers.Response The Response object
-// @router /update-rule [post]
+// @Success 200 {object} ActionResponse "Action result"
+// @Router /update-rule [post]
 func (c *ApiController) UpdateRule() {
 	id := c.Ctx.Input.Query("id")
 
@@ -148,12 +164,12 @@ func (c *ApiController) UpdateRule() {
 }
 
 // DeleteRule
-// @Title DeleteRule
-// @Tag Rule API
+// @Summary DeleteRule
+// @Tags Rule API
 // @Description delete rule
 // @Param   body    body   object.Rule  true        "The details of the rule"
-// @Success 200 {object} controllers.Response The Response object
-// @router /delete-rule [post]
+// @Success 200 {object} ActionResponse "Action result"
+// @Router /delete-rule [post]
 func (c *ApiController) DeleteRule() {
 	var rule object.Rule
 	err := json.Unmarshal(c.Ctx.Input.RequestBody, &rule)

@@ -22,13 +22,29 @@ import (
 	"github.com/deluxebear/casdoor/util"
 )
 
+// ProviderListResponse represents the response for provider list APIs
+type ProviderListResponse struct {
+	Status string        `json:"status" example:"ok"`
+	Msg    string        `json:"msg" example:""`
+	Data   []object.Provider `json:"data"`
+	Data2  int           `json:"data2" example:"10"`
+}
+
+// ProviderResponse represents the response for single provider APIs
+type ProviderResponse struct {
+	Status string       `json:"status" example:"ok"`
+	Msg    string       `json:"msg" example:""`
+	Data   object.Provider  `json:"data"`
+}
+
+
 // GetProviders
-// @Title GetProviders
-// @Tag Provider API
+// @Summary GetProviders
+// @Tags Provider API
 // @Description get providers
 // @Param   owner     query    string  true        "The owner of providers"
-// @Success 200 {array} object.Provider The Response object
-// @router /get-providers [get]
+// @Success 200 {array} object.Provider "The Response object"
+// @Router /get-providers [get]
 func (c *ApiController) GetProviders() {
 	owner := c.Ctx.Input.Query("owner")
 	limit := c.Ctx.Input.Query("pageSize")
@@ -72,11 +88,11 @@ func (c *ApiController) GetProviders() {
 }
 
 // GetGlobalProviders
-// @Title GetGlobalProviders
-// @Tag Provider API
+// @Summary GetGlobalProviders
+// @Tags Provider API
 // @Description get Global providers
-// @Success 200 {array} object.Provider The Response object
-// @router /get-global-providers [get]
+// @Success 200 {array} object.Provider "The Response object"
+// @Router /get-global-providers [get]
 func (c *ApiController) GetGlobalProviders() {
 	limit := c.Ctx.Input.Query("pageSize")
 	page := c.Ctx.Input.Query("p")
@@ -119,12 +135,12 @@ func (c *ApiController) GetGlobalProviders() {
 }
 
 // GetProvider
-// @Title GetProvider
-// @Tag Provider API
+// @Summary GetProvider
+// @Tags Provider API
 // @Description get provider
 // @Param   id     query    string  true        "The id ( owner/name ) of the provider"
-// @Success 200 {object} object.Provider The Response object
-// @router /get-provider [get]
+// @Success 200 {object} object.Provider "The Response object"
+// @Router /get-provider [get]
 func (c *ApiController) GetProvider() {
 	id := c.Ctx.Input.Query("id")
 
@@ -156,13 +172,13 @@ func (c *ApiController) requireProviderPermission(provider *object.Provider) boo
 }
 
 // UpdateProvider
-// @Title UpdateProvider
-// @Tag Provider API
+// @Summary UpdateProvider
+// @Tags Provider API
 // @Description update provider
 // @Param   id     query    string  true        "The id ( owner/name ) of the provider"
 // @Param   body    body   object.Provider  true        "The details of the provider"
-// @Success 200 {object} controllers.Response The Response object
-// @router /update-provider [post]
+// @Success 200 {object} ActionResponse "Action result"
+// @Router /update-provider [post]
 func (c *ApiController) UpdateProvider() {
 	id := c.Ctx.Input.Query("id")
 
@@ -185,12 +201,12 @@ func (c *ApiController) UpdateProvider() {
 }
 
 // AddProvider
-// @Title AddProvider
-// @Tag Provider API
+// @Summary AddProvider
+// @Tags Provider API
 // @Description add provider
 // @Param   body    body   object.Provider  true        "The details of the provider"
-// @Success 200 {object} controllers.Response The Response object
-// @router /add-provider [post]
+// @Success 200 {object} ActionResponse "Action result"
+// @Router /add-provider [post]
 func (c *ApiController) AddProvider() {
 	var provider object.Provider
 	err := json.Unmarshal(c.Ctx.Input.RequestBody, &provider)
@@ -221,12 +237,12 @@ func (c *ApiController) AddProvider() {
 }
 
 // DeleteProvider
-// @Title DeleteProvider
-// @Tag Provider API
+// @Summary DeleteProvider
+// @Tags Provider API
 // @Description delete provider
 // @Param   body    body   object.Provider  true        "The details of the provider"
-// @Success 200 {object} controllers.Response The Response object
-// @router /delete-provider [post]
+// @Success 200 {object} ActionResponse "Action result"
+// @Router /delete-provider [post]
 func (c *ApiController) DeleteProvider() {
 	var provider object.Provider
 	err := json.Unmarshal(c.Ctx.Input.RequestBody, &provider)

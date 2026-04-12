@@ -27,6 +27,14 @@ import (
 	"github.com/deluxebear/casdoor/util"
 )
 
+// GetAccountResponse is the response for GetAccount API.
+type GetAccountResponse struct {
+	Status string              `json:"status" example:"ok"`
+	Msg    string              `json:"msg" example:""`
+	Data   object.User         `json:"data"`
+	Data2  object.Organization `json:"data2"`
+}
+
 const (
 	ResponseTypeLogin   = "login"
 	ResponseTypeCode    = "code"
@@ -74,13 +82,13 @@ type LaravelResponse struct {
 }
 
 // Signup
-// @Tag Login API
-// @Title Signup
+// @Tags Login API
+// @Summary Signup
 // @Description sign up a new user
 // @Param   username     formData    string  true        "The username to sign up"
 // @Param   password     formData    string  true        "The password"
-// @Success 200 {object} controllers.Response The Response object
-// @router /signup [post]
+// @Success 200 {object} ActionResponse "User ID"
+// @Router /signup [post]
 func (c *ApiController) Signup() {
 	var authForm form.AuthForm
 	err := json.Unmarshal(c.Ctx.Input.RequestBody, &authForm)
@@ -351,14 +359,14 @@ func (c *ApiController) Signup() {
 }
 
 // Logout
-// @Title Logout
-// @Tag Login API
+// @Summary Logout
+// @Tags Login API
 // @Description logout the current user
-// @Param   id_token_hint   query        string  false        "id_token_hint"
-// @Param   post_logout_redirect_uri    query    string  false     "post_logout_redirect_uri"
-// @Param   state     query    string  false     "state"
-// @Success 200 {object} controllers.Response The Response object
-// @router /logout [post]
+// @Param   id_token_hint   query        string  false       "   0"
+// @Param   post_logout_redirect_uri    query    string  false    "   0"
+// @Param   state     query    string  false    "   0"
+// @Success 200 {object} ActionResponse "Logout result"
+// @Router /logout [post]
 func (c *ApiController) Logout() {
 	// https://openid.net/specs/openid-connect-rpinitiated-1_0-final.html
 	accessToken := c.GetString("id_token_hint")
@@ -459,12 +467,13 @@ func (c *ApiController) Logout() {
 }
 
 // SsoLogout
-// @Title SsoLogout
-// @Tag Login API
+// @Summary SsoLogout
+// @Tags Login API
 // @Description logout the current user from all applications or current session only
 // @Param   logoutAll   query    string  false     "Whether to logout from all sessions. Accepted values: 'true', '1', or empty (default: true). Any other value means false."
-// @Success 200 {object} controllers.Response The Response object
-// @router /sso-logout [get,post]
+// @Success 200 {object} ActionResponse "SSO logout result"
+// @Router /sso-logout [get]
+// @Router /sso-logout [post]
 func (c *ApiController) SsoLogout() {
 	user := c.GetSessionUsername()
 
@@ -568,11 +577,11 @@ func (c *ApiController) SsoLogout() {
 }
 
 // GetAccount
-// @Title GetAccount
-// @Tag Account API
+// @Summary GetAccount
+// @Tags Account API
 // @Description get the details of the current account
-// @Success 200 {object} controllers.Response The Response object
-// @router /get-account [get]
+// @Success 200 {object} GetAccountResponse "The Response object"
+// @Router /get-account [get]
 func (c *ApiController) GetAccount() {
 	var err error
 	err = util.AppendWebConfigCookie(c.Ctx)
@@ -647,11 +656,11 @@ func (c *ApiController) GetAccount() {
 
 // GetUserinfo
 // UserInfo
-// @Title UserInfo
-// @Tag Account API
+// @Summary UserInfo
+// @Tags Account API
 // @Description return user information according to OIDC standards
-// @Success 200 {object} object.Userinfo The Response object
-// @router /userinfo [get]
+// @Success 200 {object} object.Userinfo "The Response object"
+// @Router /userinfo [get]
 func (c *ApiController) GetUserinfo() {
 	user, ok := c.RequireSignedInUser()
 	if !ok {
@@ -673,11 +682,11 @@ func (c *ApiController) GetUserinfo() {
 
 // GetUserinfo2
 // LaravelResponse
-// @Title UserInfo2
-// @Tag Account API
+// @Summary UserInfo2
+// @Tags Account API
 // @Description return Laravel compatible user information according to OAuth 2.0
-// @Success 200 {object} controllers.LaravelResponse The Response object
-// @router /user [get]
+// @Success 200 {object} controllers.LaravelResponse "The Response object"
+// @Router /user [get]
 func (c *ApiController) GetUserinfo2() {
 	user, ok := c.RequireSignedInUser()
 	if !ok {
@@ -698,10 +707,10 @@ func (c *ApiController) GetUserinfo2() {
 }
 
 // GetCaptcha ...
-// @Tag Login API
-// @Title GetCaptcha
-// @router /get-captcha [get]
-// @Success 200 {object} object.Userinfo The Response object
+// @Tags Login API
+// @Summary GetCaptcha
+// @Router /get-captcha [get]
+// @Success 200 {object} object.Userinfo "The Response object"
 func (c *ApiController) GetCaptcha() {
 	applicationId := c.Ctx.Input.Query("applicationId")
 	isCurrentProvider := c.Ctx.Input.Query("isCurrentProvider")

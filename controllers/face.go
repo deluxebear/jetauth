@@ -25,13 +25,13 @@ import (
 )
 
 // FaceIDSigninBegin
-// @Title FaceIDSigninBegin
-// @Tag Login API
+// @Summary FaceIDSigninBegin
+// @Tags Login API
 // @Description FaceId Login Flow 1st stage
-// @Param   owner     query    string  true        "owner"
-// @Param   name     query    string  true        "name"
-// @Success 200 {object} controllers.Response The Response object
-// @router /faceid-signin-begin [get]
+// @Param   owner     query    string  true       "   0"
+// @Param   name     query    string  true       "   0"
+// @Success 200 {object} controllers.ActionResponse "Face ID sign-in initiated"
+// @Router /faceid-signin-begin [get]
 func (c *ApiController) FaceIDSigninBegin() {
 	userOwner := c.Ctx.Input.Query("owner")
 	userName := c.Ctx.Input.Query("name")

@@ -22,13 +22,29 @@ import (
 	"github.com/deluxebear/casdoor/util"
 )
 
+// PaymentListResponse represents the response for payment list APIs
+type PaymentListResponse struct {
+	Status string        `json:"status" example:"ok"`
+	Msg    string        `json:"msg" example:""`
+	Data   []object.Payment `json:"data"`
+	Data2  int           `json:"data2" example:"10"`
+}
+
+// PaymentResponse represents the response for single payment APIs
+type PaymentResponse struct {
+	Status string       `json:"status" example:"ok"`
+	Msg    string       `json:"msg" example:""`
+	Data   object.Payment  `json:"data"`
+}
+
+
 // GetPayments
-// @Title GetPayments
-// @Tag Payment API
+// @Summary GetPayments
+// @Tags Payment API
 // @Description get payments
 // @Param   owner     query    string  true        "The owner of payments"
-// @Success 200 {array} object.Payment The Response object
-// @router /get-payments [get]
+// @Success 200 {array} object.Payment "The Response object"
+// @Router /get-payments [get]
 func (c *ApiController) GetPayments() {
 	owner := c.Ctx.Input.Query("owner")
 	limit := c.Ctx.Input.Query("pageSize")
@@ -95,14 +111,14 @@ func (c *ApiController) GetPayments() {
 }
 
 // GetUserPayments
-// @Title GetUserPayments
-// @Tag Payment API
+// @Summary GetUserPayments
+// @Tags Payment API
 // @Description get payments for a user
 // @Param   owner     query    string  true        "The owner of payments"
 // @Param   organization    query   string  true   "The organization of the user"
 // @Param   user    query   string  true           "The username of the user"
-// @Success 200 {array} object.Payment The Response object
-// @router /get-user-payments [get]
+// @Success 200 {array} object.Payment "The Response object"
+// @Router /get-user-payments [get]
 func (c *ApiController) GetUserPayments() {
 	owner := c.Ctx.Input.Query("owner")
 	user := c.Ctx.Input.Query("user")
@@ -117,12 +133,12 @@ func (c *ApiController) GetUserPayments() {
 }
 
 // GetPayment
-// @Title GetPayment
-// @Tag Payment API
+// @Summary GetPayment
+// @Tags Payment API
 // @Description get payment
 // @Param   id     query    string  true        "The id ( owner/name ) of the payment"
-// @Success 200 {object} object.Payment The Response object
-// @router /get-payment [get]
+// @Success 200 {object} object.Payment "The Response object"
+// @Router /get-payment [get]
 func (c *ApiController) GetPayment() {
 	id := c.Ctx.Input.Query("id")
 
@@ -136,13 +152,13 @@ func (c *ApiController) GetPayment() {
 }
 
 // UpdatePayment
-// @Title UpdatePayment
-// @Tag Payment API
+// @Summary UpdatePayment
+// @Tags Payment API
 // @Description update payment
 // @Param   id     query    string  true        "The id ( owner/name ) of the payment"
 // @Param   body    body   object.Payment  true        "The details of the payment"
-// @Success 200 {object} controllers.Response The Response object
-// @router /update-payment [post]
+// @Success 200 {object} ActionResponse "Action result"
+// @Router /update-payment [post]
 func (c *ApiController) UpdatePayment() {
 	id := c.Ctx.Input.Query("id")
 
@@ -160,12 +176,12 @@ func (c *ApiController) UpdatePayment() {
 }
 
 // AddPayment
-// @Title AddPayment
-// @Tag Payment API
+// @Summary AddPayment
+// @Tags Payment API
 // @Description add payment
 // @Param   body    body   object.Payment  true        "The details of the payment"
-// @Success 200 {object} controllers.Response The Response object
-// @router /add-payment [post]
+// @Success 200 {object} ActionResponse "Action result"
+// @Router /add-payment [post]
 func (c *ApiController) AddPayment() {
 	var payment object.Payment
 	err := json.Unmarshal(c.Ctx.Input.RequestBody, &payment)
@@ -179,12 +195,12 @@ func (c *ApiController) AddPayment() {
 }
 
 // DeletePayment
-// @Title DeletePayment
-// @Tag Payment API
+// @Summary DeletePayment
+// @Tags Payment API
 // @Description delete payment
 // @Param   body    body   object.Payment  true        "The details of the payment"
-// @Success 200 {object} controllers.Response The Response object
-// @router /delete-payment [post]
+// @Success 200 {object} ActionResponse "Action result"
+// @Router /delete-payment [post]
 func (c *ApiController) DeletePayment() {
 	var payment object.Payment
 	err := json.Unmarshal(c.Ctx.Input.RequestBody, &payment)
@@ -198,12 +214,12 @@ func (c *ApiController) DeletePayment() {
 }
 
 // NotifyPayment
-// @Title NotifyPayment
-// @Tag Payment API
+// @Summary NotifyPayment
+// @Tags Payment API
 // @Description notify payment
 // @Param   body    body   object.Payment  true        "The details of the payment"
-// @Success 200 {object} controllers.Response The Response object
-// @router /notify-payment [post]
+// @Success 200 {object} ActionResponse "Action result"
+// @Router /notify-payment [post]
 func (c *ApiController) NotifyPayment() {
 	owner := c.Ctx.Input.Param(":owner")
 	paymentName := c.Ctx.Input.Param(":payment")
@@ -220,12 +236,12 @@ func (c *ApiController) NotifyPayment() {
 }
 
 // InvoicePayment
-// @Title InvoicePayment
-// @Tag Payment API
+// @Summary InvoicePayment
+// @Tags Payment API
 // @Description invoice payment
 // @Param   id     query    string  true        "The id ( owner/name ) of the payment"
-// @Success 200 {object} controllers.Response The Response object
-// @router /invoice-payment [post]
+// @Success 200 {object} ActionResponse "Action result"
+// @Router /invoice-payment [post]
 func (c *ApiController) InvoicePayment() {
 	id := c.Ctx.Input.Query("id")
 

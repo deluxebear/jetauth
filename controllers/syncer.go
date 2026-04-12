@@ -23,13 +23,29 @@ import (
 	"github.com/deluxebear/casdoor/util"
 )
 
+// SyncerListResponse represents the response for syncer list APIs
+type SyncerListResponse struct {
+	Status string        `json:"status" example:"ok"`
+	Msg    string        `json:"msg" example:""`
+	Data   []object.Syncer `json:"data"`
+	Data2  int           `json:"data2" example:"10"`
+}
+
+// SyncerResponse represents the response for single syncer APIs
+type SyncerResponse struct {
+	Status string       `json:"status" example:"ok"`
+	Msg    string       `json:"msg" example:""`
+	Data   object.Syncer  `json:"data"`
+}
+
+
 // GetSyncers
-// @Title GetSyncers
-// @Tag Syncer API
+// @Summary GetSyncers
+// @Tags Syncer API
 // @Description get syncers
 // @Param   owner     query    string  true        "The owner of syncers"
-// @Success 200 {array} object.Syncer The Response object
-// @router /get-syncers [get]
+// @Success 200 {array} object.Syncer "The Response object"
+// @Router /get-syncers [get]
 func (c *ApiController) GetSyncers() {
 	owner := c.Ctx.Input.Query("owner")
 	limit := c.Ctx.Input.Query("pageSize")
@@ -68,12 +84,12 @@ func (c *ApiController) GetSyncers() {
 }
 
 // GetSyncer
-// @Title GetSyncer
-// @Tag Syncer API
+// @Summary GetSyncer
+// @Tags Syncer API
 // @Description get syncer
 // @Param   id     query    string  true        "The id ( owner/name ) of the syncer"
-// @Success 200 {object} object.Syncer The Response object
-// @router /get-syncer [get]
+// @Success 200 {object} object.Syncer "The Response object"
+// @Router /get-syncer [get]
 func (c *ApiController) GetSyncer() {
 	id := c.Ctx.Input.Query("id")
 
@@ -87,13 +103,13 @@ func (c *ApiController) GetSyncer() {
 }
 
 // UpdateSyncer
-// @Title UpdateSyncer
-// @Tag Syncer API
+// @Summary UpdateSyncer
+// @Tags Syncer API
 // @Description update syncer
 // @Param   id     query    string  true        "The id ( owner/name ) of the syncer"
 // @Param   body    body   object.Syncer  true        "The details of the syncer"
-// @Success 200 {object} controllers.Response The Response object
-// @router /update-syncer [post]
+// @Success 200 {object} ActionResponse "Action result"
+// @Router /update-syncer [post]
 func (c *ApiController) UpdateSyncer() {
 	id := c.Ctx.Input.Query("id")
 
@@ -111,12 +127,12 @@ func (c *ApiController) UpdateSyncer() {
 }
 
 // AddSyncer
-// @Title AddSyncer
-// @Tag Syncer API
+// @Summary AddSyncer
+// @Tags Syncer API
 // @Description add syncer
 // @Param   body    body   object.Syncer  true        "The details of the syncer"
-// @Success 200 {object} controllers.Response The Response object
-// @router /add-syncer [post]
+// @Success 200 {object} ActionResponse "Action result"
+// @Router /add-syncer [post]
 func (c *ApiController) AddSyncer() {
 	var syncer object.Syncer
 	err := json.Unmarshal(c.Ctx.Input.RequestBody, &syncer)
@@ -130,12 +146,12 @@ func (c *ApiController) AddSyncer() {
 }
 
 // DeleteSyncer
-// @Title DeleteSyncer
-// @Tag Syncer API
+// @Summary DeleteSyncer
+// @Tags Syncer API
 // @Description delete syncer
 // @Param   body    body   object.Syncer  true        "The details of the syncer"
-// @Success 200 {object} controllers.Response The Response object
-// @router /delete-syncer [post]
+// @Success 200 {object} ActionResponse "Action result"
+// @Router /delete-syncer [post]
 func (c *ApiController) DeleteSyncer() {
 	var syncer object.Syncer
 	err := json.Unmarshal(c.Ctx.Input.RequestBody, &syncer)
@@ -149,12 +165,12 @@ func (c *ApiController) DeleteSyncer() {
 }
 
 // RunSyncer
-// @Title RunSyncer
-// @Tag Syncer API
+// @Summary RunSyncer
+// @Tags Syncer API
 // @Description run syncer
 // @Param   body    body   object.Syncer  true        "The details of the syncer"
-// @Success 200 {object} controllers.Response The Response object
-// @router /run-syncer [get]
+// @Success 200 {object} ActionResponse "Action result"
+// @Router /run-syncer [get]
 func (c *ApiController) RunSyncer() {
 	id := c.Ctx.Input.Query("id")
 	syncer, err := object.GetSyncer(id)

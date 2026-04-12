@@ -22,13 +22,29 @@ import (
 	"github.com/deluxebear/casdoor/util"
 )
 
+// TicketListResponse represents the response for ticket list APIs
+type TicketListResponse struct {
+	Status string        `json:"status" example:"ok"`
+	Msg    string        `json:"msg" example:""`
+	Data   []object.Ticket `json:"data"`
+	Data2  int           `json:"data2" example:"10"`
+}
+
+// TicketResponse represents the response for single ticket APIs
+type TicketResponse struct {
+	Status string       `json:"status" example:"ok"`
+	Msg    string       `json:"msg" example:""`
+	Data   object.Ticket  `json:"data"`
+}
+
+
 // GetTickets
-// @Title GetTickets
-// @Tag Ticket API
+// @Summary GetTickets
+// @Tags Ticket API
 // @Description get tickets
 // @Param   owner     query    string  true        "The owner of tickets"
-// @Success 200 {array} object.Ticket The Response object
-// @router /get-tickets [get]
+// @Success 200 {array} object.Ticket "The Response object"
+// @Router /get-tickets [get]
 func (c *ApiController) GetTickets() {
 	owner := c.Ctx.Input.Query("owner")
 	limit := c.Ctx.Input.Query("pageSize")
@@ -93,12 +109,12 @@ func (c *ApiController) GetTickets() {
 }
 
 // GetTicket
-// @Title GetTicket
-// @Tag Ticket API
+// @Summary GetTicket
+// @Tags Ticket API
 // @Description get ticket
 // @Param   id     query    string  true        "The id ( owner/name ) of the ticket"
-// @Success 200 {object} object.Ticket The Response object
-// @router /get-ticket [get]
+// @Success 200 {object} object.Ticket "The Response object"
+// @Router /get-ticket [get]
 func (c *ApiController) GetTicket() {
 	id := c.Ctx.Input.Query("id")
 
@@ -121,13 +137,13 @@ func (c *ApiController) GetTicket() {
 }
 
 // UpdateTicket
-// @Title UpdateTicket
-// @Tag Ticket API
+// @Summary UpdateTicket
+// @Tags Ticket API
 // @Description update ticket
 // @Param   id     query    string  true        "The id ( owner/name ) of the ticket"
 // @Param   body    body   object.Ticket  true        "The details of the ticket"
-// @Success 200 {object} controllers.Response The Response object
-// @router /update-ticket [post]
+// @Success 200 {object} ActionResponse "Action result"
+// @Router /update-ticket [post]
 func (c *ApiController) UpdateTicket() {
 	id := c.Ctx.Input.Query("id")
 
@@ -178,12 +194,12 @@ func (c *ApiController) UpdateTicket() {
 }
 
 // AddTicket
-// @Title AddTicket
-// @Tag Ticket API
+// @Summary AddTicket
+// @Tags Ticket API
 // @Description add ticket
 // @Param   body    body   object.Ticket  true        "The details of the ticket"
-// @Success 200 {object} controllers.Response The Response object
-// @router /add-ticket [post]
+// @Success 200 {object} ActionResponse "Action result"
+// @Router /add-ticket [post]
 func (c *ApiController) AddTicket() {
 	var ticket object.Ticket
 	err := json.Unmarshal(c.Ctx.Input.RequestBody, &ticket)
@@ -201,12 +217,12 @@ func (c *ApiController) AddTicket() {
 }
 
 // DeleteTicket
-// @Title DeleteTicket
-// @Tag Ticket API
+// @Summary DeleteTicket
+// @Tags Ticket API
 // @Description delete ticket
 // @Param   body    body   object.Ticket  true        "The details of the ticket"
-// @Success 200 {object} controllers.Response The Response object
-// @router /delete-ticket [post]
+// @Success 200 {object} ActionResponse "Action result"
+// @Router /delete-ticket [post]
 func (c *ApiController) DeleteTicket() {
 	var ticket object.Ticket
 	err := json.Unmarshal(c.Ctx.Input.RequestBody, &ticket)
@@ -226,13 +242,13 @@ func (c *ApiController) DeleteTicket() {
 }
 
 // AddTicketMessage
-// @Title AddTicketMessage
-// @Tag Ticket API
+// @Summary AddTicketMessage
+// @Tags Ticket API
 // @Description add a message to a ticket
 // @Param   id     query    string  true        "The id ( owner/name ) of the ticket"
 // @Param   body    body   object.TicketMessage  true        "The message to add"
-// @Success 200 {object} controllers.Response The Response object
-// @router /add-ticket-message [post]
+// @Success 200 {object} ActionResponse "Action result"
+// @Router /add-ticket-message [post]
 func (c *ApiController) AddTicketMessage() {
 	id := c.Ctx.Input.Query("id")
 

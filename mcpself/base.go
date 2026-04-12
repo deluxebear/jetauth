@@ -200,11 +200,11 @@ func FormatOperationResult(operation, resourceType string, affected bool) string
 }
 
 // HandleMcp handles MCP protocol requests
-// @Title HandleMcp
-// @Tag MCP API
+// @Summary HandleMcp
+// @Tags MCP API
 // @Description handle MCP (Model Context Protocol) requests
-// @Success 200 {object} McpResponse The Response object
-// @router /mcp [post]
+// @Success 200 {object} McpResponse "The Response object"
+// @Router /mcp [post]
 func (c *McpController) HandleMcp() {
 	var req McpRequest
 	err := json.Unmarshal(c.Ctx.Input.RequestBody, &req)

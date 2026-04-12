@@ -40,6 +40,20 @@ import (
 	"golang.org/x/oauth2"
 )
 
+// ApplicationLoginResponse is the response for GetApplicationLogin API.
+type ApplicationLoginResponse struct {
+	Status string             `json:"status" example:"ok"`
+	Msg    string             `json:"msg" example:""`
+	Data   object.Application `json:"data"`
+}
+
+// BoolResponse is the response for APIs that return a boolean value.
+type BoolResponse struct {
+	Status string `json:"status" example:"ok"`
+	Msg    string `json:"msg" example:""`
+	Data   bool   `json:"data"`
+}
+
 func codeToResponse(code *object.Code) *Response {
 	if code.Code == "" {
 		return &Response{Status: "error", Msg: code.Message, Data: code.Code}
@@ -317,16 +331,16 @@ func (c *ApiController) HandleLoggedIn(application *object.Application, user *ob
 }
 
 // GetApplicationLogin ...
-// @Title GetApplicationLogin
-// @Tag Login API
+// @Summary GetApplicationLogin
+// @Tags Login API
 // @Description get application login
 // @Param   clientId    query    string  true        "client id"
 // @Param   responseType    query    string  true        "response type"
 // @Param   redirectUri    query    string  true        "redirect uri"
-// @Param   scope    query    string  true        "scope"
-// @Param   state    query    string  true        "state"
-// @Success 200 {object} controllers.Response The Response object
-// @router /get-app-login [get]
+// @Param   scope    query    string  true       "   0"
+// @Param   state    query    string  true       "   0"
+// @Success 200 {object} ApplicationLoginResponse "The Response object"
+// @Router /get-app-login [get]
 func (c *ApiController) GetApplicationLogin() {
 	clientId := c.Ctx.Input.Query("clientId")
 	responseType := c.Ctx.Input.Query("responseType")
@@ -505,20 +519,20 @@ func getExistUserByBindingRule(providerItem *object.ProviderItem, application *o
 }
 
 // Login ...
-// @Title Login
-// @Tag Login API
+// @Summary Login
+// @Tags Login API
 // @Description login
-// @Param clientId        query    string  true clientId
-// @Param responseType    query    string  true responseType
-// @Param redirectUri     query    string  true redirectUri
-// @Param scope     query    string  false  scope
-// @Param state     query    string  false  state
-// @Param nonce     query    string  false nonce
-// @Param code_challenge_method   query    string  false code_challenge_method
-// @Param code_challenge          query    string  false code_challenge
-// @Param   form   body   controllers.AuthForm  true        "Login information"
-// @Success 200 {object} controllers.Response The Response object
-// @router /login [post]
+// @Param clientId        query    string  true " 0"
+// @Param responseType    query    string  true " 0"
+// @Param redirectUri     query    string  true " 0"
+// @Param scope     query    string  false  " 0"
+// @Param state     query    string  false  " 0"
+// @Param nonce     query    string  false " 0"
+// @Param code_challenge_method   query    string  false " 0"
+// @Param code_challenge          query    string  false " 0"
+// @Param   form   body   form.AuthForm  true        "Login information"
+// @Success 200 {object} controllers.Response "The Response object"
+// @Router /login [post]
 func (c *ApiController) Login() {
 	resp := &Response{}
 
@@ -1247,10 +1261,10 @@ func (c *ApiController) HandleSamlLogin() {
 }
 
 // HandleOfficialAccountEvent ...
-// @Tag System API
-// @Title HandleOfficialAccountEvent
-// @router /webhook [POST]
-// @Success 200 {object} controllers.Response The Response object
+// @Tags System API
+// @Summary HandleOfficialAccountEvent
+// @Router /webhook [POST]
+// @Success 200 {object} controllers.Response "The Response object"
 func (c *ApiController) HandleOfficialAccountEvent() {
 	if c.Ctx.Request.Method == "GET" {
 		s := c.Ctx.Request.FormValue("echostr")
@@ -1318,11 +1332,11 @@ func (c *ApiController) HandleOfficialAccountEvent() {
 }
 
 // GetWebhookEventType ...
-// @Tag System API
-// @Title GetWebhookEventType
-// @router /get-webhook-event [GET]
+// @Tags System API
+// @Summary GetWebhookEventType
+// @Router /get-webhook-event [GET]
 // @Param   ticket     query    string  true        "The eventId of QRCode"
-// @Success 200 {object} controllers.Response The Response object
+// @Success 200 {object} ActionResponse "Event type and ticket"
 func (c *ApiController) GetWebhookEventType() {
 	ticket := c.Ctx.Input.Query("ticket")
 
@@ -1338,11 +1352,11 @@ func (c *ApiController) GetWebhookEventType() {
 }
 
 // GetQRCode
-// @Tag System API
-// @Title GetWechatQRCode
-// @router /get-qrcode [GET]
+// @Tags System API
+// @Summary GetWechatQRCode
+// @Router /get-qrcode [GET]
 // @Param   id     query    string  true        "The id ( owner/name ) of provider"
-// @Success 200 {object} controllers.Response The Response object
+// @Success 200 {object} ActionResponse "QR code URL and ticket"
 func (c *ApiController) GetQRCode() {
 	providerId := c.Ctx.Input.Query("id")
 	provider, err := object.GetProvider(providerId)
@@ -1365,12 +1379,12 @@ func (c *ApiController) GetQRCode() {
 }
 
 // GetCaptchaStatus
-// @Title GetCaptchaStatus
-// @Tag Token API
+// @Summary GetCaptchaStatus
+// @Tags Token API
 // @Description Get Login Error Counts
 // @Param   id     query    string  true        "The id ( owner/name ) of user"
-// @Success 200 {object} controllers.Response The Response object
-// @router /get-captcha-status [get]
+// @Success 200 {object} BoolResponse "The Response object"
+// @Router /get-captcha-status [get]
 func (c *ApiController) GetCaptchaStatus() {
 	organization := c.Ctx.Input.Query("organization")
 	userId := c.Ctx.Input.Query("userId")
@@ -1397,11 +1411,11 @@ func (c *ApiController) GetCaptchaStatus() {
 }
 
 // Callback
-// @Title Callback
-// @Tag Callback API
+// @Summary Callback
+// @Tags Callback API
 // @Description Get Login Error Counts
-// @router /Callback [post]
-// @Success 200 {object} object.Userinfo The Response object
+// @Router /Callback [post]
+// @Success 200 {object} object.Userinfo "The Response object"
 func (c *ApiController) Callback() {
 	code := c.GetString("code")
 	state := c.GetString("state")
@@ -1411,11 +1425,11 @@ func (c *ApiController) Callback() {
 }
 
 // DeviceAuth
-// @Title DeviceAuth
-// @Tag Device Authorization Endpoint
+// @Summary DeviceAuth
+// @Tags Device Authorization Endpoint
 // @Description Endpoint for the device authorization flow
-// @router /device-auth [post]
-// @Success 200 {object} object.DeviceAuthResponse The Response object
+// @Router /device-auth [post]
+// @Success 200 {object} object.DeviceAuthResponse "The Response object"
 func (c *ApiController) DeviceAuth() {
 	clientId := c.Ctx.Input.Query("client_id")
 	scope := c.Ctx.Input.Query("scope")

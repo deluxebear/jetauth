@@ -22,13 +22,29 @@ import (
 	"github.com/deluxebear/casdoor/util"
 )
 
+// TransactionListResponse represents the response for transaction list APIs
+type TransactionListResponse struct {
+	Status string        `json:"status" example:"ok"`
+	Msg    string        `json:"msg" example:""`
+	Data   []object.Transaction `json:"data"`
+	Data2  int           `json:"data2" example:"10"`
+}
+
+// TransactionResponse represents the response for single transaction APIs
+type TransactionResponse struct {
+	Status string       `json:"status" example:"ok"`
+	Msg    string       `json:"msg" example:""`
+	Data   object.Transaction  `json:"data"`
+}
+
+
 // GetTransactions
-// @Title GetTransactions
-// @Tag Transaction API
+// @Summary GetTransactions
+// @Tags Transaction API
 // @Description get transactions
 // @Param   owner     query    string  true        "The owner of transactions"
-// @Success 200 {array} object.Transaction The Response object
-// @router /get-transactions [get]
+// @Success 200 {array} object.Transaction "The Response object"
+// @Router /get-transactions [get]
 func (c *ApiController) GetTransactions() {
 	owner := c.Ctx.Input.Query("owner")
 	limit := c.Ctx.Input.Query("pageSize")
@@ -98,12 +114,12 @@ func (c *ApiController) GetTransactions() {
 }
 
 // GetTransaction
-// @Title GetTransaction
-// @Tag Transaction API
+// @Summary GetTransaction
+// @Tags Transaction API
 // @Description get transaction
 // @Param   id     query    string  true        "The id ( owner/name ) of the transaction"
-// @Success 200 {object} object.Transaction The Response object
-// @router /get-transaction [get]
+// @Success 200 {object} object.Transaction "The Response object"
+// @Router /get-transaction [get]
 func (c *ApiController) GetTransaction() {
 	id := c.Ctx.Input.Query("id")
 
@@ -138,13 +154,13 @@ func (c *ApiController) GetTransaction() {
 }
 
 // UpdateTransaction
-// @Title UpdateTransaction
-// @Tag Transaction API
+// @Summary UpdateTransaction
+// @Tags Transaction API
 // @Description update transaction
 // @Param   id     query    string  true        "The id ( owner/name ) of the transaction"
 // @Param   body    body   object.Transaction  true        "The details of the transaction"
-// @Success 200 {object} controllers.Response The Response object
-// @router /update-transaction [post]
+// @Success 200 {object} ActionResponse "Action result"
+// @Router /update-transaction [post]
 func (c *ApiController) UpdateTransaction() {
 	id := c.Ctx.Input.Query("id")
 
@@ -162,13 +178,13 @@ func (c *ApiController) UpdateTransaction() {
 }
 
 // AddTransaction
-// @Title AddTransaction
-// @Tag Transaction API
+// @Summary AddTransaction
+// @Tags Transaction API
 // @Description add transaction
 // @Param   body    body   object.Transaction  true        "The details of the transaction"
 // @Param   dryRun  query  string  false       "Dry run mode: set to 'true' or '1' to validate without committing"
-// @Success 200 {object} controllers.Response The Response object
-// @router /add-transaction [post]
+// @Success 200 {object} ActionResponse "Action result"
+// @Router /add-transaction [post]
 func (c *ApiController) AddTransaction() {
 	var transaction object.Transaction
 	err := json.Unmarshal(c.Ctx.Input.RequestBody, &transaction)
@@ -196,12 +212,12 @@ func (c *ApiController) AddTransaction() {
 }
 
 // DeleteTransaction
-// @Title DeleteTransaction
-// @Tag Transaction API
+// @Summary DeleteTransaction
+// @Tags Transaction API
 // @Description delete transaction
 // @Param   body    body   object.Transaction  true        "The details of the transaction"
-// @Success 200 {object} controllers.Response The Response object
-// @router /delete-transaction [post]
+// @Success 200 {object} ActionResponse "Action result"
+// @Router /delete-transaction [post]
 func (c *ApiController) DeleteTransaction() {
 	var transaction object.Transaction
 	err := json.Unmarshal(c.Ctx.Input.RequestBody, &transaction)

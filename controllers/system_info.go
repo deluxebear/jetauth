@@ -22,11 +22,11 @@ import (
 )
 
 // GetSystemInfo
-// @Title GetSystemInfo
-// @Tag System API
+// @Summary GetSystemInfo
+// @Tags System API
 // @Description get system info like CPU and memory usage
-// @Success 200 {object} util.SystemInfo The Response object
-// @router /get-system-info [get]
+// @Success 200 {object} util.SystemInfo "The Response object"
+// @Router /get-system-info [get]
 func (c *ApiController) GetSystemInfo() {
 	_, ok := c.RequireAdmin()
 	if !ok {
@@ -43,11 +43,11 @@ func (c *ApiController) GetSystemInfo() {
 }
 
 // GetVersionInfo
-// @Title GetVersionInfo
-// @Tag System API
+// @Summary GetVersionInfo
+// @Tags System API
 // @Description get version info like Casdoor release version and commit ID
-// @Success 200 {object} util.VersionInfo The Response object
-// @router /get-version-info [get]
+// @Success 200 {object} util.VersionInfo "The Response object"
+// @Router /get-version-info [get]
 func (c *ApiController) GetVersionInfo() {
 	versionInfo, err := util.GetVersionInfo()
 	if err != nil && !errors.Is(err, git.ErrRepositoryNotExists) {
@@ -64,11 +64,11 @@ func (c *ApiController) GetVersionInfo() {
 }
 
 // Health
-// @Title Health
-// @Tag System API
+// @Summary Health
+// @Tags System API
 // @Description check if the system is live
-// @Success 200 {object} controllers.Response The Response object
-// @router /health [get]
+// @Success 200 {object} controllers.ActionResponse "The Response object"
+// @Router /health [get]
 func (c *ApiController) Health() {
 	c.ResponseOk()
 }

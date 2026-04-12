@@ -15,8 +15,6 @@
 package routers
 
 import (
-	"bytes"
-	"io/fs"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -25,7 +23,6 @@ import (
 
 	"github.com/beego/beego/v2/core/logs"
 	"github.com/beego/beego/v2/server/web/context"
-	"github.com/deluxebear/casdoor/embedded"
 	"github.com/deluxebear/casdoor/util"
 )
 
@@ -60,20 +57,6 @@ func getLightweightAuthScriptPath(scriptName string) string {
 func serveLightweightAuthScript(ctx *context.Context, requestPath string, scriptName string) bool {
 	if ctx.Request.URL.Path != requestPath {
 		return false
-	}
-
-	if embedded.WebFS != nil {
-		data, err := fs.ReadFile(embedded.WebFS, scriptName)
-		if err != nil {
-			ctx.ResponseWriter.WriteHeader(http.StatusNotFound)
-			http.ServeContent(ctx.ResponseWriter, ctx.Request, scriptName, time.Now(), strings.NewReader("window.location.replace('/');"))
-			return true
-		}
-		info, _ := fs.Stat(embedded.WebFS, scriptName)
-		ctx.Output.Header("Content-Type", "application/javascript; charset=utf-8")
-		ctx.Output.Header("Cache-Control", "no-store")
-		http.ServeContent(ctx.ResponseWriter, ctx.Request, info.Name(), info.ModTime(), bytes.NewReader(data))
-		return true
 	}
 
 	scriptPath := getLightweightAuthScriptPath(scriptName)

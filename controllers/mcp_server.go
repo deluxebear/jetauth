@@ -26,13 +26,14 @@ import (
 )
 
 // ProxyServer
-// @Title ProxyServer
-// @Tag Server API
+// @Summary ProxyServer
+// @Tags Server API
 // @Description proxy request to the upstream MCP server by Server URL
 // @Param   owner    path    string  true        "The owner name of the server"
 // @Param   name     path    string  true        "The name of the server"
-// @Success 200 {object} mcp.McpResponse The Response object
-// @router /server/:owner/:name [get,post]
+// @Success 200 {object} controllers.Response "The Response object"
+// @Router /server/:owner/:name [get]
+// @Router /server/:owner/:name [post]
 func (c *ApiController) ProxyServer() {
 	owner := c.Ctx.Input.Param(":owner")
 	name := c.Ctx.Input.Param(":name")

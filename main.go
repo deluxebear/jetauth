@@ -24,7 +24,6 @@ import (
 	"github.com/deluxebear/casdoor/authz"
 	"github.com/deluxebear/casdoor/conf"
 	"github.com/deluxebear/casdoor/controllers"
-	"github.com/deluxebear/casdoor/embedded"
 	"github.com/deluxebear/casdoor/ldap"
 	"github.com/deluxebear/casdoor/object"
 	"github.com/deluxebear/casdoor/proxy"
@@ -88,9 +87,7 @@ func main() {
 	// web.SetStaticPath("/static", "web/build/static")
 
 	web.BConfig.WebConfig.DirectoryIndex = true
-	if embedded.SwaggerFS == nil {
-		web.SetStaticPath("/swagger", "swagger")
-	}
+	web.SetStaticPath("/swagger", "swagger")
 	web.SetStaticPath("/files", "files")
 	// https://studygolang.com/articles/2303
 	web.InsertFilter("*", web.BeforeStatic, routers.RequestBodyFilter)

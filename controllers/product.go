@@ -24,13 +24,29 @@ import (
 	"github.com/deluxebear/casdoor/util"
 )
 
+// ProductListResponse represents the response for product list APIs
+type ProductListResponse struct {
+	Status string        `json:"status" example:"ok"`
+	Msg    string        `json:"msg" example:""`
+	Data   []object.Product `json:"data"`
+	Data2  int           `json:"data2" example:"10"`
+}
+
+// ProductResponse represents the response for single product APIs
+type ProductResponse struct {
+	Status string       `json:"status" example:"ok"`
+	Msg    string       `json:"msg" example:""`
+	Data   object.Product  `json:"data"`
+}
+
+
 // GetProducts
-// @Title GetProducts
-// @Tag Product API
+// @Summary GetProducts
+// @Tags Product API
 // @Description get products
 // @Param   owner     query    string  true        "The owner of products"
-// @Success 200 {array} object.Product The Response object
-// @router /get-products [get]
+// @Success 200 {array} object.Product "The Response object"
+// @Router /get-products [get]
 func (c *ApiController) GetProducts() {
 	owner := c.Ctx.Input.Query("owner")
 	limit := c.Ctx.Input.Query("pageSize")
@@ -68,12 +84,12 @@ func (c *ApiController) GetProducts() {
 }
 
 // GetProduct
-// @Title GetProduct
-// @Tag Product API
+// @Summary GetProduct
+// @Tags Product API
 // @Description get product
 // @Param   id     query    string  true        "The id ( owner/name ) of the product"
-// @Success 200 {object} object.Product The Response object
-// @router /get-product [get]
+// @Success 200 {object} object.Product "The Response object"
+// @Router /get-product [get]
 func (c *ApiController) GetProduct() {
 	id := c.Ctx.Input.Query("id")
 
@@ -93,13 +109,13 @@ func (c *ApiController) GetProduct() {
 }
 
 // UpdateProduct
-// @Title UpdateProduct
-// @Tag Product API
+// @Summary UpdateProduct
+// @Tags Product API
 // @Description update product
 // @Param   id     query    string  true        "The id ( owner/name ) of the product"
 // @Param   body    body   object.Product  true        "The details of the product"
-// @Success 200 {object} controllers.Response The Response object
-// @router /update-product [post]
+// @Success 200 {object} ActionResponse "Action result"
+// @Router /update-product [post]
 func (c *ApiController) UpdateProduct() {
 	id := c.Ctx.Input.Query("id")
 
@@ -117,12 +133,12 @@ func (c *ApiController) UpdateProduct() {
 }
 
 // AddProduct
-// @Title AddProduct
-// @Tag Product API
+// @Summary AddProduct
+// @Tags Product API
 // @Description add product
 // @Param   body    body   object.Product  true        "The details of the product"
-// @Success 200 {object} controllers.Response The Response object
-// @router /add-product [post]
+// @Success 200 {object} ActionResponse "Action result"
+// @Router /add-product [post]
 func (c *ApiController) AddProduct() {
 	var product object.Product
 	err := json.Unmarshal(c.Ctx.Input.RequestBody, &product)
@@ -136,12 +152,12 @@ func (c *ApiController) AddProduct() {
 }
 
 // DeleteProduct
-// @Title DeleteProduct
-// @Tag Product API
+// @Summary DeleteProduct
+// @Tags Product API
 // @Description delete product
 // @Param   body    body   object.Product  true        "The details of the product"
-// @Success 200 {object} controllers.Response The Response object
-// @router /delete-product [post]
+// @Success 200 {object} ActionResponse "Action result"
+// @Router /delete-product [post]
 func (c *ApiController) DeleteProduct() {
 	var product object.Product
 	err := json.Unmarshal(c.Ctx.Input.RequestBody, &product)
@@ -155,8 +171,8 @@ func (c *ApiController) DeleteProduct() {
 }
 
 // BuyProduct
-// @Title BuyProduct (Deprecated)
-// @Tag Product API
+// @Summary BuyProduct (Deprecated)
+// @Tags Product API
 // @Description buy product using the deprecated compatibility endpoint, prefer place-order plus pay-order for new integrations
 // @Param   id             query    string  true   "The id ( owner/name ) of the product"
 // @Param   providerName   query    string  true   "The name of the provider"
@@ -165,8 +181,8 @@ func (c *ApiController) DeleteProduct() {
 // @Param   userName       query    string  false  "The username to buy product for (admin only)"
 // @Param   paymentEnv     query    string  false  "The payment environment"
 // @Param   customPrice    query    number  false  "Custom price for recharge products"
-// @Success 200 {object} controllers.Response The Response object
-// @router /buy-product [post]
+// @Success 200 {object} ActionResponse "Action result"
+// @Router /buy-product [post]
 func (c *ApiController) BuyProduct() {
 	id := c.Ctx.Input.Query("id")
 	host := c.Ctx.Request.Host

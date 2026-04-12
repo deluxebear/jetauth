@@ -24,12 +24,12 @@ import (
 )
 
 // KerberosLogin
-// @Title KerberosLogin
-// @Tag Login API
+// @Summary KerberosLogin
+// @Tags Login API
 // @Description Kerberos/SPNEGO login via Integrated Windows Authentication
 // @Param   application     query    string  true        "application name"
-// @Success 200 {object} controllers.Response The Response object
-// @router /kerberos-login [get]
+// @Success 200 {object} controllers.Response "The Response object"
+// @Router /kerberos-login [get]
 func (c *ApiController) KerberosLogin() {
 	applicationName := c.Ctx.Input.Query("application")
 	if applicationName == "" {

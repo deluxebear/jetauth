@@ -22,13 +22,29 @@ import (
 	"github.com/deluxebear/casdoor/util"
 )
 
+// AgentListResponse represents the response for agent list APIs
+type AgentListResponse struct {
+	Status string        `json:"status" example:"ok"`
+	Msg    string        `json:"msg" example:""`
+	Data   []object.Agent `json:"data"`
+	Data2  int           `json:"data2" example:"10"`
+}
+
+// AgentResponse represents the response for single agent APIs
+type AgentResponse struct {
+	Status string       `json:"status" example:"ok"`
+	Msg    string       `json:"msg" example:""`
+	Data   object.Agent  `json:"data"`
+}
+
+
 // GetAgents
-// @Title GetAgents
-// @Tag Agent API
+// @Summary GetAgents
+// @Tags Agent API
 // @Description get agents
 // @Param   owner     query    string  true        "The owner of agents"
-// @Success 200 {array} object.Agent The Response object
-// @router /get-agents [get]
+// @Success 200 {array} object.Agent "The Response object"
+// @Router /get-agents [get]
 func (c *ApiController) GetAgents() {
 	owner := c.Ctx.Input.Query("owner")
 	if owner == "admin" {
@@ -70,12 +86,12 @@ func (c *ApiController) GetAgents() {
 }
 
 // GetAgent
-// @Title GetAgent
-// @Tag Agent API
+// @Summary GetAgent
+// @Tags Agent API
 // @Description get agent
 // @Param   id     query    string  true        "The id ( owner/name ) of the agent"
-// @Success 200 {object} object.Agent The Response object
-// @router /get-agent [get]
+// @Success 200 {object} object.Agent "The Response object"
+// @Router /get-agent [get]
 func (c *ApiController) GetAgent() {
 	id := c.Ctx.Input.Query("id")
 
@@ -89,13 +105,13 @@ func (c *ApiController) GetAgent() {
 }
 
 // UpdateAgent
-// @Title UpdateAgent
-// @Tag Agent API
+// @Summary UpdateAgent
+// @Tags Agent API
 // @Description update agent
 // @Param   id     query    string  true        "The id ( owner/name ) of the agent"
 // @Param   body    body   object.Agent  true        "The details of the agent"
-// @Success 200 {object} controllers.Response The Response object
-// @router /update-agent [post]
+// @Success 200 {object} ActionResponse "Action result"
+// @Router /update-agent [post]
 func (c *ApiController) UpdateAgent() {
 	id := c.Ctx.Input.Query("id")
 
@@ -113,12 +129,12 @@ func (c *ApiController) UpdateAgent() {
 }
 
 // AddAgent
-// @Title AddAgent
-// @Tag Agent API
+// @Summary AddAgent
+// @Tags Agent API
 // @Description add agent
 // @Param   body    body   object.Agent  true        "The details of the agent"
-// @Success 200 {object} controllers.Response The Response object
-// @router /add-agent [post]
+// @Success 200 {object} ActionResponse "Action result"
+// @Router /add-agent [post]
 func (c *ApiController) AddAgent() {
 	var agent object.Agent
 	err := json.Unmarshal(c.Ctx.Input.RequestBody, &agent)
@@ -132,12 +148,12 @@ func (c *ApiController) AddAgent() {
 }
 
 // DeleteAgent
-// @Title DeleteAgent
-// @Tag Agent API
+// @Summary DeleteAgent
+// @Tags Agent API
 // @Description delete agent
 // @Param   body    body   object.Agent  true        "The details of the agent"
-// @Success 200 {object} controllers.Response The Response object
-// @router /delete-agent [post]
+// @Success 200 {object} ActionResponse "Action result"
+// @Router /delete-agent [post]
 func (c *ApiController) DeleteAgent() {
 	var agent object.Agent
 	err := json.Unmarshal(c.Ctx.Input.RequestBody, &agent)

@@ -22,13 +22,29 @@ import (
 	"github.com/deluxebear/casdoor/util"
 )
 
+// AdapterListResponse represents the response for adapter list APIs
+type AdapterListResponse struct {
+	Status string        `json:"status" example:"ok"`
+	Msg    string        `json:"msg" example:""`
+	Data   []object.Adapter `json:"data"`
+	Data2  int           `json:"data2" example:"10"`
+}
+
+// AdapterResponse represents the response for single adapter APIs
+type AdapterResponse struct {
+	Status string       `json:"status" example:"ok"`
+	Msg    string       `json:"msg" example:""`
+	Data   object.Adapter  `json:"data"`
+}
+
+
 // GetAdapters
-// @Title GetAdapters
-// @Tag Adapter API
+// @Summary GetAdapters
+// @Tags Adapter API
 // @Description get adapters
 // @Param   owner     query    string  true        "The owner of adapters"
-// @Success 200 {array} object.Adapter The Response object
-// @router /get-adapters [get]
+// @Success 200 {array} object.Adapter "The Response object"
+// @Router /get-adapters [get]
 func (c *ApiController) GetAdapters() {
 	owner := c.Ctx.Input.Query("owner")
 	limit := c.Ctx.Input.Query("pageSize")
@@ -66,12 +82,12 @@ func (c *ApiController) GetAdapters() {
 }
 
 // GetAdapter
-// @Title GetAdapter
-// @Tag Adapter API
+// @Summary GetAdapter
+// @Tags Adapter API
 // @Description get adapter
 // @Param   id     query    string  true        "The id ( owner/name ) of the adapter"
-// @Success 200 {object} object.Adapter The Response object
-// @router /get-adapter [get]
+// @Success 200 {object} object.Adapter "The Response object"
+// @Router /get-adapter [get]
 func (c *ApiController) GetAdapter() {
 	id := c.Ctx.Input.Query("id")
 
@@ -85,13 +101,13 @@ func (c *ApiController) GetAdapter() {
 }
 
 // UpdateAdapter
-// @Title UpdateAdapter
-// @Tag Adapter API
+// @Summary UpdateAdapter
+// @Tags Adapter API
 // @Description update adapter
 // @Param   id     query    string  true        "The id ( owner/name ) of the adapter"
 // @Param   body    body   object.Adapter  true        "The details of the adapter"
-// @Success 200 {object} controllers.Response The Response object
-// @router /update-adapter [post]
+// @Success 200 {object} ActionResponse "Action result"
+// @Router /update-adapter [post]
 func (c *ApiController) UpdateAdapter() {
 	id := c.Ctx.Input.Query("id")
 
@@ -109,12 +125,12 @@ func (c *ApiController) UpdateAdapter() {
 }
 
 // AddAdapter
-// @Title AddAdapter
-// @Tag Adapter API
+// @Summary AddAdapter
+// @Tags Adapter API
 // @Description add adapter
 // @Param   body    body   object.Adapter  true        "The details of the adapter"
-// @Success 200 {object} controllers.Response The Response object
-// @router /add-adapter [post]
+// @Success 200 {object} ActionResponse "Action result"
+// @Router /add-adapter [post]
 func (c *ApiController) AddAdapter() {
 	var adapter object.Adapter
 	err := json.Unmarshal(c.Ctx.Input.RequestBody, &adapter)
@@ -128,12 +144,12 @@ func (c *ApiController) AddAdapter() {
 }
 
 // DeleteAdapter
-// @Title DeleteAdapter
-// @Tag Adapter API
+// @Summary DeleteAdapter
+// @Tags Adapter API
 // @Description delete adapter
 // @Param   body    body   object.Adapter  true        "The details of the adapter"
-// @Success 200 {object} controllers.Response The Response object
-// @router /delete-adapter [post]
+// @Success 200 {object} ActionResponse "Action result"
+// @Router /delete-adapter [post]
 func (c *ApiController) DeleteAdapter() {
 	var adapter object.Adapter
 	err := json.Unmarshal(c.Ctx.Input.RequestBody, &adapter)

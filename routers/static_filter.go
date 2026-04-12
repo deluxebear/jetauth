@@ -15,12 +15,10 @@
 package routers
 
 import (
-	"bytes"
 	"compress/gzip"
 	"errors"
 	"fmt"
 	"io"
-	"io/fs"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -30,7 +28,6 @@ import (
 	"github.com/beego/beego/v2/core/logs"
 	"github.com/beego/beego/v2/server/web/context"
 	"github.com/deluxebear/casdoor/conf"
-	"github.com/deluxebear/casdoor/embedded"
 	"github.com/deluxebear/casdoor/object"
 	"github.com/deluxebear/casdoor/util"
 )
@@ -42,37 +39,7 @@ var (
 	frontendBaseDir  = conf.GetConfigString("frontendBaseDir")
 )
 
-func webFileExist(fullPath string) bool {
-	if embedded.WebFS != nil {
-		relPath := strings.TrimPrefix(fullPath, "web/build/")
-		_, err := fs.Stat(embedded.WebFS, relPath)
-		return err == nil
-	}
-	return util.FileExist(fullPath)
-}
-
-func serveEmbeddedSwagger(ctx *context.Context, urlPath string) {
-	relPath := strings.TrimPrefix(urlPath, "/swagger")
-	relPath = strings.TrimPrefix(relPath, "/")
-	if relPath == "" {
-		relPath = "index.html"
-	}
-
-	data, err := fs.ReadFile(embedded.SwaggerFS, relPath)
-	if err != nil {
-		ctx.ResponseWriter.WriteHeader(http.StatusNotFound)
-		return
-	}
-
-	info, _ := fs.Stat(embedded.SwaggerFS, relPath)
-	http.ServeContent(ctx.ResponseWriter, ctx.Request, info.Name(), info.ModTime(), bytes.NewReader(data))
-}
-
 func getWebBuildFolder() string {
-	if embedded.WebFS != nil {
-		return "web/build"
-	}
-
 	path := "web/build"
 	if util.FileExist(filepath.Join(path, "index.html")) || frontendBaseDir == "" {
 		return path
@@ -166,10 +133,6 @@ func StaticFilter(ctx *context.Context) {
 	if strings.HasPrefix(urlPath, "/api/") || strings.HasPrefix(urlPath, "/.well-known/") {
 		return
 	}
-	if strings.HasPrefix(urlPath, "/swagger") && embedded.SwaggerFS != nil {
-		serveEmbeddedSwagger(ctx, urlPath)
-		return
-	}
 	if serveAuthCallbackHandlerScript(ctx) {
 		return
 	}
@@ -220,7 +183,7 @@ func StaticFilter(ctx *context.Context) {
 		fmt.Println(err)
 	}
 
-	if strings.Contains(path, "/../") || !webFileExist(path) {
+	if strings.Contains(path, "/../") || !util.FileExist(path) {
 		path = webBuildFolder + "/index.html"
 	}
 	if strings.HasSuffix(path, "/index.html") {
@@ -229,7 +192,7 @@ func StaticFilter(ctx *context.Context) {
 			logs.Error("AppendWebConfigCookie failed in StaticFilter, error: %s", err)
 		}
 	}
-	if !webFileExist(path) {
+	if !util.FileExist(path) {
 		dir, err := os.Getwd()
 		if err != nil {
 			panic(err)
@@ -249,40 +212,18 @@ func StaticFilter(ctx *context.Context) {
 }
 
 func serveFileWithReplace(w http.ResponseWriter, r *http.Request, name string, organizationThemeCookie *OrganizationThemeCookie) {
-	var oldContent string
-	var fileName string
-	var modTime time.Time
+	f, err := os.Open(filepath.Clean(name))
+	if err != nil {
+		panic(err)
+	}
+	defer f.Close()
 
-	if embedded.WebFS != nil {
-		relPath := strings.TrimPrefix(name, "web/build/")
-		data, err := fs.ReadFile(embedded.WebFS, relPath)
-		if err != nil {
-			panic(err)
-		}
-		info, err := fs.Stat(embedded.WebFS, relPath)
-		if err != nil {
-			panic(err)
-		}
-		oldContent = string(data)
-		fileName = info.Name()
-		modTime = info.ModTime()
-	} else {
-		f, err := os.Open(filepath.Clean(name))
-		if err != nil {
-			panic(err)
-		}
-		defer f.Close()
-
-		d, err := f.Stat()
-		if err != nil {
-			panic(err)
-		}
-
-		oldContent = util.ReadStringFromPath(name)
-		fileName = d.Name()
-		modTime = d.ModTime()
+	d, err := f.Stat()
+	if err != nil {
+		panic(err)
 	}
 
+	oldContent := util.ReadStringFromPath(name)
 	newContent := oldContent
 	if organizationThemeCookie != nil {
 		newContent = strings.ReplaceAll(newContent, "https://cdn.casbin.org/img/favicon.png", organizationThemeCookie.Favicon)
@@ -291,7 +232,7 @@ func serveFileWithReplace(w http.ResponseWriter, r *http.Request, name string, o
 
 	newContent = strings.ReplaceAll(newContent, oldStaticBaseUrl, newStaticBaseUrl)
 
-	http.ServeContent(w, r, fileName, modTime, strings.NewReader(newContent))
+	http.ServeContent(w, r, d.Name(), d.ModTime(), strings.NewReader(newContent))
 }
 
 type gzipResponseWriter struct {

@@ -22,13 +22,29 @@ import (
 	"github.com/deluxebear/casdoor/util"
 )
 
+// ModelListResponse represents the response for model list APIs
+type ModelListResponse struct {
+	Status string        `json:"status" example:"ok"`
+	Msg    string        `json:"msg" example:""`
+	Data   []object.Model `json:"data"`
+	Data2  int           `json:"data2" example:"10"`
+}
+
+// ModelResponse represents the response for single model APIs
+type ModelResponse struct {
+	Status string       `json:"status" example:"ok"`
+	Msg    string       `json:"msg" example:""`
+	Data   object.Model  `json:"data"`
+}
+
+
 // GetModels
-// @Title GetModels
-// @Tag Model API
+// @Summary GetModels
+// @Tags Model API
 // @Description get models
 // @Param   owner     query    string  true        "The owner of models"
-// @Success 200 {array} object.Model The Response object
-// @router /get-models [get]
+// @Success 200 {array} object.Model "The Response object"
+// @Router /get-models [get]
 func (c *ApiController) GetModels() {
 	owner := c.Ctx.Input.Query("owner")
 	limit := c.Ctx.Input.Query("pageSize")
@@ -66,12 +82,12 @@ func (c *ApiController) GetModels() {
 }
 
 // GetModel
-// @Title GetModel
-// @Tag Model API
+// @Summary GetModel
+// @Tags Model API
 // @Description get model
 // @Param   id     query    string  true        "The id ( owner/name ) of the model"
-// @Success 200 {object} object.Model The Response object
-// @router /get-model [get]
+// @Success 200 {object} object.Model "The Response object"
+// @Router /get-model [get]
 func (c *ApiController) GetModel() {
 	id := c.Ctx.Input.Query("id")
 
@@ -85,13 +101,13 @@ func (c *ApiController) GetModel() {
 }
 
 // UpdateModel
-// @Title UpdateModel
-// @Tag Model API
+// @Summary UpdateModel
+// @Tags Model API
 // @Description update model
 // @Param   id     query    string  true        "The id ( owner/name ) of the model"
 // @Param   body    body   object.Model  true        "The details of the model"
-// @Success 200 {object} controllers.Response The Response object
-// @router /update-model [post]
+// @Success 200 {object} ActionResponse "Action result"
+// @Router /update-model [post]
 func (c *ApiController) UpdateModel() {
 	id := c.Ctx.Input.Query("id")
 
@@ -109,12 +125,12 @@ func (c *ApiController) UpdateModel() {
 }
 
 // AddModel
-// @Title AddModel
-// @Tag Model API
+// @Summary AddModel
+// @Tags Model API
 // @Description add model
 // @Param   body    body   object.Model  true        "The details of the model"
-// @Success 200 {object} controllers.Response The Response object
-// @router /add-model [post]
+// @Success 200 {object} ActionResponse "Action result"
+// @Router /add-model [post]
 func (c *ApiController) AddModel() {
 	var model object.Model
 	err := json.Unmarshal(c.Ctx.Input.RequestBody, &model)
@@ -128,12 +144,12 @@ func (c *ApiController) AddModel() {
 }
 
 // DeleteModel
-// @Title DeleteModel
-// @Tag Model API
+// @Summary DeleteModel
+// @Tags Model API
 // @Description delete model
 // @Param   body    body   object.Model  true        "The details of the model"
-// @Success 200 {object} controllers.Response The Response object
-// @router /delete-model [post]
+// @Success 200 {object} ActionResponse "Action result"
+// @Router /delete-model [post]
 func (c *ApiController) DeleteModel() {
 	var model object.Model
 	err := json.Unmarshal(c.Ctx.Input.RequestBody, &model)

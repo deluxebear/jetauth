@@ -37,12 +37,12 @@ const (
 )
 
 // GetVerifications
-// @Title GetVerifications
-// @Tag Verification API
+// @Summary GetVerifications
+// @Tags Verification API
 // @Description get payments
 // @Param   owner     query    string  true        "The owner of payments"
-// @Success 200 {array} object.Verification The Response object
-// @router /get-payments [get]
+// @Success 200 {array} object.VerificationRecord "The Response object"
+// @Router /get-payments [get]
 func (c *ApiController) GetVerifications() {
 	organization, ok := c.RequireAdmin()
 	if !ok {
@@ -91,14 +91,14 @@ func (c *ApiController) GetVerifications() {
 }
 
 // GetUserVerifications
-// @Title GetUserVerifications
-// @Tag Verification API
+// @Summary GetUserVerifications
+// @Tags Verification API
 // @Description get payments for a user
 // @Param   owner     query    string  true        "The owner of payments"
 // @Param   organization    query   string  true   "The organization of the user"
 // @Param   user    query   string  true           "The username of the user"
-// @Success 200 {array} object.Verification The Response object
-// @router /get-user-payments [get]
+// @Success 200 {array} object.VerificationRecord "The Response object"
+// @Router /get-user-payments [get]
 func (c *ApiController) GetUserVerifications() {
 	owner := c.Ctx.Input.Query("owner")
 	user := c.Ctx.Input.Query("user")
@@ -113,12 +113,12 @@ func (c *ApiController) GetUserVerifications() {
 }
 
 // GetVerification
-// @Title GetVerification
-// @Tag Verification API
+// @Summary GetVerification
+// @Tags Verification API
 // @Description get payment
 // @Param   id     query    string  true        "The id ( owner/name ) of the payment"
-// @Success 200 {object} object.Verification The Response object
-// @router /get-payment [get]
+// @Success 200 {object} object.VerificationRecord "The Response object"
+// @Router /get-payment [get]
 func (c *ApiController) GetVerification() {
 	id := c.Ctx.Input.Query("id")
 
@@ -132,10 +132,10 @@ func (c *ApiController) GetVerification() {
 }
 
 // SendVerificationCode ...
-// @Title SendVerificationCode
-// @Tag Verification API
-// @router /send-verification-code [post]
-// @Success 200 {object} object.Userinfo The Response object
+// @Summary SendVerificationCode
+// @Tags Verification API
+// @Router /send-verification-code [post]
+// @Success 200 {object} object.Userinfo "The Response object"
 func (c *ApiController) SendVerificationCode() {
 	var vform form.VerificationForm
 	err := c.ParseForm(&vform)
@@ -391,10 +391,10 @@ func (c *ApiController) SendVerificationCode() {
 }
 
 // VerifyCaptcha ...
-// @Title VerifyCaptcha
-// @Tag Verification API
-// @router /verify-captcha [post]
-// @Success 200 {object} object.Userinfo The Response object
+// @Summary VerifyCaptcha
+// @Tags Verification API
+// @Router /verify-captcha [post]
+// @Success 200 {object} object.Userinfo "The Response object"
 func (c *ApiController) VerifyCaptcha() {
 	var vform form.VerificationForm
 	err := c.ParseForm(&vform)
@@ -434,10 +434,10 @@ func (c *ApiController) VerifyCaptcha() {
 }
 
 // ResetEmailOrPhone ...
-// @Tag Account API
-// @Title ResetEmailOrPhone
-// @router /reset-email-or-phone [post]
-// @Success 200 {object} object.Userinfo The Response object
+// @Tags Account API
+// @Summary ResetEmailOrPhone
+// @Router /reset-email-or-phone [post]
+// @Success 200 {object} object.Userinfo "The Response object"
 func (c *ApiController) ResetEmailOrPhone() {
 	user, ok := c.RequireSignedInUser()
 	if !ok {
@@ -542,10 +542,10 @@ func (c *ApiController) ResetEmailOrPhone() {
 }
 
 // VerifyCode
-// @Tag Verification API
-// @Title VerifyCode
-// @router /verify-code [post]
-// @Success 200 {object} object.Userinfo The Response object
+// @Tags Verification API
+// @Summary VerifyCode
+// @Router /verify-code [post]
+// @Success 200 {object} object.Userinfo "The Response object"
 func (c *ApiController) VerifyCode() {
 	var authForm form.AuthForm
 	err := json.Unmarshal(c.Ctx.Input.RequestBody, &authForm)

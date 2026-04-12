@@ -22,13 +22,29 @@ import (
 	"github.com/deluxebear/casdoor/util"
 )
 
+// PermissionListResponse represents the response for permission list APIs
+type PermissionListResponse struct {
+	Status string        `json:"status" example:"ok"`
+	Msg    string        `json:"msg" example:""`
+	Data   []object.Permission `json:"data"`
+	Data2  int           `json:"data2" example:"10"`
+}
+
+// PermissionResponse represents the response for single permission APIs
+type PermissionResponse struct {
+	Status string       `json:"status" example:"ok"`
+	Msg    string       `json:"msg" example:""`
+	Data   object.Permission  `json:"data"`
+}
+
+
 // GetPermissions
-// @Title GetPermissions
-// @Tag Permission API
+// @Summary GetPermissions
+// @Tags Permission API
 // @Description get permissions
 // @Param   owner     query    string  true        "The owner of permissions"
-// @Success 200 {array} object.Permission The Response object
-// @router /get-permissions [get]
+// @Success 200 {array} object.Permission "The Response object"
+// @Router /get-permissions [get]
 func (c *ApiController) GetPermissions() {
 	owner := c.Ctx.Input.Query("owner")
 	limit := c.Ctx.Input.Query("pageSize")
@@ -66,11 +82,11 @@ func (c *ApiController) GetPermissions() {
 }
 
 // GetPermissionsBySubmitter
-// @Title GetPermissionsBySubmitter
-// @Tag Permission API
+// @Summary GetPermissionsBySubmitter
+// @Tags Permission API
 // @Description get permissions by submitter
-// @Success 200 {array} object.Permission The Response object
-// @router /get-permissions-by-submitter [get]
+// @Success 200 {array} object.Permission "The Response object"
+// @Router /get-permissions-by-submitter [get]
 func (c *ApiController) GetPermissionsBySubmitter() {
 	user, ok := c.RequireSignedInUser()
 	if !ok {
@@ -87,12 +103,12 @@ func (c *ApiController) GetPermissionsBySubmitter() {
 }
 
 // GetPermissionsByRole
-// @Title GetPermissionsByRole
-// @Tag Permission API
+// @Summary GetPermissionsByRole
+// @Tags Permission API
 // @Description get permissions by role
 // @Param   id     query    string  true        "The id ( owner/name ) of the role"
-// @Success 200 {array} object.Permission The Response object
-// @router /get-permissions-by-role [get]
+// @Success 200 {array} object.Permission "The Response object"
+// @Router /get-permissions-by-role [get]
 func (c *ApiController) GetPermissionsByRole() {
 	id := c.Ctx.Input.Query("id")
 	permissions, err := object.GetPermissionsByRole(id)
@@ -105,12 +121,12 @@ func (c *ApiController) GetPermissionsByRole() {
 }
 
 // GetPermission
-// @Title GetPermission
-// @Tag Permission API
+// @Summary GetPermission
+// @Tags Permission API
 // @Description get permission
 // @Param   id     query    string  true        "The id ( owner/name ) of the permission"
-// @Success 200 {object} object.Permission The Response object
-// @router /get-permission [get]
+// @Success 200 {object} object.Permission "The Response object"
+// @Router /get-permission [get]
 func (c *ApiController) GetPermission() {
 	id := c.Ctx.Input.Query("id")
 
@@ -124,13 +140,13 @@ func (c *ApiController) GetPermission() {
 }
 
 // UpdatePermission
-// @Title UpdatePermission
-// @Tag Permission API
+// @Summary UpdatePermission
+// @Tags Permission API
 // @Description update permission
 // @Param   id     query    string  true        "The id ( owner/name ) of the permission"
 // @Param   body    body   object.Permission  true        "The details of the permission"
-// @Success 200 {object} controllers.Response The Response object
-// @router /update-permission [post]
+// @Success 200 {object} ActionResponse "Action result"
+// @Router /update-permission [post]
 func (c *ApiController) UpdatePermission() {
 	id := c.Ctx.Input.Query("id")
 
@@ -148,12 +164,12 @@ func (c *ApiController) UpdatePermission() {
 }
 
 // AddPermission
-// @Title AddPermission
-// @Tag Permission API
+// @Summary AddPermission
+// @Tags Permission API
 // @Description add permission
 // @Param   body    body   object.Permission  true        "The details of the permission"
-// @Success 200 {object} controllers.Response The Response object
-// @router /add-permission [post]
+// @Success 200 {object} ActionResponse "Action result"
+// @Router /add-permission [post]
 func (c *ApiController) AddPermission() {
 	var permission object.Permission
 	err := json.Unmarshal(c.Ctx.Input.RequestBody, &permission)
@@ -167,12 +183,12 @@ func (c *ApiController) AddPermission() {
 }
 
 // DeletePermission
-// @Title DeletePermission
-// @Tag Permission API
+// @Summary DeletePermission
+// @Tags Permission API
 // @Description delete permission
 // @Param   body    body   object.Permission  true        "The details of the permission"
-// @Success 200 {object} controllers.Response The Response object
-// @router /delete-permission [post]
+// @Success 200 {object} ActionResponse "Action result"
+// @Router /delete-permission [post]
 func (c *ApiController) DeletePermission() {
 	var permission object.Permission
 	err := json.Unmarshal(c.Ctx.Input.RequestBody, &permission)

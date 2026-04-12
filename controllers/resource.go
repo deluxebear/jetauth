@@ -29,20 +29,36 @@ import (
 	"github.com/deluxebear/casdoor/util"
 )
 
+// ResourceListResponse represents the response for resource list APIs
+type ResourceListResponse struct {
+	Status string        `json:"status" example:"ok"`
+	Msg    string        `json:"msg" example:""`
+	Data   []object.Resource `json:"data"`
+	Data2  int           `json:"data2" example:"10"`
+}
+
+// ResourceResponse represents the response for single resource APIs
+type ResourceResponse struct {
+	Status string       `json:"status" example:"ok"`
+	Msg    string       `json:"msg" example:""`
+	Data   object.Resource  `json:"data"`
+}
+
+
 // GetResources
-// @Tag Resource API
-// @Title GetResources
+// @Tags Resource API
+// @Summary GetResources
 // @Description get resources
-// @Param		owner 		query 		string 				true 				"Owner"
-// @Param		user 		query 		string 				true 				"User"
+// @Param		owner 		query 		string 				true 		"		0"
+// @Param		user 		query 		string 				true 		"		0"
 // @Param 		pageSize 	query 		integer 			false 				"Page Size"
 // @Param 		p 			query 		integer 				false 				"Page Number"
-// @Param 		field 		query 		string 				false 				"Field"
-// @Param 		value 		query 		string 				false 				"Value"
+// @Param 		field 		query 		string 				false 			" 		0"
+// @Param 		value 		query 		string 				false 			" 		0"
 // @Param 		sortField 	query 		string 				false 				"Sort Field"
 // @Param 		sortOrder 	query 		string 				false 				"Sort Order"
-// @Success		200 		{array} 	object.Resource 	The Response object
-// @router /get-resources [get]
+// @Success		200 		{array} 	object.Resource 	"The Response object"
+// @Router /get-resources [get]
 func (c *ApiController) GetResources() {
 	owner := c.Ctx.Input.Query("owner")
 	user := c.Ctx.Input.Query("user")
@@ -105,12 +121,12 @@ func (c *ApiController) GetResources() {
 }
 
 // GetResource
-// @Tag Resource API
-// @Title GetResource
+// @Tags Resource API
+// @Summary GetResource
 // @Description get resource
 // @Param   	id			query   	string     			true        		"The id ( owner/name ) of resource"
-// @Success 	200			{object}	object.Resource		The Response object
-// @router /get-resource [get]
+// @Success 	200			{object}	object.Resource		"The Response object"
+// @Router /get-resource [get]
 func (c *ApiController) GetResource() {
 	id := c.Ctx.Input.Query("id")
 
@@ -124,13 +140,13 @@ func (c *ApiController) GetResource() {
 }
 
 // UpdateResource
-// @Tag Resource API
-// @Title UpdateResource
+// @Tags Resource API
+// @Summary UpdateResource
 // @Description get resource
 // @Param   	id     		query   	string  			true				"The id ( owner/name ) of resource"
 // @Param		resource	body		object.Resource		true				"The resource object"
-// @Success 	200			{object}	controllers.Response					Success or error
-// @router /update-resource [post]
+// @Success 200 {object} ActionResponse "Action result"
+// @Router /update-resource [post]
 func (c *ApiController) UpdateResource() {
 	id := c.Ctx.Input.Query("id")
 
@@ -148,11 +164,11 @@ func (c *ApiController) UpdateResource() {
 }
 
 // AddResource
-// @Tag Resource API
-// @Title AddResource
+// @Tags Resource API
+// @Summary AddResource
 // @Param     	resource    body    	object.Resource  	true      			"Resource object"
-// @Success 	200			{object}	controllers.Response					Success or error
-// @router /add-resource [post]
+// @Success 200 {object} ActionResponse "Action result"
+// @Router /add-resource [post]
 func (c *ApiController) AddResource() {
 	var resource object.Resource
 	err := json.Unmarshal(c.Ctx.Input.RequestBody, &resource)
@@ -166,11 +182,11 @@ func (c *ApiController) AddResource() {
 }
 
 // DeleteResource
-// @Tag Resource API
-// @Title DeleteResource
+// @Tags Resource API
+// @Summary DeleteResource
 // @Param     	resource    body    	object.Resource  	true      			"Resource object"
-// @Success 	200			{object}	controllers.Response					Success or error
-// @router /delete-resource [post]
+// @Success 200 {object} ActionResponse "Action result"
+// @Router /delete-resource [post]
 func (c *ApiController) DeleteResource() {
 	var resource object.Resource
 	err := json.Unmarshal(c.Ctx.Input.RequestBody, &resource)
@@ -208,19 +224,19 @@ func (c *ApiController) DeleteResource() {
 }
 
 // UploadResource
-// @Tag Resource API
-// @Title UploadResource
-// @Param     owner           query   	string    			true      			"Owner"
-// @Param     user            query   	string    			true      			"User"
-// @Param     application     query   	string    			true     			"Application"
-// @Param     tag             query   	string    			false     			"Tag"
-// @Param     parent          query   	string    			false     			"Parent"
+// @Tags Resource API
+// @Summary UploadResource
+// @Param     owner           query   	string    			true      		"     0"
+// @Param     user            query   	string    			true      		"     0"
+// @Param     application     query   	string    			true     		"     0"
+// @Param     tag             query   	string    			false     		"     0"
+// @Param     parent          query   	string    			false     		"     0"
 // @Param     fullFilePath    query   	string    			true     			"Full File Path"
 // @Param     createdTime     query   	string    			false     			"Created Time"
-// @Param     description     query   	string    			false     			"Description"
+// @Param     description     query   	string    			false     		"     0"
 // @Param     file            formData 	file      			true      			"Resource file"
-// @Success   200             {object}  object.Resource  	FileUrl, objectKey
-// @router /upload-resource [post]
+// @Success   200             {object}  object.Resource  	"FileUrl, objectKey"
+// @Router /upload-resource [post]
 func (c *ApiController) UploadResource() {
 	owner := c.Ctx.Input.Query("owner")
 	username := c.Ctx.Input.Query("user")

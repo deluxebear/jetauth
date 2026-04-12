@@ -23,16 +23,16 @@ import (
 )
 
 // PlaceOrder
-// @Title PlaceOrder
-// @Tag Order API
+// @Summary PlaceOrder
+// @Tags Order API
 // @Description place an order for a product
 // @Param   productId     query    string  true        "The id ( owner/name ) of the product"
 // @Param   pricingName   query    string  false       "The name of the pricing (for subscription)"
 // @Param   planName      query    string  false       "The name of the plan (for subscription)"
 // @Param   customPrice   query    number  false       "Custom price for recharge products"
 // @Param   userName      query    string  false       "The username to place order for (admin only)"
-// @Success 200 {object} object.Order The Response object
-// @router /place-order [post]
+// @Success 200 {object} object.Order "The Response object"
+// @Router /place-order [post]
 func (c *ApiController) PlaceOrder() {
 	owner := c.Ctx.Input.Query("owner")
 	paidUserName := c.Ctx.Input.Query("userName")
@@ -90,13 +90,13 @@ func (c *ApiController) PlaceOrder() {
 }
 
 // PayOrder
-// @Title PayOrder
-// @Tag Order API
+// @Summary PayOrder
+// @Tags Order API
 // @Description pay an existing order
 // @Param   id     query    string  true        "The id ( owner/name ) of the order"
 // @Param   providerName    query    string  true  "The name of the provider"
-// @Success 200 {object} controllers.Response The Response object
-// @router /pay-order [post]
+// @Success 200 {object} controllers.Response "The Response object"
+// @Router /pay-order [post]
 func (c *ApiController) PayOrder() {
 	id := c.Ctx.Input.Query("id")
 	host := c.Ctx.Request.Host
@@ -130,12 +130,12 @@ func (c *ApiController) PayOrder() {
 }
 
 // CancelOrder
-// @Title CancelOrder
-// @Tag Order API
+// @Summary CancelOrder
+// @Tags Order API
 // @Description cancel an order
 // @Param   id     query    string  true        "The id ( owner/name ) of the order"
-// @Success 200 {object} controllers.Response The Response object
-// @router /cancel-order [post]
+// @Success 200 {object} controllers.ActionResponse "The Response object"
+// @Router /cancel-order [post]
 func (c *ApiController) CancelOrder() {
 	id := c.Ctx.Input.Query("id")
 	order, err := object.GetOrder(id)
