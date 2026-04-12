@@ -161,6 +161,12 @@ func getObject(ctx *context.Context) (string, string, error) {
 						return org, name, nil
 					}
 				}
+				// Organization's Owner is "admin" but org admins should be
+				// able to manage their own org. Use the org name itself as
+				// objOwner so subOwner == objOwner matches.
+				if strings.HasSuffix(path, "-organization") {
+					return name, name, nil
+				}
 				return owner, name, nil
 			}
 		}

@@ -88,6 +88,8 @@ type Organization struct {
 	UserNavItems           []string   `xorm:"mediumtext" json:"userNavItems"`
 	WidgetItems            []string   `xorm:"mediumtext" json:"widgetItems"`
 
+	OrgAdminEditableFields []string `xorm:"mediumtext" json:"orgAdminEditableFields"`
+
 	MfaItems           []*MfaItem     `xorm:"varchar(300)" json:"mfaItems"`
 	MfaRememberInHours int            `json:"mfaRememberInHours"`
 	AccountMenu        string         `xorm:"varchar(20)" json:"accountMenu"`
@@ -231,6 +233,12 @@ func UpdateOrganization(id string, organization *Organization, isGlobalAdmin boo
 		return false, nil
 	}
 
+	// Enforce field restrictions BEFORE any triggers to prevent
+	// org admins from triggering cascading name changes via forged requests.
+	if !isGlobalAdmin {
+		EnforceOrgAdminFields(organization, org)
+	}
+
 	if name == "built-in" {
 		organization.Name = name
 	}
@@ -248,12 +256,6 @@ func UpdateOrganization(id string, organization *Organization, isGlobalAdmin boo
 			hashedPassword := credManager.GetHashedPassword(organization.MasterPassword, organization.PasswordSalt)
 			organization.MasterPassword = hashedPassword
 		}
-	}
-
-	if !isGlobalAdmin {
-		organization.NavItems = org.NavItems
-		organization.UserNavItems = org.UserNavItems
-		organization.WidgetItems = org.WidgetItems
 	}
 
 	session := ormer.Engine.ID(core.PK{owner, name}).AllCols()
