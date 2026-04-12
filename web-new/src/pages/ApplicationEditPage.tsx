@@ -35,7 +35,7 @@ const SSL_MODES = [
 ];
 
 export default function ApplicationEditPage() {
-  const { owner, name } = useParams<{ owner: string; name: string }>();
+  const { owner: orgName, name } = useParams<{ owner: string; name: string }>();
   const isNew = !name || name === "new";
   const navigate = useNavigate();
   const location = useLocation();
@@ -55,7 +55,7 @@ export default function ApplicationEditPage() {
     if (isNew) return;
     setLoading(true);
     try {
-      const res = await AppBackend.getApplication(owner!, name!);
+      const res = await AppBackend.getApplication("admin", name!);
       if (res.status === "ok" && res.data) {
         const application = res.data;
         if (!application.grantTypes?.length) {
@@ -68,7 +68,7 @@ export default function ApplicationEditPage() {
       }
     } catch (e) { console.error(e); }
     finally { setLoading(false); }
-  }, [owner, name, isNew]);
+  }, [name, isNew]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
@@ -79,7 +79,7 @@ export default function ApplicationEditPage() {
     try {
       const res = isNew
         ? await AppBackend.addApplication(app as Application)
-        : await AppBackend.updateApplication(owner!, name!, app as Application);
+        : await AppBackend.updateApplication(app.owner || "admin", name!, app as Application);
       if (res.status === "ok") {
         modal.toast(t("common.saveSuccess" as any));
         setIsAddMode(false);
@@ -96,7 +96,7 @@ export default function ApplicationEditPage() {
     try {
       const res = isNew
         ? await AppBackend.addApplication(app as Application)
-        : await AppBackend.updateApplication(owner!, name!, app as Application);
+        : await AppBackend.updateApplication(app.owner || "admin", name!, app as Application);
       if (res.status === "ok") {
         modal.toast(t("common.saveSuccess" as any));
         invalidateList();
@@ -749,7 +749,7 @@ export default function ApplicationEditPage() {
             <h1 className="text-xl font-bold tracking-tight">
               {isNew ? t("common.add") : t("common.edit")} {t("apps.title")}
             </h1>
-            {!isNew && <p className="text-[13px] text-text-muted font-mono mt-0.5">{owner}/{name}</p>}
+            {!isNew && <p className="text-[13px] text-text-muted font-mono mt-0.5">{orgName}/{name}</p>}
           </div>
         </div>
         <div className="flex items-center gap-2">

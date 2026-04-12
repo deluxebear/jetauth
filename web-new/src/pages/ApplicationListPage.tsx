@@ -35,7 +35,7 @@ export default function ApplicationListPage() {
     const app = AppBackend.newApplication(getNewEntityOwner());
     const res = await AppBackend.addApplication(app);
     if (res.status === "ok") {
-      navigate(`/applications/${app.owner}/${app.name}`, { state: { mode: "add" } });
+      navigate(`/applications/${app.organization}/${app.name}`, { state: { mode: "add" } });
     } else {
       modal.toast(res.msg || t("common.addFailed" as any), "error");
     }
@@ -60,7 +60,7 @@ export default function ApplicationListPage() {
   const columns: Column<Application>[] = [
     {
       key: "name", title: t("col.name" as any), sortable: true, filterable: true, fixed: "left" as const, width: "150px",
-      render: (_, r) => <Link to={`/applications/${r.owner}/${r.name}`} className="font-mono font-medium text-accent hover:underline" onClick={(e) => e.stopPropagation()}>{r.name}</Link>,
+      render: (_, r) => <Link to={`/applications/${r.organization}/${r.name}`} className="font-mono font-medium text-accent hover:underline" onClick={(e) => e.stopPropagation()}>{r.name}</Link>,
     },
     {
       key: "createdTime", title: t("col.created" as any), sortable: true, width: "160px",
@@ -103,7 +103,7 @@ export default function ApplicationListPage() {
       key: "__actions", fixed: "right" as const, title: t("common.action" as any), width: "170px",
       render: (_, r) => (
         <div className="flex items-center gap-1">
-          <Link to={`/applications/${r.owner}/${r.name}`} className="rounded p-1.5 text-text-muted hover:text-warning hover:bg-warning/10 transition-colors" title={t("common.edit")} onClick={(e) => e.stopPropagation()}><Pencil size={14} /></Link>
+          <Link to={`/applications/${r.organization}/${r.name}`} className="rounded p-1.5 text-text-muted hover:text-warning hover:bg-warning/10 transition-colors" title={t("common.edit")} onClick={(e) => e.stopPropagation()}><Pencil size={14} /></Link>
           <button onClick={(e) => handleDelete(r, e)} disabled={r.name === "app-built-in"} className="rounded p-1.5 text-text-muted hover:text-danger hover:bg-danger/10 transition-colors disabled:opacity-30 disabled:cursor-not-allowed" title={t("common.delete")}><Trash2 size={14} /></button>
         </div>
       ),
