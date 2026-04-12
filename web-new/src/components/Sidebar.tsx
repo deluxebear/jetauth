@@ -135,17 +135,23 @@ export default function Sidebar({ account }: { account?: Account | null }) {
     >
       {/* Logo */}
       <div className="flex h-14 items-center gap-2.5 px-4 border-b border-border-subtle">
-        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-accent/15 text-accent font-bold text-sm font-mono">
-          C
-        </div>
-        {!collapsed && (
-          <motion.span
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="text-sm font-semibold tracking-tight text-text-primary"
-          >
-            JetAuth
-          </motion.span>
+        {collapsed ? (
+          // Collapsed: show favicon or fallback icon
+          org?.favicon ? (
+            <img src={String(org.favicon)} alt="" className="h-8 w-8 shrink-0 rounded-lg object-contain" />
+          ) : (
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-accent/15 text-accent font-bold text-sm font-mono">J</div>
+          )
+        ) : (
+          // Expanded: show full logo or text fallback
+          org?.logo ? (
+            <motion.img initial={{ opacity: 0 }} animate={{ opacity: 1 }} src={String(org.logo)} alt="" className="h-10 max-w-[160px] object-contain" />
+          ) : (
+            <>
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-accent/15 text-accent font-bold text-sm font-mono">J</div>
+              <motion.span initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-sm font-semibold tracking-tight text-text-primary">JetAuth</motion.span>
+            </>
+          )
         )}
       </div>
 

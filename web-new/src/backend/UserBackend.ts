@@ -101,6 +101,19 @@ export function updateUser(owner: string, name: string, user: User) {
   );
 }
 
+export function setPassword(userOwner: string, userName: string, oldPassword: string, newPassword: string) {
+  const formData = new FormData();
+  formData.append("userOwner", userOwner);
+  formData.append("userName", userName);
+  formData.append("oldPassword", oldPassword);
+  formData.append("newPassword", newPassword);
+  return fetch("/api/set-password", {
+    method: "POST",
+    credentials: "include",
+    body: formData,
+  }).then((res) => res.json());
+}
+
 export function deleteUser(user: User) {
   return request("POST", "/api/delete-user", user);
 }
@@ -152,21 +165,44 @@ export async function removeUserFromGroup(params: { owner: string; name: string;
   return res.json();
 }
 
+export function generateRandomPassword(length = 8): string {
+  const upper = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+  const lower = "abcdefghijklmnopqrstuvwxyz";
+  const digits = "0123456789";
+  const special = "!@#$%&*";
+  const all = upper + lower + digits + special;
+  // Ensure at least one of each category
+  let pwd = [
+    upper[Math.floor(Math.random() * upper.length)],
+    lower[Math.floor(Math.random() * lower.length)],
+    digits[Math.floor(Math.random() * digits.length)],
+    special[Math.floor(Math.random() * special.length)],
+  ];
+  for (let i = pwd.length; i < length; i++) {
+    pwd.push(all[Math.floor(Math.random() * all.length)]);
+  }
+  // Shuffle
+  for (let i = pwd.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [pwd[i], pwd[j]] = [pwd[j], pwd[i]];
+  }
+  return pwd.join("");
+}
+
 export function newUser(orgName: string): Partial<User> {
   const rand = Math.random().toString(36).substring(2, 8);
-  const phone = Math.floor(1000000000 + Math.random() * 9000000000).toString();
   return {
     owner: orgName,
     name: `user_${rand}`,
     createdTime: new Date().toISOString(),
     type: "normal-user",
-    password: "123",
+    password: generateRandomPassword(),
     passwordSalt: "",
     displayName: `New User - ${rand}`,
     avatar: "https://cdn.casbin.org/img/casbin.svg",
-    email: `${rand}@example.com`,
-    phone,
-    countryCode: "US",
+    email: "",
+    phone: "",
+    countryCode: "",
     address: [],
     groups: [],
     affiliation: "Example Inc.",

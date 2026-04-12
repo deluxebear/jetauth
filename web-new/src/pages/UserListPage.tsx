@@ -58,6 +58,13 @@ export default function UserListPage() {
 
   const handleAdd = async () => {
     const user = UserBackend.newUser(getNewEntityOwner());
+    // Use organization's default avatar if available
+    try {
+      const orgData = JSON.parse(localStorage.getItem("organizationData") ?? "null");
+      if (orgData?.defaultAvatar) {
+        user.avatar = orgData.defaultAvatar;
+      }
+    } catch { /* ignore */ }
     const res = await UserBackend.addUser(user);
     if (res.status === "ok") {
       navigate(`/users/${user.owner}/${user.name}`, { state: { mode: "add" } });

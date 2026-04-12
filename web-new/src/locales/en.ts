@@ -383,6 +383,7 @@ const en = {
   "users.section.personal": "Personal",
   "users.section.verification": "ID Verification",
   "users.section.security": "Security",
+  "users.generatePassword": "Generate",
   "users.section.finance": "Finance",
   "users.section.admin": "Administration",
   "users.tab.basic": "Basic",

@@ -153,6 +153,18 @@ export default function App() {
           localStorage.setItem("account", JSON.stringify(res.data));
           if (res.data2) {
             localStorage.setItem("organizationData", JSON.stringify(res.data2));
+            // Dynamic favicon from organization settings
+            if (res.data2.favicon) {
+              const link = document.querySelector("link[rel='icon']") as HTMLLinkElement
+                || document.createElement("link");
+              link.rel = "icon";
+              link.href = res.data2.favicon;
+              document.head.appendChild(link);
+            }
+            // Dynamic page title from organization displayName
+            if (res.data2.displayName) {
+              document.title = res.data2.displayName;
+            }
           }
           window.dispatchEvent(new Event("accountChanged"));
         }
@@ -174,22 +186,30 @@ export default function App() {
     setLoginError("");
     try {
       let application = "app-built-in";
+      let obfuscatorType = "";
+      let obfuscatorKey = "";
 
-      // For non-built-in orgs, try to find the org's default application
-      if (organization !== "built-in") {
-        try {
-          const res = await fetch(`/api/get-default-application?id=admin/${organization}`, { credentials: "include" }).then(r => r.json());
-          if (res.status === "ok" && res.data?.name) {
-            application = res.data.name;
+      // Fetch default application to get app name + org obfuscator config
+      try {
+        const res = await fetch(`/api/get-default-application?id=admin/${organization}`, { credentials: "include" }).then(r => r.json());
+        if (res.status === "ok" && res.data) {
+          if (res.data.name) application = res.data.name;
+          if (res.data.organizationObj) {
+            obfuscatorType = res.data.organizationObj.passwordObfuscatorType || "";
+            obfuscatorKey = res.data.organizationObj.passwordObfuscatorKey || "";
           }
-        } catch { /* fallback */ }
-      }
+        }
+      } catch { /* fallback to plain */ }
+
+      // Encrypt password if org uses AES/DES obfuscation
+      const { encryptPassword } = await import("./utils/obfuscator");
+      const encryptedPassword = encryptPassword(obfuscatorType, obfuscatorKey, password);
 
       const res: any = await apiLogin({
         application,
         organization,
         username,
-        password,
+        password: encryptedPassword,
         signinMethod: "Password",
         type: "login",
       });

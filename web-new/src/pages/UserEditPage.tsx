@@ -14,7 +14,9 @@ import * as AppBackend from "../backend/ApplicationBackend";
 import * as OrgBackend from "../backend/OrganizationBackend";
 import type { User as UserType } from "../backend/UserBackend";
 import { friendlyError } from "../utils/errorHelper";
+import { obfuscatePassword } from "../utils/obfuscator";
 import FaceIdTable from "../components/FaceIdTable";
+import ImageUrlInput from "../components/ImageUrlInput";
 
 const CURRENCIES = [
   { value: "USD", label: "USD" }, { value: "CNY", label: "CNY" },
@@ -156,19 +158,42 @@ export default function UserEditPage() {
     return translated === key ? name : translated;
   };
 
+  /** Save user data + handle password change via dedicated API */
+  const saveUser = async (): Promise<boolean> => {
+    const userData = JSON.parse(JSON.stringify(user));
+    const newPassword = userData.password;
+    const passwordChanged = newPassword && newPassword !== "***" && newPassword !== "";
+    // Always send "***" to updateUser so it doesn't touch the password
+    userData.password = "***";
+
+    const res = await UserBackend.updateUser(owner!, name!, userData);
+    if (res.status !== "ok") {
+      modal.toast(friendlyError(res.msg, t) || t("common.saveFailed" as any), "error");
+      return false;
+    }
+
+    // If password was changed, set it via dedicated API
+    if (passwordChanged) {
+      const pwdRes = await UserBackend.setPassword(owner!, name!, "", obfuscatePassword(newPassword));
+      if (pwdRes.status !== "ok") {
+        modal.toast(pwdRes.msg || t("common.saveFailed" as any), "error");
+        return false;
+      }
+    }
+    return true;
+  };
+
   const handleSave = async () => {
     setSaving(true);
     try {
-      const res = await UserBackend.updateUser(owner!, name!, JSON.parse(JSON.stringify(user)));
-      if (res.status === "ok") {
+      const ok = await saveUser();
+      if (ok) {
         modal.toast(t("common.saveSuccess" as any));
         setIsAddMode(false);
         invalidateList();
         if (user.name !== name) {
           navigate(`/users/${user.owner}/${user.name}`, { replace: true });
         }
-      } else {
-        modal.toast(friendlyError(res.msg, t) || t("common.saveFailed" as any), "error");
       }
     } catch (e: any) { modal.toast(e.message || t("common.saveFailed" as any), "error"); }
     finally { setSaving(false); }
@@ -177,13 +202,11 @@ export default function UserEditPage() {
   const handleSaveAndExit = async () => {
     setSaving(true);
     try {
-      const res = await UserBackend.updateUser(owner!, name!, JSON.parse(JSON.stringify(user)));
-      if (res.status === "ok") {
+      const ok = await saveUser();
+      if (ok) {
         modal.toast(t("common.saveSuccess" as any));
         invalidateList();
         navigate("/users");
-      } else {
-        modal.toast(friendlyError(res.msg, t) || t("common.saveFailed" as any), "error");
       }
     } catch (e: any) {
       modal.toast(e?.message || t("common.saveFailed" as any), "error");
@@ -306,10 +329,18 @@ export default function UserEditPage() {
         {dynField("Display name", undefined, <input value={user.displayName ?? ""} onChange={(e) => setWithValidation("Display name", "displayName", e.target.value)} disabled={isFieldDisabled("Display name")} className={inputClass} />)}
         {dynField("First name", undefined, <input value={user.firstName ?? ""} onChange={(e) => set("firstName", e.target.value)} disabled={isFieldDisabled("First name")} className={inputClass} />)}
         {dynField("Last name", undefined, <input value={user.lastName ?? ""} onChange={(e) => set("lastName", e.target.value)} disabled={isFieldDisabled("Last name")} className={inputClass} />)}
-        {dynField("Avatar", "full", <div className="flex items-center gap-4">
-            <input value={user.avatar || ""} onChange={(e) => set("avatar", e.target.value)} disabled={isFieldDisabled("Avatar")} className={`${inputClass} flex-1`} placeholder={t("help.placeholder.url" as any)} />
-            {user.avatar && <img src={user.avatar} alt="" className="h-10 w-10 rounded-full object-cover border border-border shrink-0" referrerPolicy="no-referrer" onError={(e) => ((e.target as HTMLImageElement).style.display = "none")} />}
-          </div>)}
+        {dynField("Avatar", "full",
+          <ImageUrlInput
+            value={user.avatar || ""}
+            onChange={(v) => set("avatar", v)}
+            owner={user.owner}
+            tag="avatar"
+            outputWidth={200}
+            outputHeight={200}
+            disabled={isFieldDisabled("Avatar")}
+            previewClass="h-12 w-12 rounded-full border border-border object-cover bg-surface-2"
+          />
+        )}
         {dynField("User type", undefined, <select value={user.type ?? "normal-user"} onChange={(e) => set("type", e.target.value)} disabled={isFieldDisabled("User type")} className={inputClass}>
             {TYPE_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
           </select>)}
@@ -468,11 +499,19 @@ export default function UserEditPage() {
   const securityTab = (
     <div className="space-y-5">
       <FormSection title={t("users.section.security" as any)}>
-        {dynField("Password", undefined, <div className="relative">
-            <input type={showPassword ? "text" : "password"} value={user.password ?? ""} onChange={(e) => set("password", e.target.value)} disabled={isFieldDisabled("Password")} className={monoInputClass} placeholder="***" />
-            <button type="button" onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-2 top-1/2 -translate-y-1/2 text-text-muted hover:text-text-secondary">
-              {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
+        {dynField("Password", undefined, <div className="flex gap-2 items-center">
+            <div className="relative flex-1">
+              <input type={showPassword ? "text" : "password"} value={user.password ?? ""} onChange={(e) => set("password", e.target.value)} disabled={isFieldDisabled("Password")} className={monoInputClass} placeholder="***" />
+              <button type="button" onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-text-muted hover:text-text-secondary">
+                {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
+            </button>
+            </div>
+            <button type="button" onClick={() => { const p = UserBackend.generateRandomPassword(); set("password", p); setShowPassword(true); }}
+              disabled={isFieldDisabled("Password")}
+              className="shrink-0 rounded-lg border border-border bg-surface-2 px-3 py-2 text-[12px] font-medium text-text-secondary hover:bg-surface-3 hover:text-text-primary transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              title={t("users.generatePassword" as any)}>
+              {t("users.generatePassword" as any)}
             </button>
           </div>)}
         {dynField("IP whitelist", undefined, <input value={user.ipWhitelist ?? ""} onChange={(e) => set("ipWhitelist", e.target.value)} disabled={isFieldDisabled("IP whitelist")} className={inputClass} placeholder="192.168.1.1, 10.0.0.0/8" />)}

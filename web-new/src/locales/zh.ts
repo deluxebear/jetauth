@@ -465,6 +465,7 @@ const zh: Record<string, string> = {
   "users.section.personal": "个人信息",
   "users.section.verification": "身份验证",
   "users.section.security": "安全设置",
+  "users.generatePassword": "随机生成",
   "users.section.finance": "财务信息",
   "users.section.admin": "管理设置",
   "users.tab.basic": "基本信息",

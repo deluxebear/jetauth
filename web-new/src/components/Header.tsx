@@ -144,9 +144,16 @@ export default function Header({ user, onLogout }: HeaderProps) {
             onClick={() => setUserMenuOpen(!userMenuOpen)}
             className="flex items-center gap-2 rounded-lg py-1 px-2 hover:bg-surface-2 transition-colors"
           >
-            <div className="h-7 w-7 rounded-full bg-gradient-to-br from-accent to-cyan-300 flex items-center justify-center text-[11px] font-bold text-white">
-              {user?.displayName?.[0] ?? user?.name?.[0] ?? "?"}
-            </div>
+            {(() => {
+              const avatarUrl = user?.avatar || (() => { try { return JSON.parse(localStorage.getItem("organizationData") ?? "null")?.defaultAvatar; } catch { return null; } })();
+              return avatarUrl ? (
+                <img src={avatarUrl} alt="" className="h-7 w-7 rounded-full object-cover border border-border shrink-0" referrerPolicy="no-referrer" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
+              ) : (
+                <div className="h-7 w-7 rounded-full bg-gradient-to-br from-accent to-cyan-300 flex items-center justify-center text-[11px] font-bold text-white">
+                  {user?.displayName?.[0] ?? user?.name?.[0] ?? "?"}
+                </div>
+              );
+            })()}
             <span className="text-[13px] font-medium text-text-primary max-w-[100px] truncate">
               {user?.displayName ?? user?.name ?? "User"}
             </span>

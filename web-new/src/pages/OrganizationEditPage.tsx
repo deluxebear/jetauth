@@ -352,7 +352,18 @@ export default function OrganizationEditPage() {
                   />
                 </FormField>
                 <FormField label={t("orgs.field.passwordObfuscatorType" as any)}>
-                  <select value={(org as any).passwordObfuscatorType ?? "Plain"} onChange={(e) => set("passwordObfuscatorType", e.target.value)} className={inputClass}>
+                  <select value={(org as any).passwordObfuscatorType ?? "Plain"} onChange={(e) => {
+                    const v = e.target.value;
+                    set("passwordObfuscatorType", v);
+                    // Auto-generate random key when switching to AES/DES
+                    if (v === "AES") {
+                      set("passwordObfuscatorKey", Array.from({ length: 32 }, () => Math.floor(Math.random() * 15 + 1).toString(16)).join(""));
+                    } else if (v === "DES") {
+                      set("passwordObfuscatorKey", Array.from({ length: 16 }, () => Math.floor(Math.random() * 15 + 1).toString(16)).join(""));
+                    } else {
+                      set("passwordObfuscatorKey", "");
+                    }
+                  }} className={inputClass}>
                     <option value="Plain">Plain</option>
                     <option value="AES">AES</option>
                     <option value="DES">DES</option>
