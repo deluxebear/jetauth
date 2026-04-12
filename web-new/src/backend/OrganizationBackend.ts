@@ -113,7 +113,7 @@ export function newOrganization(randomName: string): Organization {
     passwordObfuscatorType: "Plain",
     passwordObfuscatorKey: "",
     passwordExpireDays: 0,
-    countryCodes: ["US"],
+    countryCodes: ["CN"],
     languages: ["en", "zh", "es", "fr", "de", "id", "ja", "ko", "ru", "vi", "pt"],
     defaultAvatar: "https://cdn.casbin.org/img/casbin.svg",
     usePermanentAvatar: false,

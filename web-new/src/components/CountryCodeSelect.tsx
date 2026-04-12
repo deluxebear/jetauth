@@ -61,8 +61,8 @@ export default function CountryCodeSelect({ selected, onChange }: {
   const ref = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLDivElement>(null);
   const [dropStyle, setDropStyle] = useState<React.CSSProperties>({});
-  const locale = localStorage.getItem("locale") ?? "en";
-  const isZh = locale.startsWith("zh");
+  const locale = localStorage.getItem("locale") ?? navigator.language ?? "en";
+  const isZh = locale.toLowerCase().startsWith("zh");
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {

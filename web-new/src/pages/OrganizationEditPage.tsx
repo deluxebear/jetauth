@@ -358,12 +358,12 @@ export default function OrganizationEditPage() {
                 </FormField>
                 <FormField label={t("orgs.field.userTypes" as any)} span="full">
                   <div className={!canEditField("userTypes") ? "pointer-events-none opacity-60" : ""}>
-                    <TagsEditor tags={(org as any).userTypes ?? []} onChange={(v) => set("userTypes", v)} placeholder="normal-user, paid-user, ..." />
+                    <TagsEditor tags={(org as any).userTypes ?? []} onChange={(v) => set("userTypes", v)} placeholder={t("orgs.placeholder.userTypes" as any)} />
                   </div>
                 </FormField>
                 <FormField label={t("orgs.field.tags" as any)} span="full">
                   <div className={!canEditField("tags") ? "pointer-events-none opacity-60" : ""}>
-                    <TagsEditor tags={org.tags ?? []} onChange={(v) => set("tags", v)} />
+                    <TagsEditor tags={org.tags ?? []} onChange={(v) => set("tags", v)} placeholder={t("orgs.placeholder.tags" as any)} />
                   </div>
                 </FormField>
                 <FormField label={t("orgs.field.countryCodes" as any)} span="full">

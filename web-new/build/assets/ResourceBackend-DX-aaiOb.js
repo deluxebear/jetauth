@@ -1,1 +1,0 @@
-import{s as e}from"./index-YsB-TN8Q.js";export{e as uploadResource};
