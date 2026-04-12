@@ -123,7 +123,24 @@ func getObject(ctx *context.Context) (string, string, error) {
 			// query == "?id=built-in/admin"
 			id := ctx.Input.Query("id")
 			if id != "" {
-				return util.GetOwnerAndNameFromIdWithError(id)
+				owner, name, err := util.GetOwnerAndNameFromIdWithError(id)
+				if err == nil {
+					// Organization's Owner is "admin" — use org name
+					// so org admins can read their own org.
+					if ctx.Request.URL.Path == "/api/get-organization" {
+						return name, name, nil
+					}
+					// Application/token/syncer/webhook: use Organization field
+					if ctx.Request.URL.Path == "/api/get-application" ||
+						ctx.Request.URL.Path == "/api/get-token" ||
+						ctx.Request.URL.Path == "/api/get-syncer" ||
+						ctx.Request.URL.Path == "/api/get-webhook" {
+						if org, err := object.GetOrganizationFieldForAuthz(ctx.Request.URL.Path, owner, name); err == nil && org != "" {
+							return org, name, nil
+						}
+					}
+					return owner, name, nil
+				}
 			}
 		}
 

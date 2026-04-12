@@ -91,9 +91,12 @@ export default function UserEditPage() {
     });
     OrgBackend.getOrganization("admin", owner).then((res) => {
       if (res.status === "ok" && res.data) {
-        const org = res.data as any;
-        setOrgUserTypes(org.userTypes ?? []);
-        setAccountItems(org.accountItems ?? []);
+        // API may return a single object or an array (depending on endpoint)
+        const org = (Array.isArray(res.data) ? res.data[0] : res.data) as any;
+        if (org) {
+          setOrgUserTypes(org.userTypes ?? []);
+          setAccountItems(org.accountItems ?? []);
+        }
       }
     });
   }, [owner]);
@@ -407,48 +410,58 @@ export default function UserEditPage() {
 
       <FormSection title={t("users.section.verification" as any)}>
         {/* Row 1: idCardType + idCard + realName + verify button in 4 columns */}
-        <div className="col-span-2">
-          <div className="grid grid-cols-4 gap-4">
-            <div>
-              <label className="block text-[12px] font-medium text-text-secondary mb-1.5">{t("users.field.idCardType" as any)}</label>
-              <select value={user.idCardType ?? ""} onChange={(e) => set("idCardType", e.target.value)} disabled={user.isVerified === true} className={inputClass}>
-                {ID_CARD_TYPES.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="block text-[12px] font-medium text-text-secondary mb-1.5">{t("users.field.idCard" as any)}</label>
-              <input value={user.idCard ?? ""} onChange={(e) => set("idCard", e.target.value)} disabled={user.isVerified === true} className={monoInputClass} />
-            </div>
-            <div>
-              <label className="block text-[12px] font-medium text-text-secondary mb-1.5">{t("users.field.realName" as any)}</label>
-              <input value={user.realName ?? ""} onChange={(e) => set("realName", e.target.value)} disabled={user.isVerified === true} className={inputClass} />
-            </div>
-            <div>
-              <label className="block text-[12px] font-medium text-text-secondary mb-1.5">{t("users.field.isVerified" as any)}</label>
-              {user.isVerified === true ? (
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-success/15 border border-success/20 px-3 py-2 text-[12px] font-medium text-success">
-                  ✓ {t("users.verify.verified" as any)}
-                </span>
-              ) : (
-                <button
-                  type="button"
-                  disabled={!user.idCard || !user.idCardType || !user.realName}
-                  onClick={async () => {
-                    if (!user.idCard || !user.idCardType) { modal.toast(t("users.verify.fillIdCard" as any), "error"); return; }
-                    if (!user.realName) { modal.toast(t("users.verify.fillRealName" as any), "error"); return; }
-                    const res = await UserBackend.verifyIdentification(user.owner, user.name);
-                    if (res.status === "ok") { modal.toast(t("users.verify.success" as any)); set("isVerified", true); }
-                    else { modal.toast(res.msg || t("users.verify.failed" as any), "error"); }
-                  }}
-                  className="rounded-lg bg-accent px-4 py-2 text-[13px] font-semibold text-white hover:bg-accent-hover disabled:opacity-50 transition-colors"
-                >
-                  {t("users.verify.verifyIdentity" as any)}
-                </button>
+        {(isFieldVisible("ID card type") || isFieldVisible("ID card") || isFieldVisible("Real name") || isFieldVisible("ID verification")) && (
+          <div className="col-span-2">
+            <div className="grid grid-cols-4 gap-4">
+              {isFieldVisible("ID card type") && (
+                <div>
+                  <label className="block text-[12px] font-medium text-text-secondary mb-1.5">{t("users.field.idCardType" as any)}</label>
+                  <select value={user.idCardType ?? ""} onChange={(e) => set("idCardType", e.target.value)} disabled={user.isVerified === true} className={inputClass}>
+                    {ID_CARD_TYPES.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                  </select>
+                </div>
+              )}
+              {isFieldVisible("ID card") && (
+                <div>
+                  <label className="block text-[12px] font-medium text-text-secondary mb-1.5">{t("users.field.idCard" as any)}</label>
+                  <input value={user.idCard ?? ""} onChange={(e) => set("idCard", e.target.value)} disabled={user.isVerified === true} className={monoInputClass} />
+                </div>
+              )}
+              {isFieldVisible("Real name") && (
+                <div>
+                  <label className="block text-[12px] font-medium text-text-secondary mb-1.5">{t("users.field.realName" as any)}</label>
+                  <input value={user.realName ?? ""} onChange={(e) => set("realName", e.target.value)} disabled={user.isVerified === true} className={inputClass} />
+                </div>
+              )}
+              {isFieldVisible("ID verification") && (
+                <div>
+                  <label className="block text-[12px] font-medium text-text-secondary mb-1.5">{t("users.field.isVerified" as any)}</label>
+                  {user.isVerified === true ? (
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-success/15 border border-success/20 px-3 py-2 text-[12px] font-medium text-success">
+                      ✓ {t("users.verify.verified" as any)}
+                    </span>
+                  ) : (
+                    <button
+                      type="button"
+                      disabled={!user.idCard || !user.idCardType || !user.realName}
+                      onClick={async () => {
+                        if (!user.idCard || !user.idCardType) { modal.toast(t("users.verify.fillIdCard" as any), "error"); return; }
+                        if (!user.realName) { modal.toast(t("users.verify.fillRealName" as any), "error"); return; }
+                        const res = await UserBackend.verifyIdentification(user.owner, user.name);
+                        if (res.status === "ok") { modal.toast(t("users.verify.success" as any)); set("isVerified", true); }
+                        else { modal.toast(res.msg || t("users.verify.failed" as any), "error"); }
+                      }}
+                      className="rounded-lg bg-accent px-4 py-2 text-[13px] font-semibold text-white hover:bg-accent-hover disabled:opacity-50 transition-colors"
+                    >
+                      {t("users.verify.verifyIdentity" as any)}
+                    </button>
+                  )}
+                </div>
               )}
             </div>
           </div>
-        </div>
-        <FormField label={t("users.field.idCardInfo" as any)} span="full">
+        )}
+        {dynField("ID card info", "full",
           <div className="grid grid-cols-3 gap-4">
             {([
               { key: "idCardFront", label: t("users.field.idCardFront" as any) },
@@ -491,7 +504,7 @@ export default function UserEditPage() {
               );
             })}
           </div>
-        </FormField>
+        )}
       </FormSection>
     </div>
   );
@@ -519,7 +532,7 @@ export default function UserEditPage() {
       </FormSection>
 
       <FormSection title={t("users.section.thirdPartyLogins" as any)}>
-        <FormField label={t("users.field.thirdPartyLogins" as any)} span="full">
+        {dynField("3rd-party logins", "full",
           <div className="flex flex-wrap gap-1.5">
             {(((user as any).oauth ?? "") || ((user as any).github ?? "") || ((user as any).google ?? "")) ? (
               <span className="text-[12px] text-text-secondary">{t("users.field.thirdPartyConfigured" as any)}</span>
@@ -527,12 +540,12 @@ export default function UserEditPage() {
               <span className="text-[12px] text-text-muted">—</span>
             )}
           </div>
-        </FormField>
+        )}
       </FormSection>
 
       <FormSection title={t("users.section.mfa" as any)}>
-        <FormField label={t("users.field.multiFactorAuth" as any)} span="full">
-          {((user as any).multiFactorAuths ?? (user as any).mfaProps ?? []).length > 0 ? (
+        {dynField("Multi-factor authentication", "full",
+          ((user as any).multiFactorAuths ?? (user as any).mfaProps ?? []).length > 0 ? (
             <div className="space-y-2">
               {((user as any).multiFactorAuths ?? (user as any).mfaProps ?? []).map((mfa: any, idx: number) => (
                 <div key={idx} className="flex items-center gap-3 rounded-lg border border-border bg-surface-2 px-3 py-2">
@@ -544,44 +557,44 @@ export default function UserEditPage() {
             </div>
           ) : (
             <span className="text-[12px] text-text-muted">—</span>
-          )}
-        </FormField>
-        <FormField label={t("users.field.mfaAccounts" as any)} span="full">
+          )
+        )}
+        {dynField("MFA accounts", "full",
           <SimpleTable data={(user as any).mfaAccounts ?? []} columns={["issuer", "accountName"]} emptyText={t("common.noData")} />
-        </FormField>
-        <FormField label={t("users.field.mfaItems" as any)} span="full">
+        )}
+        {dynField("MFA items", "full",
           <MfaItemsTable
             items={(user as any).mfaItems ?? []}
             onChange={(v) => setAny("mfaItems", v)}
             t={t}
           />
-        </FormField>
-        <FormField label={t("users.field.webauthnCredentials" as any)} span="full">
+        )}
+        {dynField("WebAuthn credentials", "full",
           <WebAuthnTable
             items={(user as any).webauthnCredentials ?? []}
             onChange={(v) => setAny("webauthnCredentials", v)}
             isSelf={false}
             t={t}
           />
-        </FormField>
-        <FormField label={t("users.field.lastChangePasswordTime" as any)}>
+        )}
+        {dynField("Last change password time", undefined,
           <input value={(user as any).lastChangePasswordTime ?? ""} disabled className={monoInputClass} />
-        </FormField>
-        <FormField label={t("users.field.managedAccounts" as any)} span="full">
+        )}
+        {dynField("Managed accounts", "full",
           <ManagedAccountsTable
             items={(user as any).managedAccounts ?? []}
             onChange={(v) => setAny("managedAccounts", v)}
             applications={orgApps}
             t={t}
           />
-        </FormField>
-        <FormField label={t("users.field.faceIds" as any)} span="full">
+        )}
+        {dynField("Face ID", "full",
           <FaceIdTable
             table={(user as any).faceIds ?? []}
             onUpdateTable={(v) => setAny("faceIds", v)}
             account={{ owner: user.owner, name: user.name }}
           />
-        </FormField>
+        )}
       </FormSection>
 
     </div>
@@ -599,12 +612,12 @@ export default function UserEditPage() {
       </FormSection>
 
       <FormSection title={t("users.section.cart" as any)}>
-        <FormField label={t("users.field.cart" as any)} span="full">
+        {dynField("Cart", "full",
           <SimpleTable data={(user as any).cart ?? []} columns={["name", "price", "quantity", "currency"]} emptyText={t("common.noData")} />
-        </FormField>
-        <FormField label={t("users.field.transactions" as any)} span="full">
+        )}
+        {dynField("Transactions", "full",
           <SimpleTable data={(user as any).transactions ?? []} columns={["name", "amount", "currency", "createdTime"]} emptyText={t("common.noData")} />
-        </FormField>
+        )}
       </FormSection>
 
       <FormSection title={t("users.section.registration" as any)}>
@@ -632,31 +645,31 @@ export default function UserEditPage() {
       </FormSection>
 
       <FormSection title={t("users.section.roles" as any)}>
-        <FormField label={t("users.field.roles" as any)} span="full">
+        {dynField("Roles", "full",
           <div className="flex flex-wrap gap-1.5">
             {((user as any).roles ?? []).length > 0 ? ((user as any).roles as { name: string; displayName?: string }[]).map((r, i) => (
               <Link key={i} to={`/roles/${user.owner}/${r.name}`} className="inline-flex items-center rounded-md bg-info/15 border border-info/20 px-2 py-0.5 text-[12px] font-mono font-medium text-info hover:underline">{r.displayName || r.name}</Link>
             )) : <span className="text-[12px] text-text-muted">—</span>}
           </div>
-        </FormField>
-        <FormField label={t("users.field.permissions" as any)} span="full">
+        )}
+        {dynField("Permissions", "full",
           <div className="flex flex-wrap gap-1.5">
             {((user as any).permissions ?? []).length > 0 ? ((user as any).permissions as { name: string; displayName?: string }[]).map((p, i) => (
               <Link key={i} to={`/permissions/${user.owner}/${p.name}`} className="inline-flex items-center rounded-md bg-warning/15 border border-warning/20 px-2 py-0.5 text-[12px] font-mono font-medium text-warning hover:underline">{p.displayName || p.name}</Link>
             )) : <span className="text-[12px] text-text-muted">—</span>}
           </div>
-        </FormField>
+        )}
       </FormSection>
 
       <FormSection title={t("users.section.consents" as any)}>
-        <FormField label={t("users.field.consents" as any)} span="full">
+        {dynField("Consents", "full",
           <SimpleTable data={(user as any).consents ?? []} columns={["application", "grantedScopes"]} emptyText={t("common.noData")} />
-        </FormField>
+        )}
       </FormSection>
 
       <FormSection title={t("users.section.properties" as any)}>
-        <FormField label={t("users.field.properties" as any)} span="full">
-          {user.properties && Object.keys(user.properties).length > 0 ? (
+        {dynField("Properties", "full",
+          user.properties && Object.keys(user.properties).length > 0 ? (
             <div className="overflow-x-auto rounded-lg border border-border">
               <table className="w-full text-left">
                 <thead>
@@ -675,8 +688,8 @@ export default function UserEditPage() {
                 </tbody>
               </table>
             </div>
-          ) : <span className="text-[12px] text-text-muted">—</span>}
-        </FormField>
+          ) : <span className="text-[12px] text-text-muted">—</span>
+        )}
       </FormSection>
     </div>
   );

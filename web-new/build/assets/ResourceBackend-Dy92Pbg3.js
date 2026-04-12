@@ -1,1 +1,0 @@
-import{s as e}from"./index--FX3ipmT.js";export{e as uploadResource};
