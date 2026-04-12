@@ -371,7 +371,15 @@ export default function OrganizationEditPage() {
                 </FormField>
                 {(org as any).passwordObfuscatorType && (org as any).passwordObfuscatorType !== "Plain" && (
                   <FormField label={t("orgs.field.passwordObfuscatorKey" as any)}>
-                    <input value={(org as any).passwordObfuscatorKey ?? ""} onChange={(e) => set("passwordObfuscatorKey", e.target.value)} className={monoInputClass} />
+                    <div className="flex gap-2 items-center">
+                      <input value={(org as any).passwordObfuscatorKey ?? ""} readOnly className={`${monoInputClass} flex-1 bg-surface-2 cursor-default`} />
+                      <button type="button" onClick={() => {
+                        const len = (org as any).passwordObfuscatorType === "AES" ? 32 : 16;
+                        set("passwordObfuscatorKey", Array.from({ length: len }, () => Math.floor(Math.random() * 15 + 1).toString(16)).join(""));
+                      }} className="shrink-0 rounded-lg border border-border bg-surface-2 px-3 py-2 text-[12px] font-medium text-text-secondary hover:bg-surface-3 hover:text-text-primary transition-colors">
+                        {t("users.generatePassword" as any)}
+                      </button>
+                    </div>
                   </FormField>
                 )}
                 <FormField label={t("orgs.field.passwordExpireDays" as any)} help={t("orgs.field.passwordExpireDays.help" as any)}>

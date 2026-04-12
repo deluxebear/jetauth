@@ -1,0 +1,1 @@
+import{s as e}from"./index-CEAlwF5Q.js";export{e as uploadResource};
