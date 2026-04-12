@@ -10,6 +10,7 @@ import { useOrganization } from "../OrganizationContext";
 import * as AppBackend from "../backend/ApplicationBackend";
 import type { Application } from "../backend/ApplicationBackend";
 import { friendlyError } from "../utils/errorHelper";
+import ImageUrlInput from "../components/ImageUrlInput";
 
 type AppData = Partial<Application>;
 
@@ -216,19 +217,13 @@ export default function ApplicationEditPage() {
 
       <FormSection title={t("apps.section.branding" as any)}>
         <FormField label={t("apps.field.logo" as any)} span="full">
-          <div className="flex gap-3 items-start">
-            <input value={String(app.logo ?? "")} onChange={(e) => set("logo", e.target.value)} className={`${inputClass} flex-1`} placeholder={t("help.placeholder.url" as any)} />
-            {app.logo && <img src={app.logo} alt="" className="h-10 w-10 rounded-lg border border-border object-contain bg-surface-2" />}
-          </div>
+          <ImageUrlInput value={String(app.logo ?? "")} onChange={(v) => set("logo", v)} owner={String(app.organization ?? "")} tag="app-logo" outputWidth={500} outputHeight={250} />
         </FormField>
         <FormField label={t("apps.field.title" as any)}>
           <input value={String(app.title ?? "")} onChange={(e) => set("title", e.target.value)} className={inputClass} />
         </FormField>
         <FormField label={t("apps.field.favicon" as any)}>
-          <div className="flex gap-3 items-start">
-            <input value={String(app.favicon ?? "")} onChange={(e) => set("favicon", e.target.value)} className={`${inputClass} flex-1`} placeholder={t("help.placeholder.url" as any)} />
-            {app.favicon && <img src={app.favicon} alt="" className="h-10 w-10 rounded-lg border border-border object-contain bg-surface-2" />}
-          </div>
+          <ImageUrlInput value={String(app.favicon ?? "")} onChange={(v) => set("favicon", v)} owner={String(app.organization ?? "")} tag="app-favicon" outputWidth={64} outputHeight={64} accept="image/x-icon,image/png,image/svg+xml" />
         </FormField>
         <FormField label={t("apps.field.homepageUrl")} span="full">
           <input value={String(app.homepageUrl ?? "")} onChange={(e) => set("homepageUrl", e.target.value)} className={inputClass} placeholder={t("help.placeholder.homepageUrl" as any)} />

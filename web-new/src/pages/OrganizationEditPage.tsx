@@ -11,6 +11,7 @@ import TreeCheckbox, { type TreeNode } from "../components/TreeCheckbox";
 import CurrencySelect from "../components/CurrencySelect";
 import CountryCodeSelect from "../components/CountryCodeSelect";
 import LanguageSelect from "../components/LanguageSelect";
+import ImageUrlInput from "../components/ImageUrlInput";
 import { navGroups as navGroupsDef, widgetItems as widgetItemsDef } from "../navConfig";
 import * as OrgBackend from "../backend/OrganizationBackend";
 import * as AppBackend from "../backend/ApplicationBackend";
@@ -171,8 +172,6 @@ export default function OrganizationEditPage() {
     });
   };
 
-  const imgPreview = (url: string) =>
-    url ? <img src={url} alt="" className="h-8 w-8 rounded border border-border object-contain bg-surface-2" onError={(e) => ((e.target as HTMLImageElement).style.display = "none")} /> : null;
 
   // Build nav tree from the shared navConfig — always in sync with the sidebar
   const navTree: TreeNode[] = [
@@ -255,33 +254,21 @@ export default function OrganizationEditPage() {
                 </FormField>
                 <div />
                 <FormField label={t("orgs.field.logo" as any)} span="full">
-                  <div className="flex gap-2 items-center">
-                    <input value={org.logo ?? ""} onChange={(e) => set("logo", e.target.value)} className={`${inputClass} flex-1`} placeholder="https://..." />
-                    {imgPreview(org.logo)}
-                  </div>
+                  <ImageUrlInput value={org.logo ?? ""} onChange={(v) => set("logo", v)} owner={org.name ?? ""} tag="org-logo" outputWidth={320} outputHeight={80} />
                 </FormField>
                 {!!org.enableDarkLogo && (
                   <FormField label={t("orgs.field.logoDark" as any)} span="full">
-                    <div className="flex gap-2 items-center">
-                      <input value={(org as any).logoDark ?? ""} onChange={(e) => set("logoDark", e.target.value)} className={`${inputClass} flex-1`} />
-                      {imgPreview((org as any).logoDark)}
-                    </div>
+                    <ImageUrlInput value={(org as any).logoDark ?? ""} onChange={(v) => set("logoDark", v)} owner={org.name ?? ""} tag="org-logo-dark" outputWidth={320} outputHeight={80} />
                   </FormField>
                 )}
                 <FormField label={t("orgs.field.favicon" as any)}>
-                  <div className="flex gap-2 items-center">
-                    <input value={org.favicon ?? ""} onChange={(e) => set("favicon", e.target.value)} className={`${inputClass} flex-1`} />
-                    {imgPreview(org.favicon)}
-                  </div>
+                  <ImageUrlInput value={org.favicon ?? ""} onChange={(v) => set("favicon", v)} owner={org.name ?? ""} tag="org-favicon" outputWidth={64} outputHeight={64} accept="image/x-icon,image/png,image/svg+xml" />
                 </FormField>
                 <FormField label={t("orgs.field.websiteUrl" as any)}>
                   <input value={org.websiteUrl ?? ""} onChange={(e) => set("websiteUrl", e.target.value)} className={inputClass} placeholder="https://example.com" />
                 </FormField>
                 <FormField label={t("orgs.field.defaultAvatar" as any)} span="full">
-                  <div className="flex gap-2 items-center">
-                    <input value={org.defaultAvatar ?? ""} onChange={(e) => set("defaultAvatar", e.target.value)} className={`${inputClass} flex-1`} />
-                    {imgPreview(org.defaultAvatar)}
-                  </div>
+                  <ImageUrlInput value={org.defaultAvatar ?? ""} onChange={(v) => set("defaultAvatar", v)} owner={org.name ?? ""} tag="org-avatar" outputWidth={200} outputHeight={200} previewClass="h-12 w-12 rounded-full border border-border object-cover bg-surface-2" />
                 </FormField>
                 {isBuiltIn && (
                   <FormField label={t("orgs.field.hasPrivilegeConsent" as any)} help={t("orgs.field.hasPrivilegeConsent.help" as any)}>
