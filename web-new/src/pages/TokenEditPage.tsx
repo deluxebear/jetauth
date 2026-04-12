@@ -6,6 +6,7 @@ import { FormField, FormSection, inputClass, monoInputClass } from "../component
 import { useTranslation } from "../i18n";
 import { useModal } from "../components/Modal";
 import { useEntityEdit } from "../hooks/useEntityEdit";
+import { useOrganization } from "../OrganizationContext";
 import * as TokenBackend from "../backend/TokenBackend";
 import type { Token } from "../backend/TokenBackend";
 import { friendlyError } from "../utils/errorHelper";
@@ -29,6 +30,7 @@ export default function TokenEditPage() {
   const [isAddMode, setIsAddMode] = useState((location.state as any)?.mode === "add");
   const { t } = useTranslation();
   const modal = useModal();
+  const { isGlobalAdmin } = useOrganization();
   const [token, setToken] = useState<Token | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -161,7 +163,7 @@ export default function TokenEditPage() {
           <input value={token.application} onChange={(e) => set("application", e.target.value)} className={inputClass} />
         </FormField>
         <FormField label={t("col.organization" as any)}>
-          <input value={token.organization} onChange={(e) => set("organization", e.target.value)} className={inputClass} />
+          <input value={token.organization} onChange={(e) => set("organization", e.target.value)} disabled={!isGlobalAdmin} className={inputClass} />
         </FormField>
         <FormField label={t("col.user" as any)}>
           <input value={token.user} onChange={(e) => set("user", e.target.value)} className={inputClass} />

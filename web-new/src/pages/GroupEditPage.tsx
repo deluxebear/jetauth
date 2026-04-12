@@ -13,6 +13,7 @@ import type { Group } from "../backend/GroupBackend";
 import * as UserBackend from "../backend/UserBackend";
 import type { User } from "../backend/UserBackend";
 import * as OrgBackend from "../backend/OrganizationBackend";
+import { useOrganization } from "../OrganizationContext";
 import { friendlyError } from "../utils/errorHelper";
 
 export default function GroupEditPage() {
@@ -22,6 +23,7 @@ export default function GroupEditPage() {
   const [isAddMode, setIsAddMode] = useState((location.state as any)?.mode === "add");
   const { t } = useTranslation();
   const modal = useModal();
+  const { isGlobalAdmin } = useOrganization();
   const queryClient = useQueryClient();
   const [group, setGroup] = useState<Group | null>(null);
   const [allGroups, setAllGroups] = useState<Group[]>([]);
@@ -244,6 +246,7 @@ export default function GroupEditPage() {
           <select
             value={group.owner}
             onChange={(e) => set("owner", e.target.value)}
+            disabled={!isGlobalAdmin}
             className={inputClass}
           >
             {organizations.map((o) => (

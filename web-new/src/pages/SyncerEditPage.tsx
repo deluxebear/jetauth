@@ -6,6 +6,7 @@ import { FormField, FormSection, inputClass, monoInputClass, Switch } from "../c
 import { useTranslation } from "../i18n";
 import { useModal } from "../components/Modal";
 import { useEntityEdit } from "../hooks/useEntityEdit";
+import { useOrganization } from "../OrganizationContext";
 import * as SyncerBackend from "../backend/SyncerBackend";
 import type { Syncer } from "../backend/SyncerBackend";
 import { friendlyError } from "../utils/errorHelper";
@@ -35,6 +36,7 @@ export default function SyncerEditPage() {
   const [isAddMode, setIsAddMode] = useState((location.state as any)?.mode === "add");
   const { t } = useTranslation();
   const modal = useModal();
+  const { isGlobalAdmin } = useOrganization();
   const [syncer, setSyncer] = useState<Syncer | null>(null);
   const [saving, setSaving] = useState(false);
   const [testDbLoading, setTestDbLoading] = useState(false);
@@ -164,7 +166,7 @@ export default function SyncerEditPage() {
       {/* Basic */}
       <FormSection title={t("syncers.section.basic" as any)}>
         <FormField label={t("col.organization" as any)}>
-          <input value={syncer.organization} onChange={(e) => set("organization", e.target.value)} className={inputClass} />
+          <input value={syncer.organization} onChange={(e) => set("organization", e.target.value)} disabled={!isGlobalAdmin} className={inputClass} />
         </FormField>
         <FormField label={t("field.name")} required>
           <input value={syncer.name} onChange={(e) => set("name", e.target.value)} className={monoInputClass} />

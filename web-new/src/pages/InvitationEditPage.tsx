@@ -145,7 +145,7 @@ export default function InvitationEditPage() {
   const { t } = useTranslation();
   const modal = useModal();
   const queryClient = useQueryClient();
-  const { orgOptions } = useOrganization();
+  const { orgOptions, isGlobalAdmin } = useOrganization();
   const [inv, setInv] = useState<Invitation | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -474,12 +474,13 @@ export default function InvitationEditPage() {
                   : orgOptions.find((o) => o.name === inv.owner)?.displayName ||
                     inv.owner
               }
-              disabled={isCreatedByPlan}
+              disabled={isCreatedByPlan || !isGlobalAdmin}
               onChange={(e) => {
                 setOrgSearch(e.target.value);
                 setOrgDropdownOpen(true);
               }}
               onFocus={() => {
+                if (!isGlobalAdmin) return;
                 setOrgSearch("");
                 setOrgDropdownOpen(true);
               }}

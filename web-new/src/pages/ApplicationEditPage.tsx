@@ -42,7 +42,7 @@ export default function ApplicationEditPage() {
   const [isAddMode, setIsAddMode] = useState((location.state as any)?.mode === "add");
   const { t } = useTranslation();
   const modal = useModal();
-  const { orgOptions } = useOrganization();
+  const { orgOptions, isGlobalAdmin } = useOrganization();
   const queryClient = useQueryClient();
   const [app, setApp] = useState<AppData>({});
   const [loading, setLoading] = useState(!isNew);
@@ -156,7 +156,7 @@ export default function ApplicationEditPage() {
     <div className="space-y-5">
       <FormSection title={t("field.name")}>
         <FormField label={t("field.owner")}>
-          <select value={String(app.organization ?? "")} onChange={(e) => set("organization", e.target.value)} className={inputClass}>
+          <select value={String(app.organization ?? "")} onChange={(e) => set("organization", e.target.value)} disabled={!isGlobalAdmin} className={inputClass}>
             <option value="">—</option>
             {orgOptions.map((o) => <option key={o.name} value={o.name}>{o.displayName || o.name}</option>)}
           </select>

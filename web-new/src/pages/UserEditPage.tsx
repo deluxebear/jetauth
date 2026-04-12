@@ -29,7 +29,7 @@ export default function UserEditPage() {
   const [isAddMode, setIsAddMode] = useState((location.state as any)?.mode === "add");
   const { t } = useTranslation();
   const modal = useModal();
-  const { orgOptions } = useOrganization();
+  const { orgOptions, isGlobalAdmin } = useOrganization();
   const [user, setUser] = useState<UserType | null>(null);
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState<string>("basic");
@@ -284,11 +284,11 @@ export default function UserEditPage() {
               value={orgDropdownOpen ? orgSearch : (user.owner || "")}
               onChange={(e) => { setOrgSearch(e.target.value); setOrgDropdownOpen(true); }}
               onFocus={() => { setOrgSearch(""); setOrgDropdownOpen(true); }}
-              disabled={isFieldDisabled("Organization")}
+              disabled={!isGlobalAdmin || isFieldDisabled("Organization")}
               className={inputClass}
               placeholder={t("help.placeholder.searchOrg" as any)}
             />
-            {orgDropdownOpen && !isFieldDisabled("Organization") && (
+            {orgDropdownOpen && isGlobalAdmin && !isFieldDisabled("Organization") && (
               <div className="absolute left-0 top-full mt-1 w-full max-h-48 overflow-y-auto rounded-lg border border-border bg-surface-0 py-1 shadow-lg z-50">
                 {filteredOrgs.length > 0 ? filteredOrgs.map((org) => (
                   <button key={org.name} onClick={() => { set("owner", org.name); setOrgSearch(""); setOrgDropdownOpen(false); }}

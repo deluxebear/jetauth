@@ -6,6 +6,7 @@ import { FormField, FormSection, inputClass, monoInputClass, Switch } from "../c
 import { useTranslation } from "../i18n";
 import { useModal } from "../components/Modal";
 import { useEntityEdit } from "../hooks/useEntityEdit";
+import { useOrganization } from "../OrganizationContext";
 import * as WebhookBackend from "../backend/WebhookBackend";
 import type { Webhook, Header } from "../backend/WebhookBackend";
 import { friendlyError } from "../utils/errorHelper";
@@ -29,6 +30,7 @@ export default function WebhookEditPage() {
   const [isAddMode, setIsAddMode] = useState((location.state as any)?.mode === "add");
   const { t } = useTranslation();
   const modal = useModal();
+  const { isGlobalAdmin } = useOrganization();
   const [webhook, setWebhook] = useState<Webhook | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -159,7 +161,7 @@ export default function WebhookEditPage() {
       {/* Basic */}
       <FormSection title={t("webhooks.section.basic" as any)}>
         <FormField label={t("col.organization" as any)}>
-          <input value={webhook.organization} onChange={(e) => set("organization", e.target.value)} className={inputClass} />
+          <input value={webhook.organization} onChange={(e) => set("organization", e.target.value)} disabled={!isGlobalAdmin} className={inputClass} />
         </FormField>
         <FormField label={t("field.name")} required>
           <input value={webhook.name} onChange={(e) => set("name", e.target.value)} className={monoInputClass} />
