@@ -19,6 +19,7 @@ import UserEditPage from "./pages/UserEditPage";
 import InvitationListPage from "./pages/InvitationListPage";
 import InvitationEditPage from "./pages/InvitationEditPage";
 // Authentication
+import UserHomePage from "./pages/UserHomePage";
 import ApplicationListPage from "./pages/ApplicationListPage";
 import ApplicationEditPage from "./pages/ApplicationEditPage";
 import ProviderListPage from "./pages/ProviderListPage";
@@ -150,6 +151,9 @@ export default function App() {
         if (res?.status === "ok" && res.data) {
           setUser(res.data);
           localStorage.setItem("account", JSON.stringify(res.data));
+          if (res.data2) {
+            localStorage.setItem("organizationData", JSON.stringify(res.data2));
+          }
           window.dispatchEvent(new Event("accountChanged"));
         }
       })
@@ -369,17 +373,16 @@ export default function App() {
   });
 
   const isAdmin = isLocalAdmin(user);
-  const profilePath = `/users/${user.owner}/${user.name}`;
 
-  // Non-admin users: only see their own profile
+  // Non-admin users: app list home + own profile
   if (!isAdmin) {
     return (
       <Layout user={user} onLogout={handleLogout}>
         <Routes>
-          <Route path={`/users/${user.owner}/${user.name}`} element={<UserEditPage />} />
-          <Route path="/" element={<Navigate to={profilePath} replace />} />
-          <Route path="/login" element={<Navigate to={profilePath} replace />} />
-          <Route path="*" element={<Navigate to={profilePath} replace />} />
+          <Route path="/" element={<UserHomePage userOrg={user.owner} />} />
+          <Route path="/users/:owner/:name" element={<UserEditPage />} />
+          <Route path="/login" element={<Navigate to="/" replace />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Layout>
     );

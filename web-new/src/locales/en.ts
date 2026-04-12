@@ -61,6 +61,7 @@ const en = {
   // Sidebar
   "nav.overview": "Overview",
   "nav.dashboard": "Dashboard",
+  "nav.myProfile": "My Profile",
   "nav.identity": "Identity",
   "nav.users": "Users",
   "nav.organizations": "Organizations",

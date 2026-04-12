@@ -61,6 +61,7 @@ const zh: Record<string, string> = {
   // Sidebar
   "nav.overview": "概览",
   "nav.dashboard": "仪表盘",
+  "nav.myProfile": "个人信息",
   "nav.identity": "身份管理",
   "nav.users": "用户",
   "nav.organizations": "组织",

@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
@@ -66,18 +67,45 @@ const LOCAL_ADMIN_ITEMS = ["/models", "/adapters", "/enforcers"];
 // Global admin-only items
 const GLOBAL_ADMIN_ITEMS = ["/sysinfo", "/swagger"];
 
+/** Read the organization object saved by App.tsx on login */
+function getStoredOrganization(): Record<string, unknown> | null {
+  try {
+    return JSON.parse(localStorage.getItem("organizationData") ?? "null");
+  } catch {
+    return null;
+  }
+}
+
+/** Collect all allowed nav keys (group keys + item paths) from the org config.
+ *  Returns null when not configured or "all" is in the list (= show everything).
+ *  Returns empty Set when configured but nothing selected (= show nothing). */
+function getAllowedKeys(items: unknown): Set<string> | null {
+  if (!Array.isArray(items) || items.includes("all")) {
+    return null; // not configured or explicitly "all"
+  }
+  return new Set(items as string[]);
+}
+
 export default function Sidebar({ account }: { account?: Account | null }) {
-  const { collapsed, toggle, width } = useSidebar();
+  const { collapsed, toggle, width, setVisible } = useSidebar();
   const location = useLocation();
   const { t } = useTranslation();
 
   const isGA = isGlobalAdmin(account);
   const isLA = isLocalAdmin(account);
 
-  // Filter nav groups based on user permissions
+  // Get org-level nav restrictions
+  const org = getStoredOrganization();
+  const allowedKeys = isGA
+    ? null // global admins always see everything
+    : getAllowedKeys(isLA ? org?.navItems : org?.userNavItems);
+
+  // Filter nav groups based on user permissions + org nav settings
   const filteredGroups = navGroups
     .filter((group) => {
       if (GLOBAL_ADMIN_GROUPS.includes(group.key) && !isGA) return false;
+      // If org restricts nav items, hide groups not in the allowed list
+      if (allowedKeys && !allowedKeys.has(group.key)) return false;
       return true;
     })
     .map((group) => ({
@@ -85,10 +113,18 @@ export default function Sidebar({ account }: { account?: Account | null }) {
       items: group.items.filter((item) => {
         if (GLOBAL_ADMIN_ITEMS.includes(item.to) && !isGA) return false;
         if (LOCAL_ADMIN_ITEMS.includes(item.to) && !isLA) return false;
+        if (allowedKeys && !allowedKeys.has(item.to)) return false;
         return true;
       }),
     }))
     .filter((group) => group.items.length > 0);
+
+  // Sync visibility state so Layout can remove the left margin
+  const hasItems = filteredGroups.length > 0;
+  useEffect(() => { setVisible(hasItems); }, [hasItems, setVisible]);
+
+  // Hide sidebar entirely when user has no nav items
+  if (!hasItems) return null;
 
   return (
     <motion.aside

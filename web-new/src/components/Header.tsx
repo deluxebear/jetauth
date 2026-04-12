@@ -1,11 +1,12 @@
-import { Bell, LogOut, ChevronDown, Sun, Moon, Globe, Building2 } from "lucide-react";
+import { Bell, LogOut, ChevronDown, Sun, Moon, Globe, Building2, UserCircle } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
+import { Link } from "react-router-dom";
 import { useTranslation } from "../i18n";
 import { useTheme } from "../theme";
 import { useOrganization } from "../OrganizationContext";
 
 interface HeaderProps {
-  user: { name: string; displayName: string; avatar: string } | null;
+  user: { owner: string; name: string; displayName: string; avatar: string } | null;
   onLogout: () => void;
 }
 
@@ -162,6 +163,14 @@ export default function Header({ user, onLogout }: HeaderProps) {
                   {user?.name}
                 </div>
               </div>
+              <Link
+                to={`/users/${user?.owner}/${user?.name}`}
+                onClick={() => setUserMenuOpen(false)}
+                className="flex w-full items-center gap-2 px-3 py-2 text-[13px] text-text-secondary hover:bg-surface-3 transition-colors"
+              >
+                <UserCircle size={14} />
+                {t("nav.myProfile" as any)}
+              </Link>
               <button
                 onClick={onLogout}
                 className="flex w-full items-center gap-2 px-3 py-2 text-[13px] text-danger hover:bg-surface-3 transition-colors"
