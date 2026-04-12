@@ -49,7 +49,7 @@ const en = {
   "login.submit": "Sign in",
   "login.error.failed": "Login failed",
   "login.error.network": "Network error",
-  "login.brand.title": "Casdoor",
+  "login.brand.title": "JetAuth",
   "login.brand.subtitle": "Identity Platform",
   "login.brand.heading1": "Identity &",
   "login.brand.heading2": "Access,",
@@ -213,8 +213,6 @@ const en = {
   "col.registerType": "Register Type",
   "col.registerSource": "Register Source",
   "col.balance": "Balance",
-  "col.balanceCredit": "Balance Credit",
-  "col.balanceCurrency": "Balance Currency",
   "col.signupApp": "Application",
 
   // Shared field labels
@@ -651,7 +649,6 @@ const en = {
   "common.all": "All",
   "common.copy": "Copy",
   "common.download": "Download",
-  "common.none": "None",
   "common.shared": "{name} (Shared)",
   "common.adminShared": "admin (Shared)",
 
@@ -807,9 +804,6 @@ const en = {
   "invitations.field.signupUrl": "Signup URL",
   "invitations.field.sendEmails": "Send to Emails",
   "invitations.field.sendEmails.help": "One email per line, or comma-separated",
-
-  // User Edit extras
-  "users.field.id": "ID",
 
   // Groups
   "groups.title": "Groups",
@@ -1290,7 +1284,7 @@ const en = {
   "sites.field.publicIp": "Public IP",
   "sites.field.sslMode": "SSL Mode",
   "sites.field.sslCert": "SSL Certificate",
-  "sites.field.casdoorApp": "Casdoor Application",
+  "sites.field.casdoorApp": "JetAuth Application",
   "sites.field.status": "Status",
   "sites.section.basic": "Basic Information",
   "sites.section.domain": "Domain Configuration",
@@ -1442,7 +1436,7 @@ const en = {
   "sysinfo.requestCount": "Requests",
   "sysinfo.avgLatency": "Avg Latency",
   "sysinfo.throughput": "Throughput",
-  "sysinfo.aboutCasdoor": "About Casdoor",
+  "sysinfo.aboutCasdoor": "About JetAuth",
   "sysinfo.description": "An Identity and Access Management (IAM) / Single-Sign-On (SSO) platform with web UI supporting OAuth 2.0, OIDC, SAML and CAS",
   "sysinfo.version": "Version",
   "sysinfo.unknownVersion": "Unknown version",

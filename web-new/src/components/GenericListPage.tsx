@@ -39,7 +39,7 @@ export default function GenericListPage({
   columns,
   rowKey = "name",
   owner = "built-in",
-  editPath,
+  editPath: _editPath,
   canAdd = true,
   canDelete = true,
   pageSize = 20,
@@ -87,9 +87,6 @@ export default function GenericListPage({
   const handleAdd = () => {
     navigate(`/${entityType}/new`);
   };
-
-  const defaultEditPath = (r: Record<string, unknown>) =>
-    `/${entityType}/${r.owner ?? owner}/${r.name}`;
 
   // Translate column titles
   const translatedColumns = columns.map((col) => ({

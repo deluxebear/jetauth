@@ -171,11 +171,6 @@ export default function OrganizationEditPage() {
     });
   };
 
-  const toggleChip = (key: string, opt: string) => {
-    const current = (org[key] as string[]) ?? [];
-    set(key, current.includes(opt) ? current.filter((o: string) => o !== opt) : [...current, opt]);
-  };
-
   const imgPreview = (url: string) =>
     url ? <img src={url} alt="" className="h-8 w-8 rounded border border-border object-contain bg-surface-2" onError={(e) => ((e.target as HTMLImageElement).style.display = "none")} /> : null;
 
@@ -265,7 +260,7 @@ export default function OrganizationEditPage() {
                     {imgPreview(org.logo)}
                   </div>
                 </FormField>
-                {org.enableDarkLogo && (
+                {!!org.enableDarkLogo && (
                   <FormField label={t("orgs.field.logoDark" as any)} span="full">
                     <div className="flex gap-2 items-center">
                       <input value={(org as any).logoDark ?? ""} onChange={(e) => set("logoDark", e.target.value)} className={`${inputClass} flex-1`} />

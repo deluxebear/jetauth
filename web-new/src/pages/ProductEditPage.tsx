@@ -25,7 +25,7 @@ export default function ProductEditPage() {
   const [product, setProduct] = useState<Product | null>(null);
   const [saving, setSaving] = useState(false);
 
-  const { entity, loading, invalidate, invalidateList } = useEntityEdit<Product>({
+  const { entity, loading, invalidate: _invalidate, invalidateList } = useEntityEdit<Product>({
     queryKey: "product",
     owner,
     name,

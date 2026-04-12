@@ -22,7 +22,7 @@ export default function FormEditPage() {
   const [form, setForm] = useState<Form | null>(null);
   const [saving, setSaving] = useState(false);
 
-  const { entity, loading, invalidate, invalidateList } = useEntityEdit<Form>({
+  const { entity, loading, invalidate: _invalidate, invalidateList } = useEntityEdit<Form>({
     queryKey: "form",
     owner: owner,
     name: name,

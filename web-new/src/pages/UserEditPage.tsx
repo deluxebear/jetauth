@@ -60,7 +60,7 @@ export default function UserEditPage() {
 
   const isBuiltInAdmin = owner === "built-in" && name === "admin";
 
-  const { entity, loading, invalidate, invalidateList } = useEntityEdit<UserType>({
+  const { entity, loading, invalidate: _invalidate, invalidateList } = useEntityEdit<UserType>({
     queryKey: "user",
     owner,
     name,
@@ -155,24 +155,6 @@ export default function UserEditPage() {
     const translated = t(key as any);
     return translated === key ? name : translated;
   };
-
-  // Get unique tabs from accountItems
-  const getFieldTabs = (): string[] => {
-    if (accountItems.length === 0) return [];
-    const tabs = new Set<string>();
-    accountItems.forEach((item) => {
-      if (isFieldVisible(item.name)) {
-        tabs.add(item.tab || "");
-      }
-    });
-    return Array.from(tabs).sort((a, b) => {
-      if (a === "") return -1;
-      if (b === "") return 1;
-      return a.localeCompare(b);
-    });
-  };
-
-  const fieldTabs = getFieldTabs();
 
   const handleSave = async () => {
     setSaving(true);

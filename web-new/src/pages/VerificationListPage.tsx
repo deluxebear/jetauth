@@ -3,15 +3,12 @@ import { motion } from "framer-motion";
 import { RefreshCw } from "lucide-react";
 import DataTable, { type Column } from "../components/DataTable";
 import { useTranslation } from "../i18n";
-import { useModal } from "../components/Modal";
 import { useEntityList } from "../hooks/useEntityList";
 import * as VerificationBackend from "../backend/VerificationBackend";
 import type { Verification } from "../backend/VerificationBackend";
 
 export default function VerificationListPage() {
   const { t } = useTranslation();
-  const modal = useModal();
-
   const list = useEntityList<Verification>({
     queryKey: "verifications",
     fetchFn: VerificationBackend.getVerifications,

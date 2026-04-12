@@ -20,7 +20,7 @@ export default function PaymentEditPage() {
   const [payment, setPayment] = useState<Payment | null>(null);
   const [saving, setSaving] = useState(false);
 
-  const { entity, loading, invalidate, invalidateList } = useEntityEdit<Payment>({
+  const { entity, loading, invalidate: _invalidate, invalidateList } = useEntityEdit<Payment>({
     queryKey: "payment",
     owner,
     name,

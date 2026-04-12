@@ -29,6 +29,7 @@ export const login = (values: {
   organization: string;
   username: string;
   password: string;
+  signinMethod?: string;
   type: string;
 }) => api.post("/api/login", values);
 

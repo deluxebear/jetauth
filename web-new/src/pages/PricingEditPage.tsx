@@ -20,7 +20,7 @@ export default function PricingEditPage() {
   const [pricing, setPricing] = useState<Pricing | null>(null);
   const [saving, setSaving] = useState(false);
 
-  const { entity, loading, invalidate, invalidateList } = useEntityEdit<Pricing>({
+  const { entity, loading, invalidate: _invalidate, invalidateList } = useEntityEdit<Pricing>({
     queryKey: "pricing",
     owner,
     name,

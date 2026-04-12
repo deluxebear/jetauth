@@ -201,10 +201,6 @@ export default function Signup() {
   const labelClass = "block text-[12px] font-medium text-text-secondary mb-1.5";
   const errorClass = "text-[11px] text-danger mt-1";
 
-  const selectedCountry = COUNTRIES.find(
-    (c) => c.phone === `+${form.phonePrefix}` || c.phone.replace("+", "") === form.phonePrefix
-  );
-
   // Loading state
   if (appLoading) {
     return (
@@ -605,7 +601,7 @@ export default function Signup() {
 
           <p className="mt-8 text-center text-[11px] text-text-muted">
             {t("common.poweredBy")}{" "}
-            <span className="font-mono font-medium text-text-secondary">Casdoor</span>{" "}
+            <span className="font-mono font-medium text-text-secondary">JetAuth</span>{" "}
             &middot; {t("common.openSourceIAM")}
           </p>
         </motion.div>

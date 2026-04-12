@@ -32,7 +32,7 @@ export default function SiteEditPage() {
   const [site, setSite] = useState<Site | null>(null);
   const [saving, setSaving] = useState(false);
 
-  const { entity, loading, invalidate, invalidateList } = useEntityEdit<Site>({
+  const { entity, loading, invalidate: _invalidate, invalidateList } = useEntityEdit<Site>({
     queryKey: "site",
     owner,
     name,

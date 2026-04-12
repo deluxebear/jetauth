@@ -43,7 +43,7 @@ export function paginationQuery(params: {
   value?: string;
   sortField?: string;
   sortOrder?: string;
-  [key: string]: string | number | undefined;
+  [key: string]: string | number | boolean | undefined;
 }): string {
   const qs = Object.entries(params)
     .filter(([, v]) => v !== undefined && v !== "")

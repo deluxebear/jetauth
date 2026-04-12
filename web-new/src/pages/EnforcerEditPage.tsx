@@ -20,7 +20,7 @@ export default function EnforcerEditPage() {
   const [enforcer, setEnforcer] = useState<Enforcer | null>(null);
   const [saving, setSaving] = useState(false);
 
-  const { entity, loading, invalidate, invalidateList } = useEntityEdit<Enforcer>({
+  const { entity, loading, invalidate: _invalidate, invalidateList } = useEntityEdit<Enforcer>({
     queryKey: "enforcer",
     owner,
     name,

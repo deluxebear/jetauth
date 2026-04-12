@@ -48,7 +48,7 @@ export default function PermissionEditPage() {
   const [permission, setPermission] = useState<Permission | null>(null);
   const [saving, setSaving] = useState(false);
 
-  const { entity, loading, invalidate, invalidateList } = useEntityEdit<Permission>({
+  const { entity, loading, invalidate: _invalidate, invalidateList } = useEntityEdit<Permission>({
     queryKey: "permission",
     owner,
     name,
@@ -136,11 +136,6 @@ export default function PermissionEditPage() {
   const handleTagsChange = (key: string, text: string) => {
     const values = text.split(",").map((s) => s.trim()).filter(Boolean);
     set(key, values);
-  };
-
-  const handleMultiSelectChange = (key: string, e: React.ChangeEvent<HTMLSelectElement>) => {
-    const selected = Array.from(e.target.selectedOptions, (o) => o.value);
-    set(key, selected);
   };
 
   const isAPI = permission.resourceType === "API";

@@ -25,7 +25,7 @@ export default function PlanEditPage() {
   const [plan, setPlan] = useState<Plan | null>(null);
   const [saving, setSaving] = useState(false);
 
-  const { entity, loading, invalidate, invalidateList } = useEntityEdit<Plan>({
+  const { entity, loading, invalidate: _invalidate, invalidateList } = useEntityEdit<Plan>({
     queryKey: "plan",
     owner,
     name,

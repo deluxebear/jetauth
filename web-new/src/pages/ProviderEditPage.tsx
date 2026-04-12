@@ -80,7 +80,7 @@ export default function ProviderEditPage() {
   const handleSaveAndExit = async () => {
     setSaving(true);
     try {
-      const res = await ProvBackend.updateProvider(owner!, name!, provider);
+      const res = await ProvBackend.updateProvider(owner!, name!, prov as Provider);
       if (res.status === "ok") {
         modal.toast(t("common.saveSuccess" as any));
         invalidateList();

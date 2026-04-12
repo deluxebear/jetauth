@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { motion } from "framer-motion";
+import { motion, type Variants } from "framer-motion";
 import {
   Users, AppWindow, ShieldCheck, KeyRound,
   ArrowUpRight, Clock, Globe, TrendingUp,
   UserPlus, CalendarDays, CalendarRange,
-  LogIn, LogOut, UserCog, FilePen, Trash2, PlusCircle, Settings,
+  LogIn, LogOut, FilePen, Trash2, PlusCircle, Settings,
 } from "lucide-react";
 import { useTranslation } from "../i18n";
 import { request } from "../backend/request";
@@ -30,11 +30,11 @@ interface DashboardData {
   enforcerCounts: number[];
 }
 
-const stagger = {
+const stagger: Variants = {
   hidden: {},
   show: { transition: { staggerChildren: 0.06 } },
 };
-const fadeUp = {
+const fadeUp: Variants = {
   hidden: { opacity: 0, y: 12 },
   show: { opacity: 1, y: 0, transition: { duration: 0.35, ease: "easeOut" } },
 };

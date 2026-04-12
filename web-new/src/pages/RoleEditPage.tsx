@@ -20,7 +20,7 @@ export default function RoleEditPage() {
   const [role, setRole] = useState<Role | null>(null);
   const [saving, setSaving] = useState(false);
 
-  const { entity, loading, invalidate, invalidateList } = useEntityEdit<Role>({
+  const { entity, loading, invalidate: _invalidate, invalidateList } = useEntityEdit<Role>({
     queryKey: "role",
     owner,
     name,

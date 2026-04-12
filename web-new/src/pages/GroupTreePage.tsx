@@ -1,6 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
-import { motion } from "framer-motion";
 import { Plus, Pencil, Trash2, Users, ChevronRight, ChevronDown, Grip, Eye, ArrowLeft } from "lucide-react";
 import { useTranslation } from "../i18n";
 import { useModal } from "../components/Modal";
@@ -96,7 +95,6 @@ export default function GroupTreePage() {
   };
 
   const handleAddGroup = async (parentId?: string) => {
-    const rand = Math.random().toString(36).substring(2, 8);
     const newGroup = GroupBackend.newGroup(organizationName!);
     newGroup.parentId = parentId || organizationName!;
     const res = await GroupBackend.addGroup(newGroup);

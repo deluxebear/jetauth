@@ -1,4 +1,4 @@
-import { request, paginationQuery, type ApiResponse } from "./request";
+import { request, paginationQuery } from "./request";
 
 export interface Group {
   owner: string;

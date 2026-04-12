@@ -36,7 +36,7 @@ export default function KeyEditPage() {
   const [saving, setSaving] = useState(false);
   const [showSecret, setShowSecret] = useState(false);
 
-  const { entity, loading, invalidate, invalidateList } = useEntityEdit<Key>({
+  const { entity, loading, invalidate: _invalidate, invalidateList } = useEntityEdit<Key>({
     queryKey: "key",
     owner,
     name,

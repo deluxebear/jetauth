@@ -29,7 +29,7 @@ export default function OrderEditPage() {
   const [order, setOrder] = useState<Order | null>(null);
   const [saving, setSaving] = useState(false);
 
-  const { entity, loading, invalidate, invalidateList } = useEntityEdit<Order>({
+  const { entity, loading, invalidate: _invalidate, invalidateList } = useEntityEdit<Order>({
     queryKey: "order",
     owner,
     name,

@@ -20,7 +20,7 @@ export default function EntryEditPage() {
   const [entry, setEntry] = useState<Entry | null>(null);
   const [saving, setSaving] = useState(false);
 
-  const { entity, loading, invalidate, invalidateList } = useEntityEdit<Entry>({
+  const { entity, loading, invalidate: _invalidate, invalidateList } = useEntityEdit<Entry>({
     queryKey: "entry",
     owner,
     name,

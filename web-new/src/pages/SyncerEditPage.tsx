@@ -39,7 +39,7 @@ export default function SyncerEditPage() {
   const [saving, setSaving] = useState(false);
   const [testDbLoading, setTestDbLoading] = useState(false);
 
-  const { entity, loading, invalidate, invalidateList } = useEntityEdit<Syncer>({
+  const { entity, loading, invalidate: _invalidate, invalidateList } = useEntityEdit<Syncer>({
     queryKey: "syncer",
     owner: owner,
     name: name,

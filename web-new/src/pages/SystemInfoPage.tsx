@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { motion } from "framer-motion";
+import { motion, type Variants } from "framer-motion";
 import { Cpu, HardDrive, MemoryStick, Network, ExternalLink, Globe, MessageSquare } from "lucide-react";
 import { useTranslation } from "../i18n";
 import * as SystemBackend from "../backend/SystemBackend";
@@ -42,7 +42,7 @@ function CircleProgress({ percent, size = 100 }: { percent: number; size?: numbe
   );
 }
 
-const fadeUp = {
+const fadeUp: Variants = {
   hidden: { opacity: 0, y: 12 },
   show: { opacity: 1, y: 0, transition: { duration: 0.35, ease: "easeOut" } },
 };
@@ -92,7 +92,7 @@ export default function SystemInfoPage() {
   if (versionInfo && versionInfo.commitOffset > 0) {
     versionText += ` (ahead+${versionInfo.commitOffset})`;
   }
-  const versionLink = versionInfo?.version ? `https://github.com/casdoor/casdoor/releases/tag/${versionInfo.version}` : "";
+  const versionLink = versionInfo?.version ? `https://github.com/deluxebear/jetauth/releases/tag/${versionInfo.version}` : "";
 
   return (
     <div className="space-y-6  mx-auto">
@@ -231,7 +231,7 @@ export default function SystemInfoPage() {
             </motion.div>
           )}
 
-          {/* About Casdoor */}
+          {/* About JetAuth */}
           <motion.div variants={fadeUp} initial="hidden" animate="show" className="rounded-xl border border-border bg-surface-1 p-5">
             <h2 className="text-sm font-semibold mb-4">{t("sysinfo.aboutCasdoor" as any)}</h2>
             <p className="text-[13px] text-text-secondary mb-4">{t("sysinfo.description" as any)}</p>
@@ -239,7 +239,7 @@ export default function SystemInfoPage() {
               <div className="flex items-center gap-2">
                 <ExternalLink size={14} className="text-text-muted" />
                 <span className="text-text-muted">GitHub:</span>
-                <a href="https://github.com/casdoor/casdoor" target="_blank" rel="noreferrer" className="text-accent hover:underline">Casdoor</a>
+                <a href="https://github.com/deluxebear/jetauth" target="_blank" rel="noreferrer" className="text-accent hover:underline">JetAuth</a>
               </div>
               <div className="flex items-center gap-2">
                 <span className="w-3.5" />
@@ -253,12 +253,12 @@ export default function SystemInfoPage() {
               <div className="flex items-center gap-2">
                 <Globe size={14} className="text-text-muted" />
                 <span className="text-text-muted">{t("sysinfo.website" as any)}:</span>
-                <a href="https://casdoor.org" target="_blank" rel="noreferrer" className="text-accent hover:underline">https://casdoor.org</a>
+                <a href="https://github.com/deluxebear/jetauth" target="_blank" rel="noreferrer" className="text-accent hover:underline">https://github.com/deluxebear/jetauth</a>
               </div>
               <div className="flex items-center gap-2">
                 <MessageSquare size={14} className="text-text-muted" />
                 <span className="text-text-muted">{t("sysinfo.community" as any)}:</span>
-                <a href="https://casdoor.org/#:~:text=Casdoor%20API-,Community,-GitHub" target="_blank" rel="noreferrer" className="text-accent hover:underline">Get in Touch!</a>
+                <a href="https://github.com/deluxebear/jetauth/discussions" target="_blank" rel="noreferrer" className="text-accent hover:underline">Get in Touch!</a>
               </div>
             </div>
           </motion.div>

@@ -20,7 +20,7 @@ export default function TransactionEditPage() {
   const [txn, setTxn] = useState<Transaction | null>(null);
   const [saving, setSaving] = useState(false);
 
-  const { entity, loading, invalidate, invalidateList } = useEntityEdit<Transaction>({
+  const { entity, loading, invalidate: _invalidate, invalidateList } = useEntityEdit<Transaction>({
     queryKey: "transaction",
     owner,
     name,

@@ -1,4 +1,4 @@
-import { request, paginationQuery } from "./request";
+import { request } from "./request";
 
 export interface Record {
   id: number;

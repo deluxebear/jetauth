@@ -103,11 +103,6 @@ export default function CountryCodeSelect({ selected, onChange }: {
     onChange(selected.includes(code) ? selected.filter((c) => c !== code) : [...selected, code]);
   };
 
-  const getLabel = (code: string) => {
-    const c = COUNTRIES.find((c) => c.code === code);
-    return c ? `${c.flag} ${isZh ? c.zh : c.en}${c.phone}` : code;
-  };
-
   const getShortLabel = (code: string) => {
     const c = COUNTRIES.find((c) => c.code === code);
     return c ? `${c.flag} ${isZh ? c.zh : c.en}${c.phone}` : code;

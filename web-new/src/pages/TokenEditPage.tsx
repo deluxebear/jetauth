@@ -32,7 +32,7 @@ export default function TokenEditPage() {
   const [token, setToken] = useState<Token | null>(null);
   const [saving, setSaving] = useState(false);
 
-  const { entity, loading, invalidate, invalidateList } = useEntityEdit<Token>({
+  const { entity, loading, invalidate: _invalidate, invalidateList } = useEntityEdit<Token>({
     queryKey: "token",
     owner: owner,
     name: name,

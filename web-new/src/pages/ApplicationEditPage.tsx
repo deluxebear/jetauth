@@ -726,7 +726,7 @@ export default function ApplicationEditPage() {
     </div>
   );
 
-  const tabContent: Record<string, JSX.Element> = {
+  const tabContent: Record<string, React.JSX.Element> = {
     basic: basicTab,
     auth: authTab,
     oauth: oauthTab,

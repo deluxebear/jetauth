@@ -20,7 +20,7 @@ export default function ModelEditPage() {
   const [model, setModel] = useState<Model | null>(null);
   const [saving, setSaving] = useState(false);
 
-  const { entity, loading, invalidate, invalidateList } = useEntityEdit<Model>({
+  const { entity, loading, invalidate: _invalidate, invalidateList } = useEntityEdit<Model>({
     queryKey: "model",
     owner,
     name,

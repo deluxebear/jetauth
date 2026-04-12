@@ -20,7 +20,7 @@ export default function AgentEditPage() {
   const [agent, setAgent] = useState<Agent | null>(null);
   const [saving, setSaving] = useState(false);
 
-  const { entity, loading, invalidate, invalidateList } = useEntityEdit<Agent>({
+  const { entity, loading, invalidate: _invalidate, invalidateList } = useEntityEdit<Agent>({
     queryKey: "agent",
     owner,
     name,

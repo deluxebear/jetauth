@@ -58,7 +58,7 @@ export function deleteToken(token: Token) {
   return request("POST", "/api/delete-token", token);
 }
 
-export function newToken(owner: string, organization: string): Token {
+export function newToken(_owner: string, organization: string): Token {
   const rand = Math.random().toString(36).substring(2, 8);
   return {
     owner: "admin",

@@ -1,4 +1,4 @@
-import { useState, useCallback, type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { ChevronDown, ChevronRight, Check, Minus } from "lucide-react";
 
 export interface TreeNode {

@@ -28,7 +28,7 @@ export default function AdapterEditPage() {
   const [adapter, setAdapter] = useState<Adapter | null>(null);
   const [saving, setSaving] = useState(false);
 
-  const { entity, loading, invalidate, invalidateList } = useEntityEdit<Adapter>({
+  const { entity, loading, invalidate: _invalidate, invalidateList } = useEntityEdit<Adapter>({
     queryKey: "adapter",
     owner,
     name,

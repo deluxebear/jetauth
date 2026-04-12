@@ -1,6 +1,4 @@
-import type { TranslationKeys } from "./en";
-
-const zh: Record<TranslationKeys, string> = {
+const zh: Record<string, string> = {
   // Common
   "common.search": "搜索...",
   "common.signOut": "退出登录",
@@ -51,7 +49,7 @@ const zh: Record<TranslationKeys, string> = {
   "login.submit": "登录",
   "login.error.failed": "登录失败",
   "login.error.network": "网络错误",
-  "login.brand.title": "Casdoor",
+  "login.brand.title": "JetAuth",
   "login.brand.subtitle": "统一身份平台",
   "login.brand.heading1": "身份认证 &",
   "login.brand.heading2": "访问控制,",
@@ -215,8 +213,6 @@ const zh: Record<TranslationKeys, string> = {
   "col.registerType": "注册类型",
   "col.registerSource": "注册来源",
   "col.balance": "余额",
-  "col.balanceCredit": "余额额度",
-  "col.balanceCurrency": "余额币种",
   "col.signupApp": "应用",
 
   // Shared fields
@@ -734,7 +730,6 @@ const zh: Record<TranslationKeys, string> = {
   "common.all": "全部",
   "common.copy": "复制",
   "common.download": "下载",
-  "common.none": "无",
   "common.shared": "{name} (共享)",
   "common.adminShared": "admin (共享)",
 
@@ -890,9 +885,6 @@ const zh: Record<TranslationKeys, string> = {
   "invitations.field.signupUrl": "注册地址",
   "invitations.field.sendEmails": "发送至邮箱",
   "invitations.field.sendEmails.help": "每行一个邮箱，或用逗号分隔",
-
-  // User Edit extras
-  "users.field.id": "ID",
 
   // Groups
   "groups.title": "分组管理",
@@ -1373,7 +1365,7 @@ const zh: Record<TranslationKeys, string> = {
   "sites.field.publicIp": "公网 IP",
   "sites.field.sslMode": "SSL 模式",
   "sites.field.sslCert": "SSL 证书",
-  "sites.field.casdoorApp": "Casdoor 应用",
+  "sites.field.casdoorApp": "JetAuth 应用",
   "sites.field.status": "状态",
   "sites.section.basic": "基本信息",
   "sites.section.domain": "域名配置",
@@ -1525,7 +1517,7 @@ const zh: Record<TranslationKeys, string> = {
   "sysinfo.requestCount": "请求数",
   "sysinfo.avgLatency": "平均延迟",
   "sysinfo.throughput": "吞吐量",
-  "sysinfo.aboutCasdoor": "关于 Casdoor",
+  "sysinfo.aboutCasdoor": "关于 JetAuth",
   "sysinfo.description": "一个支持 OAuth 2.0、OIDC、SAML 和 CAS 的身份和访问管理 (IAM) / 单点登录 (SSO) 平台",
   "sysinfo.version": "版本",
   "sysinfo.unknownVersion": "未知版本",

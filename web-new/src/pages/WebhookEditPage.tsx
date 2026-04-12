@@ -32,7 +32,7 @@ export default function WebhookEditPage() {
   const [webhook, setWebhook] = useState<Webhook | null>(null);
   const [saving, setSaving] = useState(false);
 
-  const { entity, loading, invalidate, invalidateList } = useEntityEdit<Webhook>({
+  const { entity, loading, invalidate: _invalidate, invalidateList } = useEntityEdit<Webhook>({
     queryKey: "webhook",
     owner: owner,
     name: name,

@@ -571,7 +571,7 @@ export const entityConfigs: Record<string, EntityConfig> = {
       { key: "displayName", title: "col.displayName", sortable: true },
       { key: "createdTime", title: "col.created", sortable: true, render: dateCol("createdTime") },
       { key: "price", title: "col.price", render: (_: unknown, r: Record<string, unknown>) =>
-        <span className="font-mono font-medium">{r.price} {r.currency}</span>
+        <span className="font-mono font-medium">{String(r.price ?? "")} {String(r.currency ?? "")}</span>
       },
       { key: "quantity", title: "col.quantity", render: monoMuted("quantity") },
       { key: "sold", title: "col.sold", render: monoMuted("sold") },
@@ -611,7 +611,7 @@ export const entityConfigs: Record<string, EntityConfig> = {
       { key: "displayName", title: "col.displayName", sortable: true },
       { key: "createdTime", title: "col.created", sortable: true, render: dateCol("createdTime") },
       { key: "price", title: "col.price", render: (_: unknown, r: Record<string, unknown>) =>
-        <span className="font-mono font-medium">{r.price} {r.currency}</span>
+        <span className="font-mono font-medium">{String(r.price ?? "")} {String(r.currency ?? "")}</span>
       },
       { key: "period", title: "col.period", render: monoMuted("period") },
       { key: "isEnabled", title: "col.enabled", render: boolBadge("isEnabled") },
@@ -714,7 +714,7 @@ export const entityConfigs: Record<string, EntityConfig> = {
       { key: "provider", title: "col.provider" },
       { key: "type", title: "col.type", render: monoMuted("type") },
       { key: "price", title: "col.amount", render: (_: unknown, r: Record<string, unknown>) =>
-        <span className="font-mono font-medium">{r.price} {r.currency}</span>
+        <span className="font-mono font-medium">{String(r.price ?? "")} {String(r.currency ?? "")}</span>
       },
       { key: "state", title: "col.state", render: (_: unknown, r: Record<string, unknown>) => {
         const s = String(r.state ?? "");
@@ -750,7 +750,7 @@ export const entityConfigs: Record<string, EntityConfig> = {
         <StatusBadge status={r.category === "Recharge" ? "active" : "warning"} label={String(r.category ?? "—")} />
       },
       { key: "amount", title: "col.amount", render: (_: unknown, r: Record<string, unknown>) =>
-        <span className={`font-mono font-medium ${Number(r.amount) >= 0 ? "text-success" : "text-danger"}`}>{r.amount} {r.currency}</span>
+        <span className={`font-mono font-medium ${Number(r.amount) >= 0 ? "text-success" : "text-danger"}`}>{String(r.amount ?? "")} {String(r.currency ?? "")}</span>
       },
       { key: "state", title: "col.state", render: monoMuted("state") },
     ],
@@ -778,7 +778,7 @@ export const entityConfigs: Record<string, EntityConfig> = {
       { key: "user", title: "col.user" },
       { key: "products", title: "col.products", render: tagsList("products") },
       { key: "price", title: "col.price", render: (_: unknown, r: Record<string, unknown>) =>
-        <span className="font-mono font-medium">{r.price} {r.currency}</span>
+        <span className="font-mono font-medium">{String(r.price ?? "")} {String(r.currency ?? "")}</span>
       },
       { key: "state", title: "col.state", render: (_: unknown, r: Record<string, unknown>) => {
         const s = String(r.state ?? "");

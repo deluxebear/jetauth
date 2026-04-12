@@ -255,7 +255,7 @@ export default function Login({ onLogin, error, organizations = [] }: LoginProps
 
           <p className="mt-8 text-center text-[11px] text-text-muted">
             {t("common.poweredBy")}{" "}
-            <span className="font-mono font-medium text-text-secondary">Casdoor</span>{" "}
+            <span className="font-mono font-medium text-text-secondary">JetAuth</span>{" "}
             &middot; {t("common.openSourceIAM")}
           </p>
         </motion.div>

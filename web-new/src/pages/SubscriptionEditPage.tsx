@@ -34,7 +34,7 @@ export default function SubscriptionEditPage() {
   const [sub, setSub] = useState<Subscription | null>(null);
   const [saving, setSaving] = useState(false);
 
-  const { entity, loading, invalidate, invalidateList } = useEntityEdit<Subscription>({
+  const { entity, loading, invalidate: _invalidate, invalidateList } = useEntityEdit<Subscription>({
     queryKey: "subscription",
     owner,
     name,

@@ -1,5 +1,3 @@
-import { create } from "zustand";
-
 // Lightweight store without extra deps — just React state via context would work too,
 // but a simple module-level store keeps things flat.
 

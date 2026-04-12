@@ -33,7 +33,7 @@ export default function RuleEditPage() {
   const [rule, setRule] = useState<Rule | null>(null);
   const [saving, setSaving] = useState(false);
 
-  const { entity, loading, invalidate, invalidateList } = useEntityEdit<Rule>({
+  const { entity, loading, invalidate: _invalidate, invalidateList } = useEntityEdit<Rule>({
     queryKey: "rule",
     owner,
     name,

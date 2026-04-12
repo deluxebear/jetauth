@@ -108,7 +108,7 @@ export default function Sidebar({ account }: { account?: Account | null }) {
             animate={{ opacity: 1 }}
             className="text-sm font-semibold tracking-tight text-text-primary"
           >
-            Casdoor
+            JetAuth
           </motion.span>
         )}
       </div>

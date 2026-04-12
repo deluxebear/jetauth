@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useCallback, type ReactNode } from "react";
-import en, { type TranslationKeys } from "./locales/en";
+import en from "./locales/en";
 import zh from "./locales/zh";
 
 type Locale = "en" | "zh";
@@ -14,7 +14,7 @@ const localeLabels: Record<Locale, string> = {
 interface I18nContextType {
   locale: Locale;
   setLocale: (l: Locale) => void;
-  t: (key: TranslationKeys) => string;
+  t: (key: string) => string;
   locales: { value: Locale; label: string }[];
 }
 
@@ -38,7 +38,7 @@ export function I18nProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const t = useCallback(
-    (key: TranslationKeys) => locales[locale]?.[key] ?? locales.en[key] ?? key,
+    (key: string) => locales[locale]?.[key] ?? locales.en[key] ?? key,
     [locale]
   );
 

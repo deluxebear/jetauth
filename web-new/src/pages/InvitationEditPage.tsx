@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Save, ArrowLeft, Trash2, Copy, Send, LogOut, RefreshCw, Shuffle } from "lucide-react";
+import { Save, ArrowLeft, Trash2, Copy, Send, LogOut, RefreshCw } from "lucide-react";
 import { FormField, FormSection, Switch, inputClass, monoInputClass } from "../components/FormSection";
 import { useTranslation } from "../i18n";
 import { useModal } from "../components/Modal";
@@ -47,9 +47,8 @@ function generateObfuscatedCode(coreCode: string, prefixLen: number, suffixLen: 
 }
 
 /** Try to parse existing regex back into obfuscation settings */
-function parseRegexToSettings(regex: string, coreCode: string): { prefixLen: number; suffixLen: number; charSet: CharSet } | null {
+function parseRegexToSettings(regex: string, _coreCode: string): { prefixLen: number; suffixLen: number; charSet: CharSet } | null {
   // Patterns like [a-zA-Z0-9]{3}coreCode[a-zA-Z0-9]{4}
-  const escaped = coreCode.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const match = regex.match(/^(?:\[[\w-]+\]\{(\d+)\})?(.+?)(?:\[[\w-]+\]\{(\d+)\})?$/);
   if (!match) return null;
   const prefixLen = match[1] ? parseInt(match[1]) : 0;
@@ -58,53 +57,6 @@ function parseRegexToSettings(regex: string, coreCode: string): { prefixLen: num
   if (regex.includes("[0-9]") && !regex.includes("a-z")) charSet = "numbers";
   else if (regex.includes("[a-zA-Z]") && !regex.includes("0-9")) charSet = "letters";
   return { prefixLen, suffixLen, charSet };
-}
-
-// For backward compatibility: generate from raw regex pattern
-function generateFromRegex(pattern: string): string {
-  const chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-  const digits = "0123456789";
-
-  let result = "";
-  let i = 0;
-  while (i < pattern.length) {
-    if (pattern[i] === "[") {
-      const closeBracket = pattern.indexOf("]", i);
-      if (closeBracket === -1) break;
-      const charClass = pattern.substring(i, closeBracket + 1);
-      const pool = charClass.includes("0-9") && !charClass.includes("a-z") ? digits : chars;
-
-      let count = 1;
-      if (pattern[closeBracket + 1] === "{") {
-        const closeQuant = pattern.indexOf("}", closeBracket + 1);
-        const quantStr = pattern.substring(closeBracket + 2, closeQuant);
-        const parts = quantStr.split(",");
-        count = parseInt(parts[0]) || 8;
-        i = closeQuant + 1;
-      } else {
-        i = closeBracket + 1;
-      }
-
-      for (let j = 0; j < count; j++) {
-        result += pool[Math.floor(Math.random() * pool.length)];
-      }
-    } else if (
-      pattern[i] === "." ||
-      pattern[i] === "*" ||
-      pattern[i] === "+" ||
-      pattern[i] === "?" ||
-      pattern[i] === "^" ||
-      pattern[i] === "$" ||
-      pattern[i] === "(" ||
-      pattern[i] === ")"
-    ) {
-      i++;
-    } else {
-      result += pattern[i];
-      i++;
-    }
-  }
-  return result || Math.random().toString(36).substring(2, 10);
 }
 
 // ---------------------------------------------------------------------------

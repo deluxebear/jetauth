@@ -1,5 +1,3 @@
-import { useState, useRef, useEffect, useCallback } from "react";
-
 const LANGUAGES = [
   { code: "en", flag: "\u{1F1FA}\u{1F1F8}", en: "English", zh: "英语" },
   { code: "zh", flag: "\u{1F1E8}\u{1F1F3}", en: "Chinese", zh: "中文" },

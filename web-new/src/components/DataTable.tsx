@@ -247,7 +247,7 @@ export default function DataTable<T extends Record<string, unknown>>({
 
 // Column search/filter popover
 function FilterPopover({
-  columnKey,
+  columnKey: _columnKey,
   isOpen,
   onToggle,
   onApply,

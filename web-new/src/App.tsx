@@ -169,8 +169,6 @@ export default function App() {
   const handleLogin = async (username: string, password: string, organization = "built-in") => {
     setLoginError("");
     try {
-      // Use the org's own application if available, fallback to app-built-in
-      const orgInfo = loginOrgs.length > 0 ? loginOrgs : [];
       let application = "app-built-in";
 
       // For non-built-in orgs, try to find the org's default application

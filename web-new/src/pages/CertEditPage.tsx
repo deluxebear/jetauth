@@ -55,7 +55,7 @@ export default function CertEditPage() {
   const [cert, setCert] = useState<Cert | null>(null);
   const [saving, setSaving] = useState(false);
 
-  const { entity, loading, invalidate, invalidateList } = useEntityEdit<Cert>({
+  const { entity, loading, invalidate: _invalidate, invalidateList } = useEntityEdit<Cert>({
     queryKey: "cert",
     owner,
     name,
