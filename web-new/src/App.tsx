@@ -146,33 +146,32 @@ export default function App() {
   const [loginOrgBranding, setLoginOrgBranding] = useState<{ logo?: string; logoDark?: string; favicon?: string; displayName?: string } | null>(null);
   const navigate = useNavigate();
 
+  const applyAccountData = useCallback((res: any) => {
+    if (res?.status !== "ok" || !res.data) return false;
+    setUser(res.data);
+    localStorage.setItem("account", JSON.stringify(res.data));
+    if (res.data2) {
+      localStorage.setItem("organizationData", JSON.stringify(res.data2));
+      if (res.data2.favicon) {
+        let link = document.querySelector("link[rel*='icon']") as HTMLLinkElement | null;
+        if (!link) {
+          link = document.createElement("link");
+          link.rel = "icon";
+          document.head.appendChild(link);
+        }
+        link.href = res.data2.favicon + (res.data2.favicon.includes("?") ? "&" : "?") + "t=" + Date.now();
+      }
+      if (res.data2.displayName) {
+        document.title = res.data2.displayName;
+      }
+    }
+    window.dispatchEvent(new Event("accountChanged"));
+    return true;
+  }, []);
+
   useEffect(() => {
     getAccount()
-      .then((res: any) => {
-        if (res?.status === "ok" && res.data) {
-          setUser(res.data);
-          localStorage.setItem("account", JSON.stringify(res.data));
-          if (res.data2) {
-            localStorage.setItem("organizationData", JSON.stringify(res.data2));
-            // Dynamic favicon from organization settings
-            if (res.data2.favicon) {
-              let link = document.querySelector("link[rel*='icon']") as HTMLLinkElement | null;
-              if (!link) {
-                link = document.createElement("link");
-                link.rel = "icon";
-                document.head.appendChild(link);
-              }
-              // Force browser to reload by appending timestamp
-              link.href = res.data2.favicon + (res.data2.favicon.includes("?") ? "&" : "?") + "t=" + Date.now();
-            }
-            // Dynamic page title from organization displayName
-            if (res.data2.displayName) {
-              document.title = res.data2.displayName;
-            }
-          }
-          window.dispatchEvent(new Event("accountChanged"));
-        }
-      })
+      .then((res: any) => { applyAccountData(res); })
       .catch(() => {})
       .finally(() => setLoading(false));
 
@@ -259,10 +258,7 @@ export default function App() {
         }
 
         const acc: any = await getAccount();
-        if (acc?.status === "ok" && acc.data) {
-          setUser(acc.data);
-          localStorage.setItem("account", JSON.stringify(acc.data));
-          window.dispatchEvent(new Event("accountChanged"));
+        if (applyAccountData(acc)) {
           navigate("/");
         }
       } else {
