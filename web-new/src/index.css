@@ -25,6 +25,10 @@
   --shadow-glow: 0 0 20px rgba(8, 145, 178, 0.08);
   --dot-grid-color: rgba(0, 0, 0, 0.06);
   --glass-bg: rgba(255, 255, 255, 0.8);
+  --gradient-from: #0891b2;
+  --gradient-to: #14b8a6;
+  --gradient-blob: #06b6d4;
+  --radius: 8px;
 }
 
 /* ── Dark theme ── */
@@ -51,6 +55,10 @@
   --shadow-glow: 0 0 20px rgba(6, 182, 212, 0.15);
   --dot-grid-color: var(--surface-4);
   --glass-bg: rgba(15, 17, 23, 0.7);
+  --gradient-from: #06b6d4;
+  --gradient-to: #2dd4bf;
+  --gradient-blob: #22d3ee;
+  --radius: 8px;
 }
 
 /* ── Tailwind theme tokens ── */
@@ -72,6 +80,10 @@
   --color-warning: var(--warning);
   --color-danger: var(--danger);
   --color-info: var(--info);
+  --color-gradient-from: var(--gradient-from);
+  --color-gradient-to: var(--gradient-to);
+  --color-gradient-blob: var(--gradient-blob);
+  --radius-theme: var(--radius);
   --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, monospace;
 }
