@@ -262,7 +262,7 @@ export default function App() {
             mfaType: reqMfaType,
             loginForm: { application, organization, username, encryptedPassword },
           });
-          navigate("/mfa/setup");
+          navigate(`/mfa/setup?mfaType=${reqMfaType}`);
           return;
         }
         if (res.data === "NextMfa") {
@@ -271,7 +271,7 @@ export default function App() {
             mfaProps: res.data2 || [],
             loginForm: { application, organization, username, encryptedPassword },
           });
-          navigate("/mfa/verify");
+          navigate(`/mfa/verify?mfaType=${res.data2?.[0]?.mfaType || "app"}`);
           return;
         }
 
@@ -321,7 +321,7 @@ export default function App() {
             mfaProps: res.data2 || [],
             loginForm: mfaState.loginForm,
           });
-          navigate("/mfa/verify");
+          navigate(`/mfa/verify?mfaType=${res.data2?.[0]?.mfaType || "app"}`);
         } else if (res.data !== "RequiredMfa") {
           setMfaState(null);
           const acc: any = await getAccount();
