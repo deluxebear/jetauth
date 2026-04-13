@@ -1,27 +1,31 @@
 import { useState, useEffect, type FormEvent } from "react";
+import { useParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Eye, EyeOff, ArrowRight, ShieldCheck, Sun, Moon, Globe } from "lucide-react";
 import { useTranslation } from "../i18n";
 import { useTheme } from "../theme";
 
-interface OrgOption { name: string; displayName: string }
-
 interface LoginProps {
   onLogin: (username: string, password: string, organization: string) => Promise<void>;
   error?: string;
-  organizations?: OrgOption[];
   themeData?: { themeType: string; colorPrimary: string; borderRadius: number; isCompact: boolean; isEnabled: boolean } | null;
   onOrganizationChange?: (org: string) => void;
 }
 
-export default function Login({ onLogin, error, organizations = [], themeData, onOrganizationChange }: LoginProps) {
+export default function Login({ onLogin, error, themeData, onOrganizationChange }: LoginProps) {
+  const { organizationName } = useParams<{ organizationName: string }>();
+  const organization = organizationName || "built-in";
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [organization, setOrganization] = useState("built-in");
   const [showPw, setShowPw] = useState(false);
   const [loading, setLoading] = useState(false);
   const { t, locale, setLocale, locales } = useTranslation();
   const { theme, toggle: toggleTheme, applyOrgTheme, clearOrgTheme } = useTheme();
+
+  // Notify parent when organization changes (from route param)
+  useEffect(() => {
+    onOrganizationChange?.(organization);
+  }, [organization, onOrganizationChange]);
 
   useEffect(() => {
     if (themeData?.isEnabled) {
@@ -168,22 +172,6 @@ export default function Login({ onLogin, error, organizations = [], themeData, o
           )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            {organizations.length > 1 && (
-              <div>
-                <label className="block text-[12px] font-medium text-text-secondary mb-1.5">
-                  {t("login.organization" as any)}
-                </label>
-                <select
-                  value={organization}
-                  onChange={(e) => { setOrganization(e.target.value); onOrganizationChange?.(e.target.value); }}
-                  className="w-full rounded-lg border border-border bg-surface-1 px-3.5 py-2.5 text-[14px] text-text-primary focus:border-accent focus:ring-1 focus:ring-accent/30 outline-none transition-all"
-                >
-                  {organizations.map((org) => (
-                    <option key={org.name} value={org.name}>{org.displayName || org.name}</option>
-                  ))}
-                </select>
-              </div>
-            )}
             <div>
               <label className="block text-[12px] font-medium text-text-secondary mb-1.5">
                 {t("login.username")}

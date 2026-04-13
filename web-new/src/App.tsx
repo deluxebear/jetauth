@@ -142,7 +142,6 @@ export default function App() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [loginError, setLoginError] = useState("");
-  const [loginOrgs, setLoginOrgs] = useState<{ name: string; displayName: string }[]>([]);
   const [loginThemeData, setLoginThemeData] = useState<any>(null);
   const navigate = useNavigate();
 
@@ -173,17 +172,7 @@ export default function App() {
       .catch(() => {})
       .finally(() => setLoading(false));
 
-    // Fetch organizations for login page org selector (may fail if not authenticated — that's ok)
-    import("./backend/OrganizationBackend").then((OrgBackend) => {
-      OrgBackend.getOrganizationNames("admin").then((res: any) => {
-        if (res.status === "ok" && Array.isArray(res.data)) {
-          setLoginOrgs(res.data);
-        }
-      }).catch(() => { /* Not authenticated yet, will show default built-in org */ });
-    });
-
-    // Fetch theme data for login page from default application
-    fetchLoginTheme("built-in");
+    // Theme is fetched by Login component via onOrganizationChange callback
   }, []);
 
   const fetchLoginTheme = (organization: string) => {
@@ -275,9 +264,11 @@ export default function App() {
   }
 
   if (!user) {
+    const loginElement = <Login onLogin={handleLogin} error={loginError} themeData={loginThemeData} onOrganizationChange={fetchLoginTheme} />;
     return (
       <Routes>
-        <Route path="/login" element={<Login onLogin={handleLogin} error={loginError} organizations={loginOrgs} themeData={loginThemeData} onOrganizationChange={fetchLoginTheme} />} />
+        <Route path="/login/:organizationName" element={loginElement} />
+        <Route path="/login" element={loginElement} />
         <Route path="/signup/:applicationName" element={<Signup />} />
         <Route path="/signup" element={<Signup />} />
         <Route path="*" element={<Navigate to="/login" replace />} />
