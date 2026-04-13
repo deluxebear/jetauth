@@ -1,5 +1,5 @@
 import { Routes, Route, Navigate, useNavigate } from "react-router-dom";
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState, useCallback, type ReactNode } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import Sidebar from "./components/Sidebar";
 import Header from "./components/Header";
@@ -179,7 +179,7 @@ export default function App() {
     // Theme is fetched by Login component via onOrganizationChange callback
   }, []);
 
-  const fetchLoginTheme = (organization: string) => {
+  const fetchLoginTheme = useCallback((organization: string) => {
     fetch(`/api/get-default-application?id=admin/${organization}`, { credentials: "include" })
       .then((r) => r.json())
       .then((res: any) => {
@@ -209,7 +209,7 @@ export default function App() {
         }
       })
       .catch(() => { /* theme fetch failed, use default */ });
-  };
+  }, []);
 
   const handleLogin = async (username: string, password: string, organization = "built-in") => {
     setLoginError("");
