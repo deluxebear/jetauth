@@ -16,10 +16,8 @@ package object
 
 import (
 	"encoding/gob"
-	"fmt"
 	"os"
 
-	"github.com/deluxebear/casdoor/conf"
 	"github.com/deluxebear/casdoor/util"
 	"github.com/go-webauthn/webauthn/webauthn"
 )
@@ -127,11 +125,11 @@ func initBuiltInOrganization() bool {
 		CreatedTime:        util.GetCurrentTime(),
 		DisplayName:        "Built-in Organization",
 		WebsiteUrl:         "https://example.com",
-		Favicon:            fmt.Sprintf("%s/img/casbin/favicon.ico", conf.GetConfigString("staticBaseUrl")),
+		Favicon:            "/img/favicon.svg",
 		PasswordType:       "bcrypt",
 		PasswordOptions:    []string{"AtLeast6"},
 		CountryCodes:       []string{"US", "ES", "FR", "DE", "GB", "CN", "JP", "KR", "VN", "ID", "SG", "IN"},
-		DefaultAvatar:      fmt.Sprintf("%s/img/casbin.svg", conf.GetConfigString("staticBaseUrl")),
+		DefaultAvatar:      "/img/avatar.svg",
 		UserTypes:          []string{},
 		Tags:               []string{},
 		Languages:          []string{"en", "es", "fr", "de", "ja", "zh", "vi", "pt", "tr", "pl", "uk"},
@@ -168,7 +166,7 @@ func initBuiltInUser() {
 		Type:              "normal-user",
 		Password:          "123",
 		DisplayName:       "Admin",
-		Avatar:            fmt.Sprintf("%s/img/casbin.svg", conf.GetConfigString("staticBaseUrl")),
+		Avatar:            "/img/avatar.svg",
 		Email:             "admin@example.com",
 		Phone:             "12345678910",
 		CountryCode:       "US",
@@ -206,11 +204,11 @@ func initBuiltInApplication() {
 		Owner:          "admin",
 		Name:           "app-built-in",
 		CreatedTime:    util.GetCurrentTime(),
-		DisplayName:    "Casdoor",
+		DisplayName:    "JetAuth",
 		Category:       "Default",
 		Type:           "All",
 		Scopes:         []*ScopeItem{},
-		Logo:           fmt.Sprintf("%s/img/casdoor-logo_1185x256.png", conf.GetConfigString("staticBaseUrl")),
+		Logo:           "/img/logo.svg",
 		HomepageUrl:    "https://casdoor.org",
 		Organization:   "built-in",
 		Cert:           "cert-built-in",
