@@ -64,7 +64,7 @@ export function newProduct(owner: string): Product {
     name: `product_${rand}`,
     createdTime: new Date().toISOString(),
     displayName: `New Product - ${rand}`,
-    image: "/img/logo.svg",
+    image: "/img/logo.png",
     detail: "",
     description: "",
     tag: "",

@@ -162,7 +162,7 @@ export function newApplication(orgName: string): Application {
     displayName: `New Application - ${rand}`,
     category: "Default",
     type: "All",
-    logo: "/img/logo.svg",
+    logo: "/img/logo.png",
     title: "",
     favicon: "",
     order: 0,

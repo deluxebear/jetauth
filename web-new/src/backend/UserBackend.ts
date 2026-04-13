@@ -199,7 +199,7 @@ export function newUser(orgName: string): Partial<User> {
     password: generateRandomPassword(),
     passwordSalt: "",
     displayName: `New User - ${rand}`,
-    avatar: "/img/avatar.svg",
+    avatar: "/img/avatar.png",
     email: "",
     phone: "",
     countryCode: "",
