@@ -243,6 +243,21 @@ export default function App() {
         type: "login",
       });
       if (res?.status === "ok") {
+        // Check if MFA is required before completing login
+        if (res.data === "RequiredMfa") {
+          // User must set up MFA before login is allowed
+          setLoginError("MFA setup is required. Please configure multi-factor authentication.");
+          // TODO: Navigate to MFA setup page when implemented
+          return;
+        }
+        if (res.data === "NextMfa") {
+          // User has MFA enabled, needs to verify
+          setLoginError("MFA verification required.");
+          // TODO: Navigate to MFA verify page when implemented
+          // res.data2 contains the list of available MFA methods
+          return;
+        }
+
         const acc: any = await getAccount();
         if (acc?.status === "ok" && acc.data) {
           setUser(acc.data);
