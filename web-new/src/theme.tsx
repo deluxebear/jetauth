@@ -1,12 +1,19 @@
-import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from "react";
+import { createContext, useContext, useState, useCallback, useEffect, useRef, type ReactNode } from "react";
 import { deriveThemeVars, type ThemeVars } from "./lib/theme-utils";
 
 type Theme = "dark" | "light";
 
+interface OrgThemeData {
+  themeType: string;
+  colorPrimary: string;
+  borderRadius: number;
+  isCompact: boolean;
+}
+
 interface ThemeContextType {
   theme: Theme;
   toggle: () => void;
-  applyOrgTheme: (themeData: { themeType: string; colorPrimary: string; borderRadius: number; isCompact: boolean } | null) => void;
+  applyOrgTheme: (themeData: OrgThemeData | null) => void;
   clearOrgTheme: () => void;
 }
 
@@ -33,8 +40,24 @@ const THEME_VAR_KEYS: (keyof ThemeVars)[] = [
   "--radius",
 ];
 
+function applyVars(colorPrimary: string, resolvedTheme: Theme, borderRadius: number) {
+  const vars = deriveThemeVars(colorPrimary, resolvedTheme, borderRadius);
+  const root = document.documentElement;
+  for (const key of THEME_VAR_KEYS) {
+    root.style.setProperty(key, vars[key]);
+  }
+}
+
+function removeVars() {
+  const root = document.documentElement;
+  for (const key of THEME_VAR_KEYS) {
+    root.style.removeProperty(key);
+  }
+}
+
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [theme, setTheme] = useState<Theme>(getInitialTheme);
+  const orgThemeRef = useRef<OrgThemeData | null>(null);
 
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", theme);
@@ -42,34 +65,36 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   }, [theme]);
 
   const toggle = useCallback(() => {
-    setTheme((t) => (t === "dark" ? "light" : "dark"));
+    setTheme((prev) => {
+      const next: Theme = prev === "dark" ? "light" : "dark";
+      // Re-derive org theme CSS variables for the new mode
+      if (orgThemeRef.current) {
+        applyVars(orgThemeRef.current.colorPrimary, next, orgThemeRef.current.borderRadius);
+      }
+      return next;
+    });
   }, []);
 
   const clearOrgTheme = useCallback(() => {
-    const root = document.documentElement;
-    for (const key of THEME_VAR_KEYS) {
-      root.style.removeProperty(key);
-    }
+    orgThemeRef.current = null;
+    removeVars();
     setTheme(getInitialTheme());
   }, []);
 
   const applyOrgTheme = useCallback(
-    (themeData: { themeType: string; colorPrimary: string; borderRadius: number; isCompact: boolean } | null) => {
+    (themeData: OrgThemeData | null) => {
       if (!themeData) {
         clearOrgTheme();
         return;
       }
 
+      orgThemeRef.current = themeData;
+
       const resolvedTheme: Theme = themeData.themeType === "system"
         ? getSystemTheme()
         : themeData.themeType === "dark" ? "dark" : "light";
       setTheme(resolvedTheme);
-
-      const vars = deriveThemeVars(themeData.colorPrimary, resolvedTheme, themeData.borderRadius);
-      const root = document.documentElement;
-      for (const key of THEME_VAR_KEYS) {
-        root.style.setProperty(key, vars[key]);
-      }
+      applyVars(themeData.colorPrimary, resolvedTheme, themeData.borderRadius);
     },
     [clearOrgTheme]
   );
