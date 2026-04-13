@@ -87,11 +87,25 @@ export default function Signup() {
       .finally(() => setAppLoading(false));
   }, [appName]);
 
-  // Apply application/organization theme
+  // Apply application/organization theme + branding
   useEffect(() => {
+    if (!application) return;
     const appTheme = (application as any)?.themeData;
+    const orgTheme = (application as any)?.organizationObj?.themeData;
     if (appTheme?.isEnabled) {
       applyOrgTheme(appTheme);
+    } else if (orgTheme?.isEnabled) {
+      applyOrgTheme(orgTheme);
+    }
+    // Apply org favicon and title
+    const org = (application as any)?.organizationObj;
+    if (org?.favicon) {
+      let link = document.querySelector("link[rel*='icon']") as HTMLLinkElement | null;
+      if (!link) { link = document.createElement("link"); link.rel = "icon"; document.head.appendChild(link); }
+      link.href = org.favicon;
+    }
+    if (org?.displayName) {
+      document.title = org.displayName;
     }
     return () => clearOrgTheme();
   }, [application, applyOrgTheme, clearOrgTheme]);
@@ -206,7 +220,7 @@ export default function Signup() {
   };
 
   const inputClass =
-    "w-full rounded-lg border border-border bg-surface-1 px-3.5 py-2.5 text-[14px] text-text-primary placeholder:text-text-muted focus:border-accent focus:ring-1 focus:ring-accent/30 outline-none transition-all";
+    "login-input w-full border border-border bg-surface-1 px-3.5 py-2.5 text-[14px] text-text-primary placeholder:text-text-muted focus:border-accent focus:ring-1 focus:ring-accent/30 outline-none transition-all";
   const labelClass = "block text-[12px] font-medium text-text-secondary mb-1.5";
   const errorClass = "text-[11px] text-danger mt-1";
 
@@ -237,7 +251,7 @@ export default function Signup() {
   }
 
   return (
-    <div className="min-h-screen flex relative bg-surface-0">
+    <div className="min-h-screen flex relative bg-surface-0" data-compact={(application as any)?.themeData?.isCompact ? "true" : undefined}>
       {/* Top-right controls */}
       <div className="absolute top-4 right-4 z-20 flex items-center gap-1">
         <button
@@ -283,21 +297,26 @@ export default function Signup() {
           className="relative z-10 max-w-md px-12"
         >
           <div className="flex items-center gap-3 mb-10">
-            {application?.logo ? (
-              <img src={application.logo} alt="Logo" className="h-11 w-11 rounded-xl object-contain" />
-            ) : (
-              <div className="h-11 w-11 rounded-xl bg-accent/15 border border-accent/20 flex items-center justify-center">
-                <ShieldCheck size={22} className="text-accent" />
-              </div>
-            )}
-            <div>
-              <div className="text-lg font-bold tracking-tight text-text-primary">
-                {application?.displayName || t("login.brand.title")}
-              </div>
-              <div className="text-[11px] font-mono text-text-muted tracking-wider uppercase">
-                {t("login.brand.subtitle")}
-              </div>
-            </div>
+            {(() => {
+              const org = (application as any)?.organizationObj;
+              const logo = (theme === "dark" && org?.logoDark) ? org.logoDark : (org?.logo || application?.logo);
+              if (logo) return <img src={logo} alt="" className="h-16 max-w-[280px] object-contain" />;
+              return (
+                <>
+                  <div className="h-11 w-11 rounded-xl bg-accent/15 border border-accent/20 flex items-center justify-center">
+                    <ShieldCheck size={22} className="text-accent" />
+                  </div>
+                  <div>
+                    <div className="text-lg font-bold tracking-tight text-text-primary">
+                      {application?.displayName || t("login.brand.title")}
+                    </div>
+                    <div className="text-[11px] font-mono text-text-muted tracking-wider uppercase">
+                      {t("login.brand.subtitle")}
+                    </div>
+                  </div>
+                </>
+              );
+            })()}
           </div>
 
           <h1 className="text-[40px] font-bold leading-[1.1] tracking-tight text-text-primary mb-5">
@@ -338,16 +357,21 @@ export default function Signup() {
         >
           {/* Mobile logo */}
           <div className="lg:hidden flex items-center gap-2 mb-8">
-            {application?.logo ? (
-              <img src={application.logo} alt="Logo" className="h-9 w-9 rounded-lg object-contain" />
-            ) : (
-              <div className="h-9 w-9 rounded-lg bg-accent/15 flex items-center justify-center">
-                <ShieldCheck size={18} className="text-accent" />
-              </div>
-            )}
-            <span className="text-base font-bold tracking-tight">
-              {application?.displayName || t("login.brand.title")}
-            </span>
+            {(() => {
+              const org = (application as any)?.organizationObj;
+              const logo = (theme === "dark" && org?.logoDark) ? org.logoDark : (org?.logo || application?.logo);
+              if (logo) return <img src={logo} alt="" className="h-9 max-w-[160px] object-contain" />;
+              return (
+                <>
+                  <div className="h-9 w-9 rounded-lg bg-accent/15 flex items-center justify-center">
+                    <ShieldCheck size={18} className="text-accent" />
+                  </div>
+                  <span className="text-base font-bold tracking-tight">
+                    {application?.displayName || t("login.brand.title")}
+                  </span>
+                </>
+              );
+            })()}
           </div>
 
           <h2 className="text-2xl font-bold tracking-tight text-text-primary mb-1">
@@ -359,13 +383,13 @@ export default function Signup() {
             <motion.div
               initial={{ opacity: 0, y: -8 }}
               animate={{ opacity: 1, y: 0 }}
-              className="mb-5 rounded-lg border border-danger/30 bg-danger/10 px-4 py-2.5 text-[13px] text-danger"
+              className="login-card mb-5 border border-danger/30 bg-danger/10 px-4 py-2.5 text-[13px] text-danger"
             >
               {error}
             </motion.div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-3.5">
+          <form onSubmit={handleSubmit} className="login-form space-y-3.5">
             {/* Username */}
             <div>
               <label className={labelClass}>
@@ -481,7 +505,7 @@ export default function Signup() {
                   type="button"
                   disabled={emailCountdown > 0 || !form.email.trim()}
                   onClick={() => sendCode("email")}
-                  className="shrink-0 rounded-lg border border-accent bg-accent/10 px-3 py-2.5 text-[12px] font-semibold text-accent hover:bg-accent/20 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  className="login-btn shrink-0 border border-accent bg-accent/10 px-3 py-2.5 text-[12px] font-semibold text-accent hover:bg-accent/20 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
                   {emailCountdown > 0
                     ? `${t("signup.codeSent")} (${emailCountdown}s)`
@@ -531,7 +555,7 @@ export default function Signup() {
                   type="button"
                   disabled={phoneCountdown > 0 || !form.phone.trim()}
                   onClick={() => sendCode("phone")}
-                  className="shrink-0 rounded-lg border border-accent bg-accent/10 px-3 py-2.5 text-[12px] font-semibold text-accent hover:bg-accent/20 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  className="login-btn shrink-0 border border-accent bg-accent/10 px-3 py-2.5 text-[12px] font-semibold text-accent hover:bg-accent/20 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
                   {phoneCountdown > 0
                     ? `${t("signup.codeSent")} (${phoneCountdown}s)`
@@ -584,7 +608,7 @@ export default function Signup() {
             <button
               type="submit"
               disabled={loading}
-              className="group w-full flex items-center justify-center gap-2 rounded-lg bg-accent py-2.5 text-[14px] font-semibold text-white hover:bg-accent-hover disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 mt-2"
+              className="login-btn group w-full flex items-center justify-center gap-2 bg-accent py-2.5 text-[14px] font-semibold text-white hover:bg-accent-hover disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 mt-2"
             >
               {loading ? (
                 <div className="h-4 w-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
