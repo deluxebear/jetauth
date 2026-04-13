@@ -6,6 +6,8 @@ import Header from "./components/Header";
 import { useSidebar } from "./SidebarContext";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
+import MfaSetup from "./pages/MfaSetup";
+import MfaVerify from "./pages/MfaVerify";
 import Dashboard from "./pages/Dashboard";
 import GenericListPage from "./components/GenericListPage";
 import GenericEditPage from "./components/GenericEditPage";
@@ -144,6 +146,12 @@ export default function App() {
   const [loginError, setLoginError] = useState("");
   const [loginThemeData, setLoginThemeData] = useState<any>(null);
   const [loginOrgBranding, setLoginOrgBranding] = useState<{ logo?: string; logoDark?: string; favicon?: string; displayName?: string } | null>(null);
+  const [mfaState, setMfaState] = useState<{
+    type: "setup" | "verify";
+    mfaType?: string;
+    mfaProps?: any[];
+    loginForm: { application: string; organization: string; username: string; encryptedPassword: string };
+  } | null>(null);
   const navigate = useNavigate();
 
   const applyAccountData = useCallback((res: any) => {
@@ -242,18 +250,28 @@ export default function App() {
         type: "login",
       });
       if (res?.status === "ok") {
-        // Check if MFA is required before completing login
         if (res.data === "RequiredMfa") {
-          // User must set up MFA before login is allowed
-          setLoginError("MFA setup is required. Please configure multi-factor authentication.");
-          // TODO: Navigate to MFA setup page when implemented
+          // Determine which MFA type is required from org config
+          const orgRes: any = await fetch(`/api/get-default-application?id=admin/${organization}`, { credentials: "include" }).then(r => r.json());
+          const orgMfaItems = orgRes?.data?.organizationObj?.mfaItems || [];
+          const requiredItem = orgMfaItems.find((i: any) => i.rule === "Required");
+          const reqMfaType = requiredItem?.name || "app";
+
+          setMfaState({
+            type: "setup",
+            mfaType: reqMfaType,
+            loginForm: { application, organization, username, encryptedPassword },
+          });
+          navigate("/mfa/setup");
           return;
         }
         if (res.data === "NextMfa") {
-          // User has MFA enabled, needs to verify
-          setLoginError("MFA verification required.");
-          // TODO: Navigate to MFA verify page when implemented
-          // res.data2 contains the list of available MFA methods
+          setMfaState({
+            type: "verify",
+            mfaProps: res.data2 || [],
+            loginForm: { application, organization, username, encryptedPassword },
+          });
+          navigate("/mfa/verify");
           return;
         }
 
@@ -285,6 +303,47 @@ export default function App() {
     navigate("/login");
   };
 
+  const handleMfaSetupComplete = async () => {
+    if (!mfaState) return;
+    try {
+      const res: any = await apiLogin({
+        application: mfaState.loginForm.application,
+        organization: mfaState.loginForm.organization,
+        username: mfaState.loginForm.username,
+        password: mfaState.loginForm.encryptedPassword,
+        signinMethod: "Password",
+        type: "login",
+      });
+      if (res?.status === "ok") {
+        if (res.data === "NextMfa") {
+          setMfaState({
+            type: "verify",
+            mfaProps: res.data2 || [],
+            loginForm: mfaState.loginForm,
+          });
+          navigate("/mfa/verify");
+        } else if (res.data !== "RequiredMfa") {
+          setMfaState(null);
+          const acc: any = await getAccount();
+          if (applyAccountData(acc)) navigate("/");
+        }
+      } else {
+        setLoginError(res?.msg || "Login failed after MFA setup");
+        setMfaState(null);
+        navigate("/login");
+      }
+    } catch {
+      setMfaState(null);
+      navigate("/login");
+    }
+  };
+
+  const handleMfaVerified = async () => {
+    setMfaState(null);
+    const acc: any = await getAccount();
+    if (applyAccountData(acc)) navigate("/");
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-surface-0 flex items-center justify-center">
@@ -302,6 +361,33 @@ export default function App() {
       <Routes>
         <Route path="/login/:organizationName" element={loginElement} />
         <Route path="/login" element={loginElement} />
+        <Route path="/mfa/setup" element={
+          mfaState?.type === "setup" ? (
+            <MfaSetup
+              mfaType={mfaState.mfaType || "app"}
+              owner={mfaState.loginForm.organization}
+              name={mfaState.loginForm.username}
+              organization={mfaState.loginForm.organization}
+              application={mfaState.loginForm.application}
+              encryptedPassword={mfaState.loginForm.encryptedPassword}
+              themeData={loginThemeData}
+              orgBranding={loginOrgBranding}
+              onComplete={handleMfaSetupComplete}
+            />
+          ) : <Navigate to="/login" replace />
+        } />
+        <Route path="/mfa/verify" element={
+          mfaState?.type === "verify" ? (
+            <MfaVerify
+              mfaProps={mfaState.mfaProps || []}
+              loginForm={{ application: mfaState.loginForm.application, organization: mfaState.loginForm.organization }}
+              themeData={loginThemeData}
+              orgBranding={loginOrgBranding}
+              onVerified={handleMfaVerified}
+              onError={(msg) => setLoginError(msg)}
+            />
+          ) : <Navigate to="/login" replace />
+        } />
         <Route path="/signup/:applicationName" element={<Signup />} />
         <Route path="/signup" element={<Signup />} />
         <Route path="*" element={<Navigate to="/login" replace />} />
