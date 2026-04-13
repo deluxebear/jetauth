@@ -13,10 +13,10 @@ interface ImageUrlInputProps {
   owner: string;
   tag: string;
   accept?: string;
-  /** Fixed output width in px. Cropped image will be scaled to this size. */
-  outputWidth: number;
-  /** Fixed output height in px. Cropped image will be scaled to this size. */
-  outputHeight: number;
+  /** Fixed output width in px. Cropped image will be scaled to this size. When 0, uses cropped region width. */
+  outputWidth?: number;
+  /** Fixed output height in px. Cropped image will be scaled to this size. When 0, uses cropped region height. */
+  outputHeight?: number;
   /** Preview image class */
   previewClass?: string;
   placeholder?: string;
@@ -29,8 +29,8 @@ export default function ImageUrlInput({
   owner,
   tag,
   accept = "image/*",
-  outputWidth,
-  outputHeight,
+  outputWidth = 0,
+  outputHeight = 0,
   previewClass = "max-h-16 max-w-[240px] rounded-lg border border-border object-contain bg-surface-2",
   placeholder = "https://...",
   disabled = false,
@@ -43,7 +43,7 @@ export default function ImageUrlInput({
   const [cropSrc, setCropSrc] = useState<string | null>(null);
   const [cropFile, setCropFile] = useState<File | null>(null);
 
-  const aspectRatio = outputWidth / outputHeight;
+  const aspectRatio = outputWidth && outputHeight ? outputWidth / outputHeight : undefined;
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -60,11 +60,10 @@ export default function ImageUrlInput({
 
     setUploading(true);
     try {
-      // Get cropped canvas at fixed output size
-      const canvas = cropperRef.current.getCanvas({
-        width: outputWidth,
-        height: outputHeight,
-      });
+      // Get cropped canvas, optionally at fixed output size
+      const canvas = cropperRef.current.getCanvas(
+        outputWidth && outputHeight ? { width: outputWidth, height: outputHeight } : undefined
+      );
       if (!canvas) return;
 
       const blob = await new Promise<Blob | null>((resolve) =>
@@ -147,7 +146,9 @@ export default function ImageUrlInput({
               <h3 className="text-[14px] font-semibold text-text-primary">
                 {t("common.cropImage" as any)}
               </h3>
-              <span className="text-[11px] text-text-muted font-mono">{outputWidth} x {outputHeight}px</span>
+              {outputWidth && outputHeight ? (
+                <span className="text-[11px] text-text-muted font-mono">{outputWidth} x {outputHeight}px</span>
+              ) : null}
               <button onClick={handleCropCancel} className="text-text-muted hover:text-text-primary transition-colors">
                 <X size={18} />
               </button>
@@ -157,9 +158,9 @@ export default function ImageUrlInput({
                 ref={cropperRef}
                 src={cropSrc}
                 stencilProps={{
-                  aspectRatio,
+                  ...(aspectRatio ? { aspectRatio } : {}),
                   movable: true,
-                  resizable: false,
+                  resizable: true,
                 }}
                 className="h-[360px] rounded-lg"
               />
