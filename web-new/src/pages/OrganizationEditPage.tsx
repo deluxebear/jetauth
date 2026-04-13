@@ -320,11 +320,11 @@ export default function OrganizationEditPage() {
                 </FormField>
                 <div />
                 <FormField label={t("orgs.field.logo" as any)} span="full">
-                  <ImageUrlInput value={org.logo ?? ""} onChange={(v) => set("logo", v)} owner={org.name ?? ""} tag="org-logo" outputWidth={320} outputHeight={96} disabled={!canEditField("logo")} />
+                  <ImageUrlInput value={org.logo ?? ""} onChange={(v) => set("logo", v)} owner={org.name ?? ""} tag="org-logo" outputWidth={320} outputHeight={200} disabled={!canEditField("logo")} />
                 </FormField>
                 {!!org.enableDarkLogo && (
                   <FormField label={t("orgs.field.logoDark" as any)} span="full">
-                    <ImageUrlInput value={(org as any).logoDark ?? ""} onChange={(v) => set("logoDark", v)} owner={org.name ?? ""} tag="org-logo-dark" outputWidth={320} outputHeight={96} disabled={!canEditField("logoDark")} />
+                    <ImageUrlInput value={(org as any).logoDark ?? ""} onChange={(v) => set("logoDark", v)} owner={org.name ?? ""} tag="org-logo-dark" outputWidth={320} outputHeight={200} disabled={!canEditField("logoDark")} />
                   </FormField>
                 )}
                 <FormField label={t("orgs.field.favicon" as any)}>
