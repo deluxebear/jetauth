@@ -143,6 +143,7 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [loginError, setLoginError] = useState("");
   const [loginThemeData, setLoginThemeData] = useState<any>(null);
+  const [loginOrgBranding, setLoginOrgBranding] = useState<{ logo?: string; logoDark?: string; favicon?: string; displayName?: string } | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -180,15 +181,27 @@ export default function App() {
       .then((r) => r.json())
       .then((res: any) => {
         if (res.status === "ok" && res.data) {
+          const org = res.data.organizationObj;
           // Priority: app themeData (if enabled) > org themeData (if enabled) > null
           const appTheme = res.data.themeData;
-          const orgTheme = res.data.organizationObj?.themeData;
+          const orgTheme = org?.themeData;
           if (appTheme?.isEnabled) {
             setLoginThemeData(appTheme);
           } else if (orgTheme?.isEnabled) {
             setLoginThemeData(orgTheme);
           } else {
             setLoginThemeData(null);
+          }
+          // Extract org branding for login page
+          if (org) {
+            setLoginOrgBranding({
+              logo: org.logo || "",
+              logoDark: org.logoDark || "",
+              favicon: org.favicon || "",
+              displayName: org.displayName || "",
+            });
+          } else {
+            setLoginOrgBranding(null);
           }
         }
       })
@@ -264,7 +277,7 @@ export default function App() {
   }
 
   if (!user) {
-    const loginElement = <Login onLogin={handleLogin} error={loginError} themeData={loginThemeData} onOrganizationChange={fetchLoginTheme} />;
+    const loginElement = <Login onLogin={handleLogin} error={loginError} themeData={loginThemeData} orgBranding={loginOrgBranding} onOrganizationChange={fetchLoginTheme} />;
     return (
       <Routes>
         <Route path="/login/:organizationName" element={loginElement} />

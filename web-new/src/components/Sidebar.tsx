@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { type ReactNode } from "react";
 import { useTranslation } from "../i18n";
+import { useTheme } from "../theme";
 import { useSidebar } from "../SidebarContext";
 import { navGroups } from "../navConfig";
 import { isGlobalAdmin, isLocalAdmin, type Account } from "../utils/auth";
@@ -94,8 +95,12 @@ export default function Sidebar({ account }: { account?: Account | null }) {
   const isGA = isGlobalAdmin(account);
   const isLA = isLocalAdmin(account);
 
+  const { theme } = useTheme();
+
   // Get org-level nav restrictions
   const org = getStoredOrganization();
+  // Use dark logo variant when in dark mode (if available)
+  const sidebarLogo = (theme === "dark" && org?.logoDark) ? org.logoDark : org?.logo;
   const allowedKeys = isGA
     ? null // global admins always see everything
     : getAllowedKeys(isLA ? org?.navItems : org?.userNavItems);
@@ -144,8 +149,8 @@ export default function Sidebar({ account }: { account?: Account | null }) {
           )
         ) : (
           // Expanded: show full logo or text fallback
-          org?.logo ? (
-            <motion.img initial={{ opacity: 0 }} animate={{ opacity: 1 }} src={String(org.logo)} alt="" className="h-10 max-w-[160px] object-contain" />
+          sidebarLogo ? (
+            <motion.img initial={{ opacity: 0 }} animate={{ opacity: 1 }} src={String(sidebarLogo)} alt="" className="h-10 max-w-[160px] object-contain" />
           ) : (
             <>
               <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-accent/15 text-accent font-bold text-sm font-mono">J</div>

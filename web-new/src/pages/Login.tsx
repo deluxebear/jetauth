@@ -5,14 +5,22 @@ import { Eye, EyeOff, ArrowRight, ShieldCheck, Sun, Moon, Globe } from "lucide-r
 import { useTranslation } from "../i18n";
 import { useTheme } from "../theme";
 
+interface OrgBranding {
+  logo?: string;
+  logoDark?: string;
+  favicon?: string;
+  displayName?: string;
+}
+
 interface LoginProps {
   onLogin: (username: string, password: string, organization: string) => Promise<void>;
   error?: string;
   themeData?: { themeType: string; colorPrimary: string; borderRadius: number; isCompact: boolean; isEnabled: boolean } | null;
+  orgBranding?: OrgBranding | null;
   onOrganizationChange?: (org: string) => void;
 }
 
-export default function Login({ onLogin, error, themeData, onOrganizationChange }: LoginProps) {
+export default function Login({ onLogin, error, themeData, orgBranding, onOrganizationChange }: LoginProps) {
   const { organizationName } = useParams<{ organizationName: string }>();
   const organization = organizationName || "built-in";
   const [username, setUsername] = useState("");
@@ -33,6 +41,10 @@ export default function Login({ onLogin, error, themeData, onOrganizationChange 
     }
     return () => clearOrgTheme();
   }, [themeData, applyOrgTheme, clearOrgTheme]);
+
+  // Resolve branding: use org logo (dark variant if in dark mode), fallback to defaults
+  const orgLogo = (theme === "dark" && orgBranding?.logoDark) ? orgBranding.logoDark : orgBranding?.logo;
+  const orgName = orgBranding?.displayName || t("login.brand.title");
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -91,12 +103,16 @@ export default function Login({ onLogin, error, themeData, onOrganizationChange 
           className="relative z-10 max-w-md px-12"
         >
           <div className="flex items-center gap-3 mb-10">
-            <div className="h-11 w-11 rounded-xl bg-accent/15 border border-accent/20 flex items-center justify-center">
-              <ShieldCheck size={22} className="text-accent" />
-            </div>
+            {orgLogo ? (
+              <img src={orgLogo} alt="" className="h-11 max-w-[200px] rounded-xl object-contain" />
+            ) : (
+              <div className="h-11 w-11 rounded-xl bg-accent/15 border border-accent/20 flex items-center justify-center">
+                <ShieldCheck size={22} className="text-accent" />
+              </div>
+            )}
             <div>
               <div className="text-lg font-bold tracking-tight text-text-primary">
-                {t("login.brand.title")}
+                {orgName}
               </div>
               <div className="text-[11px] font-mono text-text-muted tracking-wider uppercase">
                 {t("login.brand.subtitle")}
@@ -150,10 +166,14 @@ export default function Login({ onLogin, error, themeData, onOrganizationChange 
           className="w-full max-w-sm"
         >
           <div className="lg:hidden flex items-center gap-2 mb-10">
-            <div className="h-9 w-9 rounded-lg bg-accent/15 flex items-center justify-center">
-              <ShieldCheck size={18} className="text-accent" />
-            </div>
-            <span className="text-base font-bold tracking-tight">{t("login.brand.title")}</span>
+            {orgLogo ? (
+              <img src={orgLogo} alt="" className="h-9 max-w-[160px] rounded-lg object-contain" />
+            ) : (
+              <div className="h-9 w-9 rounded-lg bg-accent/15 flex items-center justify-center">
+                <ShieldCheck size={18} className="text-accent" />
+              </div>
+            )}
+            <span className="text-base font-bold tracking-tight">{orgName}</span>
           </div>
 
           <h2 className="text-2xl font-bold tracking-tight text-text-primary mb-1">
