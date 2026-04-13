@@ -589,6 +589,12 @@ func (c *ApiController) GetAccount() {
 		logs.Error("AppendWebConfigCookie failed in GetAccount, error: %s", err)
 	}
 
+	// Block access if user is in MFA setup/verify flow (not fully authenticated)
+	if c.getMfaUserSession() != "" {
+		c.ResponseError(c.T("general:Please login first"), "Please login first")
+		return
+	}
+
 	user, ok := c.RequireSignedInUser()
 	if !ok {
 		return

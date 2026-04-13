@@ -435,7 +435,8 @@ func isProxyProviderType(providerType string) bool {
 
 func checkMfaEnable(c *ApiController, user *object.User, organization *object.Organization, verificationType string) bool {
 	if object.IsNeedPromptMfa(organization, user) {
-		// Use MFA session instead of login session to prevent bypassing MFA
+		// Set both: username (for authz filter to allow MFA API access) and MFA session (to block getAccount)
+		c.SetSessionUsername(user.GetId())
 		c.setMfaUserSession(user.GetId())
 		c.ResponseOk(object.RequiredMfa)
 		return true
