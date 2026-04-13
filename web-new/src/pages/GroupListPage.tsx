@@ -92,7 +92,7 @@ export default function GroupListPage() {
         <span className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${
           r.type === "Physical" ? "bg-info/15 text-info border border-info/20" : "bg-surface-3 text-text-muted border border-border"
         }`}>
-          {r.type ?? "Virtual"}
+          {r.type === "Physical" ? t("groups.type.physical" as any) : t("groups.type.virtual" as any)}
         </span>
       ),
     },
