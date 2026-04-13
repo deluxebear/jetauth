@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useState, useEffect, type FormEvent } from "react";
 import { motion } from "framer-motion";
 import { Eye, EyeOff, ArrowRight, ShieldCheck, Sun, Moon, Globe } from "lucide-react";
 import { useTranslation } from "../i18n";
@@ -10,16 +10,24 @@ interface LoginProps {
   onLogin: (username: string, password: string, organization: string) => Promise<void>;
   error?: string;
   organizations?: OrgOption[];
+  themeData?: { themeType: string; colorPrimary: string; borderRadius: number; isCompact: boolean; isEnabled: boolean } | null;
 }
 
-export default function Login({ onLogin, error, organizations = [] }: LoginProps) {
+export default function Login({ onLogin, error, organizations = [], themeData }: LoginProps) {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [organization, setOrganization] = useState("built-in");
   const [showPw, setShowPw] = useState(false);
   const [loading, setLoading] = useState(false);
   const { t, locale, setLocale, locales } = useTranslation();
-  const { theme, toggle: toggleTheme } = useTheme();
+  const { theme, toggle: toggleTheme, applyOrgTheme, clearOrgTheme } = useTheme();
+
+  useEffect(() => {
+    if (themeData?.isEnabled) {
+      applyOrgTheme(themeData);
+    }
+    return () => clearOrgTheme();
+  }, [themeData, applyOrgTheme, clearOrgTheme]);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();

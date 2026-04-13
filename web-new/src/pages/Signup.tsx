@@ -38,7 +38,7 @@ export default function Signup() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { t, locale, setLocale, locales } = useTranslation();
-  const { theme, toggle: toggleTheme } = useTheme();
+  const { theme, toggle: toggleTheme, applyOrgTheme, clearOrgTheme } = useTheme();
 
   const [application, setApplication] = useState<Application | null>(null);
   const [appLoading, setAppLoading] = useState(true);
@@ -86,6 +86,15 @@ export default function Signup() {
       .catch((e) => setAppError(e.message || "Network error"))
       .finally(() => setAppLoading(false));
   }, [appName]);
+
+  // Apply application/organization theme
+  useEffect(() => {
+    const appTheme = (application as any)?.themeData;
+    if (appTheme?.isEnabled) {
+      applyOrgTheme(appTheme);
+    }
+    return () => clearOrgTheme();
+  }, [application, applyOrgTheme, clearOrgTheme]);
 
   // Countdown timers
   useEffect(() => {
