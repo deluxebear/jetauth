@@ -594,6 +594,7 @@ const en = {
   "theme.preset.cosmos": "Cosmos",
   "theme.preset.coral": "Coral",
   "theme.preset.custom": "Custom",
+  "theme.followSystem": "Follow System",
   "orgs.section.ldap": "LDAP Configuration",
   "orgs.field.ldapServers": "LDAP Servers",
   "orgs.ldap.serverName": "Server Name",

@@ -559,6 +559,7 @@ export default function OrganizationEditPage() {
                         onChange={(e) => set("themeData", { ...(org as any).themeData, themeType: e.target.value })}
                         className={inputClass}
                       >
+                        <option value="system">{t("theme.followSystem" as any)}</option>
                         <option value="light">Light</option>
                         <option value="dark">Dark</option>
                       </select>

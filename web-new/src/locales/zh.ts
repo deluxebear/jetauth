@@ -676,6 +676,7 @@ const zh: Record<string, string> = {
   "theme.preset.cosmos": "星空",
   "theme.preset.coral": "珊瑚",
   "theme.preset.custom": "自定义",
+  "theme.followSystem": "跟随系统",
   "orgs.section.ldap": "LDAP 配置",
   "orgs.field.ldapServers": "LDAP 服务器",
   "orgs.ldap.serverName": "服务器名称",

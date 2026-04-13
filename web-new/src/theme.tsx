@@ -12,6 +12,10 @@ interface ThemeContextType {
 
 const ThemeContext = createContext<ThemeContextType>(null!);
 
+function getSystemTheme(): Theme {
+  return window.matchMedia?.("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+}
+
 function getInitialTheme(): Theme {
   const saved = localStorage.getItem("theme");
   if (saved === "dark" || saved === "light") return saved;
@@ -56,10 +60,12 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      const resolvedTheme = (themeData.themeType === "dark" ? "dark" : "light") as Theme;
+      const resolvedTheme: Theme = themeData.themeType === "system"
+        ? getSystemTheme()
+        : themeData.themeType === "dark" ? "dark" : "light";
       setTheme(resolvedTheme);
 
-      const vars = deriveThemeVars(themeData.colorPrimary, themeData.themeType, themeData.borderRadius);
+      const vars = deriveThemeVars(themeData.colorPrimary, resolvedTheme, themeData.borderRadius);
       const root = document.documentElement;
       for (const key of THEME_VAR_KEYS) {
         root.style.setProperty(key, vars[key]);

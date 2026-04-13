@@ -10,8 +10,11 @@ interface LoginPreviewProps {
 
 export default function LoginPreview({ colorPrimary, themeType, borderRadius }: LoginPreviewProps) {
   const { t } = useTranslation();
-  const isDark = themeType === "dark";
-  const vars = deriveThemeVars(colorPrimary, themeType, borderRadius);
+  const resolvedType = themeType === "system"
+    ? (window.matchMedia?.("(prefers-color-scheme: dark)").matches ? "dark" : "light")
+    : themeType;
+  const isDark = resolvedType === "dark";
+  const vars = deriveThemeVars(colorPrimary, resolvedType, borderRadius);
   const radius = `${borderRadius}px`;
 
   const bgColor = isDark ? "#0f1117" : "#ffffff";
