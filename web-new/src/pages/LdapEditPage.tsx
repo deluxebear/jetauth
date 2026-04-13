@@ -156,31 +156,31 @@ export default function LdapEditPage() {
           <FormField label={t("ldap.field.id" as any)}>
             <input value={ldap.id} disabled className={`${monoInputClass} opacity-60`} />
           </FormField>
-          <FormField label={t("ldap.field.serverName" as any)}>
+          <FormField label={t("ldap.field.serverName" as any)} help={t("ldap.help.serverName" as any)}>
             <input value={ldap.serverName} onChange={(e) => set("serverName", e.target.value)} className={inputClass} />
           </FormField>
-          <FormField label={t("ldap.field.host" as any)}>
+          <FormField label={t("ldap.field.host" as any)} help={t("ldap.help.host" as any)}>
             <input value={ldap.host} onChange={(e) => set("host", e.target.value)} className={inputClass} />
           </FormField>
-          <FormField label={t("ldap.field.port" as any)}>
+          <FormField label={t("ldap.field.port" as any)} help={t("ldap.help.port" as any)}>
             <input type="number" value={ldap.port} onChange={(e) => set("port", Math.max(0, Math.min(65535, Number(e.target.value))))} min={0} max={65535} className={monoInputClass} />
           </FormField>
-          <FormField label={t("ldap.field.enableSsl" as any)}>
+          <FormField label={t("ldap.field.enableSsl" as any)} help={t("ldap.help.enableSsl" as any)}>
             <Switch checked={ldap.enableSsl} onChange={(v) => set("enableSsl", v)} />
           </FormField>
-          <FormField label={t("ldap.field.allowSelfSignedCert" as any)}>
+          <FormField label={t("ldap.field.allowSelfSignedCert" as any)} help={t("ldap.help.allowSelfSignedCert" as any)}>
             <Switch checked={ldap.allowSelfSignedCert} onChange={(v) => set("allowSelfSignedCert", v)} />
           </FormField>
         </FormSection>
 
         <FormSection title={t("ldap.section.search" as any)}>
-          <FormField label={t("ldap.field.baseDn" as any)} span="full">
+          <FormField label={t("ldap.field.baseDn" as any)} help={t("ldap.help.baseDn" as any)} span="full">
             <input value={ldap.baseDn} onChange={(e) => set("baseDn", e.target.value)} className={monoInputClass} />
           </FormField>
-          <FormField label={t("ldap.field.filter" as any)} span="full">
+          <FormField label={t("ldap.field.filter" as any)} help={t("ldap.help.filter" as any)} span="full">
             <input value={ldap.filter ?? ""} onChange={(e) => set("filter", e.target.value)} className={monoInputClass} placeholder="(&(objectClass=*))" />
           </FormField>
-          <FormField label={t("ldap.field.filterFields" as any)} span="full">
+          <FormField label={t("ldap.field.filterFields" as any)} help={t("ldap.help.filterFields" as any)} span="full">
             <div className="flex flex-wrap gap-2">
               {FILTER_FIELDS.map((f) => {
                 const sel = (ldap.filterFields ?? []).includes(f);
@@ -196,13 +196,13 @@ export default function LdapEditPage() {
         </FormSection>
 
         <FormSection title={t("ldap.section.auth" as any)}>
-          <FormField label={t("ldap.field.adminUser" as any)} span="full">
+          <FormField label={t("ldap.field.adminUser" as any)} help={t("ldap.help.adminUser" as any)} span="full">
             <input value={ldap.username} onChange={(e) => set("username", e.target.value)} className={monoInputClass} />
           </FormField>
-          <FormField label={t("ldap.field.adminPassword" as any)}>
+          <FormField label={t("ldap.field.adminPassword" as any)} help={t("ldap.help.adminPassword" as any)}>
             <input type="password" value={ldap.password} onChange={(e) => set("password", e.target.value)} className={inputClass} />
           </FormField>
-          <FormField label={t("ldap.field.passwordType" as any)}>
+          <FormField label={t("ldap.field.passwordType" as any)} help={t("ldap.help.passwordType" as any)}>
             <select value={ldap.passwordType ?? "Plain"} onChange={(e) => set("passwordType", e.target.value)} className={inputClass}>
               {PASSWORD_TYPES.map((p) => <option key={p} value={p}>{p}</option>)}
             </select>
@@ -210,7 +210,7 @@ export default function LdapEditPage() {
         </FormSection>
 
         <FormSection title={t("ldap.section.sync" as any)}>
-          <FormField label={t("ldap.field.defaultGroup" as any)}>
+          <FormField label={t("ldap.field.defaultGroup" as any)} help={t("ldap.help.defaultGroup" as any)}>
             <select value={ldap.defaultGroup ?? ""} onChange={(e) => set("defaultGroup", e.target.value)} className={inputClass}>
               <option value="">—</option>
               {groups.map((g: any) => <option key={g.name} value={g.name}>{g.displayName || g.name}</option>)}
