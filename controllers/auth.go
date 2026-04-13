@@ -435,8 +435,8 @@ func isProxyProviderType(providerType string) bool {
 
 func checkMfaEnable(c *ApiController, user *object.User, organization *object.Organization, verificationType string) bool {
 	if object.IsNeedPromptMfa(organization, user) {
-		// The prompt page needs the user to be signed in
-		c.SetSessionUsername(user.GetId())
+		// Use MFA session instead of login session to prevent bypassing MFA
+		c.setMfaUserSession(user.GetId())
 		c.ResponseOk(object.RequiredMfa)
 		return true
 	}
