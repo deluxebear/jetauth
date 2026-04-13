@@ -102,7 +102,7 @@ export function newOrganization(randomName: string): Organization {
     name: `organization_${randomName}`,
     createdTime: new Date().toISOString(),
     displayName: `New Organization - ${randomName}`,
-    websiteUrl: "https://door.casdoor.com",
+    websiteUrl: "",
     logo: "",
     logoDark: "",
     favicon: "https://cdn.casbin.org/img/favicon.png",
