@@ -101,7 +101,8 @@ export const THEME_PRESETS: ThemePreset[] = [
   },
 ];
 
-export function matchPreset(themeData: Omit<ThemeData, "isEnabled">): string | null {
+export function matchPreset(themeData: Partial<ThemeData> | null | undefined): string | null {
+  if (!themeData) return null;
   for (const preset of THEME_PRESETS) {
     if (
       preset.themeData.themeType === themeData.themeType &&
