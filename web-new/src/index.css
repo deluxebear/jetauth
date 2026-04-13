@@ -124,6 +124,21 @@ button:not(:disabled) {
   cursor: pointer;
 }
 
+/* ── Login page theme-aware styles ── */
+.login-input {
+  border-radius: var(--radius, 8px);
+}
+.login-btn {
+  border-radius: var(--radius, 8px);
+}
+.login-card {
+  border-radius: var(--radius, 8px);
+}
+/* Compact mode: tighter spacing */
+[data-compact="true"] .login-form { gap: 0.625rem; }
+[data-compact="true"] .login-input { padding: 0.5rem 0.75rem; font-size: 13px; }
+[data-compact="true"] .login-btn { padding: 0.5rem; }
+
 /* Prevent accidental text selection on page headers and nav elements */
 h1, h2, h3, nav, [data-no-select] {
   -webkit-user-select: none;

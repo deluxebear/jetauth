@@ -73,7 +73,7 @@ export default function Login({ onLogin, error, themeData, orgBranding, onOrgani
   };
 
   return (
-    <div className="min-h-screen flex relative">
+    <div className="min-h-screen flex relative" data-compact={themeData?.isCompact ? "true" : undefined}>
       {/* Top-right controls */}
       <div className="absolute top-4 right-4 z-20 flex items-center gap-1">
         <button
@@ -205,13 +205,13 @@ export default function Login({ onLogin, error, themeData, orgBranding, onOrgani
             <motion.div
               initial={{ opacity: 0, y: -8 }}
               animate={{ opacity: 1, y: 0 }}
-              className="mb-5 rounded-lg border border-danger/30 bg-danger/10 px-4 py-2.5 text-[13px] text-danger"
+              className="login-card mb-5 border border-danger/30 bg-danger/10 px-4 py-2.5 text-[13px] text-danger"
             >
               {error}
             </motion.div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="login-form space-y-4">
             <div>
               <label className="block text-[12px] font-medium text-text-secondary mb-1.5">
                 {t("login.username")}
@@ -223,7 +223,7 @@ export default function Login({ onLogin, error, themeData, orgBranding, onOrgani
                 autoComplete="username"
                 autoFocus
                 required
-                className="w-full rounded-lg border border-border bg-surface-1 px-3.5 py-2.5 text-[14px] text-text-primary placeholder:text-text-muted focus:border-accent focus:ring-1 focus:ring-accent/30 outline-none transition-all"
+                className="login-input w-full border border-border bg-surface-1 px-3.5 py-2.5 text-[14px] text-text-primary placeholder:text-text-muted focus:border-accent focus:ring-1 focus:ring-accent/30 outline-none transition-all"
                 placeholder="admin"
               />
             </div>
@@ -238,7 +238,7 @@ export default function Login({ onLogin, error, themeData, orgBranding, onOrgani
                   onChange={(e) => setPassword(e.target.value)}
                   autoComplete="current-password"
                   required
-                  className="w-full rounded-lg border border-border bg-surface-1 px-3.5 py-2.5 pr-10 text-[14px] text-text-primary placeholder:text-text-muted focus:border-accent focus:ring-1 focus:ring-accent/30 outline-none transition-all"
+                  className="login-input w-full border border-border bg-surface-1 px-3.5 py-2.5 pr-10 text-[14px] text-text-primary placeholder:text-text-muted focus:border-accent focus:ring-1 focus:ring-accent/30 outline-none transition-all"
                   placeholder="••••••••"
                 />
                 <button
@@ -255,7 +255,7 @@ export default function Login({ onLogin, error, themeData, orgBranding, onOrgani
             <button
               type="submit"
               disabled={loading || !username || !password}
-              className="group w-full flex items-center justify-center gap-2 rounded-lg bg-accent py-2.5 text-[14px] font-semibold text-white hover:bg-accent-hover disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 mt-2"
+              className="login-btn group w-full flex items-center justify-center gap-2 bg-accent py-2.5 text-[14px] font-semibold text-white hover:bg-accent-hover disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 mt-2"
             >
               {loading ? (
                 <div className="h-4 w-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
@@ -282,7 +282,7 @@ export default function Login({ onLogin, error, themeData, orgBranding, onOrgani
             ].map((p) => (
               <button
                 key={p.name}
-                className="flex items-center justify-center gap-1.5 rounded-lg border border-border bg-surface-1 py-2 text-[12px] font-medium text-text-secondary hover:bg-surface-2 hover:text-text-primary transition-colors"
+                className="login-card flex items-center justify-center gap-1.5 border border-border bg-surface-1 py-2 text-[12px] font-medium text-text-secondary hover:bg-surface-2 hover:text-text-primary transition-colors"
               >
                 <span className="font-mono text-[11px] font-bold text-text-muted">{p.icon}</span>
                 {p.name}
