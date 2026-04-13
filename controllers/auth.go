@@ -1177,7 +1177,7 @@ func (c *ApiController) Login() {
 		} else if authForm.RecoveryCode != "" {
 			err = object.MfaRecover(user, authForm.RecoveryCode)
 			if err != nil {
-				c.ResponseError(err.Error())
+				c.ResponseError(c.T(err.Error()))
 				return
 			}
 		} else {
