@@ -23,6 +23,18 @@ export const api = {
     request<T>("POST", path, body),
 };
 
+/** POST with application/x-www-form-urlencoded (for MFA APIs) */
+export async function postForm<T = unknown>(path: string, params: Record<string, string>): Promise<T> {
+  const res = await fetch(`${BASE}${path}`, {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams(params).toString(),
+  });
+  if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+  return res.json();
+}
+
 // Auth
 export const login = (values: {
   application: string;
