@@ -156,11 +156,14 @@ export default function App() {
             localStorage.setItem("organizationData", JSON.stringify(res.data2));
             // Dynamic favicon from organization settings
             if (res.data2.favicon) {
-              const link = document.querySelector("link[rel='icon']") as HTMLLinkElement
-                || document.createElement("link");
-              link.rel = "icon";
-              link.href = res.data2.favicon;
-              document.head.appendChild(link);
+              let link = document.querySelector("link[rel*='icon']") as HTMLLinkElement | null;
+              if (!link) {
+                link = document.createElement("link");
+                link.rel = "icon";
+                document.head.appendChild(link);
+              }
+              // Force browser to reload by appending timestamp
+              link.href = res.data2.favicon + (res.data2.favicon.includes("?") ? "&" : "?") + "t=" + Date.now();
             }
             // Dynamic page title from organization displayName
             if (res.data2.displayName) {

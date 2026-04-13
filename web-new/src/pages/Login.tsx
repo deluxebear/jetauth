@@ -42,6 +42,22 @@ export default function Login({ onLogin, error, themeData, orgBranding, onOrgani
     return () => clearOrgTheme();
   }, [themeData, applyOrgTheme, clearOrgTheme]);
 
+  // Apply org favicon and title on login page
+  useEffect(() => {
+    if (orgBranding?.favicon) {
+      let link = document.querySelector("link[rel*='icon']") as HTMLLinkElement | null;
+      if (!link) {
+        link = document.createElement("link");
+        link.rel = "icon";
+        document.head.appendChild(link);
+      }
+      link.href = orgBranding.favicon;
+    }
+    if (orgBranding?.displayName) {
+      document.title = orgBranding.displayName;
+    }
+  }, [orgBranding]);
+
   // Resolve branding: use org logo (dark variant if in dark mode), fallback to defaults
   const orgLogo = (theme === "dark" && orgBranding?.logoDark) ? orgBranding.logoDark : orgBranding?.logo;
   const orgName = orgBranding?.displayName || t("login.brand.title");
