@@ -60,6 +60,7 @@ export default function MfaVerify({ mfaProps, loginForm, themeData, orgBranding,
       const body: any = {
         application: loginForm.application,
         organization: loginForm.organization,
+        type: "login",
       };
       if (useRecovery) {
         body.recoveryCode = recoveryCode;

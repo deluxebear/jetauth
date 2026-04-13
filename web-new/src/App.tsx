@@ -340,8 +340,25 @@ export default function App() {
 
   const handleMfaVerified = async () => {
     setMfaState(null);
-    const acc: any = await getAccount();
-    if (applyAccountData(acc)) navigate("/");
+    try {
+      const acc: any = await getAccount();
+      if (applyAccountData(acc)) {
+        navigate("/");
+      } else {
+        // getAccount might fail if session isn't fully established yet, retry once
+        await new Promise(r => setTimeout(r, 500));
+        const retry: any = await getAccount();
+        if (applyAccountData(retry)) {
+          navigate("/");
+        } else {
+          setLoginError("Login failed after MFA verification");
+          navigate("/login");
+        }
+      }
+    } catch {
+      setLoginError("Login failed after MFA verification");
+      navigate("/login");
+    }
   };
 
   if (loading) {
