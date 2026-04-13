@@ -226,5 +226,21 @@
   "webauthn": {
     "Found no credentials for this user": "无法找到此用户的证书",
     "Please call WebAuthnSigninBegin first": "请先调用WebAuthnSigninBegin函数"
+  },
+  "mfa": {
+    "Invalid MFA type": "无效的 MFA 类型",
+    "User does not exist": "用户不存在",
+    "Missing MFA type or passcode": "缺少 MFA 类型或验证码",
+    "TOTP secret is missing": "缺少 TOTP 密钥",
+    "Destination is missing": "缺少目标地址",
+    "Country code is missing": "缺少国家代码",
+    "Recovery codes are missing": "缺少恢复码",
+    "RADIUS username is missing": "缺少 RADIUS 用户名",
+    "RADIUS provider is missing": "缺少 RADIUS 提供商",
+    "Push receiver is missing": "缺少推送接收者",
+    "Push provider is missing": "缺少推送提供商",
+    "Missing passcode or recovery code": "缺少验证码或恢复码",
+    "No recovery codes available": "没有可用的恢复码",
+    "Recovery code not found": "恢复码不存在"
   }
 }

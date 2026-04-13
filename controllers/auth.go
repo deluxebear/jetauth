@@ -1138,13 +1138,13 @@ func (c *ApiController) Login() {
 
 		if authForm.Passcode != "" {
 			if authForm.MfaType == c.GetSession("verificationCodeType") {
-				c.ResponseError("Invalid multi-factor authentication type")
+				c.ResponseError(c.T("mfa:Invalid MFA type"))
 				return
 			}
 			user.CountryCode = user.GetCountryCode(user.CountryCode)
 			mfaUtil := object.GetMfaUtil(authForm.MfaType, user.GetMfaProps(authForm.MfaType, false))
 			if mfaUtil == nil {
-				c.ResponseError("Invalid multi-factor authentication type")
+				c.ResponseError(c.T("mfa:Invalid MFA type"))
 				return
 			}
 
@@ -1181,7 +1181,7 @@ func (c *ApiController) Login() {
 				return
 			}
 		} else {
-			c.ResponseError("missing passcode or recovery code")
+			c.ResponseError(c.T("mfa:Missing passcode or recovery code"))
 			return
 		}
 

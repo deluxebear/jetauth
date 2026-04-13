@@ -39,3 +39,6 @@ server
 !manifests/casdoor
 jetauth
 .gstack/
+.DS_Store
+casdoor.db
+cookie.txt

@@ -73,7 +73,7 @@ func MfaRecover(user *User, recoveryCode string) error {
 	hit := false
 
 	if len(user.RecoveryCodes) == 0 {
-		return fmt.Errorf("do not have recovery codes")
+		return fmt.Errorf("mfa:No recovery codes available")
 	}
 
 	for _, code := range user.RecoveryCodes {
@@ -84,7 +84,7 @@ func MfaRecover(user *User, recoveryCode string) error {
 		}
 	}
 	if !hit {
-		return fmt.Errorf("recovery code not found")
+		return fmt.Errorf("mfa:Recovery code not found")
 	}
 
 	_, err := UpdateUser(user.GetId(), user, []string{"recovery_codes"}, false)

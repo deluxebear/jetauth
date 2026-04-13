@@ -226,5 +226,21 @@
   "webauthn": {
     "Found no credentials for this user": "Found no credentials for this user",
     "Please call WebAuthnSigninBegin first": "Please call WebAuthnSigninBegin first"
+  },
+  "mfa": {
+    "Invalid MFA type": "Invalid MFA type",
+    "User does not exist": "User does not exist",
+    "Missing MFA type or passcode": "Missing MFA type or passcode",
+    "TOTP secret is missing": "TOTP secret is missing",
+    "Destination is missing": "Destination is missing",
+    "Country code is missing": "Country code is missing",
+    "Recovery codes are missing": "Recovery codes are missing",
+    "RADIUS username is missing": "RADIUS username is missing",
+    "RADIUS provider is missing": "RADIUS provider is missing",
+    "Push receiver is missing": "Push receiver is missing",
+    "Push provider is missing": "Push provider is missing",
+    "Missing passcode or recovery code": "Missing passcode or recovery code",
+    "No recovery codes available": "No recovery codes available",
+    "Recovery code not found": "Recovery code not found"
   }
 }
