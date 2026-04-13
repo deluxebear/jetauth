@@ -143,6 +143,7 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [loginError, setLoginError] = useState("");
   const [loginOrgs, setLoginOrgs] = useState<{ name: string; displayName: string }[]>([]);
+  const [loginThemeData, setLoginThemeData] = useState<any>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -180,7 +181,30 @@ export default function App() {
         }
       }).catch(() => { /* Not authenticated yet, will show default built-in org */ });
     });
+
+    // Fetch theme data for login page from default application
+    fetchLoginTheme("built-in");
   }, []);
+
+  const fetchLoginTheme = (organization: string) => {
+    fetch(`/api/get-default-application?id=admin/${organization}`, { credentials: "include" })
+      .then((r) => r.json())
+      .then((res: any) => {
+        if (res.status === "ok" && res.data) {
+          // Priority: app themeData (if enabled) > org themeData (if enabled) > null
+          const appTheme = res.data.themeData;
+          const orgTheme = res.data.organizationObj?.themeData;
+          if (appTheme?.isEnabled) {
+            setLoginThemeData(appTheme);
+          } else if (orgTheme?.isEnabled) {
+            setLoginThemeData(orgTheme);
+          } else {
+            setLoginThemeData(null);
+          }
+        }
+      })
+      .catch(() => { /* theme fetch failed, use default */ });
+  };
 
   const handleLogin = async (username: string, password: string, organization = "built-in") => {
     setLoginError("");
@@ -253,7 +277,7 @@ export default function App() {
   if (!user) {
     return (
       <Routes>
-        <Route path="/login" element={<Login onLogin={handleLogin} error={loginError} organizations={loginOrgs} />} />
+        <Route path="/login" element={<Login onLogin={handleLogin} error={loginError} organizations={loginOrgs} themeData={loginThemeData} onOrganizationChange={fetchLoginTheme} />} />
         <Route path="/signup/:applicationName" element={<Signup />} />
         <Route path="/signup" element={<Signup />} />
         <Route path="*" element={<Navigate to="/login" replace />} />

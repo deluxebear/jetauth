@@ -11,9 +11,10 @@ interface LoginProps {
   error?: string;
   organizations?: OrgOption[];
   themeData?: { themeType: string; colorPrimary: string; borderRadius: number; isCompact: boolean; isEnabled: boolean } | null;
+  onOrganizationChange?: (org: string) => void;
 }
 
-export default function Login({ onLogin, error, organizations = [], themeData }: LoginProps) {
+export default function Login({ onLogin, error, organizations = [], themeData, onOrganizationChange }: LoginProps) {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [organization, setOrganization] = useState("built-in");
@@ -174,7 +175,7 @@ export default function Login({ onLogin, error, organizations = [], themeData }:
                 </label>
                 <select
                   value={organization}
-                  onChange={(e) => setOrganization(e.target.value)}
+                  onChange={(e) => { setOrganization(e.target.value); onOrganizationChange?.(e.target.value); }}
                   className="w-full rounded-lg border border-border bg-surface-1 px-3.5 py-2.5 text-[14px] text-text-primary focus:border-accent focus:ring-1 focus:ring-accent/30 outline-none transition-all"
                 >
                   {organizations.map((org) => (
