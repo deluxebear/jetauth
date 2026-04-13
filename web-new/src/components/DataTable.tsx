@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { motion } from "framer-motion";
 import { ChevronLeft, ChevronRight, ArrowUp, ArrowDown, ArrowUpDown, Search, X } from "lucide-react";
+import { useTranslation } from "../i18n";
 
 export interface Column<T> {
   key: string;
@@ -257,6 +258,7 @@ function FilterPopover({
   onToggle: () => void;
   onApply: (value: string) => void;
 }) {
+  const { t } = useTranslation();
   const [value, setValue] = useState("");
   const ref = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -298,7 +300,7 @@ function FilterPopover({
                 if (e.key === "Enter") onApply(value);
                 if (e.key === "Escape") onToggle();
               }}
-              placeholder="Search..."
+              placeholder={t("common.search" as any)}
               className="flex-1 rounded border border-border bg-surface-1 px-2 py-1 text-[12px] text-text-primary placeholder:text-text-muted outline-none focus:border-accent"
             />
             <button
