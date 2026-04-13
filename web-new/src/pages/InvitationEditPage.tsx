@@ -73,6 +73,7 @@ function SearchableSelect({
   options: { value: string; label: string }[];
   placeholder?: string;
 }) {
+  const { t } = useTranslation();
   const [search, setSearch] = useState("");
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -126,7 +127,7 @@ function SearchableSelect({
             </button>
           ))}
           {filtered.length === 0 && (
-            <div className="px-3 py-2 text-[13px] text-text-muted">No results</div>
+            <div className="px-3 py-2 text-[13px] text-text-muted">{t("common.noResults" as any)}</div>
           )}
         </div>
       )}
@@ -227,7 +228,7 @@ export default function InvitationEditPage() {
           setCoreCode(res.data.code || "");
         }
       } else {
-        modal.showError(res.msg || "Failed to load invitation");
+        modal.showError(res.msg || t("invitations.loadFailed" as any));
         navigate("/invitations");
       }
     } catch (e) {
@@ -308,7 +309,7 @@ export default function InvitationEditPage() {
             invalidateList();
             navigate("/invitations");
           } else {
-            modal.showError(res.msg || "Failed to delete");
+            modal.showError(res.msg || t("common.deleteFailed" as any));
           }
         } catch (e) {
           console.error(e);
@@ -331,10 +332,21 @@ export default function InvitationEditPage() {
       .map((e) => e.trim())
       .filter((e) => e.length > 0);
     if (emails.length === 0) {
-      modal.showError("Please enter at least one email address");
+      modal.showError(t("invitations.enterEmail" as any));
       return;
     }
-    modal.showConfirm(`Send invitation to ${emails.length} email(s)?`, async () => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const invalidEmails = emails.filter((e) => !emailRegex.test(e));
+    if (invalidEmails.length > 0) {
+      modal.showError(t("invitations.invalidEmail" as any, { emails: invalidEmails.join(", ") }));
+      return;
+    }
+    const remaining = inv.quota - inv.usedCount;
+    if (emails.length > remaining) {
+      modal.showError(t("invitations.emailExceedQuota" as any, { count: emails.length, remaining }));
+      return;
+    }
+    modal.showConfirm(t("invitations.sendConfirm" as any, { count: emails.length }), async () => {
       setSending(true);
       try {
         const res = await InvBackend.sendInvitation(inv, emails);
@@ -389,7 +401,7 @@ export default function InvitationEditPage() {
 
   // --- Dropdown options ----------------------------------------------------
   const appOptions: { value: string; label: string }[] = [
-    { value: "All", label: "All" },
+    { value: "All", label: t("common.all" as any) },
     ...apps.map((a) => ({
       value: a.name,
       label: a.displayName ? `${a.displayName} (${a.name})` : a.name,
@@ -397,7 +409,7 @@ export default function InvitationEditPage() {
   ];
 
   const groupOptions: { value: string; label: string }[] = [
-    { value: "", label: "-- None --" },
+    { value: "", label: `-- ${t("common.none" as any)} --` },
     ...groups.map((g) => ({
       value: g.name,
       label: g.displayName ? `${g.displayName} (${g.name})` : g.name,
@@ -506,7 +518,7 @@ export default function InvitationEditPage() {
                   </button>
                 ))}
                 {filteredOrgs.length === 0 && (
-                  <div className="px-3 py-2 text-[13px] text-text-muted">No results</div>
+                  <div className="px-3 py-2 text-[13px] text-text-muted">{t("common.noResults" as any)}</div>
                 )}
               </div>
             )}
@@ -632,7 +644,7 @@ export default function InvitationEditPage() {
               className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-[13px] font-medium text-text-secondary hover:bg-surface-2 transition-colors"
             >
               <Copy size={14} />
-              Copy
+              {t("common.copy" as any)}
             </button>
           </div>
         </FormField>
@@ -659,7 +671,7 @@ export default function InvitationEditPage() {
               ) : (
                 <Send size={14} />
               )}
-              Send
+              {t("common.send" as any)}
             </button>
           </div>
         </FormField>
@@ -693,7 +705,7 @@ export default function InvitationEditPage() {
             value={inv.application ?? "All"}
             onChange={(v) => set("application", v)}
             options={appOptions}
-            placeholder="All"
+            placeholder={t("common.all" as any)}
           />
         </FormField>
         <FormField label={t("invitations.field.signupGroup" as any)}>
@@ -701,7 +713,7 @@ export default function InvitationEditPage() {
             value={inv.signupGroup ?? ""}
             onChange={(v) => set("signupGroup", v)}
             options={groupOptions}
-            placeholder="Select group..."
+            placeholder={t("invitations.selectGroup" as any)}
           />
         </FormField>
       </FormSection>

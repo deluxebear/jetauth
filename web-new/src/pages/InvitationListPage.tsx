@@ -90,6 +90,12 @@ export default function InvitationListPage() {
       render: (_, r) => r.email ? <a href={`mailto:${r.email}`} className="text-accent hover:underline text-[12px]" onClick={(e) => e.stopPropagation()}>{r.email}</a> : <span className="text-text-muted text-[12px]">—</span>,
     },
     {
+      key: "phone",
+      title: t("col.phone" as any),
+      width: "140px",
+      render: (_, r) => r.phone ? <a href={`tel:${r.phone}`} className="text-accent hover:underline text-[12px]" onClick={(e) => e.stopPropagation()}>{r.phone}</a> : <span className="text-text-muted text-[12px]">—</span>,
+    },
+    {
       key: "state",
       title: t("col.state" as any),
       width: "100px",

@@ -1,1 +1,0 @@
-import{d as e}from"./index-Bu6JMwAS.js";export{e as getOrganizationNames};

@@ -16,6 +16,10 @@ const en = {
   "common.rotate": "Rotate",
   "common.confirm": "Confirm",
   "common.cancel": "Cancel",
+  "common.ok": "OK",
+  "common.success": "Success",
+  "common.error": "Error",
+  "common.info": "Info",
   "common.refresh": "Refresh",
   "common.viewAll": "View all",
   "common.underConstruction": "This page is under construction",
@@ -757,6 +761,7 @@ const en = {
   // Common UI
   "common.all": "All",
   "common.copy": "Copy",
+  "common.noResults": "No results",
   "common.download": "Download",
   "common.shared": "{name} (Shared)",
   "common.adminShared": "admin (Shared)",
@@ -1067,6 +1072,12 @@ const en = {
   "invitations.regenerate": "Regenerate",
   "invitations.state.active": "Active",
   "invitations.state.suspended": "Suspended",
+  "invitations.loadFailed": "Failed to load invitation",
+  "invitations.enterEmail": "Please enter at least one email address",
+  "invitations.sendConfirm": "Send invitation to {{count}} email(s)?",
+  "invitations.selectGroup": "Select group...",
+  "invitations.invalidEmail": "Invalid email format: {{emails}}",
+  "invitations.emailExceedQuota": "Email count ({{count}}) exceeds remaining quota ({{remaining}})",
 
   // Products
   "products.title": "Products",

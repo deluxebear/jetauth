@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useCallback, type ReactNode } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { AlertTriangle, CheckCircle, Info, XCircle, X } from "lucide-react";
+import { useTranslation } from "../i18n";
 
 type ModalType = "confirm" | "success" | "error" | "info";
 
@@ -108,16 +109,15 @@ const icons: Record<ModalType, ReactNode> = {
   info: <Info size={22} className="text-accent" />,
 };
 
-const defaultTitles: Record<ModalType, { en: string; zh: string }> = {
-  confirm: { en: "Confirm", zh: "确认" },
-  success: { en: "Success", zh: "成功" },
-  error: { en: "Error", zh: "错误" },
-  info: { en: "Info", zh: "提示" },
+const defaultTitleKeys: Record<ModalType, string> = {
+  confirm: "common.confirm",
+  success: "common.success",
+  error: "common.error",
+  info: "common.info",
 };
 
 function ModalOverlay({ state, onClose }: { state: ModalState; onClose: () => void }) {
-  const locale = localStorage.getItem("locale") ?? "en";
-  const isZh = locale.startsWith("zh");
+  const { t } = useTranslation();
 
   return (
     <AnimatePresence>
@@ -147,7 +147,7 @@ function ModalOverlay({ state, onClose }: { state: ModalState; onClose: () => vo
                 <div className="flex items-center gap-3">
                   <div className="rounded-lg bg-surface-2 p-2">{icons[state.type]}</div>
                   <h3 className="text-[15px] font-semibold text-text-primary">
-                    {state.title || defaultTitles[state.type][isZh ? "zh" : "en"]}
+                    {state.title || t(defaultTitleKeys[state.type])}
                   </h3>
                 </div>
                 <button
@@ -172,7 +172,7 @@ function ModalOverlay({ state, onClose }: { state: ModalState; onClose: () => vo
                     onClick={state.onCancel}
                     className="rounded-lg border border-border px-4 py-2 text-[13px] font-medium text-text-secondary hover:bg-surface-2 transition-colors"
                   >
-                    {isZh ? "取消" : "Cancel"}
+                    {t("common.cancel")}
                   </button>
                 )}
                 <button
@@ -185,7 +185,7 @@ function ModalOverlay({ state, onClose }: { state: ModalState; onClose: () => vo
                         : "bg-accent hover:bg-accent-hover"
                   }`}
                 >
-                  {isZh ? "确定" : "OK"}
+                  {t("common.ok")}
                 </button>
               </div>
             </div>
