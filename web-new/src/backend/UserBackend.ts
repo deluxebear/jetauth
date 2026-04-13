@@ -199,7 +199,7 @@ export function newUser(orgName: string): Partial<User> {
     password: generateRandomPassword(),
     passwordSalt: "",
     displayName: `New User - ${rand}`,
-    avatar: "https://cdn.casbin.org/img/casbin.svg",
+    avatar: "/img/avatar.svg",
     email: "",
     phone: "",
     countryCode: "",

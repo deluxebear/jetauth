@@ -162,7 +162,7 @@ export function newApplication(orgName: string): Application {
     displayName: `New Application - ${rand}`,
     category: "Default",
     type: "All",
-    logo: "https://cdn.casbin.org/img/casdoor-logo_1185x256.png",
+    logo: "/img/logo.svg",
     title: "",
     favicon: "",
     order: 0,

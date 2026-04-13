@@ -64,7 +64,7 @@ export function newProduct(owner: string): Product {
     name: `product_${rand}`,
     createdTime: new Date().toISOString(),
     displayName: `New Product - ${rand}`,
-    image: "https://cdn.casbin.org/img/casdoor-logo_1185x256.png",
+    image: "/img/logo.svg",
     detail: "",
     description: "",
     tag: "",
