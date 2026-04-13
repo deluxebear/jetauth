@@ -316,7 +316,7 @@ export default function OrganizationEditPage() {
                   <input value={org.displayName ?? ""} onChange={(e) => set("displayName", e.target.value)} disabled={!canEditField("displayName")} className={inputClass} />
                 </FormField>
                 <FormField label={t("orgs.field.enableDarkLogo" as any)} help={t("orgs.help.enableDarkLogo" as any)}>
-                  <Switch checked={!!org.enableDarkLogo || !!(org as any).logoDark} onChange={(v) => set("enableDarkLogo", v)} disabled={!canEditField("logoDark")} />
+                  <Switch checked={!!org.enableDarkLogo || !!(org as any).logoDark} onChange={(v) => { set("enableDarkLogo", v); if (!v) set("logoDark", ""); }} disabled={!canEditField("logoDark")} />
                 </FormField>
                 <div />
                 <FormField label={t("orgs.field.logo" as any)} span="full">
