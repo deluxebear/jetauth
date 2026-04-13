@@ -479,14 +479,17 @@ export default function OrganizationEditPage() {
 
               <FormSection title={t("orgs.section.mfa" as any)}>
                 <FormField label={t("orgs.field.mfaRemember" as any)} help={t("orgs.help.mfaRememberInHours" as any)}>
-                  <input type="number" value={org.mfaRememberInHours ?? 12} onChange={(e) => set("mfaRememberInHours", Number(e.target.value))} min={0} disabled={!canEditField("mfaRememberDuration")} className={monoInputClass} />
+                  <div className="flex items-center gap-2">
+                    <input type="number" value={org.mfaRememberInHours ?? 12} onChange={(e) => set("mfaRememberInHours", Number(e.target.value))} min={0} disabled={!canEditField("mfaRememberDuration")} className={`${monoInputClass} w-32`} />
+                    <span className="text-[12px] text-text-muted">{t("orgs.mfa.hours" as any)}</span>
+                  </div>
                 </FormField>
                 <div />
-                <FormField label={t("orgs.field.mfaItems" as any)} span="full">
+                <div className="col-span-2">
                   <div className={!canEditField("mfaItems") ? "pointer-events-none opacity-60" : ""}>
                     <MfaItemsEditor items={(org as any).mfaItems ?? []} onChange={(v) => set("mfaItems", v)} t={t} />
                   </div>
-                </FormField>
+                </div>
               </FormSection>
             </div>
           ),
@@ -847,33 +850,92 @@ function TagsEditor({ tags, onChange, placeholder = "Type and press Enter..." }:
 }
 
 function MfaItemsEditor({ items, onChange, t }: { items: { name: string; rule: string }[]; onChange: (items: { name: string; rule: string }[]) => void; t: (key: string) => string }) {
-  const MFA_NAMES = ["app", "sms", "email"];
+  const MFA_TYPES = [
+    { value: "app", label: t("orgs.mfa.app" as any) },
+    { value: "sms", label: t("orgs.mfa.sms" as any) },
+    { value: "email", label: t("orgs.mfa.email" as any) },
+    { value: "push", label: t("orgs.mfa.push" as any) },
+  ];
   const MFA_RULES = ["Optional", "Required", "Prompt"];
 
-  // Ensure all MFA types exist
-  const normalized = MFA_NAMES.map((name) => {
-    const existing = items.find((i) => i.name === name);
-    return existing ?? { name, rule: "Optional" };
-  });
+  const usedNames = items.map((i) => i.name);
+  const availableTypes = MFA_TYPES.filter((t) => !usedNames.includes(t.value));
+
+  const addItem = () => {
+    if (availableTypes.length === 0) return;
+    onChange([...items, { name: availableTypes[0].value, rule: "Optional" }]);
+  };
+
+  const removeItem = (idx: number) => {
+    onChange(items.filter((_, i) => i !== idx));
+  };
+
+  const updateItem = (idx: number, field: "name" | "rule", value: string) => {
+    const next = [...items];
+    // If setting to Required, clear other Required items (only 1 allowed)
+    if (field === "rule" && value === "Required") {
+      next.forEach((item, i) => { if (i !== idx && item.rule === "Required") next[i] = { ...item, rule: "Optional" }; });
+    }
+    next[idx] = { ...next[idx], [field]: value };
+    onChange(next);
+  };
+
+  const moveItem = (idx: number, dir: -1 | 1) => {
+    const target = idx + dir;
+    if (target < 0 || target >= items.length) return;
+    const next = [...items];
+    [next[idx], next[target]] = [next[target], next[idx]];
+    onChange(next);
+  };
 
   return (
-    <div className="space-y-2">
-      {normalized.map((item, idx) => (
-        <div key={item.name} className="flex items-center gap-3">
-          <span className="text-[13px] font-mono text-text-secondary w-16">{t(`orgs.mfa.${item.name}` as any)}</span>
-          <select
-            value={item.rule}
-            onChange={(e) => {
-              const next = [...normalized];
-              next[idx] = { ...next[idx], rule: e.target.value };
-              onChange(next);
-            }}
-            className="rounded-lg border border-border bg-surface-2 px-3 py-1.5 text-[12px] text-text-primary outline-none focus:border-accent"
-          >
-            {MFA_RULES.map((r) => <option key={r} value={r}>{t(`orgs.mfa.${r}` as any)}</option>)}
-          </select>
-        </div>
-      ))}
+    <div>
+      <div className="flex items-center gap-2 mb-2">
+        <span className="text-[12px] font-semibold text-text-secondary">{t("orgs.field.mfaItems" as any)}</span>
+        {availableTypes.length > 0 && (
+          <button type="button" onClick={addItem} className="rounded-md bg-accent/10 border border-accent/30 px-2 py-0.5 text-[11px] font-semibold text-accent hover:bg-accent/20 transition-colors">
+            + {t("common.add" as any)}
+          </button>
+        )}
+      </div>
+      {items.length === 0 ? (
+        <p className="text-[12px] text-text-muted py-4 text-center border border-dashed border-border rounded-lg">{t("common.noData" as any)}</p>
+      ) : (
+        <table className="w-full text-[12px]">
+          <thead>
+            <tr className="border-b border-border">
+              <th className="text-left py-1.5 px-2 font-semibold text-text-muted uppercase tracking-wider text-[10px]">{t("common.name" as any)}</th>
+              <th className="text-left py-1.5 px-2 font-semibold text-text-muted uppercase tracking-wider text-[10px]">{t("orgs.mfa.rule" as any)}</th>
+              <th className="text-right py-1.5 px-2 font-semibold text-text-muted uppercase tracking-wider text-[10px] w-24">{t("common.action" as any)}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {items.map((item, idx) => (
+              <tr key={idx} className="border-b border-border-subtle hover:bg-surface-2/50">
+                <td className="py-1.5 px-2">
+                  <select value={item.name} onChange={(e) => updateItem(idx, "name", e.target.value)} className="rounded border border-border bg-surface-2 px-2 py-1 text-[12px] text-text-primary outline-none focus:border-accent">
+                    {MFA_TYPES.filter((t) => t.value === item.name || !usedNames.includes(t.value)).map((t) => (
+                      <option key={t.value} value={t.value}>{t.label}</option>
+                    ))}
+                  </select>
+                </td>
+                <td className="py-1.5 px-2">
+                  <select value={item.rule} onChange={(e) => updateItem(idx, "rule", e.target.value)} className="rounded border border-border bg-surface-2 px-2 py-1 text-[12px] text-text-primary outline-none focus:border-accent">
+                    {MFA_RULES.map((r) => <option key={r} value={r}>{t(`orgs.mfa.${r}` as any)}</option>)}
+                  </select>
+                </td>
+                <td className="py-1.5 px-2 text-right">
+                  <div className="flex items-center justify-end gap-1">
+                    <button type="button" onClick={() => moveItem(idx, -1)} disabled={idx === 0} className="p-0.5 rounded text-text-muted hover:text-text-primary disabled:opacity-30 transition-colors"><ChevronUp size={14} /></button>
+                    <button type="button" onClick={() => moveItem(idx, 1)} disabled={idx === items.length - 1} className="p-0.5 rounded text-text-muted hover:text-text-primary disabled:opacity-30 transition-colors"><ChevronDown size={14} /></button>
+                    <button type="button" onClick={() => removeItem(idx)} className="p-0.5 rounded text-text-muted hover:text-danger transition-colors"><Trash2 size={14} /></button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
     </div>
   );
 }
