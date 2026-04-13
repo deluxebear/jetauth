@@ -13,6 +13,9 @@ import CountryCodeSelect from "../components/CountryCodeSelect";
 import LanguageSelect from "../components/LanguageSelect";
 import ImageUrlInput from "../components/ImageUrlInput";
 import { navGroups as navGroupsDef, widgetItems as widgetItemsDef } from "../navConfig";
+import { THEME_PRESETS, matchPreset } from "../theme-presets";
+import ThemePresetCard from "../components/ThemePresetCard";
+import LoginPreview from "../components/LoginPreview";
 import * as OrgBackend from "../backend/OrganizationBackend";
 import * as AppBackend from "../backend/ApplicationBackend";
 import * as LdapBackend from "../backend/LdapBackend";
@@ -518,32 +521,93 @@ export default function OrganizationEditPage() {
           icon: <Palette size={14} />,
           content: (
             <div className={!canEditField("themeData") ? "pointer-events-none opacity-60" : ""}>
-            <FormSection title={t("orgs.section.theme" as any)}>
-              <FormField label={t("orgs.field.enableCustomTheme" as any)}>
-                <Switch checked={!!(org as any).themeData?.isEnabled} onChange={(v) => set("themeData", { ...((org as any).themeData ?? {}), isEnabled: v })} />
-              </FormField>
+              <FormSection title={t("orgs.section.theme" as any)}>
+                <FormField label={t("orgs.field.enableCustomTheme" as any)}>
+                  <Switch checked={!!(org as any).themeData?.isEnabled} onChange={(v) => set("themeData", { ...((org as any).themeData ?? {}), isEnabled: v })} />
+                </FormField>
+              </FormSection>
+
               {(org as any).themeData?.isEnabled && (
                 <>
-                  <FormField label={t("orgs.field.themeType" as any)}>
-                    <select value={(org as any).themeData?.themeType ?? "default"} onChange={(e) => set("themeData", { ...(org as any).themeData, themeType: e.target.value })} className={inputClass}>
-                      <option value="default">Default</option><option value="dark">Dark</option><option value="light">Light</option>
-                    </select>
-                  </FormField>
-                  <FormField label={t("orgs.field.primaryColor" as any)}>
-                    <div className="flex gap-2 items-center">
-                      <input type="color" value={(org as any).themeData?.colorPrimary ?? "#1890ff"} onChange={(e) => set("themeData", { ...(org as any).themeData, colorPrimary: e.target.value })} className="h-9 w-12 rounded border border-border cursor-pointer" />
-                      <input value={(org as any).themeData?.colorPrimary ?? "#1890ff"} onChange={(e) => set("themeData", { ...(org as any).themeData, colorPrimary: e.target.value })} className={`${monoInputClass} flex-1`} />
+                  {/* Preset cards */}
+                  <FormSection title={t("orgs.section.selectTheme" as any)}>
+                    <div className="col-span-2">
+                      <div className="flex flex-wrap gap-3">
+                        {THEME_PRESETS.map((preset) => (
+                          <ThemePresetCard
+                            key={preset.key}
+                            preset={preset}
+                            selected={matchPreset((org as any).themeData) === preset.key}
+                            onClick={() =>
+                              set("themeData", {
+                                ...((org as any).themeData ?? {}),
+                                isEnabled: true,
+                                ...preset.themeData,
+                              })
+                            }
+                          />
+                        ))}
+                      </div>
                     </div>
-                  </FormField>
-                  <FormField label={t("orgs.field.borderRadius" as any)}>
-                    <input type="number" value={(org as any).themeData?.borderRadius ?? 6} onChange={(e) => set("themeData", { ...(org as any).themeData, borderRadius: Number(e.target.value) })} min={0} max={20} className={monoInputClass} />
-                  </FormField>
-                  <FormField label={t("orgs.field.compactMode" as any)}>
-                    <Switch checked={!!(org as any).themeData?.isCompact} onChange={(v) => set("themeData", { ...(org as any).themeData, isCompact: v })} />
-                  </FormField>
+                  </FormSection>
+
+                  {/* Custom controls */}
+                  <FormSection title={t("orgs.section.customizeTheme" as any)}>
+                    <FormField label={t("orgs.field.lightDarkMode" as any)}>
+                      <select
+                        value={(org as any).themeData?.themeType ?? "light"}
+                        onChange={(e) => set("themeData", { ...(org as any).themeData, themeType: e.target.value })}
+                        className={inputClass}
+                      >
+                        <option value="light">Light</option>
+                        <option value="dark">Dark</option>
+                      </select>
+                    </FormField>
+                    <FormField label={t("orgs.field.primaryColor" as any)}>
+                      <div className="flex gap-2 items-center">
+                        <input
+                          type="color"
+                          value={(org as any).themeData?.colorPrimary ?? "#0891b2"}
+                          onChange={(e) => set("themeData", { ...(org as any).themeData, colorPrimary: e.target.value })}
+                          className="h-9 w-12 rounded border border-border cursor-pointer"
+                        />
+                        <input
+                          value={(org as any).themeData?.colorPrimary ?? "#0891b2"}
+                          onChange={(e) => set("themeData", { ...(org as any).themeData, colorPrimary: e.target.value })}
+                          className={`${monoInputClass} flex-1`}
+                        />
+                      </div>
+                    </FormField>
+                    <FormField label={t("orgs.field.borderRadius" as any)}>
+                      <input
+                        type="number"
+                        value={(org as any).themeData?.borderRadius ?? 8}
+                        onChange={(e) => set("themeData", { ...(org as any).themeData, borderRadius: Number(e.target.value) })}
+                        min={0}
+                        max={20}
+                        className={monoInputClass}
+                      />
+                    </FormField>
+                    <FormField label={t("orgs.field.compactMode" as any)}>
+                      <Switch
+                        checked={!!(org as any).themeData?.isCompact}
+                        onChange={(v) => set("themeData", { ...(org as any).themeData, isCompact: v })}
+                      />
+                    </FormField>
+                  </FormSection>
+
+                  {/* Live preview */}
+                  <FormSection title={t("orgs.section.themePreview" as any)}>
+                    <div className="col-span-2">
+                      <LoginPreview
+                        colorPrimary={(org as any).themeData?.colorPrimary ?? "#0891b2"}
+                        themeType={(org as any).themeData?.themeType ?? "light"}
+                        borderRadius={(org as any).themeData?.borderRadius ?? 8}
+                      />
+                    </div>
+                  </FormSection>
                 </>
               )}
-            </FormSection>
             </div>
           ),
         },
