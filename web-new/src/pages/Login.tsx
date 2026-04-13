@@ -120,7 +120,7 @@ export default function Login({ onLogin, error, themeData, orgBranding, onOrgani
         >
           <div className="flex items-center gap-3 mb-10">
             {orgLogo ? (
-              <img src={orgLogo} alt="" className="h-11 max-w-[200px] object-contain" />
+              <img src={orgLogo} alt="" className="h-16 max-w-[280px] object-contain" />
             ) : (
               <>
                 <div className="h-11 w-11 rounded-xl bg-accent/15 border border-accent/20 flex items-center justify-center">
