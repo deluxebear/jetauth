@@ -213,7 +213,7 @@ export default function LdapEditPage() {
           <FormField label={t("ldap.field.defaultGroup" as any)} help={t("ldap.help.defaultGroup" as any)}>
             <select value={ldap.defaultGroup ?? ""} onChange={(e) => set("defaultGroup", e.target.value)} className={inputClass}>
               <option value="">—</option>
-              {groups.map((g: any) => <option key={g.name} value={g.name}>{g.displayName || g.name}</option>)}
+              {groups.map((g: any) => <option key={g.name} value={`${g.owner}/${g.name}`}>{g.displayName || g.name}</option>)}
             </select>
           </FormField>
           <FormField label={t("ldap.field.autoSync" as any)} help={t("ldap.field.autoSync.help" as any)}>
