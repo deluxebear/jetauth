@@ -279,6 +279,12 @@ export default function App() {
     } catch {}
     setUser(null);
     localStorage.removeItem("account");
+    localStorage.removeItem("organizationData");
+    localStorage.removeItem("selectedOrganization");
+    // Reset favicon and title to defaults
+    const link = document.querySelector("link[rel*='icon']") as HTMLLinkElement | null;
+    if (link) link.href = "/img/favicon.png";
+    document.title = "JetAuth";
     window.dispatchEvent(new Event("accountChanged"));
     navigate("/login");
   };
