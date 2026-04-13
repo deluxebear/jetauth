@@ -108,6 +108,7 @@ p, *, *, *, /api/saml/redirect, *, *
 p, *, *, *, /cas, *, *
 p, *, *, *, /scim, *, *
 p, *, *, *, /api/webauthn, *, *
+p, *, *, POST, /api/mfa/setup, *, *
 p, *, *, GET, /api/get-release, *, *
 p, *, *, GET, /api/get-default-application, *, *
 p, *, *, GET, /api/get-prometheus-info, *, *

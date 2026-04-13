@@ -252,6 +252,10 @@ func getUrlPath(ctx *context.Context) string {
 		return "/api/webauthn"
 	}
 
+	if strings.HasPrefix(urlPath, "/api/mfa/setup") {
+		return "/api/mfa/setup"
+	}
+
 	if strings.HasPrefix(urlPath, "/api/saml/redirect") {
 		return "/api/saml/redirect"
 	}
