@@ -264,8 +264,8 @@ export default function Signup() {
       {/* Left panel -- branding */}
       <div className="hidden lg:flex lg:w-[45%] relative bg-surface-1 items-center justify-center overflow-hidden">
         <div className="absolute inset-0 bg-dot-grid opacity-40" />
-        <div className="absolute top-1/4 left-1/3 h-72 w-72 rounded-full bg-accent/8 blur-[100px]" />
-        <div className="absolute bottom-1/3 right-1/4 h-56 w-56 rounded-full bg-cyan-400/6 blur-[80px]" />
+        <div className="absolute top-1/4 left-1/3 h-72 w-72 rounded-full blur-[100px]" style={{ background: "var(--gradient-from)", opacity: 0.08 }} />
+        <div className="absolute bottom-1/3 right-1/4 h-56 w-56 rounded-full blur-[80px]" style={{ background: "var(--gradient-blob)", opacity: 0.06 }} />
 
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -294,7 +294,7 @@ export default function Signup() {
           <h1 className="text-[40px] font-bold leading-[1.1] tracking-tight text-text-primary mb-5">
             {t("signup.brandHeading1")}
             <br />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-accent to-cyan-300">
+            <span className="text-transparent bg-clip-text" style={{ backgroundImage: `linear-gradient(to right, var(--gradient-from), var(--gradient-to))` }}>
               {t("signup.brandHeading2")}
             </span>
           </h1>
