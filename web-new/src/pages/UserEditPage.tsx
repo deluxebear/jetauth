@@ -91,12 +91,20 @@ export default function UserEditPage() {
     });
     OrgBackend.getOrganization("admin", owner).then((res) => {
       if (res.status === "ok" && res.data) {
-        // API may return a single object or an array (depending on endpoint)
         const org = (Array.isArray(res.data) ? res.data[0] : res.data) as any;
         if (org) {
           setOrgUserTypes(org.userTypes ?? []);
           setAccountItems(org.accountItems ?? []);
         }
+      } else {
+        // Non-admin users can't call get-organization API; fall back to localStorage
+        try {
+          const orgData = JSON.parse(localStorage.getItem("organizationData") ?? "null");
+          if (orgData) {
+            setOrgUserTypes(orgData.userTypes ?? []);
+            setAccountItems(orgData.accountItems ?? []);
+          }
+        } catch { /* ignore */ }
       }
     });
   }, [owner]);
