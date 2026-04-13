@@ -159,7 +159,7 @@ export function withAlpha(hex: string, alpha: number): string {
  */
 export function deriveThemeVars(
   colorPrimary: string,
-  themeType: "dark" | "light",
+  themeType: string,
   borderRadius: number
 ): ThemeVars {
   const isDark = themeType === "dark";
