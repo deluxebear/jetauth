@@ -104,20 +104,22 @@ export default function Login({ onLogin, error, themeData, orgBranding, onOrgani
         >
           <div className="flex items-center gap-3 mb-10">
             {orgLogo ? (
-              <img src={orgLogo} alt="" className="h-11 max-w-[200px] rounded-xl object-contain" />
+              <img src={orgLogo} alt="" className="h-11 max-w-[200px] object-contain" />
             ) : (
-              <div className="h-11 w-11 rounded-xl bg-accent/15 border border-accent/20 flex items-center justify-center">
-                <ShieldCheck size={22} className="text-accent" />
-              </div>
+              <>
+                <div className="h-11 w-11 rounded-xl bg-accent/15 border border-accent/20 flex items-center justify-center">
+                  <ShieldCheck size={22} className="text-accent" />
+                </div>
+                <div>
+                  <div className="text-lg font-bold tracking-tight text-text-primary">
+                    {orgName}
+                  </div>
+                  <div className="text-[11px] font-mono text-text-muted tracking-wider uppercase">
+                    {t("login.brand.subtitle")}
+                  </div>
+                </div>
+              </>
             )}
-            <div>
-              <div className="text-lg font-bold tracking-tight text-text-primary">
-                {orgName}
-              </div>
-              <div className="text-[11px] font-mono text-text-muted tracking-wider uppercase">
-                {t("login.brand.subtitle")}
-              </div>
-            </div>
           </div>
 
           <h1 className="text-[40px] font-bold leading-[1.1] tracking-tight text-text-primary mb-5">
@@ -167,13 +169,15 @@ export default function Login({ onLogin, error, themeData, orgBranding, onOrgani
         >
           <div className="lg:hidden flex items-center gap-2 mb-10">
             {orgLogo ? (
-              <img src={orgLogo} alt="" className="h-9 max-w-[160px] rounded-lg object-contain" />
+              <img src={orgLogo} alt="" className="h-9 max-w-[160px] object-contain" />
             ) : (
-              <div className="h-9 w-9 rounded-lg bg-accent/15 flex items-center justify-center">
-                <ShieldCheck size={18} className="text-accent" />
-              </div>
+              <>
+                <div className="h-9 w-9 rounded-lg bg-accent/15 flex items-center justify-center">
+                  <ShieldCheck size={18} className="text-accent" />
+                </div>
+                <span className="text-base font-bold tracking-tight">{orgName}</span>
+              </>
             )}
-            <span className="text-base font-bold tracking-tight">{orgName}</span>
           </div>
 
           <h2 className="text-2xl font-bold tracking-tight text-text-primary mb-1">
