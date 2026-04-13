@@ -316,13 +316,13 @@ export default function OrganizationEditPage() {
                   <input value={org.displayName ?? ""} onChange={(e) => set("displayName", e.target.value)} disabled={!canEditField("displayName")} className={inputClass} />
                 </FormField>
                 <FormField label={t("orgs.field.enableDarkLogo" as any)} help={t("orgs.help.enableDarkLogo" as any)}>
-                  <Switch checked={!!org.enableDarkLogo} onChange={(v) => set("enableDarkLogo", v)} disabled={!canEditField("logoDark")} />
+                  <Switch checked={!!org.enableDarkLogo || !!(org as any).logoDark} onChange={(v) => set("enableDarkLogo", v)} disabled={!canEditField("logoDark")} />
                 </FormField>
                 <div />
                 <FormField label={t("orgs.field.logo" as any)} span="full">
                   <ImageUrlInput value={org.logo ?? ""} onChange={(v) => set("logo", v)} owner={org.name ?? ""} tag="org-logo" disabled={!canEditField("logo")} />
                 </FormField>
-                {!!org.enableDarkLogo && (
+                {(!!org.enableDarkLogo || !!(org as any).logoDark) && (
                   <FormField label={t("orgs.field.logoDark" as any)} span="full">
                     <ImageUrlInput value={(org as any).logoDark ?? ""} onChange={(v) => set("logoDark", v)} owner={org.name ?? ""} tag="org-logo-dark" disabled={!canEditField("logoDark")} />
                   </FormField>
