@@ -4,6 +4,9 @@ import { AnimatePresence, motion } from "framer-motion";
 import Sidebar from "./components/Sidebar";
 import Header from "./components/Header";
 import { useSidebar } from "./SidebarContext";
+import { useOrganization } from "./OrganizationContext";
+import { useTheme } from "./theme";
+import * as OrgBackend from "./backend/OrganizationBackend";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import MfaSetup from "./pages/MfaSetup";
@@ -113,6 +116,27 @@ function Layout({
   onLogout: () => void;
 }) {
   const { width } = useSidebar();
+  const { selectedOrg, isAll } = useOrganization();
+  const { applyOrgTheme, clearOrgTheme } = useTheme();
+
+  useEffect(() => {
+    if (isAll) {
+      clearOrgTheme();
+      return;
+    }
+    OrgBackend.getOrganization("admin", selectedOrg).then((res) => {
+      if (res.status === "ok" && res.data) {
+        const td = (res.data as any).themeData;
+        if (td?.isEnabled) {
+          applyOrgTheme(td);
+        } else {
+          clearOrgTheme();
+        }
+      }
+    });
+    return () => clearOrgTheme();
+  }, [selectedOrg, isAll, applyOrgTheme, clearOrgTheme]);
+
   return (
     <div className="min-h-screen bg-surface-0">
       <Sidebar account={user} />
