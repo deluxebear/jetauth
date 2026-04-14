@@ -47,7 +47,7 @@ const TYPE_BY_CATEGORY: Record<string, string[]> = {
   ],
   SAML: ["Aliyun IDaaS", "Keycloak", "Custom"],
   Payment: ["Dummy", "Balance", "Alipay", "WeChat Pay", "PayPal", "Stripe", "GC"],
-  Captcha: ["Default", "reCAPTCHA v2", "reCAPTCHA v3", "hCaptcha", "Aliyun Captcha", "GEETEST", "Cloudflare Turnstile"],
+  Captcha: ["Aliyun Captcha", "Cloudflare Turnstile", "Default", "GEETEST", "hCaptcha", "reCAPTCHA v2", "reCAPTCHA v3"],
   Web3: ["MetaMask", "Web3Onboard"],
   Notification: [
     "Telegram", "Custom HTTP", "DingTalk", "Lark", "Microsoft Teams", "Bark",
@@ -78,44 +78,44 @@ const SUBTYPES: Record<string, string[]> = {
 // ── Dynamic label helpers ──
 
 function getClientIdLabel(cat: string, type: string, t: (k: string) => string): string {
-  if (cat === "OAuth" && type === "Apple") return "Service ID identifier";
+  if (cat === "OAuth" && type === "Apple") return t("providers.label.serviceIdIdentifier" as any);
   if (cat === "Email") return t("providers.label.username" as any);
   if (cat === "SMS") {
-    if (["Volc Engine SMS", "Amazon SNS", "Baidu Cloud SMS"].includes(type)) return "Access Key";
-    if (type === "Huawei Cloud SMS") return "App Key";
-    if (type === "UCloud SMS") return "Public Key";
-    if (["Msg91 SMS", "Infobip SMS", "OSON SMS"].includes(type)) return "Sender Id";
+    if (["Volc Engine SMS", "Amazon SNS", "Baidu Cloud SMS"].includes(type)) return t("providers.label.accessKey" as any);
+    if (type === "Huawei Cloud SMS") return t("providers.label.appKey" as any);
+    if (type === "UCloud SMS") return t("providers.label.publicKey" as any);
+    if (["Msg91 SMS", "Infobip SMS", "OSON SMS"].includes(type)) return t("providers.label.senderId" as any);
     return t("providers.field.clientId");
   }
   if (cat === "Captcha") {
-    if (type === "Aliyun Captcha") return "Access Key";
-    return "Site Key";
+    if (type === "Aliyun Captcha") return t("providers.label.accessKey" as any);
+    return t("providers.label.siteKey" as any);
   }
   return t("providers.field.clientId");
 }
 
 function getClientSecretLabel(cat: string, type: string, t: (k: string) => string): string {
-  if (cat === "OAuth" && type === "Apple") return "Team ID";
-  if (cat === "Storage" && type === "Google Cloud Storage") return "Service Account JSON";
+  if (cat === "OAuth" && type === "Apple") return t("providers.label.teamId" as any);
+  if (cat === "Storage" && type === "Google Cloud Storage") return t("providers.label.serviceAccountJson" as any);
   if (cat === "Email") {
-    if (["Azure ACS", "SendGrid", "Resend"].includes(type)) return "Secret Key";
+    if (["Azure ACS", "SendGrid", "Resend"].includes(type)) return t("providers.label.secretKey" as any);
     return t("providers.label.password" as any);
   }
   if (cat === "SMS") {
-    if (["Volc Engine SMS", "Amazon SNS", "Baidu Cloud SMS", "OSON SMS"].includes(type)) return "Secret Access Key";
-    if (type === "Huawei Cloud SMS") return "App Secret";
-    if (type === "UCloud SMS") return "Private Key";
-    if (type === "Msg91 SMS") return "Auth Key";
-    if (type === "Infobip SMS") return "API Key";
+    if (["Volc Engine SMS", "Amazon SNS", "Baidu Cloud SMS", "OSON SMS"].includes(type)) return t("providers.label.secretAccessKey" as any);
+    if (type === "Huawei Cloud SMS") return t("providers.label.appSecret" as any);
+    if (type === "UCloud SMS") return t("providers.label.privateKey" as any);
+    if (type === "Msg91 SMS") return t("providers.label.authKey" as any);
+    if (type === "Infobip SMS") return t("providers.label.apiKey" as any);
     return t("providers.field.clientSecret");
   }
   if (cat === "Captcha") {
-    if (type === "Aliyun Captcha") return "Secret Access Key";
-    return "Secret Key";
+    if (type === "Aliyun Captcha") return t("providers.label.secretAccessKey" as any);
+    return t("providers.label.secretKey" as any);
   }
   if (cat === "Notification") {
-    if (["Line", "Telegram", "Bark", "DingTalk", "Discord", "Slack", "Pushover", "Pushbullet"].includes(type)) return "Secret Key";
-    if (["Lark", "Microsoft Teams", "WeCom"].includes(type)) return "Endpoint";
+    if (["Line", "Telegram", "Bark", "DingTalk", "Discord", "Slack", "Pushover", "Pushbullet"].includes(type)) return t("providers.label.secretKey" as any);
+    if (["Lark", "Microsoft Teams", "WeCom"].includes(type)) return t("providers.field.endpoint" as any);
     return t("providers.field.clientSecret");
   }
   return t("providers.field.clientSecret");
@@ -138,19 +138,19 @@ function shouldShowClientId2(cat: string, type: string): boolean {
   return ["WeChat", "Apple", "Aliyun Captcha", "WeChat Pay", "Twitter", "Reddit", "CUCloud"].includes(type);
 }
 
-function getClientId2Label(cat: string, type: string): string {
-  if (cat === "OAuth" && type === "Apple") return "Key ID";
-  if (cat === "Email") return "From Address";
-  if (type === "Aliyun Captcha") return "Scene";
-  if (type === "WeChat Pay" || type === "CUCloud") return "App ID";
-  return "Client ID 2";
+function getClientId2Label(cat: string, type: string, t: (k: string) => string): string {
+  if (cat === "OAuth" && type === "Apple") return t("providers.label.keyId" as any);
+  if (cat === "Email") return t("providers.label.fromAddress" as any);
+  if (type === "Aliyun Captcha") return t("providers.label.scene" as any);
+  if (type === "WeChat Pay" || type === "CUCloud") return t("providers.label.appId" as any);
+  return t("providers.label.clientId2" as any);
 }
 
-function getClientSecret2Label(cat: string, type: string): string {
-  if (cat === "OAuth" && type === "Apple") return "Key Text";
-  if (cat === "Email") return "From Name";
-  if (type === "Aliyun Captcha") return "App Key";
-  return "Client Secret 2";
+function getClientSecret2Label(cat: string, type: string, t: (k: string) => string): string {
+  if (cat === "OAuth" && type === "Apple") return t("providers.label.keyText" as any);
+  if (cat === "Email") return t("providers.label.fromName" as any);
+  if (type === "Aliyun Captcha") return t("providers.label.appKey" as any);
+  return t("providers.label.clientSecret2" as any);
 }
 
 function shouldHideClientSecret2(cat: string, type: string): boolean {
@@ -472,11 +472,11 @@ export default function ProviderEditPage() {
         </FormField>
         {showClientId2 && (
           <>
-            <FormField label={getClientId2Label(category, type)}>
+            <FormField label={getClientId2Label(category, type, t)}>
               <input value={String(prov.clientId2 ?? "")} onChange={(e) => set("clientId2", e.target.value)} className={monoInputClass} />
             </FormField>
             {!shouldHideClientSecret2(category, type) && (
-              <FormField label={getClientSecret2Label(category, type)}>
+              <FormField label={getClientSecret2Label(category, type, t)}>
                 {category === "OAuth" && type === "Apple" ? (
                   <textarea value={String(prov.clientSecret2 ?? "")} onChange={(e) => set("clientSecret2", e.target.value)} rows={4} className={`${monoInputClass} text-[11px]`} />
                 ) : (

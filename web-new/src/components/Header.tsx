@@ -35,7 +35,7 @@ export default function Header({ user, onLogout }: HeaderProps) {
         <button
           onClick={toggleTheme}
           className="rounded-lg p-2 text-text-muted hover:text-text-secondary hover:bg-surface-2 transition-colors"
-          title={theme === "dark" ? "Switch to light" : "Switch to dark"}
+          title={theme === "dark" ? t("header.switchToLight" as any) : t("header.switchToDark" as any)}
         >
           {theme === "dark" ? <Sun size={17} /> : <Moon size={17} />}
         </button>
