@@ -1115,6 +1115,7 @@ const zh: Record<string, string> = {
   "apps.oauth.tokenAttributes": "令牌属性",
   "apps.oauth.category": "类别",
   "apps.oauth.scopes": "作用域",
+  "apps.oauth.tools": "工具",
 
   // Application UI table
   "apps.ui.rule": "规则",

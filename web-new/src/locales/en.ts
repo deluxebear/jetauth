@@ -1034,6 +1034,7 @@ const en = {
   "apps.oauth.tokenAttributes": "Token Attributes",
   "apps.oauth.category": "Category",
   "apps.oauth.scopes": "Scopes",
+  "apps.oauth.tools": "Tools",
 
   // Application UI table
   "apps.ui.rule": "Rule",

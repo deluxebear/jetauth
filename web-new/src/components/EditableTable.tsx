@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Plus, Trash2, ChevronUp, ChevronDown } from "lucide-react";
 import { inputClass } from "./FormSection";
 import SimpleSelect from "./SimpleSelect";
+import { useTranslation } from "../i18n";
 
 export interface EditableColumn<T> {
   key: string;
@@ -20,6 +21,7 @@ interface EditableTableProps<T extends Record<string, unknown>> {
   rows: T[];
   onChange: (rows: T[]) => void;
   newRow: () => T;
+  title?: string;
   addLabel?: string;
   onAddCustom?: () => void;
   addCustomLabel?: string;
@@ -34,13 +36,15 @@ export default function EditableTable<T extends Record<string, unknown>>({
   rows,
   onChange,
   newRow,
-  addLabel = "Add",
+  title,
+  addLabel,
   onAddCustom,
   addCustomLabel,
   minRows = 0,
   disableAdd,
   rowKey,
 }: EditableTableProps<T>) {
+  const { t } = useTranslation();
   const [hoveredRow, setHoveredRow] = useState<number | null>(null);
 
   const handleAdd = () => {
@@ -65,23 +69,49 @@ export default function EditableTable<T extends Record<string, unknown>>({
     onChange(next);
   };
 
+  const addButtons = (
+    <div className="flex items-center gap-1.5">
+      {onAddCustom && (
+        <button
+          onClick={onAddCustom}
+          className="flex items-center gap-1 rounded-lg bg-accent px-2.5 py-1 text-[12px] font-medium text-white hover:bg-accent-hover transition-colors"
+        >
+          <Plus size={13} /> {addCustomLabel || t("common.add")}
+        </button>
+      )}
+      <button
+        onClick={handleAdd}
+        disabled={disableAdd}
+        className="flex items-center gap-1 rounded-lg bg-accent px-2.5 py-1 text-[12px] font-medium text-white hover:bg-accent-hover transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+      >
+        <Plus size={13} /> {addLabel || t("common.add")}
+      </button>
+    </div>
+  );
+
   return (
-    <div className="space-y-1">
-      {/* Header */}
-      <div className="flex items-center gap-1 rounded-t-lg bg-surface-2 border border-border px-2 py-1.5 text-[11px] font-semibold text-text-muted uppercase tracking-wider">
+    <div className="rounded-xl border border-border bg-surface-1 overflow-visible">
+      {/* Title bar with add buttons */}
+      <div className="px-4 py-2.5 border-b border-border-subtle bg-surface-2/30 flex items-center justify-between">
+        <h4 className="text-[13px] font-semibold text-text-primary">{title || ""}</h4>
+        {addButtons}
+      </div>
+
+      {/* Column headers */}
+      <div className="flex items-center gap-1 bg-surface-2/20 border-b border-border px-2 py-1.5 text-[11px] font-semibold text-text-muted uppercase tracking-wider">
         {columns.map((col) => (
           <div key={col.key} style={{ width: col.width, minWidth: col.width }} className={col.width ? "flex-none" : "flex-1"}>
             {col.title}
           </div>
         ))}
-        <div className="w-[72px] flex-none text-right">Action</div>
+        <div className="w-[72px] flex-none text-right">{t("common.action" as any)}</div>
       </div>
 
       {/* Rows */}
       {rows.map((row, i) => (
         <div
           key={rowKey ? rowKey(row, i) : i}
-          className="flex items-center gap-1 border border-border bg-surface-1 px-2 py-1.5 text-[12px] transition-colors hover:bg-surface-2/50"
+          className="flex items-center gap-1 border-b border-border bg-surface-1 px-2 py-1.5 text-[12px] transition-colors hover:bg-surface-2/50 last:border-b-0"
           onMouseEnter={() => setHoveredRow(i)}
           onMouseLeave={() => setHoveredRow(null)}
         >
@@ -161,29 +191,10 @@ export default function EditableTable<T extends Record<string, unknown>>({
 
       {/* Empty */}
       {rows.length === 0 && (
-        <div className="border border-dashed border-border rounded-lg py-4 text-center text-[12px] text-text-muted">
-          No items
+        <div className="py-6 text-center text-[12px] text-text-muted">
+          {t("common.noData")}
         </div>
       )}
-
-      {/* Add buttons */}
-      <div className="flex gap-2 pt-1">
-        <button
-          onClick={handleAdd}
-          disabled={disableAdd}
-          className="flex items-center gap-1 rounded-lg border border-border px-2.5 py-1.5 text-[12px] font-medium text-text-secondary hover:bg-surface-2 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-        >
-          <Plus size={13} /> {addLabel}
-        </button>
-        {onAddCustom && (
-          <button
-            onClick={onAddCustom}
-            className="flex items-center gap-1 rounded-lg border border-border px-2.5 py-1.5 text-[12px] font-medium text-text-secondary hover:bg-surface-2 transition-colors"
-          >
-            <Plus size={13} /> {addCustomLabel || "Add Custom"}
-          </button>
-        )}
-      </div>
     </div>
   );
 }

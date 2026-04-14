@@ -9,8 +9,10 @@ import { useModal } from "../components/Modal";
 import { useOrganization } from "../OrganizationContext";
 import * as AppBackend from "../backend/ApplicationBackend";
 import type { Application } from "../backend/ApplicationBackend";
+import * as GroupBackend from "../backend/GroupBackend";
 import { friendlyError } from "../utils/errorHelper";
 import SimpleSelect from "../components/SimpleSelect";
+import SingleSearchSelect from "../components/SingleSearchSelect";
 import ImageUrlInput from "../components/ImageUrlInput";
 import SaveButton from "../components/SaveButton";
 import UnsavedBanner from "../components/UnsavedBanner";
@@ -130,6 +132,7 @@ export default function ApplicationEditPage() {
   const [activeTab, setActiveTab] = useState("basic");
   const [samlMetadata, setSamlMetadata] = useState("");
   const [loadingMetadata, setLoadingMetadata] = useState(false);
+  const [groupOptions, setGroupOptions] = useState<{ value: string; label: string }[]>([]);
 
   const invalidateList = () => queryClient.invalidateQueries({ queryKey: ["applications"] });
 
@@ -154,6 +157,20 @@ export default function ApplicationEditPage() {
   }, [name, isNew]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
+
+  // Fetch groups for the application's organization
+  useEffect(() => {
+    const orgOwner = app.organization || orgName;
+    if (!orgOwner) return;
+    GroupBackend.getGroups({ owner: orgOwner, pageSize: 100 }).then((res) => {
+      if (res.status === "ok" && Array.isArray(res.data)) {
+        setGroupOptions(res.data.map((g) => ({
+          value: `${g.owner}/${g.name}`,
+          label: `${g.type === "Physical" ? "📁" : "📂"} ${g.displayName || g.name}`,
+        })));
+      }
+    }).catch(() => {});
+  }, [app.organization, orgName]);
 
   const fetchSamlMetadata = useCallback(async () => {
     if (!orgName || !name) return;
@@ -349,7 +366,12 @@ export default function ApplicationEditPage() {
           <input type="number" value={app.cookieExpireInHours ?? 720} onChange={(e) => set("cookieExpireInHours", Number(e.target.value))} min={1} step={1} className={monoInputClass} />
         </FormField>
         <FormField label={t("apps.field.defaultGroup" as any)}>
-          <input value={String(app.defaultGroup ?? "")} onChange={(e) => set("defaultGroup", e.target.value)} className={inputClass} />
+          <SingleSearchSelect
+            value={String(app.defaultGroup ?? "")}
+            options={groupOptions}
+            onChange={(v) => set("defaultGroup", v)}
+            placeholder={t("common.search" as any)}
+          />
         </FormField>
         <FormField label={t("apps.field.enableSignUp")}>
           <Switch checked={!!app.enableSignUp} onChange={(v) => set("enableSignUp", v)} />
@@ -483,8 +505,9 @@ export default function ApplicationEditPage() {
           </FormField>
         )}
         {app.tokenFormat === "JWT-Custom" && (
-          <FormField label={t("apps.oauth.tokenAttributes" as any)} span="full">
+          <div className="col-span-2">
             <EditableTable
+              title={t("apps.oauth.tokenAttributes" as any)}
               columns={[
                 { key: "name", title: t("col.name" as any), width: "25%", placeholder: "e.g., department" },
                 { key: "category", title: t("apps.oauth.category" as any), width: "20%", type: "select", options: TOKEN_ATTR_CATEGORIES },
@@ -501,9 +524,8 @@ export default function ApplicationEditPage() {
               rows={(app.tokenAttributes as Record<string, unknown>[]) ?? []}
               onChange={(rows) => set("tokenAttributes", rows)}
               newRow={() => ({ name: "", value: "", type: "Array", category: "Static Value" })}
-              addLabel={t("common.add")}
             />
-          </FormField>
+          </div>
         )}
         <FormField label={t("apps.field.expireInHours")} help={t("help.tokenLifetime" as any)}>
           <input type="number" value={app.expireInHours ?? 168} onChange={(e) => set("expireInHours", Number(e.target.value))} min={0.01} step={0.01} className={monoInputClass} />
@@ -515,21 +537,27 @@ export default function ApplicationEditPage() {
 
       {/* Scopes table — only for Agent category */}
       {app.category === "Agent" && (
-        <FormSection title={t("apps.oauth.scopes" as any)}>
-          <FormField label="" span="full">
-            <EditableTable
-              columns={[
-                { key: "name", title: t("col.name" as any), width: "25%", placeholder: "e.g., files:read" },
-                { key: "displayName", title: t("col.displayName" as any), width: "25%", placeholder: "e.g., Read Files" },
-                { key: "description", title: t("field.description" as any), placeholder: "e.g., Allow reading your files" },
-              ]}
-              rows={(app.scopes as Record<string, unknown>[]) ?? []}
-              onChange={(rows) => set("scopes", rows)}
-              newRow={() => ({ name: "", displayName: "", description: "" })}
-              addLabel={t("common.add")}
-            />
-          </FormField>
-        </FormSection>
+        <EditableTable
+          title={t("apps.oauth.scopes" as any)}
+          columns={[
+            { key: "name", title: t("col.name" as any), width: "20%", placeholder: "e.g., files:read" },
+            { key: "displayName", title: t("col.displayName" as any), width: "20%", placeholder: "e.g., Read Files" },
+            { key: "description", title: t("field.description" as any), width: "30%", placeholder: "e.g., Allow reading your files" },
+            { key: "tools", title: t("apps.oauth.tools" as any), width: "20%",
+              render: (row, _i, onChange) => (
+                <input
+                  value={Array.isArray(row.tools) ? (row.tools as string[]).join(", ") : String(row.tools ?? "")}
+                  onChange={(e) => onChange("tools", e.target.value.split(",").map((s: string) => s.trim()).filter(Boolean))}
+                  placeholder="tool1, tool2, ..."
+                  className={`${inputClass} !py-1 !text-[12px]`}
+                />
+              ),
+            },
+          ]}
+          rows={(app.scopes as Record<string, unknown>[]) ?? []}
+          onChange={(rows) => set("scopes", rows)}
+          newRow={() => ({ name: "", displayName: "", description: "", tools: [] })}
+        />
       )}
     </div>
   );
@@ -591,17 +619,13 @@ export default function ApplicationEditPage() {
 
       {/* SAML Attributes Table */}
       {!app.disableSamlAttributes && (
-        <FormSection title={t("apps.saml.attributes" as any)}>
-          <FormField label="" span="full">
-            <EditableTable
-              columns={samlAttributeColumns}
-              rows={(app.samlAttributes as Record<string, unknown>[]) ?? []}
-              onChange={(rows) => set("samlAttributes", rows)}
-              newRow={() => ({ Name: "", nameFormat: "", value: "" })}
-              addLabel={t("common.add")}
-            />
-          </FormField>
-        </FormSection>
+        <EditableTable
+          title={t("apps.saml.attributes" as any)}
+          columns={samlAttributeColumns}
+          rows={(app.samlAttributes as Record<string, unknown>[]) ?? []}
+          onChange={(rows) => set("samlAttributes", rows)}
+          newRow={() => ({ Name: "", nameFormat: "", value: "" })}
+        />
       )}
 
       {/* SAML Metadata */}
@@ -862,51 +886,47 @@ export default function ApplicationEditPage() {
         <FormField label={t("apps.field.orgChoiceMode" as any)}>
           <SimpleSelect value={String(app.orgChoiceMode ?? "None")} options={[{ value: "None", label: "None" }, { value: "Select", label: "Select" }, { value: "Input", label: "Input" }]} onChange={(v) => set("orgChoiceMode", v)} />
         </FormField>
-        <FormField label={t("apps.field.signinMethods" as any)} span="full">
+        <div className="col-span-2">
           <EditableTable
+            title={t("apps.field.signinMethods" as any)}
             columns={signinMethodColumns}
             rows={(app.signinMethods as Record<string, unknown>[]) ?? []}
             onChange={(rows) => set("signinMethods", rows)}
             newRow={() => ({ name: "", displayName: "", rule: "None" })}
-            addLabel={t("common.add")}
             minRows={1}
             disableAdd={availableSigninMethods.length === 0}
           />
-        </FormField>
+        </div>
         <FormField label={t("apps.field.signupHtml" as any)} span="full">
           <textarea value={String(app.signupHtml ?? "")} onChange={(e) => set("signupHtml", e.target.value)} rows={3} className={`${inputClass} font-mono text-[12px]`} />
         </FormField>
         <FormField label={t("apps.field.signinHtml" as any)} span="full">
           <textarea value={String(app.signinHtml ?? "")} onChange={(e) => set("signinHtml", e.target.value)} rows={3} className={`${inputClass} font-mono text-[12px]`} />
         </FormField>
-        <FormField label={t("apps.field.signinItems" as any)} span="full">
+        <div className="col-span-2">
           <EditableTable
+            title={t("apps.field.signinItems" as any)}
             columns={signinItemColumns}
             rows={(app.signinItems as Record<string, unknown>[]) ?? []}
             onChange={(rows) => set("signinItems", rows)}
             newRow={() => ({ name: "", visible: true, required: true, rule: "None" })}
-            addLabel={t("common.add")}
             onAddCustom={() => {
               const items = (app.signinItems as Record<string, unknown>[]) ?? [];
               set("signinItems", [...items, { name: `Text ${Date.now()}`, visible: true, isCustom: true }]);
             }}
             addCustomLabel={t("apps.ui.addCustom" as any)}
           />
-        </FormField>
+        </div>
       </FormSection>
 
       {!!app.enableSignUp && (
-        <FormSection title={t("apps.section.signupUi" as any)}>
-          <FormField label={t("apps.field.signupItems" as any)} span="full">
-            <EditableTable
-              columns={signupItemColumns}
-              rows={(app.signupItems as Record<string, unknown>[]) ?? []}
-              onChange={(rows) => set("signupItems", rows)}
-              newRow={() => ({ name: "", visible: true, required: true, options: [], rule: "None", customCss: "" })}
-              addLabel={t("common.add")}
-            />
-          </FormField>
-        </FormSection>
+        <EditableTable
+          title={t("apps.field.signupItems" as any)}
+          columns={signupItemColumns}
+          rows={(app.signupItems as Record<string, unknown>[]) ?? []}
+          onChange={(rows) => set("signupItems", rows)}
+          newRow={() => ({ name: "", visible: true, required: true, options: [], rule: "None", customCss: "" })}
+        />
       )}
 
       <FormSection title={t("apps.section.formLayout" as any)}>
@@ -1148,7 +1168,7 @@ function RedirectUriEditor({ uris, onChange }: { uris: string[]; onChange: (v: s
         />
         <button
           onClick={() => { if (input.trim()) { onChange([...uris, input.trim()]); setInput(""); } }}
-          className="rounded-lg border border-border px-3 py-2 text-[12px] font-medium text-text-secondary hover:bg-surface-2 transition-colors"
+          className="rounded-lg bg-accent px-3 py-2 text-[12px] font-medium text-white hover:bg-accent-hover transition-colors"
         >
           {t("apps.addUri" as any)}
         </button>
@@ -1215,7 +1235,7 @@ function ProviderAdder({ onAdd }: { onAdd: (name: string) => void }) {
       />
       <button
         onClick={() => { if (input.trim()) { onAdd(input.trim()); setInput(""); } }}
-        className="rounded-lg border border-border px-3 py-2 text-[12px] font-medium text-text-secondary hover:bg-surface-2 transition-colors"
+        className="rounded-lg bg-accent px-3 py-2 text-[12px] font-medium text-white hover:bg-accent-hover transition-colors"
       >
         {t("common.add" as any)}
       </button>
