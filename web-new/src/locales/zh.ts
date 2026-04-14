@@ -162,6 +162,7 @@ const zh: Record<string, string> = {
   // Column headers
   "col.name": "名称",
   "col.displayName": "显示名称",
+  "col.value": "值",
   "col.organization": "组织",
   "col.created": "创建时间",
   "col.updated": "更新时间",

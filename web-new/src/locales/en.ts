@@ -162,6 +162,7 @@ const en = {
   // Column headers (shared across tables)
   "col.name": "Name",
   "col.displayName": "Display Name",
+  "col.value": "Value",
   "col.organization": "Organization",
   "col.created": "Created",
   "col.updated": "Updated",

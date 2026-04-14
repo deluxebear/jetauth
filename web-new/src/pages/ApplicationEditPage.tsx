@@ -10,6 +10,7 @@ import { useOrganization } from "../OrganizationContext";
 import * as AppBackend from "../backend/ApplicationBackend";
 import type { Application } from "../backend/ApplicationBackend";
 import * as GroupBackend from "../backend/GroupBackend";
+import * as CertBackend from "../backend/CertBackend";
 import { friendlyError } from "../utils/errorHelper";
 import SimpleSelect from "../components/SimpleSelect";
 import SingleSearchSelect from "../components/SingleSearchSelect";
@@ -133,6 +134,7 @@ export default function ApplicationEditPage() {
   const [samlMetadata, setSamlMetadata] = useState("");
   const [loadingMetadata, setLoadingMetadata] = useState(false);
   const [groupOptions, setGroupOptions] = useState<{ value: string; label: string }[]>([]);
+  const [certOptions, setCertOptions] = useState<{ value: string; label: string }[]>([]);
 
   const invalidateList = () => queryClient.invalidateQueries({ queryKey: ["applications"] });
 
@@ -172,21 +174,32 @@ export default function ApplicationEditPage() {
     }).catch(() => {});
   }, [app.organization, orgName]);
 
+  // Fetch certs for the application's organization
+  useEffect(() => {
+    const certOwner = app.isShared ? "admin" : (app.organization || orgName);
+    if (!certOwner) return;
+    CertBackend.getCerts({ owner: certOwner, pageSize: 100 }).then((res) => {
+      if (res.status === "ok" && Array.isArray(res.data)) {
+        setCertOptions(res.data.map((c) => ({ value: c.name, label: c.name })));
+      }
+    }).catch(() => {});
+  }, [app.organization, app.isShared, orgName]);
+
   const fetchSamlMetadata = useCallback(async () => {
-    if (!orgName || !name) return;
+    if (!name) return;
     setLoadingMetadata(true);
     try {
-      const xml = await AppBackend.getSamlMetadata(orgName, name, !!app.enableSamlPostBinding);
+      const xml = await AppBackend.getSamlMetadata("admin", name, !!app.enableSamlPostBinding);
       setSamlMetadata(xml);
     } catch { setSamlMetadata(""); }
     finally { setLoadingMetadata(false); }
-  }, [orgName, name, app.enableSamlPostBinding]);
+  }, [name, app.enableSamlPostBinding]);
 
   useEffect(() => {
-    if (activeTab === "saml" && !samlMetadata && !loadingMetadata) {
+    if (!isNew && name && !samlMetadata && !loadingMetadata) {
       fetchSamlMetadata();
     }
-  }, [activeTab, samlMetadata, loadingMetadata, fetchSamlMetadata]);
+  }, [isNew, name, samlMetadata, loadingMetadata, fetchSamlMetadata]);
 
   const set = (key: string, val: unknown) => setApp((p) => ({ ...p, [key]: val }));
 
@@ -631,33 +644,24 @@ export default function ApplicationEditPage() {
       {/* SAML Metadata */}
       <FormSection title={t("apps.saml.metadata" as any)}>
         <FormField label="" span="full">
-          <div className="space-y-2">
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => {
-                  const url = `${window.location.origin}/api/saml/metadata?application=${orgName}/${name}`;
-                  navigator.clipboard.writeText(url);
-                  modal.toast(t("common.copySuccess" as any));
-                }}
-                className="flex items-center gap-1.5 rounded-lg border border-border px-2.5 py-1.5 text-[12px] font-medium text-text-secondary hover:bg-surface-2 transition-colors"
-              >
-                <Copy size={13} /> {t("apps.saml.copyMetadataUrl" as any)}
-              </button>
-              <button
-                onClick={fetchSamlMetadata}
-                disabled={loadingMetadata}
-                className="flex items-center gap-1.5 rounded-lg border border-border px-2.5 py-1.5 text-[12px] font-medium text-text-secondary hover:bg-surface-2 transition-colors disabled:opacity-50"
-              >
-                {t("common.refresh")}
-              </button>
-            </div>
+          <div className="space-y-3">
             <textarea
               value={samlMetadata}
               readOnly
-              rows={10}
-              className={`${inputClass} font-mono text-[11px] bg-surface-2 cursor-default`}
+              rows={12}
+              className={`${inputClass} font-mono text-[11px] bg-surface-2 cursor-default whitespace-pre`}
               placeholder={loadingMetadata ? t("common.loading" as any) : t("apps.saml.metadataPlaceholder" as any)}
             />
+            <button
+              onClick={() => {
+                const url = `${window.location.origin}/api/saml/metadata?application=admin/${encodeURIComponent(name!)}&enablePostBinding=${!!app.enableSamlPostBinding}`;
+                navigator.clipboard.writeText(url);
+                modal.toast(t("common.copySuccess" as any));
+              }}
+              className="flex items-center gap-1.5 rounded-lg bg-accent px-3 py-1.5 text-[12px] font-medium text-white hover:bg-accent-hover transition-colors"
+            >
+              <Copy size={13} /> {t("apps.saml.copyMetadataUrl" as any)}
+            </button>
           </div>
         </FormField>
       </FormSection>
@@ -994,10 +998,20 @@ export default function ApplicationEditPage() {
     <div className="space-y-5">
       <FormSection title={t("apps.section.certs" as any)}>
         <FormField label={t("apps.field.tokenCert" as any)}>
-          <input value={String(app.cert ?? "")} onChange={(e) => set("cert", e.target.value)} className={inputClass} placeholder={t("help.placeholder.certBuiltIn" as any)} />
+          <SingleSearchSelect
+            value={String(app.cert ?? "")}
+            options={certOptions}
+            onChange={(v) => set("cert", v)}
+            placeholder={t("common.search" as any)}
+          />
         </FormField>
         <FormField label={t("apps.field.clientCert" as any)}>
-          <input value={String(app.clientCert ?? "")} onChange={(e) => set("clientCert", e.target.value)} className={inputClass} />
+          <SingleSearchSelect
+            value={String(app.clientCert ?? "")}
+            options={certOptions}
+            onChange={(v) => set("clientCert", v)}
+            placeholder={t("common.search" as any)}
+          />
         </FormField>
       </FormSection>
 
@@ -1056,7 +1070,12 @@ export default function ApplicationEditPage() {
           <SimpleSelect value={String(app.sslMode ?? "")} options={SSL_MODES} onChange={(v) => set("sslMode", v)} />
         </FormField>
         <FormField label={t("apps.field.sslCert" as any)}>
-          <input value={String(app.sslCert ?? "")} onChange={(e) => set("sslCert", e.target.value)} className={inputClass} />
+          <SingleSearchSelect
+            value={String(app.sslCert ?? "")}
+            options={[{ value: "", label: "None" }, ...certOptions]}
+            onChange={(v) => set("sslCert", v)}
+            placeholder={t("common.search" as any)}
+          />
         </FormField>
       </FormSection>
     </div>
