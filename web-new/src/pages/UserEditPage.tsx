@@ -1081,14 +1081,21 @@ function SimpleTable({ data, columns, emptyText }: { data: Record<string, unknow
 }
 
 // ── MFA Items Table (Name + Rule, max 4) ──
-const MFA_NAME_KEYS = ["Phone", "Email", "App", "Push"];
+// MFA item names: display key → backend value (must match Go constants in object/mfa.go)
+const MFA_ITEMS = [
+  { display: "Phone", value: "sms" },
+  { display: "Email", value: "email" },
+  { display: "App", value: "app" },
+  { display: "Push", value: "push" },
+];
 const MFA_RULE_KEYS = ["Optional", "Prompt", "Required"];
 
 function MfaItemsTable({ items, onChange, t }: { items: { name: string; rule: string }[]; onChange: (v: { name: string; rule: string }[]) => void; t: (k: string) => string }) {
-  const usedNames = new Set(items.map((i) => i.name));
+  const usedValues = new Set(items.map((i) => i.name));
+  const getDisplayName = (val: string) => MFA_ITEMS.find((m) => m.value === val)?.display ?? val;
   const addRow = () => {
-    const nextName = MFA_NAME_KEYS.find((n) => !usedNames.has(n)) ?? "Phone";
-    onChange([...items, { name: nextName, rule: "Optional" }]);
+    const next = MFA_ITEMS.find((m) => !usedValues.has(m.value));
+    onChange([...items, { name: next?.value ?? "sms", rule: "Optional" }]);
   };
   const updateField = (idx: number, key: string, value: string) => {
     const next = [...items]; next[idx] = { ...next[idx], [key]: value }; onChange(next);
@@ -1118,8 +1125,8 @@ function MfaItemsTable({ items, onChange, t }: { items: { name: string; rule: st
                 <td className="px-3 py-1.5">
                   <SimpleSelect value={item.name}
                     options={[
-                      { value: item.name, label: t(`users.mfaName.${item.name}` as any) },
-                      ...MFA_NAME_KEYS.filter((n) => !usedNames.has(n)).map((n) => ({ value: n, label: t(`users.mfaName.${n}` as any) })),
+                      { value: item.name, label: t(`users.mfaName.${getDisplayName(item.name)}` as any) },
+                      ...MFA_ITEMS.filter((m) => !usedValues.has(m.value)).map((m) => ({ value: m.value, label: t(`users.mfaName.${m.display}` as any) })),
                     ]}
                     onChange={(v) => updateField(idx, "name", v)} compact />
                 </td>
@@ -1432,7 +1439,7 @@ function MfaSection({ multiFactorAuths, user, isSelf, isAdmin, onRefresh, t }: {
             modal.toast(initRes.msg || t("users.mfa.enableFailed" as any), "error");
             return;
           }
-          const enableRes = await MfaBackend.mfaSetupEnable(user.owner, user.name, mfaType);
+          const enableRes = await MfaBackend.mfaSetupEnable(mfaType, user as Record<string, unknown>);
           if (enableRes.status === "ok") {
             modal.toast(t("users.mfa.enableSuccess" as any));
             onRefresh?.();

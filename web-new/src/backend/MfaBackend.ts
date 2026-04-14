@@ -31,6 +31,19 @@ export function mfaSetupInitiate(owner: string, name: string, mfaType: string) {
   return postForm("/api/mfa/setup/initiate", { owner, name, mfaType });
 }
 
-export function mfaSetupEnable(owner: string, name: string, mfaType: string) {
-  return postForm("/api/mfa/setup/enable", { owner, name, mfaType });
+// Matches original: MfaSetupEnable({mfaType, ...user})
+// Backend expects: mfaType, owner, name, secret, recoveryCodes, dest, countryCode
+export function mfaSetupEnable(
+  mfaType: string,
+  user: Record<string, unknown>
+) {
+  return postForm("/api/mfa/setup/enable", {
+    mfaType,
+    owner: String(user.owner ?? ""),
+    name: String(user.name ?? ""),
+    secret: String(user.secret ?? ""),
+    recoveryCodes: String(user.recoveryCodes ?? ""),
+    dest: String(mfaType === "email" ? (user.email ?? "") : (user.phone ?? "")),
+    countryCode: String(user.countryCode ?? ""),
+  });
 }
