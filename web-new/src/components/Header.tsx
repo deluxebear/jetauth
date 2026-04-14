@@ -1,9 +1,8 @@
-import { Bell, LogOut, ChevronDown, Sun, Moon, Globe, Building2, UserCircle } from "lucide-react";
+import { Bell, LogOut, ChevronDown, Sun, Moon, Globe, UserCircle } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "../i18n";
 import { useTheme } from "../theme";
-import { useOrganization } from "../OrganizationContext";
 
 interface HeaderProps {
   user: { owner: string; name: string; displayName: string; avatar: string } | null;
@@ -13,13 +12,10 @@ interface HeaderProps {
 export default function Header({ user, onLogout }: HeaderProps) {
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [langMenuOpen, setLangMenuOpen] = useState(false);
-  const [orgMenuOpen, setOrgMenuOpen] = useState(false);
   const userRef = useRef<HTMLDivElement>(null);
   const langRef = useRef<HTMLDivElement>(null);
-  const orgRef = useRef<HTMLDivElement>(null);
   const { t, locale, setLocale, locales } = useTranslation();
   const { theme, toggle: toggleTheme } = useTheme();
-  const { selectedOrg, setSelectedOrg, orgOptions, isGlobalAdmin } = useOrganization();
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -27,64 +23,13 @@ export default function Header({ user, onLogout }: HeaderProps) {
         setUserMenuOpen(false);
       if (langRef.current && !langRef.current.contains(e.target as Node))
         setLangMenuOpen(false);
-      if (orgRef.current && !orgRef.current.contains(e.target as Node))
-        setOrgMenuOpen(false);
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
   return (
-    <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-border bg-surface-1/80 backdrop-blur-md px-6">
-      {/* Organization selector */}
-      <div className="relative" ref={orgRef}>
-        {isGlobalAdmin ? (
-          <>
-            <button
-              onClick={() => setOrgMenuOpen(!orgMenuOpen)}
-              className="flex items-center gap-2 rounded-lg border border-border bg-surface-2 px-3 py-1.5 text-[13px] text-text-primary hover:border-accent/50 transition-colors min-w-[160px]"
-            >
-              <Building2 size={15} className="text-text-muted shrink-0" />
-              <span className="truncate">
-                {selectedOrg === "All" ? t("common.all" as any) : orgOptions.find((o) => o.name === selectedOrg)?.displayName || selectedOrg}
-              </span>
-              <ChevronDown size={14} className="text-text-muted ml-auto shrink-0" />
-            </button>
-            {orgMenuOpen && (
-              <div className="absolute left-0 top-full mt-1 w-64 max-h-80 overflow-y-auto rounded-lg border border-border bg-surface-2 py-1 shadow-[var(--shadow-elevated)] z-50">
-                <button
-                  onClick={() => { setSelectedOrg("All"); setOrgMenuOpen(false); }}
-                  className={`flex w-full items-center gap-2 px-3 py-2 text-[13px] transition-colors ${
-                    selectedOrg === "All" ? "text-accent bg-accent-subtle font-medium" : "text-text-secondary hover:bg-surface-3"
-                  }`}
-                >
-                  {t("common.all" as any)}
-                </button>
-                {orgOptions.map((org) => (
-                  <button
-                    key={org.name}
-                    onClick={() => { setSelectedOrg(org.name); setOrgMenuOpen(false); }}
-                    className={`flex w-full items-center gap-2 px-3 py-2 text-[13px] transition-colors ${
-                      selectedOrg === org.name ? "text-accent bg-accent-subtle font-medium" : "text-text-secondary hover:bg-surface-3"
-                    }`}
-                  >
-                    {org.displayName || org.name}
-                  </button>
-                ))}
-              </div>
-            )}
-          </>
-        ) : (
-          /* Non-global admins: locked to their own org, no dropdown */
-          <div className="flex items-center gap-2 rounded-lg border border-border bg-surface-2 px-3 py-1.5 text-[13px] text-text-primary min-w-[160px] cursor-default">
-            <Building2 size={15} className="text-text-muted shrink-0" />
-            <span className="truncate">
-              {orgOptions.find((o) => o.name === selectedOrg)?.displayName || selectedOrg}
-            </span>
-          </div>
-        )}
-      </div>
-
+    <header className="sticky top-0 z-20 flex h-14 items-center justify-end border-b border-border bg-surface-1/80 backdrop-blur-md px-6">
       {/* Right side */}
       <div className="flex items-center gap-1.5">
         {/* Theme toggle */}

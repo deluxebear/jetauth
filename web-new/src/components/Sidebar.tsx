@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState, useRef } from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
@@ -7,12 +7,13 @@ import {
   CreditCard, Boxes, ShoppingBag, ShoppingCart, CalendarCheck, Tag, Repeat, ClipboardList,
   ArrowLeftRight, Monitor, TicketCheck, FolderOpen, Key, Cable, Gavel,
   Bot, Server, Store, DoorOpen, Scale, BadgeCheck, Info, FileText, KeySquare,
-  RefreshCw, Webhook, Zap, Ticket, FileCode,
+  RefreshCw, Webhook, Zap, Ticket, FileCode, Search, Check, ChevronsUpDown,
 } from "lucide-react";
 import { type ReactNode } from "react";
 import { useTranslation } from "../i18n";
 import { useTheme } from "../theme";
 import { useSidebar } from "../SidebarContext";
+import { useOrganization } from "../OrganizationContext";
 import { navGroups } from "../navConfig";
 import { isGlobalAdmin, isLocalAdmin, type Account } from "../utils/auth";
 
@@ -87,10 +88,145 @@ function getAllowedKeys(items: unknown): Set<string> | null {
   return new Set(items as string[]);
 }
 
+// ── Organization Selector (sidebar top) ──
+function SidebarOrgSelector({
+  collapsed, isGlobalAdmin, selectedOrg, setSelectedOrg, orgOptions, t,
+}: {
+  collapsed: boolean;
+  isGlobalAdmin: boolean;
+  selectedOrg: string;
+  setSelectedOrg: (org: string) => void;
+  orgOptions: { name: string; displayName: string }[];
+  t: (key: string) => string;
+}) {
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState("");
+  const ref = useRef<HTMLDivElement>(null);
+  const searchRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) { setOpen(false); setSearch(""); }
+    };
+    if (open) { document.addEventListener("mousedown", handler); return () => document.removeEventListener("mousedown", handler); }
+  }, [open]);
+
+  useEffect(() => {
+    if (open) requestAnimationFrame(() => searchRef.current?.focus());
+  }, [open]);
+
+  const currentLabel = selectedOrg === "All"
+    ? t("common.all" as any)
+    : orgOptions.find((o) => o.name === selectedOrg)?.displayName || selectedOrg;
+
+  const filtered = orgOptions.filter((o) => {
+    if (!search) return true;
+    const s = search.toLowerCase();
+    return o.name.toLowerCase().includes(s) || (o.displayName || "").toLowerCase().includes(s);
+  });
+
+  // Collapsed: show icon only, click to expand dropdown
+  if (collapsed) {
+    return (
+      <div className="px-2 py-2 border-b border-border-subtle" ref={ref}>
+        <button
+          onClick={() => { if (isGlobalAdmin) setOpen(!open); }}
+          title={currentLabel}
+          className={`flex items-center justify-center w-full h-8 rounded-lg transition-colors ${
+            isGlobalAdmin ? "hover:bg-surface-2 cursor-pointer" : "cursor-default"
+          }`}
+        >
+          <Building2 size={18} className="text-text-muted" />
+        </button>
+        {open && (
+          <div className="absolute left-full top-14 ml-1 z-50 w-64 rounded-xl border border-border bg-surface-1 shadow-[var(--shadow-elevated)] overflow-hidden">
+            <div className="p-2 border-b border-border-subtle">
+              <div className="relative">
+                <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none" />
+                <input ref={searchRef} value={search} onChange={(e) => setSearch(e.target.value)}
+                  placeholder={t("common.search" as any)}
+                  className="w-full rounded-lg border border-border bg-surface-2 pl-8 pr-3 py-1.5 text-[12px] text-text-primary placeholder:text-text-muted outline-none focus:border-accent transition-colors" />
+              </div>
+            </div>
+            <div className="max-h-64 overflow-y-auto py-1">
+              <button onClick={() => { setSelectedOrg("All"); setOpen(false); setSearch(""); }}
+                className={`flex w-full items-center gap-2 px-3 py-2 text-[13px] transition-colors ${
+                  selectedOrg === "All" ? "text-accent bg-accent/8 font-medium" : "text-text-primary hover:bg-surface-2"
+                }`}>
+                <span className="flex-1 text-left">{t("common.all" as any)}</span>
+                {selectedOrg === "All" && <Check size={14} className="text-accent shrink-0" />}
+              </button>
+              {filtered.map((o) => (
+                <button key={o.name} onClick={() => { setSelectedOrg(o.name); setOpen(false); setSearch(""); }}
+                  className={`flex w-full items-center gap-2 px-3 py-2 text-[13px] transition-colors ${
+                    selectedOrg === o.name ? "text-accent bg-accent/8 font-medium" : "text-text-primary hover:bg-surface-2"
+                  }`}>
+                  <span className="flex-1 text-left truncate">{o.displayName || o.name}</span>
+                  {selectedOrg === o.name && <Check size={14} className="text-accent shrink-0" />}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // Expanded: full org selector
+  return (
+    <div className="px-2 py-2 border-b border-border-subtle" ref={ref}>
+      <button
+        onClick={() => { if (isGlobalAdmin) setOpen(!open); }}
+        className={`flex items-center gap-2 w-full rounded-lg px-2.5 py-2 transition-colors ${
+          isGlobalAdmin ? "hover:bg-surface-2 cursor-pointer" : "cursor-default"
+        } ${open ? "bg-surface-2" : ""}`}
+      >
+        <Building2 size={16} className="text-text-muted shrink-0" />
+        <span className="text-[13px] font-medium text-text-primary truncate flex-1 text-left">{currentLabel}</span>
+        {isGlobalAdmin && <ChevronsUpDown size={14} className="text-text-muted shrink-0" />}
+      </button>
+      {open && (
+        <div className="mt-1 rounded-xl border border-border bg-surface-1 shadow-[var(--shadow-elevated)] overflow-hidden">
+          <div className="p-2 border-b border-border-subtle">
+            <div className="relative">
+              <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none" />
+              <input ref={searchRef} value={search} onChange={(e) => setSearch(e.target.value)}
+                placeholder={t("common.search" as any)}
+                className="w-full rounded-lg border border-border bg-surface-2 pl-8 pr-3 py-1.5 text-[12px] text-text-primary placeholder:text-text-muted outline-none focus:border-accent transition-colors" />
+            </div>
+          </div>
+          <div className="max-h-64 overflow-y-auto py-1">
+            <button onClick={() => { setSelectedOrg("All"); setOpen(false); setSearch(""); }}
+              className={`flex w-full items-center gap-2 px-3 py-2 text-[13px] transition-colors ${
+                selectedOrg === "All" ? "text-accent bg-accent/8 font-medium" : "text-text-primary hover:bg-surface-2"
+              }`}>
+              <span className="flex-1 text-left">{t("common.all" as any)}</span>
+              {selectedOrg === "All" && <Check size={14} className="text-accent shrink-0" />}
+            </button>
+            {filtered.map((o) => (
+              <button key={o.name} onClick={() => { setSelectedOrg(o.name); setOpen(false); setSearch(""); }}
+                className={`flex w-full items-center gap-2 px-3 py-2 text-[13px] transition-colors ${
+                  selectedOrg === o.name ? "text-accent bg-accent/8 font-medium" : "text-text-primary hover:bg-surface-2"
+                }`}>
+                <span className="flex-1 text-left truncate">{o.displayName || o.name}</span>
+                {selectedOrg === o.name && <Check size={14} className="text-accent shrink-0" />}
+              </button>
+            ))}
+            {filtered.length === 0 && (
+              <div className="px-3 py-4 text-center text-[12px] text-text-muted">{t("common.noResults" as any)}</div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function Sidebar({ account }: { account?: Account | null }) {
   const { collapsed, toggle, width, setVisible } = useSidebar();
   const location = useLocation();
   const { t } = useTranslation();
+  const { selectedOrg, setSelectedOrg, orgOptions, isGlobalAdmin: isGAOrg } = useOrganization();
 
   const isGA = isGlobalAdmin(account);
   const isLA = isLocalAdmin(account);
@@ -159,6 +295,16 @@ export default function Sidebar({ account }: { account?: Account | null }) {
           )
         )}
       </div>
+
+      {/* Organization Selector */}
+      <SidebarOrgSelector
+        collapsed={collapsed}
+        isGlobalAdmin={isGAOrg}
+        selectedOrg={selectedOrg}
+        setSelectedOrg={setSelectedOrg}
+        orgOptions={orgOptions}
+        t={t}
+      />
 
       {/* Nav */}
       <nav className="flex-1 overflow-y-auto py-3 px-2">
