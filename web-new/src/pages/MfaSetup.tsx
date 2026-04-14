@@ -52,10 +52,13 @@ export default function MfaSetup({
   const [countdown, setCountdown] = useState(0);
   const [copied, setCopied] = useState(false);
 
+  // Only apply/clear theme in login flow (encryptedPassword present means login-triggered).
+  // For logged-in users (from personal settings), Layout already handles the theme.
+  const isLoginFlow = !!encryptedPassword;
   useEffect(() => {
-    if (themeData?.isEnabled) applyOrgTheme(themeData);
-    return () => clearOrgTheme();
-  }, [themeData, applyOrgTheme, clearOrgTheme]);
+    if (isLoginFlow && themeData?.isEnabled) applyOrgTheme(themeData);
+    return () => { if (isLoginFlow) clearOrgTheme(); };
+  }, [themeData, isLoginFlow, applyOrgTheme, clearOrgTheme]);
 
   useEffect(() => {
     if (countdown <= 0) return;

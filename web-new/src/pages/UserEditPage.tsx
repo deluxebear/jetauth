@@ -20,6 +20,7 @@ import ImageUrlInput from "../components/ImageUrlInput";
 import CurrencySelect from "../components/CurrencySelect";
 import SimpleSelect from "../components/SimpleSelect";
 import SaveButton from "../components/SaveButton";
+import PasswordModal from "../components/PasswordModal";
 import UnsavedBanner from "../components/UnsavedBanner";
 import { useUnsavedWarning } from "../hooks/useUnsavedWarning";
 
@@ -568,7 +569,16 @@ export default function UserEditPage() {
     <div className="space-y-5">
       {anySectionFieldVisible("Password", "IP whitelist") && (
       <FormSection title={t("users.section.security" as any)}>
-        {dynField("Password", undefined, <div className="flex gap-2 items-center">
+        {dynField("Password", undefined, isSelf ? (
+          <PasswordModal
+            userOwner={user.owner}
+            userName={user.name}
+            hasExistingPassword={!!user.password && user.password !== ""}
+            isAdmin={isAdmin}
+            disabled={isFieldDisabled("Password")}
+          />
+        ) : (
+          <div className="flex gap-2 items-center">
             <div className="relative flex-1">
               <input type={showPassword ? "text" : "password"} value={user.password ?? ""} onChange={(e) => set("password", e.target.value)} disabled={isFieldDisabled("Password")} className={monoInputClass} placeholder="***" />
               <button type="button" onClick={() => setShowPassword(!showPassword)}
@@ -582,7 +592,8 @@ export default function UserEditPage() {
               title={t("users.generatePassword" as any)}>
               {t("users.generatePassword" as any)}
             </button>
-          </div>)}
+          </div>
+        ))}
         {dynField("IP whitelist", undefined, <input value={user.ipWhitelist ?? ""} onChange={(e) => set("ipWhitelist", e.target.value)} disabled={isFieldDisabled("IP whitelist")} className={inputClass} placeholder="192.168.1.1, 10.0.0.0/8" />)}
       </FormSection>
       )}
@@ -782,19 +793,21 @@ export default function UserEditPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <button onClick={handleBack} className="rounded-lg p-1.5 text-text-muted hover:bg-surface-2 transition-colors">
-            <ArrowLeft size={18} />
-          </button>
+          {!isSelf && (
+            <button onClick={handleBack} className="rounded-lg p-1.5 text-text-muted hover:bg-surface-2 transition-colors">
+              <ArrowLeft size={18} />
+            </button>
+          )}
           <div className="flex items-center gap-3">
             {imgPreview(user.avatar)}
             <div>
-              <h1 className="text-xl font-bold tracking-tight">{isAddMode ? t("common.add") : t("common.edit")} {t("users.title" as any)}</h1>
-              <p className="text-[13px] text-text-muted font-mono mt-0.5">{owner}/{name}</p>
+              <h1 className="text-xl font-bold tracking-tight">{isSelf ? t("users.myProfile" as any) : `${isAddMode ? t("common.add") : t("common.edit")} ${t("users.title" as any)}`}</h1>
+              {!isSelf && <p className="text-[13px] text-text-muted font-mono mt-0.5">{owner}/{name}</p>}
             </div>
           </div>
         </div>
         <div className="flex items-center gap-2">
-          {!isBuiltInAdmin && (
+          {!isBuiltInAdmin && !isSelf && (
             <button onClick={handleDelete} className="flex items-center gap-1.5 rounded-lg border border-danger/30 px-3 py-2 text-[13px] font-medium text-danger hover:bg-danger/10 transition-colors">
               <Trash2 size={14} /> {t("common.delete")}
             </button>
@@ -1088,7 +1101,7 @@ const MFA_ITEMS = [
   { display: "App", value: "app" },
   { display: "Push", value: "push" },
 ];
-const MFA_RULE_KEYS = ["Optional", "Prompt", "Required"];
+const MFA_RULE_KEYS = ["Optional", "Prompted", "Required"];
 
 function MfaItemsTable({ items, onChange, t }: { items: { name: string; rule: string }[]; onChange: (v: { name: string; rule: string }[]) => void; t: (k: string) => string }) {
   const usedValues = new Set(items.map((i) => i.name));
@@ -1512,7 +1525,7 @@ function MfaSection({ multiFactorAuths, user, isSelf, isAdmin, onRefresh, t }: {
                   )}
                   {isSelf && (
                     <button onClick={() => navigate(`/mfa/setup?mfaType=${mfaType}`)}
-                      className="rounded-lg border border-border px-2 py-0.5 text-[11px] font-medium text-text-secondary hover:bg-surface-3 transition-colors">
+                      className="rounded-lg bg-accent px-2 py-0.5 text-[11px] font-medium text-white hover:bg-accent-hover transition-colors">
                       {t("users.mfa.setup" as any)}
                     </button>
                   )}

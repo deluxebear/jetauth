@@ -11,6 +11,7 @@ import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import MfaSetup from "./pages/MfaSetup";
 import MfaVerify from "./pages/MfaVerify";
+import EnableMfaNotification from "./components/EnableMfaNotification";
 import Dashboard from "./pages/Dashboard";
 import GenericListPage from "./components/GenericListPage";
 import GenericEditPage from "./components/GenericEditPage";
@@ -119,7 +120,18 @@ function Layout({
   const { selectedOrg, isAll } = useOrganization();
   const { applyOrgTheme, clearOrgTheme } = useTheme();
 
+  const isAdmin = user.owner === "built-in" || user.isAdmin;
+
   useEffect(() => {
+    if (!isAdmin) {
+      // Non-admin users: always apply their own org's theme
+      const orgData = JSON.parse(localStorage.getItem("organizationData") ?? "null");
+      if (orgData?.themeData?.isEnabled) {
+        applyOrgTheme(orgData.themeData);
+      }
+      return () => clearOrgTheme();
+    }
+    // Admin users: follow org selector
     if (isAll) {
       clearOrgTheme();
       return;
@@ -135,7 +147,7 @@ function Layout({
       }
     });
     return () => clearOrgTheme();
-  }, [selectedOrg, isAll, applyOrgTheme, clearOrgTheme]);
+  }, [selectedOrg, isAll, isAdmin, applyOrgTheme, clearOrgTheme]);
 
   return (
     <div className="min-h-screen bg-surface-0">
@@ -168,6 +180,7 @@ export default function App() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [loginError, setLoginError] = useState("");
+  const [justLoggedIn, setJustLoggedIn] = useState(false);
   const [loginThemeData, setLoginThemeData] = useState<any>(null);
   const [loginOrgBranding, setLoginOrgBranding] = useState<{ logo?: string; logoDark?: string; favicon?: string; displayName?: string } | null>(null);
   const [mfaState, setMfaState] = useState<{
@@ -301,6 +314,7 @@ export default function App() {
 
         const acc: any = await getAccount();
         if (applyAccountData(acc)) {
+          setJustLoggedIn(true);
           navigate("/");
         }
       } else {
@@ -312,6 +326,7 @@ export default function App() {
   };
 
   const handleLogout = async () => {
+    const userOrg = user?.owner;
     try {
       await apiLogout();
     } catch {}
@@ -324,7 +339,7 @@ export default function App() {
     if (link) link.href = "/img/favicon.png";
     document.title = "JetAuth";
     window.dispatchEvent(new Event("accountChanged"));
-    navigate("/login");
+    navigate(userOrg && userOrg !== "built-in" ? `/login/${userOrg}` : "/login");
   };
 
   const handleMfaSetupComplete = async () => {
@@ -569,13 +584,39 @@ export default function App() {
 
   const isAdmin = isLocalAdmin(user);
 
+  const mfaAccount = user ? {
+    ...user,
+    organization: JSON.parse(localStorage.getItem("organizationData") ?? "null") ?? undefined,
+  } : null;
+
   // Non-admin users: app list home + own profile
   if (!isAdmin) {
     return (
       <Layout user={user} onLogout={handleLogout}>
+        <EnableMfaNotification account={mfaAccount as any} justLoggedIn={justLoggedIn} onDismiss={() => setJustLoggedIn(false)} />
         <Routes>
           <Route path="/" element={<UserHomePage userOrg={user.owner} />} />
           <Route path="/users/:owner/:name" element={<UserEditPage />} />
+          <Route path="/mfa/setup" element={(() => {
+            const orgData = JSON.parse(localStorage.getItem("organizationData") ?? "null");
+            return (
+              <MfaSetup
+                mfaType={new URLSearchParams(window.location.search).get("mfaType") || "app"}
+                owner={user.owner}
+                name={user.name}
+                organization={user.owner}
+                application=""
+                encryptedPassword=""
+                themeData={orgData?.themeData}
+                orgBranding={orgData ? { logo: orgData.logo, logoDark: orgData.logoDark, displayName: orgData.displayName } : null}
+                onComplete={async () => {
+                  const acc: any = await getAccount();
+                  applyAccountData(acc);
+                  navigate("/");
+                }}
+              />
+            );
+          })()} />
           <Route path="/login" element={<Navigate to="/" replace />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
@@ -585,6 +626,7 @@ export default function App() {
 
   return (
     <Layout user={user} onLogout={handleLogout}>
+      <EnableMfaNotification account={mfaAccount as any} justLoggedIn={justLoggedIn} onDismiss={() => setJustLoggedIn(false)} />
       <Routes>
         <Route path="/" element={<Dashboard />} />
         {entityRoutes}
