@@ -1015,7 +1015,7 @@ function SingleSearchSelect({ value, options, onChange, placeholder }: {
               {opt.label}
             </button>
           ))}
-          {filtered.length === 0 && <div className="px-3 py-2 text-[12px] text-text-muted">No results</div>}
+          {filtered.length === 0 && <div className="px-3 py-2 text-[12px] text-text-muted">{t("common.noResults" as any)}</div>}
         </div>
       )}
     </div>

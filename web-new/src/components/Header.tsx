@@ -1,4 +1,4 @@
-import { Bell, LogOut, ChevronDown, Sun, Moon, Globe, UserCircle } from "lucide-react";
+import { LogOut, ChevronDown, Sun, Moon, Globe, UserCircle } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "../i18n";
@@ -75,12 +75,6 @@ export default function Header({ user, onLogout }: HeaderProps) {
             </div>
           )}
         </div>
-
-        {/* Notifications */}
-        <button className="relative rounded-lg p-2 text-text-muted hover:text-text-secondary hover:bg-surface-2 transition-colors">
-          <Bell size={17} />
-          <span className="absolute top-1.5 right-1.5 h-1.5 w-1.5 rounded-full bg-danger" />
-        </button>
 
         {/* User menu */}
         <div className="relative" ref={userRef}>

@@ -58,6 +58,7 @@ const zh: Record<string, string> = {
   "login.username": "用户名",
   "login.password": "密码",
   "login.submit": "登录",
+  "login.submitting": "登录中...",
   "login.error.failed": "登录失败",
   "login.error.network": "网络错误",
   "login.brand.title": "JetAuth",

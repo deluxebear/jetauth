@@ -58,6 +58,7 @@ const en = {
   "login.username": "Username",
   "login.password": "Password",
   "login.submit": "Sign in",
+  "login.submitting": "Signing in...",
   "login.error.failed": "Login failed",
   "login.error.network": "Network error",
   "login.brand.title": "JetAuth",

@@ -258,7 +258,10 @@ export default function Login({ onLogin, error, themeData, orgBranding, onOrgani
               className="login-btn group w-full flex items-center justify-center gap-2 bg-accent py-2.5 text-[14px] font-semibold text-white hover:bg-accent-hover disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 mt-2"
             >
               {loading ? (
-                <div className="h-4 w-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+                <>
+                  <div className="h-4 w-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+                  {t("login.submitting" as any)}
+                </>
               ) : (
                 <>
                   {t("login.submit")}
