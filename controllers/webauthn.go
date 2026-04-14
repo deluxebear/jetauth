@@ -36,7 +36,7 @@ import (
 func (c *ApiController) WebAuthnSignupBegin() {
 	webauthnObj, err := object.GetWebAuthnObject(c.Ctx.Request.Host)
 	if err != nil {
-		c.ResponseError(err.Error())
+		c.ResponseError(fmt.Sprintf(c.T("webauthn:Failed to get WebAuthn configuration: %s"), err.Error()))
 		return
 	}
 
@@ -61,7 +61,7 @@ func (c *ApiController) WebAuthnSignupBegin() {
 		registerOptions,
 	)
 	if err != nil {
-		c.ResponseError(err.Error())
+		c.ResponseError(fmt.Sprintf(c.T("webauthn:Failed to begin WebAuthn registration: %s"), err.Error()))
 		return
 	}
 	c.SetSession("registration", *sessionData)
@@ -79,7 +79,7 @@ func (c *ApiController) WebAuthnSignupBegin() {
 func (c *ApiController) WebAuthnSignupFinish() {
 	webauthnObj, err := object.GetWebAuthnObject(c.Ctx.Request.Host)
 	if err != nil {
-		c.ResponseError(err.Error())
+		c.ResponseError(fmt.Sprintf(c.T("webauthn:Failed to get WebAuthn configuration: %s"), err.Error()))
 		return
 	}
 
@@ -98,13 +98,13 @@ func (c *ApiController) WebAuthnSignupFinish() {
 
 	credential, err := webauthnObj.FinishRegistration(user, sessionData, c.Ctx.Request)
 	if err != nil {
-		c.ResponseError(err.Error())
+		c.ResponseError(fmt.Sprintf(c.T("webauthn:Failed to finish WebAuthn registration: %s"), err.Error()))
 		return
 	}
 	isGlobalAdmin := c.IsGlobalAdmin()
 	_, err = user.AddCredentials(*credential, isGlobalAdmin)
 	if err != nil {
-		c.ResponseError(err.Error())
+		c.ResponseError(fmt.Sprintf(c.T("webauthn:Failed to finish WebAuthn registration: %s"), err.Error()))
 		return
 	}
 
@@ -122,7 +122,7 @@ func (c *ApiController) WebAuthnSignupFinish() {
 func (c *ApiController) WebAuthnSigninBegin() {
 	webauthnObj, err := object.GetWebAuthnObject(c.Ctx.Request.Host)
 	if err != nil {
-		c.ResponseError(err.Error())
+		c.ResponseError(fmt.Sprintf(c.T("webauthn:Failed to get WebAuthn configuration: %s"), err.Error()))
 		return
 	}
 
@@ -155,7 +155,7 @@ func (c *ApiController) WebAuthnSigninBegin() {
 	}
 
 	if err != nil {
-		c.ResponseError(err.Error())
+		c.ResponseError(fmt.Sprintf(c.T("webauthn:Failed to begin WebAuthn login: %s"), err.Error()))
 		return
 	}
 	c.SetSession("authentication", *sessionData)
@@ -175,7 +175,7 @@ func (c *ApiController) WebAuthnSigninFinish() {
 	clientId := c.Ctx.Input.Query("clientId")
 	webauthnObj, err := object.GetWebAuthnObject(c.Ctx.Request.Host)
 	if err != nil {
-		c.ResponseError(err.Error())
+		c.ResponseError(fmt.Sprintf(c.T("webauthn:Failed to get WebAuthn configuration: %s"), err.Error()))
 		return
 	}
 
@@ -192,7 +192,7 @@ func (c *ApiController) WebAuthnSigninFinish() {
 		userId := string(sessionData.UserID)
 		user, err = object.GetUser(userId)
 		if err != nil {
-			c.ResponseError(err.Error())
+			c.ResponseError(fmt.Sprintf(c.T("webauthn:Failed to finish WebAuthn login: %s"), err.Error()))
 			return
 		}
 
@@ -210,7 +210,7 @@ func (c *ApiController) WebAuthnSigninFinish() {
 	}
 
 	if err != nil {
-		c.ResponseError(err.Error())
+		c.ResponseError(fmt.Sprintf(c.T("webauthn:Failed to finish WebAuthn login: %s"), err.Error()))
 		return
 	}
 	c.SetSessionUsername(user.GetId())

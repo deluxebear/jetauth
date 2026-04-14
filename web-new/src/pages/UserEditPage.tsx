@@ -20,6 +20,8 @@ import ImageUrlInput from "../components/ImageUrlInput";
 import CurrencySelect from "../components/CurrencySelect";
 import SimpleSelect from "../components/SimpleSelect";
 import SaveButton from "../components/SaveButton";
+import UnsavedBanner from "../components/UnsavedBanner";
+import { useUnsavedWarning } from "../hooks/useUnsavedWarning";
 
 export default function UserEditPage() {
   const { owner, name } = useParams<{ owner: string; name: string }>();
@@ -33,11 +35,13 @@ export default function UserEditPage() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   useEffect(() => { if (saved) { const t = setTimeout(() => setSaved(false), 1500); return () => clearTimeout(t); } }, [saved]);
+  const [originalJson, setOriginalJson] = useState("");
   const [activeTab, setActiveTab] = useState<string>("basic");
   const [showPassword, setShowPassword] = useState(false);
   const [orgGroups, setOrgGroups] = useState<{ name: string; displayName: string }[]>([]);
   const [orgApps, setOrgApps] = useState<{ name: string; displayName: string }[]>([]);
   const [orgUserTypes, setOrgUserTypes] = useState<string[]>([]);
+  const [orgTags, setOrgTags] = useState<string[]>([]);
   const [accountItems, setAccountItems] = useState<{ name: string; visible: boolean; viewRule: string; modifyRule: string; tab?: string; regex?: string }[]>([]);
   const [regexErrors, setRegexErrors] = useState<Record<string, string>>({});
   const [orgSearch, setOrgSearch] = useState("");
@@ -61,7 +65,7 @@ export default function UserEditPage() {
 
   const isBuiltInAdmin = owner === "built-in" && name === "admin";
 
-  const { entity, loading, invalidate: _invalidate, invalidateList } = useEntityEdit<UserType>({
+  const { entity, loading, invalidate, invalidateList } = useEntityEdit<UserType>({
     queryKey: "user",
     owner,
     name,
@@ -69,7 +73,7 @@ export default function UserEditPage() {
   });
 
   useEffect(() => {
-    if (entity) setUser(entity);
+    if (entity) { setUser(entity); setOriginalJson(JSON.stringify(entity)); }
   }, [entity]);
 
   const [noAppError, setNoAppError] = useState(false);
@@ -93,6 +97,7 @@ export default function UserEditPage() {
         const org = (Array.isArray(res.data) ? res.data[0] : res.data) as any;
         if (org) {
           setOrgUserTypes(org.userTypes ?? []);
+          setOrgTags(org.tags ?? []);
           setAccountItems(org.accountItems ?? []);
         }
       } else {
@@ -101,6 +106,7 @@ export default function UserEditPage() {
           const orgData = JSON.parse(localStorage.getItem("organizationData") ?? "null");
           if (orgData) {
             setOrgUserTypes(orgData.userTypes ?? []);
+            setOrgTags(orgData.tags ?? []);
             setAccountItems(orgData.accountItems ?? []);
           }
         } catch { /* ignore */ }
@@ -122,6 +128,9 @@ export default function UserEditPage() {
       </div>
     );
   }
+
+  const isDirty = !!user && originalJson !== "" && JSON.stringify(user) !== originalJson;
+  const showBanner = useUnsavedWarning({ isAddMode, isDirty });
 
   if (loading || !user) {
     return <div className="flex items-center justify-center py-24"><div className="h-8 w-8 rounded-full border-2 border-accent/30 border-t-accent animate-spin" /></div>;
@@ -204,6 +213,7 @@ export default function UserEditPage() {
         modal.toast(t("common.saveSuccess" as any));
         setIsAddMode(false);
         setSaved(true);
+        setOriginalJson(JSON.stringify(user));
         invalidateList();
         if (user.name !== name) {
           navigate(`/users/${user.owner}/${user.name}`, { replace: true });
@@ -434,7 +444,20 @@ export default function UserEditPage() {
       </FormSection>
 
       <FormSection title={t("users.section.personal" as any)}>
-        {dynField("Tag", undefined, <input value={user.tag ?? ""} onChange={(e) => set("tag", e.target.value)} disabled={isFieldDisabled("Tag")} className={inputClass} />)}
+        {dynField("Tag", undefined, orgTags.length > 0 ? (
+          <SimpleSelect
+            value={user.tag ?? ""}
+            options={orgTags.map((tag) => {
+              const tokens = tag.split("|");
+              const displayLabel = locale.startsWith("zh") && tokens[1] ? tokens[1] : tokens[0];
+              return { value: tokens[0], label: displayLabel };
+            })}
+            onChange={(v) => set("tag", v)}
+            disabled={isFieldDisabled("Tag")}
+          />
+        ) : (
+          <input value={user.tag ?? ""} onChange={(e) => set("tag", e.target.value)} disabled={isFieldDisabled("Tag")} className={inputClass} />
+        ))}
         {dynField("Language", undefined, <input value={user.language ?? ""} onChange={(e) => set("language", e.target.value)} disabled={isFieldDisabled("Language")} className={inputClass} />)}
         {dynField("Gender", undefined, <SimpleSelect value={user.gender ?? ""} options={GENDER_OPTIONS} onChange={(v) => set("gender", v)} disabled={isFieldDisabled("Gender")} />)}
         {dynField("Birthday", undefined, <input type="date" value={user.birthday ?? ""} onChange={(e) => setWithValidation("Birthday", "birthday", e.target.value)} disabled={isFieldDisabled("Birthday")} className={inputClass} />)}
@@ -566,34 +589,51 @@ export default function UserEditPage() {
 
       {anySectionFieldVisible("3rd-party logins") && (
       <FormSection title={t("users.section.thirdPartyLogins" as any)}>
-        {dynField("3rd-party logins", "full",
-          <div className="flex flex-wrap gap-1.5">
-            {(((user as any).oauth ?? "") || ((user as any).github ?? "") || ((user as any).google ?? "")) ? (
-              <span className="text-[12px] text-text-secondary">{t("users.field.thirdPartyConfigured" as any)}</span>
-            ) : (
-              <span className="text-[12px] text-text-muted">—</span>
-            )}
-          </div>
-        )}
+        {dynField("3rd-party logins", "full", (() => {
+          const PROVIDER_FIELDS = [
+            "github", "google", "qq", "wechat", "facebook", "dingtalk", "weibo", "gitee",
+            "linkedin", "wecom", "lark", "gitlab", "adfs", "baidu", "alipay", "casdoor",
+            "infoflow", "apple", "azureAD", "azureADB2c", "slack", "steam", "bilibili",
+            "okta", "douyin", "kwai", "line", "amazon", "auth0", "battleNet", "bitbucket",
+            "box", "cloudFoundry", "dailymotion", "deezer", "digitalOcean", "discord",
+            "dropbox", "eveOnline", "fitbit", "gitea", "heroku", "influxCloud", "instagram",
+            "intercom", "kakao", "lastfm", "mailru", "meetup", "microsoftOnline", "naver",
+            "nextcloud", "oneDrive", "oura", "patreon", "paypal", "salesForce", "shopify",
+            "soundcloud", "spotify", "strava", "stripe", "telegram", "tikTok", "tumblr",
+            "twitch", "twitter", "typetalk", "uber", "vk", "wepay", "xero", "yahoo",
+            "yammer", "yandex", "zoom", "metamask", "web3Onboard",
+            "custom", "custom2", "custom3", "custom4", "custom5",
+          ];
+          const linked = PROVIDER_FIELDS.filter((p) => (user as any)[p]);
+          if (linked.length === 0) return <span className="text-[12px] text-text-muted">—</span>;
+          return (
+            <div className="space-y-1.5">
+              {linked.map((provider) => (
+                <div key={provider} className="flex items-center gap-3 rounded-lg border border-border bg-surface-2 px-3 py-2">
+                  <span className="text-[13px] font-medium text-text-primary capitalize">{provider}</span>
+                  <span className="text-[12px] text-text-muted font-mono truncate max-w-[300px]">{(user as any)[provider]}</span>
+                  <span className="ml-auto inline-flex items-center gap-1 rounded-full bg-success/15 border border-success/20 px-2 py-0.5 text-[10px] font-medium text-success">
+                    ✓ {t("users.provider.linked" as any)}
+                  </span>
+                </div>
+              ))}
+            </div>
+          );
+        })())}
       </FormSection>
       )}
 
       {anySectionFieldVisible("Multi-factor authentication", "MFA accounts", "MFA items", "WebAuthn credentials", "Last change password time", "Managed accounts", "Face ID") && (
       <FormSection title={t("users.section.mfa" as any)}>
         {dynField("Multi-factor authentication", "full",
-          ((user as any).multiFactorAuths ?? (user as any).mfaProps ?? []).length > 0 ? (
-            <div className="space-y-2">
-              {((user as any).multiFactorAuths ?? (user as any).mfaProps ?? []).map((mfa: any, idx: number) => (
-                <div key={idx} className="flex items-center gap-3 rounded-lg border border-border bg-surface-2 px-3 py-2">
-                  <span className="text-[13px] font-medium text-text-primary">{(() => { const key = mfa.mfaType ?? mfa.type ?? ""; const translated = t(`users.mfa.${key}` as any); return translated.startsWith("users.mfa.") ? key : translated; })()}</span>
-                  {mfa.isPreferred && <span className="rounded-full bg-accent/15 border border-accent/20 px-1.5 py-0.5 text-[10px] font-medium text-accent">{t("users.mfa.preferred" as any)}</span>}
-                  <span className="ml-auto text-[12px] text-text-muted">{mfa.enabled ? t("common.enabled" as any) : t("common.disabled" as any)}</span>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <span className="text-[12px] text-text-muted">—</span>
-          )
+          <MfaSection
+            multiFactorAuths={(user as any).multiFactorAuths ?? (user as any).mfaProps ?? []}
+            user={user}
+            isSelf={isSelf}
+            isAdmin={isAdmin}
+            onRefresh={invalidate}
+            t={t}
+          />
         )}
         {dynField("MFA accounts", "full",
           <SimpleTable data={(user as any).mfaAccounts ?? []} columns={["issuer", "accountName"]} emptyText={t("common.noData")} />
@@ -609,8 +649,9 @@ export default function UserEditPage() {
           <WebAuthnTable
             items={(user as any).webauthnCredentials ?? []}
             onChange={(v) => setAny("webauthnCredentials", v)}
-            isSelf={false}
+            isSelf={isSelf}
             t={t}
+            onRefresh={invalidate}
           />
         )}
         {dynField("Last change password time", undefined,
@@ -678,12 +719,11 @@ export default function UserEditPage() {
       <FormSection title={t("users.section.admin" as any)}>
         {dynField("Is admin", undefined, <Switch checked={!!user.isAdmin} onChange={(v) => set("isAdmin", v)} disabled={isFieldDisabled("Is admin")} />)}
         {dynField("Is forbidden", undefined, <Switch checked={!!user.isForbidden} onChange={(v) => set("isForbidden", v)} disabled={isFieldDisabled("Is forbidden")} />)}
-        {dynField("Is deleted", undefined, <Switch checked={!!user.isDeleted} onChange={(v) => set("isDeleted", v)} disabled={isFieldDisabled("Is deleted")} />)}
+        {dynField("Is deleted", undefined, <Switch checked={!!user.isDeleted} onChange={(v) => { set("isDeleted", v); setAny("deletedTime", v ? new Date().toISOString() : ""); }} disabled={isFieldDisabled("Is deleted")} />)}
         {dynField("Need update password", undefined, <Switch checked={!!(user as any).needUpdatePassword} onChange={(v) => setAny("needUpdatePassword", v)} disabled={isFieldDisabled("Need update password")} />)}
         {dynField("Is online", undefined, <Switch checked={!!(user as any).isOnline} onChange={() => {}} disabled />)}
-        <div />
-        <FormField label={t("field.createdTime")}><input value={user.createdTime ?? ""} disabled className={monoInputClass} /></FormField>
-        <FormField label={t("users.field.updatedTime" as any)}><input value={String((user as any).updatedTime ?? "")} disabled className={monoInputClass} /></FormField>
+        {dynField("Created time", undefined, <input value={user.createdTime ?? ""} disabled className={monoInputClass} />)}
+        {dynField("Updated time", undefined, <input value={String((user as any).updatedTime ?? "")} disabled className={monoInputClass} />)}
       </FormSection>
       )}
 
@@ -717,26 +757,12 @@ export default function UserEditPage() {
       {anySectionFieldVisible("Properties") && (
       <FormSection title={t("users.section.properties" as any)}>
         {dynField("Properties", "full",
-          user.properties && Object.keys(user.properties).length > 0 ? (
-            <div className="overflow-x-auto rounded-lg border border-border">
-              <table className="w-full text-left">
-                <thead>
-                  <tr className="border-b border-border bg-surface-2/30">
-                    <th className="px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-text-muted">Key</th>
-                    <th className="px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-text-muted">Value</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {Object.entries(user.properties).map(([k, v]) => (
-                    <tr key={k} className="border-b border-border-subtle">
-                      <td className="px-3 py-1.5 text-[12px] font-mono text-text-secondary">{k}</td>
-                      <td className="px-3 py-1.5 text-[12px] text-text-primary">{String(v)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ) : <span className="text-[12px] text-text-muted">—</span>
+          <PropertyTable
+            properties={user.properties ?? {}}
+            onChange={(v) => set("properties", v)}
+            disabled={isFieldDisabled("Properties")}
+            t={t}
+          />
         )}
       </FormSection>
       )}
@@ -780,6 +806,8 @@ export default function UserEditPage() {
           </button>
         </div>
       </div>
+
+      {showBanner && <UnsavedBanner isAddMode={isAddMode} />}
 
       {/* Tab bar */}
       <div className="flex border-b border-border">
@@ -1117,16 +1145,57 @@ function MfaItemsTable({ items, onChange, t }: { items: { name: string; rule: st
 }
 
 // ── WebAuthn Credentials Table ──
-function WebAuthnTable({ items, onChange, isSelf, t }: { items: { id?: string; name?: string }[]; onChange: (v: { id?: string; name?: string }[]) => void; isSelf?: boolean; t: (k: string) => string }) {
-  const addRow = () => onChange([...items, { id: "", name: "" }]);
+function WebAuthnTable({ items, onChange, isSelf, t, onRefresh }: {
+  items: { id?: string; ID?: unknown; name?: string }[];
+  onChange: (v: { id?: string; ID?: unknown; name?: string }[]) => void;
+  isSelf?: boolean;
+  t: (k: string) => string;
+  onRefresh?: () => void;
+}) {
+  const [registering, setRegistering] = useState(false);
+  const modal = useModal();
+
+  const handleRegister = async () => {
+    if (!window.PublicKeyCredential) {
+      modal.toast(t("users.webauthn.notSupported" as any), "error");
+      return;
+    }
+    setRegistering(true);
+    try {
+      const { registerWebauthnCredential } = await import("../backend/WebauthnBackend");
+      const res = await registerWebauthnCredential();
+      if (res.status === "ok") {
+        modal.toast(t("users.webauthn.registerSuccess" as any));
+        onRefresh?.();
+      } else {
+        modal.toast(friendlyError(res.msg, t) || t("users.webauthn.registerFailed" as any), "error");
+      }
+    } catch (e: any) {
+      if (e.name === "NotAllowedError") {
+        modal.toast(t("users.webauthn.cancelled" as any), "error");
+      } else {
+        modal.toast(friendlyError(e.message, t) || t("users.webauthn.registerFailed" as any), "error");
+      }
+    } finally {
+      setRegistering(false);
+    }
+  };
+
   const deleteRow = (idx: number) => onChange(items.filter((_, i) => i !== idx));
 
   return (
     <div className="rounded-xl border border-border bg-surface-1 overflow-visible">
       <div className="px-4 py-2.5 border-b border-border-subtle bg-surface-2/30 flex items-center gap-2">
         <span className="text-[12px] font-semibold text-text-primary">{t("users.field.webauthnCredentials" as any)}</span>
-        <button onClick={addRow} disabled={!isSelf}
-          className="rounded-lg border border-border px-2 py-0.5 text-[11px] font-medium text-text-secondary hover:bg-surface-2 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">{t("common.add")}</button>
+        <button onClick={handleRegister} disabled={!isSelf || registering}
+          className="rounded-lg bg-accent px-2 py-0.5 text-[11px] font-medium text-white hover:bg-accent-hover disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+          {registering ? (
+            <span className="flex items-center gap-1">
+              <span className="inline-block h-3 w-3 rounded-full border-2 border-text-muted/30 border-t-text-muted animate-spin" />
+              {t("users.webauthn.registering" as any)}
+            </span>
+          ) : t("common.add")}
+        </button>
       </div>
       {items.length === 0 ? (
         <div className="px-4 py-6 text-center text-[12px] text-text-muted">{t("common.noData")}</div>
@@ -1289,6 +1358,243 @@ function RegionSelect({ value, onChange }: { value: string; onChange: (v: string
             </button>
           ))}
         </div>
+      )}
+    </div>
+  );
+}
+
+// ── MFA Section (interactive, matches original) ──
+function MfaSection({ multiFactorAuths, user, isSelf, isAdmin, onRefresh, t }: {
+  multiFactorAuths: { mfaType?: string; type?: string; enabled?: boolean; isPreferred?: boolean; secret?: string }[];
+  user: { owner: string; name: string; email?: string; phone?: string };
+  isSelf: boolean;
+  isAdmin: boolean;
+  onRefresh?: () => void;
+  t: (k: string) => string;
+}) {
+  const modal = useModal();
+  const navigate = useNavigate();
+  const [loading, setLoading] = useState<string | null>(null);
+
+  if (multiFactorAuths.length === 0) {
+    return <span className="text-[12px] text-text-muted">—</span>;
+  }
+
+  const anyEnabled = multiFactorAuths.some((m) => m.enabled);
+
+  const handleSetPreferred = async (mfaType: string) => {
+    setLoading(`pref-${mfaType}`);
+    try {
+      const MfaBackend = await import("../backend/MfaBackend");
+      const res = await MfaBackend.setPreferredMfa(user.owner, user.name, mfaType);
+      if (res.status === "ok") {
+        modal.toast(t("users.mfa.setPreferredSuccess" as any));
+        onRefresh?.();
+      } else {
+        modal.toast(res.msg || t("common.saveFailed" as any), "error");
+      }
+    } finally {
+      setLoading(null);
+    }
+  };
+
+  const handleDisableAll = () => {
+    modal.showConfirm(t("users.mfa.confirmDisableAll" as any), async () => {
+      const MfaBackend = await import("../backend/MfaBackend");
+      const res = await MfaBackend.deleteMfa(user.owner, user.name);
+      if (res.status === "ok") {
+        modal.toast(t("users.mfa.disableSuccess" as any));
+        onRefresh?.();
+      } else {
+        modal.toast(res.msg || t("common.saveFailed" as any), "error");
+      }
+    });
+  };
+
+  const handleEnableForUser = async (mfaType: string) => {
+    // Validate: non-TOTP types require email/phone
+    if (mfaType === "email" && !user.email) {
+      modal.toast(t("users.mfa.needEmail" as any), "error");
+      return;
+    }
+    if (mfaType !== "email" && mfaType !== "app" && !user.phone) {
+      modal.toast(t("users.mfa.needPhone" as any), "error");
+      return;
+    }
+    modal.showConfirm(
+      `${t("users.mfa.confirmEnable" as any)}\n${t("users.mfa.userLabel" as any)}: ${user.owner}/${user.name}\n${mfaType === "email" ? `${t("users.mfa.emailLabel" as any)}: ${user.email}` : `${t("users.mfa.phoneLabel" as any)}: ${user.phone}`}`,
+      async () => {
+        setLoading(`enable-${mfaType}`);
+        try {
+          const MfaBackend = await import("../backend/MfaBackend");
+          const initRes = await MfaBackend.mfaSetupInitiate(user.owner, user.name, mfaType);
+          if (initRes.status !== "ok") {
+            modal.toast(initRes.msg || t("users.mfa.enableFailed" as any), "error");
+            return;
+          }
+          const enableRes = await MfaBackend.mfaSetupEnable(user.owner, user.name, mfaType);
+          if (enableRes.status === "ok") {
+            modal.toast(t("users.mfa.enableSuccess" as any));
+            onRefresh?.();
+          } else {
+            modal.toast(enableRes.msg || t("users.mfa.enableFailed" as any), "error");
+          }
+        } finally {
+          setLoading(null);
+        }
+      }
+    );
+  };
+
+  const getMfaLabel = (mfa: typeof multiFactorAuths[0]) => {
+    const key = mfa.mfaType ?? mfa.type ?? "";
+    const translated = t(`users.mfa.${key}` as any);
+    return translated.startsWith("users.mfa.") ? key : translated;
+  };
+
+  return (
+    <div className="space-y-1.5">
+      {/* Disable all button */}
+      {anyEnabled && (isSelf || isAdmin) && (
+        <div className="flex justify-end mb-1">
+          <button onClick={handleDisableAll}
+            className="rounded-lg border border-danger/30 px-2.5 py-1 text-[11px] font-medium text-danger hover:bg-danger/10 transition-colors">
+            {t("users.mfa.disableAll" as any)}
+          </button>
+        </div>
+      )}
+      {multiFactorAuths.map((mfa, idx) => {
+        const mfaType = mfa.mfaType ?? mfa.type ?? "";
+        return (
+          <div key={idx} className="flex items-center gap-3 rounded-lg border border-border bg-surface-2 px-3 py-2">
+            <span className="text-[13px] font-medium text-text-primary">{getMfaLabel(mfa)}</span>
+            <div className="ml-auto flex items-center gap-2">
+              {mfa.enabled ? (
+                <>
+                  <span className="inline-flex items-center gap-1 rounded-full bg-success/15 border border-success/20 px-2 py-0.5 text-[10px] font-medium text-success">
+                    ✓ {t("common.enabled" as any)}
+                  </span>
+                  {mfa.isPreferred ? (
+                    <span className="rounded-full bg-info/15 border border-info/20 px-2 py-0.5 text-[10px] font-medium text-info">
+                      {t("users.mfa.preferred" as any)}
+                    </span>
+                  ) : (isSelf || isAdmin) ? (
+                    <button onClick={() => handleSetPreferred(mfaType)}
+                      disabled={loading === `pref-${mfaType}`}
+                      className="rounded-lg bg-accent px-2 py-0.5 text-[11px] font-medium text-white hover:bg-accent-hover disabled:opacity-50 transition-colors">
+                      {t("users.mfa.setPreferred" as any)}
+                    </button>
+                  ) : null}
+                  {isSelf && (
+                    <button onClick={() => navigate(`/mfa/setup?mfaType=${mfaType}`)}
+                      className="rounded-lg border border-border px-2 py-0.5 text-[11px] font-medium text-text-secondary hover:bg-surface-3 transition-colors">
+                      {t("common.edit")}
+                    </button>
+                  )}
+                </>
+              ) : (
+                <>
+                  <span className="text-[12px] text-text-muted">{t("common.disabled" as any)}</span>
+                  {/* Admin can enable non-TOTP MFA for other users */}
+                  {mfaType !== "app" && isAdmin && !isSelf && (
+                    <button onClick={() => handleEnableForUser(mfaType)}
+                      disabled={loading === `enable-${mfaType}`}
+                      className="rounded-lg bg-accent px-2 py-0.5 text-[11px] font-medium text-white hover:bg-accent-hover disabled:opacity-50 transition-colors">
+                      {t("common.enable" as any)}
+                    </button>
+                  )}
+                  {isSelf && (
+                    <button onClick={() => navigate(`/mfa/setup?mfaType=${mfaType}`)}
+                      className="rounded-lg border border-border px-2 py-0.5 text-[11px] font-medium text-text-secondary hover:bg-surface-3 transition-colors">
+                      {t("users.mfa.setup" as any)}
+                    </button>
+                  )}
+                </>
+              )}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ── Editable Property Table (key-value pairs) ──
+function PropertyTable({ properties, onChange, disabled, t }: {
+  properties: Record<string, unknown>;
+  onChange: (v: Record<string, unknown>) => void;
+  disabled?: boolean;
+  t: (k: string) => string;
+}) {
+  const entries = Object.entries(properties);
+  const addRow = () => {
+    const key = `key_${Date.now()}`;
+    onChange({ ...properties, [key]: "" });
+  };
+  const deleteRow = (key: string) => {
+    const next = { ...properties };
+    delete next[key];
+    onChange(next);
+  };
+  const renameKey = (oldKey: string, newKey: string) => {
+    if (newKey === oldKey) return;
+    // Rebuild to preserve insertion order
+    const next: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(properties)) {
+      next[k === oldKey ? newKey : k] = v;
+    }
+    onChange(next);
+  };
+  const updateValue = (key: string, value: string) => {
+    onChange({ ...properties, [key]: value });
+  };
+
+  const ic = "w-full rounded-lg border border-border bg-surface-2 px-2 py-1 text-[12px] text-text-primary outline-none focus:border-accent transition-colors";
+
+  return (
+    <div className="rounded-xl border border-border bg-surface-1 overflow-visible">
+      <div className="px-4 py-2.5 border-b border-border-subtle bg-surface-2/30 flex items-center gap-2">
+        <span className="text-[12px] font-semibold text-text-primary">{t("users.section.properties" as any)}</span>
+        {!disabled && (
+          <button onClick={addRow}
+            className="rounded-lg bg-accent px-2 py-0.5 text-[11px] font-medium text-white hover:bg-accent-hover transition-colors">{t("common.add")}</button>
+        )}
+      </div>
+      {entries.length === 0 ? (
+        <div className="px-4 py-6 text-center text-[12px] text-text-muted">{t("common.noData")}</div>
+      ) : (
+        <table className="w-full text-left">
+          <thead><tr className="border-b border-border bg-surface-2/30">
+            <th className="px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-text-muted">{t("users.prop.key" as any)}</th>
+            <th className="px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-text-muted">{t("users.prop.value" as any)}</th>
+            {!disabled && <th className="px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-text-muted w-16">{t("common.action" as any)}</th>}
+          </tr></thead>
+          <tbody>
+            {entries.map(([k, v]) => (
+              <tr key={k} className="border-b border-border-subtle">
+                <td className="px-3 py-1.5">
+                  {disabled ? (
+                    <span className="text-[12px] font-mono text-text-secondary">{k}</span>
+                  ) : (
+                    <input defaultValue={k} onBlur={(e) => renameKey(k, e.target.value.trim() || k)} className={`${ic} font-mono`} />
+                  )}
+                </td>
+                <td className="px-3 py-1.5">
+                  {disabled ? (
+                    <span className="text-[12px] text-text-primary">{String(v)}</span>
+                  ) : (
+                    <input value={String(v ?? "")} onChange={(e) => updateValue(k, e.target.value)} className={ic} />
+                  )}
+                </td>
+                {!disabled && (
+                  <td className="px-3 py-1.5">
+                    <button onClick={() => deleteRow(k)} className="rounded p-0.5 text-text-muted hover:text-danger hover:bg-danger/10 transition-colors text-[12px]">✕</button>
+                  </td>
+                )}
+              </tr>
+            ))}
+          </tbody>
+        </table>
       )}
     </div>
   );

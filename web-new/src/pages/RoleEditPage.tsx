@@ -10,6 +10,8 @@ import * as RoleBackend from "../backend/RoleBackend";
 import type { Role } from "../backend/RoleBackend";
 import { friendlyError } from "../utils/errorHelper";
 import SaveButton from "../components/SaveButton";
+import UnsavedBanner from "../components/UnsavedBanner";
+import { useUnsavedWarning } from "../hooks/useUnsavedWarning";
 
 export default function RoleEditPage() {
   const { owner, name } = useParams<{ owner: string; name: string }>();
@@ -22,6 +24,7 @@ export default function RoleEditPage() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   useEffect(() => { if (saved) { const t = setTimeout(() => setSaved(false), 1500); return () => clearTimeout(t); } }, [saved]);
+  const [originalJson, setOriginalJson] = useState("");
 
   const { entity, loading, invalidate: _invalidate, invalidateList } = useEntityEdit<Role>({
     queryKey: "role",
@@ -31,8 +34,11 @@ export default function RoleEditPage() {
   });
 
   useEffect(() => {
-    if (entity) setRole(entity);
+    if (entity) { setRole(entity); setOriginalJson(JSON.stringify(entity)); }
   }, [entity]);
+
+  const isDirty = !!role && originalJson !== "" && JSON.stringify(role) !== originalJson;
+  const showBanner = useUnsavedWarning({ isAddMode, isDirty });
 
   if (loading || !role) {
     return (
@@ -53,6 +59,7 @@ export default function RoleEditPage() {
       if (res.status === "ok") {
         modal.toast(t("common.saveSuccess" as any));
         setSaved(true);
+        setOriginalJson(JSON.stringify(role));
         setIsAddMode(false);
         invalidateList();
         if (role.name !== name) {
@@ -138,6 +145,8 @@ export default function RoleEditPage() {
           </button>
         </div>
       </div>
+
+      {showBanner && <UnsavedBanner isAddMode={isAddMode} />}
 
       {/* Basic Info */}
       <FormSection title={t("roles.section.basic" as any)}>

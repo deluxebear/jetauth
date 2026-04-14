@@ -225,7 +225,12 @@
   },
   "webauthn": {
     "Found no credentials for this user": "Found no credentials for this user",
-    "Please call WebAuthnSigninBegin first": "Please call WebAuthnSigninBegin first"
+    "Please call WebAuthnSigninBegin first": "Please call WebAuthnSigninBegin first",
+    "Failed to begin WebAuthn registration: %s": "Failed to begin WebAuthn registration: %s",
+    "Failed to finish WebAuthn registration: %s": "Failed to finish WebAuthn registration: %s",
+    "Failed to get WebAuthn configuration: %s": "Failed to get WebAuthn configuration: %s",
+    "Failed to begin WebAuthn login: %s": "Failed to begin WebAuthn login: %s",
+    "Failed to finish WebAuthn login: %s": "Failed to finish WebAuthn login: %s"
   },
   "mfa": {
     "Invalid MFA type": "Invalid MFA type",

@@ -11,6 +11,8 @@ import type { Payment } from "../backend/PaymentBackend";
 import { friendlyError } from "../utils/errorHelper";
 import SimpleSelect from "../components/SimpleSelect";
 import SaveButton from "../components/SaveButton";
+import UnsavedBanner from "../components/UnsavedBanner";
+import { useUnsavedWarning } from "../hooks/useUnsavedWarning";
 
 export default function PaymentEditPage() {
   const { owner, name } = useParams<{ owner: string; name: string }>();
@@ -23,6 +25,7 @@ export default function PaymentEditPage() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   useEffect(() => { if (saved) { const t = setTimeout(() => setSaved(false), 1500); return () => clearTimeout(t); } }, [saved]);
+  const [originalJson, setOriginalJson] = useState("");
 
   const { entity, loading, invalidate: _invalidate, invalidateList } = useEntityEdit<Payment>({
     queryKey: "payment",
@@ -32,8 +35,11 @@ export default function PaymentEditPage() {
   });
 
   useEffect(() => {
-    if (entity) setPayment(entity);
+    if (entity) { setPayment(entity); setOriginalJson(JSON.stringify(entity)); }
   }, [entity]);
+
+  const isDirty = !!payment && originalJson !== "" && JSON.stringify(payment) !== originalJson;
+  const showBanner = useUnsavedWarning({ isAddMode, isDirty });
 
   if (loading || !payment) {
     return (
@@ -54,6 +60,7 @@ export default function PaymentEditPage() {
       if (res.status === "ok") {
         modal.toast(t("common.saveSuccess" as any));
         setSaved(true);
+        setOriginalJson(JSON.stringify(payment));
         setIsAddMode(false);
         invalidateList();
         if (payment.name !== name) {
@@ -134,6 +141,8 @@ export default function PaymentEditPage() {
           </button>
         </div>
       </div>
+
+      {showBanner && <UnsavedBanner isAddMode={isAddMode} />}
 
       {/* Basic Info (mostly read-only) */}
       <FormSection title={t("payments.section.basic" as any)}>

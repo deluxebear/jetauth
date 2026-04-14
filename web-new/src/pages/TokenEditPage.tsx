@@ -11,6 +11,8 @@ import * as TokenBackend from "../backend/TokenBackend";
 import type { Token } from "../backend/TokenBackend";
 import { friendlyError } from "../utils/errorHelper";
 import SaveButton from "../components/SaveButton";
+import UnsavedBanner from "../components/UnsavedBanner";
+import { useUnsavedWarning } from "../hooks/useUnsavedWarning";
 
 function parseAccessToken(accessToken: string): string {
   try {
@@ -36,6 +38,7 @@ export default function TokenEditPage() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   useEffect(() => { if (saved) { const t = setTimeout(() => setSaved(false), 1500); return () => clearTimeout(t); } }, [saved]);
+  const [originalJson, setOriginalJson] = useState("");
 
   const { entity, loading, invalidate: _invalidate, invalidateList } = useEntityEdit<Token>({
     queryKey: "token",
@@ -45,8 +48,11 @@ export default function TokenEditPage() {
   });
 
   useEffect(() => {
-    if (entity) setToken(entity);
+    if (entity) { setToken(entity); setOriginalJson(JSON.stringify(entity)); }
   }, [entity]);
+
+  const isDirty = !!token && originalJson !== "" && JSON.stringify(token) !== originalJson;
+  const showBanner = useUnsavedWarning({ isAddMode, isDirty });
 
   if (loading || !token) {
     return (
@@ -67,6 +73,7 @@ export default function TokenEditPage() {
       if (res.status === "ok") {
         modal.toast(t("common.saveSuccess" as any));
         setSaved(true);
+        setOriginalJson(JSON.stringify(token));
         setIsAddMode(false);
         invalidateList();
         if (token.name !== name) {
@@ -154,6 +161,8 @@ export default function TokenEditPage() {
           </button>
         </div>
       </div>
+
+      {showBanner && <UnsavedBanner isAddMode={isAddMode} />}
 
       {/* Basic Info */}
       <FormSection title={t("tokens.section.basic" as any)}>

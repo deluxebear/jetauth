@@ -12,6 +12,8 @@ import type { Webhook, Header } from "../backend/WebhookBackend";
 import { friendlyError } from "../utils/errorHelper";
 import SimpleSelect from "../components/SimpleSelect";
 import SaveButton from "../components/SaveButton";
+import UnsavedBanner from "../components/UnsavedBanner";
+import { useUnsavedWarning } from "../hooks/useUnsavedWarning";
 
 const METHODS = ["POST", "GET", "PUT", "DELETE"];
 const CONTENT_TYPES = ["application/json", "application/x-www-form-urlencoded"];
@@ -35,6 +37,7 @@ export default function WebhookEditPage() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   useEffect(() => { if (saved) { const t = setTimeout(() => setSaved(false), 1500); return () => clearTimeout(t); } }, [saved]);
+  const [originalJson, setOriginalJson] = useState("");
 
   const { entity, loading, invalidate: _invalidate, invalidateList } = useEntityEdit<Webhook>({
     queryKey: "webhook",
@@ -44,8 +47,11 @@ export default function WebhookEditPage() {
   });
 
   useEffect(() => {
-    if (entity) setWebhook(entity);
+    if (entity) { setWebhook(entity); setOriginalJson(JSON.stringify(entity)); }
   }, [entity]);
+
+  const isDirty = !!webhook && originalJson !== "" && JSON.stringify(webhook) !== originalJson;
+  const showBanner = useUnsavedWarning({ isAddMode, isDirty });
 
   if (loading || !webhook) {
     return (
@@ -66,6 +72,7 @@ export default function WebhookEditPage() {
       if (res.status === "ok") {
         modal.toast(t("common.saveSuccess" as any));
         setSaved(true);
+        setOriginalJson(JSON.stringify(webhook));
         setIsAddMode(false);
         invalidateList();
         if (webhook.name !== name) {
@@ -157,6 +164,8 @@ export default function WebhookEditPage() {
           </button>
         </div>
       </div>
+
+      {showBanner && <UnsavedBanner isAddMode={isAddMode} />}
 
       {/* Basic */}
       <FormSection title={t("webhooks.section.basic" as any)}>

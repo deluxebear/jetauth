@@ -17,6 +17,8 @@ import { useOrganization } from "../OrganizationContext";
 import { friendlyError } from "../utils/errorHelper";
 import SimpleSelect from "../components/SimpleSelect";
 import SaveButton from "../components/SaveButton";
+import UnsavedBanner from "../components/UnsavedBanner";
+import { useUnsavedWarning } from "../hooks/useUnsavedWarning";
 
 export default function GroupEditPage() {
   const { owner, name } = useParams<{ owner: string; name: string }>();
@@ -34,6 +36,7 @@ export default function GroupEditPage() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   useEffect(() => { if (saved) { const t = setTimeout(() => setSaved(false), 1500); return () => clearTimeout(t); } }, [saved]);
+  const [originalJson, setOriginalJson] = useState("");
   const [groupUsers, setGroupUsers] = useState<User[]>([]);
   const [userTotal, setUserTotal] = useState(0);
   const [userPage, setUserPage] = useState(1);
@@ -53,6 +56,7 @@ export default function GroupEditPage() {
       ]);
       if (groupRes.status === "ok" && groupRes.data) {
         setGroup(groupRes.data);
+        setOriginalJson(JSON.stringify(groupRes.data));
       } else {
         modal.showError(groupRes.msg || t("groups.error.loadFailed" as any));
         navigate("/groups");
@@ -91,6 +95,9 @@ export default function GroupEditPage() {
 
   useEffect(() => { fetchGroupUsers(); }, [fetchGroupUsers]);
 
+  const isDirty = !!group && originalJson !== "" && JSON.stringify(group) !== originalJson;
+  const showBanner = useUnsavedWarning({ isAddMode, isDirty });
+
   if (loading || !group) {
     return <div className="flex items-center justify-center py-24"><div className="h-8 w-8 rounded-full border-2 border-accent/30 border-t-accent animate-spin" /></div>;
   }
@@ -114,6 +121,7 @@ export default function GroupEditPage() {
         }
         modal.toast(t("common.saveSuccess" as any));
         setSaved(true);
+        setOriginalJson(JSON.stringify(group));
         setIsAddMode(false);
       } else {
         modal.toast(friendlyError(res.msg, t) || t("common.saveFailed" as any), "error");
@@ -241,6 +249,8 @@ export default function GroupEditPage() {
           </button>
         </div>
       </div>
+
+      {showBanner && <UnsavedBanner isAddMode={isAddMode} />}
 
       {/* Basic Info */}
       <FormSection title={t("orgs.section.basic" as any)}>

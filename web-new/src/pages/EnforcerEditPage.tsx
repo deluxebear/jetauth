@@ -10,6 +10,8 @@ import * as EnforcerBackend from "../backend/EnforcerBackend";
 import type { Enforcer } from "../backend/EnforcerBackend";
 import { friendlyError } from "../utils/errorHelper";
 import SaveButton from "../components/SaveButton";
+import UnsavedBanner from "../components/UnsavedBanner";
+import { useUnsavedWarning } from "../hooks/useUnsavedWarning";
 
 export default function EnforcerEditPage() {
   const { owner, name } = useParams<{ owner: string; name: string }>();
@@ -22,6 +24,7 @@ export default function EnforcerEditPage() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   useEffect(() => { if (saved) { const t = setTimeout(() => setSaved(false), 1500); return () => clearTimeout(t); } }, [saved]);
+  const [originalJson, setOriginalJson] = useState("");
 
   const { entity, loading, invalidate: _invalidate, invalidateList } = useEntityEdit<Enforcer>({
     queryKey: "enforcer",
@@ -31,8 +34,11 @@ export default function EnforcerEditPage() {
   });
 
   useEffect(() => {
-    if (entity) setEnforcer(entity);
+    if (entity) { setEnforcer(entity); setOriginalJson(JSON.stringify(entity)); }
   }, [entity]);
+
+  const isDirty = !!enforcer && originalJson !== "" && JSON.stringify(enforcer) !== originalJson;
+  const showBanner = useUnsavedWarning({ isAddMode, isDirty });
 
   if (loading || !enforcer) {
     return (
@@ -53,6 +59,7 @@ export default function EnforcerEditPage() {
       if (res.status === "ok") {
         modal.toast(t("common.saveSuccess" as any));
         setSaved(true);
+        setOriginalJson(JSON.stringify(enforcer));
         setIsAddMode(false);
         invalidateList();
         if (enforcer.name !== name) {
@@ -133,6 +140,8 @@ export default function EnforcerEditPage() {
           </button>
         </div>
       </div>
+
+      {showBanner && <UnsavedBanner isAddMode={isAddMode} />}
 
       {/* Basic Info */}
       <FormSection title={t("enforcers.section.basic" as any)}>

@@ -11,6 +11,8 @@ import * as ProvBackend from "../backend/ProviderBackend";
 import type { Provider } from "../backend/ProviderBackend";
 import { friendlyError } from "../utils/errorHelper";
 import SaveButton from "../components/SaveButton";
+import UnsavedBanner from "../components/UnsavedBanner";
+import { useUnsavedWarning } from "../hooks/useUnsavedWarning";
 
 const CATEGORIES = ["OAuth", "Email", "SMS", "Storage", "Payment", "Captcha", "Notification", "AI", "SAML", "Web3", "MFA"];
 
@@ -46,6 +48,7 @@ export default function ProviderEditPage() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   useEffect(() => { if (saved) { const t = setTimeout(() => setSaved(false), 1500); return () => clearTimeout(t); } }, [saved]);
+  const [originalJson, setOriginalJson] = useState("");
 
   const invalidateList = () => queryClient.invalidateQueries({ queryKey: ["providers"] });
 
@@ -54,7 +57,7 @@ export default function ProviderEditPage() {
     setLoading(true);
     try {
       const res = await ProvBackend.getProvider(owner!, name!);
-      if (res.status === "ok" && res.data) setProv(res.data);
+      if (res.status === "ok" && res.data) { setProv(res.data); setOriginalJson(JSON.stringify(res.data)); }
     } catch (e: any) { modal.toast(e?.message || t("common.saveFailed" as any), "error"); }
     finally { setLoading(false); }
   }, [owner, name, isNew]);
@@ -73,6 +76,7 @@ export default function ProviderEditPage() {
       if (res.status === "ok") {
         modal.toast(t("common.saveSuccess" as any));
         setSaved(true);
+        setOriginalJson(JSON.stringify(prov));
         setIsAddMode(false);
         invalidateList();
       } else {
@@ -122,6 +126,9 @@ export default function ProviderEditPage() {
       }
     });
   };
+
+  const isDirty = originalJson !== "" && JSON.stringify(prov) !== originalJson;
+  const showBanner = useUnsavedWarning({ isAddMode, isDirty });
 
   if (loading) {
     return <div className="flex items-center justify-center py-24"><div className="h-8 w-8 rounded-full border-2 border-accent/30 border-t-accent animate-spin" /></div>;
@@ -318,6 +325,8 @@ export default function ProviderEditPage() {
           </button>
         </div>
       </div>
+
+      {showBanner && <UnsavedBanner isAddMode={isAddMode} />}
 
       {/* Basic info */}
       <FormSection title={t("field.name")}>

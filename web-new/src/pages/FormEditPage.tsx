@@ -11,6 +11,8 @@ import type { Form } from "../backend/FormBackend";
 import { friendlyError } from "../utils/errorHelper";
 import SimpleSelect from "../components/SimpleSelect";
 import SaveButton from "../components/SaveButton";
+import UnsavedBanner from "../components/UnsavedBanner";
+import { useUnsavedWarning } from "../hooks/useUnsavedWarning";
 
 export default function FormEditPage() {
   const { owner, name } = useParams<{ owner: string; name: string }>();
@@ -23,6 +25,7 @@ export default function FormEditPage() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   useEffect(() => { if (saved) { const t = setTimeout(() => setSaved(false), 1500); return () => clearTimeout(t); } }, [saved]);
+  const [originalJson, setOriginalJson] = useState("");
 
   const { entity, loading, invalidate: _invalidate, invalidateList } = useEntityEdit<Form>({
     queryKey: "form",
@@ -32,8 +35,11 @@ export default function FormEditPage() {
   });
 
   useEffect(() => {
-    if (entity) setForm(entity);
+    if (entity) { setForm(entity); setOriginalJson(JSON.stringify(entity)); }
   }, [entity]);
+
+  const isDirty = !!form && originalJson !== "" && JSON.stringify(form) !== originalJson;
+  const showBanner = useUnsavedWarning({ isAddMode, isDirty });
 
   if (loading || !form) {
     return (
@@ -54,6 +60,7 @@ export default function FormEditPage() {
       if (res.status === "ok") {
         modal.toast(t("common.saveSuccess" as any));
         setSaved(true);
+        setOriginalJson(JSON.stringify(form));
         setIsAddMode(false);
         invalidateList();
         if (form.name !== name) {
@@ -127,6 +134,8 @@ export default function FormEditPage() {
           </button>
         </div>
       </div>
+
+      {showBanner && <UnsavedBanner isAddMode={isAddMode} />}
 
       {/* Basic */}
       <FormSection title={t("forms.section.basic" as any)}>

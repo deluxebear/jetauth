@@ -11,6 +11,8 @@ import * as LdapBackend from "../backend/LdapBackend";
 import * as GroupBackend from "../backend/GroupBackend";
 import type { Ldap } from "../backend/LdapBackend";
 import SaveButton from "../components/SaveButton";
+import UnsavedBanner from "../components/UnsavedBanner";
+import { useUnsavedWarning } from "../hooks/useUnsavedWarning";
 
 const FILTER_FIELDS = ["uid", "mail", "mobile", "sAMAccountName"];
 const PASSWORD_TYPES = ["Plain", "SSHA", "MD5"];
@@ -26,6 +28,7 @@ export default function LdapEditPage() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   useEffect(() => { if (saved) { const t = setTimeout(() => setSaved(false), 1500); return () => clearTimeout(t); } }, [saved]);
+  const [originalJson, setOriginalJson] = useState("");
 
   // Custom attributes — use separate state to support empty rows during editing
   const [customAttrs, setCustomAttrsState] = useState<{ id: number; attrName: string; propName: string }[]>([]);
@@ -41,6 +44,7 @@ export default function LdapEditPage() {
       ]);
       if (ldapRes.status === "ok" && ldapRes.data) {
         setLdap(ldapRes.data);
+        setOriginalJson(JSON.stringify(ldapRes.data));
       } else {
         modal.showError(ldapRes.msg || t("ldap.error.loadFailed" as any));
         navigate(-1);
@@ -66,6 +70,10 @@ export default function LdapEditPage() {
     }
   }, [ldap]);
 
+  const isAddMode = false;
+  const isDirty = !!ldap && originalJson !== "" && JSON.stringify(ldap) !== originalJson;
+  const showBanner = useUnsavedWarning({ isAddMode, isDirty });
+
   if (loading || !ldap) {
     return <div className="flex items-center justify-center py-24"><div className="h-8 w-8 rounded-full border-2 border-accent/30 border-t-accent animate-spin" /></div>;
   }
@@ -80,6 +88,7 @@ export default function LdapEditPage() {
       if (res.status === "ok") {
         modal.toast(t("common.saveSuccess" as any));
         setSaved(true);
+        setOriginalJson(JSON.stringify(ldap));
       } else {
         modal.toast(friendlyError(res.msg, t) || t("common.saveFailed" as any), "error");
       }
@@ -148,6 +157,8 @@ export default function LdapEditPage() {
           </button>
         </div>
       </div>
+
+      {showBanner && <UnsavedBanner isAddMode={isAddMode} />}
 
       {/* Form */}
       <div className="space-y-5">

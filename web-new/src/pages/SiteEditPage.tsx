@@ -11,6 +11,8 @@ import type { Site } from "../backend/SiteBackend";
 import { friendlyError } from "../utils/errorHelper";
 import SimpleSelect from "../components/SimpleSelect";
 import SaveButton from "../components/SaveButton";
+import UnsavedBanner from "../components/UnsavedBanner";
+import { useUnsavedWarning } from "../hooks/useUnsavedWarning";
 
 const SSL_MODE_OPTIONS = [
   { id: "HTTP", name: "HTTP" },
@@ -35,6 +37,7 @@ export default function SiteEditPage() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   useEffect(() => { if (saved) { const t = setTimeout(() => setSaved(false), 1500); return () => clearTimeout(t); } }, [saved]);
+  const [originalJson, setOriginalJson] = useState("");
 
   const { entity, loading, invalidate: _invalidate, invalidateList } = useEntityEdit<Site>({
     queryKey: "site",
@@ -44,8 +47,11 @@ export default function SiteEditPage() {
   });
 
   useEffect(() => {
-    if (entity) setSite(entity);
+    if (entity) { setSite(entity); setOriginalJson(JSON.stringify(entity)); }
   }, [entity]);
+
+  const isDirty = !!site && originalJson !== "" && JSON.stringify(site) !== originalJson;
+  const showBanner = useUnsavedWarning({ isAddMode, isDirty });
 
   if (loading || !site) {
     return (
@@ -66,6 +72,7 @@ export default function SiteEditPage() {
       if (res.status === "ok") {
         modal.toast(t("common.saveSuccess" as any));
         setSaved(true);
+        setOriginalJson(JSON.stringify(site));
         setIsAddMode(false);
         invalidateList();
         if (site.name !== name) {
@@ -149,6 +156,8 @@ export default function SiteEditPage() {
           </button>
         </div>
       </div>
+
+      {showBanner && <UnsavedBanner isAddMode={isAddMode} />}
 
       {/* Basic Info */}
       <FormSection title={t("sites.section.basic" as any)}>

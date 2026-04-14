@@ -10,6 +10,8 @@ import * as TransactionBackend from "../backend/TransactionBackend";
 import type { Transaction } from "../backend/TransactionBackend";
 import { friendlyError } from "../utils/errorHelper";
 import SaveButton from "../components/SaveButton";
+import UnsavedBanner from "../components/UnsavedBanner";
+import { useUnsavedWarning } from "../hooks/useUnsavedWarning";
 
 export default function TransactionEditPage() {
   const { owner, name } = useParams<{ owner: string; name: string }>();
@@ -22,6 +24,7 @@ export default function TransactionEditPage() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   useEffect(() => { if (saved) { const t = setTimeout(() => setSaved(false), 1500); return () => clearTimeout(t); } }, [saved]);
+  const [originalJson, setOriginalJson] = useState("");
 
   const { entity, loading, invalidate: _invalidate, invalidateList } = useEntityEdit<Transaction>({
     queryKey: "transaction",
@@ -31,8 +34,11 @@ export default function TransactionEditPage() {
   });
 
   useEffect(() => {
-    if (entity) setTxn(entity);
+    if (entity) { setTxn(entity); setOriginalJson(JSON.stringify(entity)); }
   }, [entity]);
+
+  const isDirty = !!txn && originalJson !== "" && JSON.stringify(txn) !== originalJson;
+  const showBanner = useUnsavedWarning({ isAddMode, isDirty });
 
   if (loading || !txn) {
     return (
@@ -53,6 +59,7 @@ export default function TransactionEditPage() {
       if (res.status === "ok") {
         modal.toast(t("common.saveSuccess" as any));
         setSaved(true);
+        setOriginalJson(JSON.stringify(txn));
         setIsAddMode(false);
         invalidateList();
         if (txn.name !== name) {
@@ -133,6 +140,8 @@ export default function TransactionEditPage() {
           </button>
         </div>
       </div>
+
+      {showBanner && <UnsavedBanner isAddMode={isAddMode} />}
 
       {/* Basic Info (mostly read-only) */}
       <FormSection title={t("transactions.section.basic" as any)}>

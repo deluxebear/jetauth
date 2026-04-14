@@ -12,6 +12,8 @@ import type { Syncer } from "../backend/SyncerBackend";
 import { friendlyError } from "../utils/errorHelper";
 import SimpleSelect from "../components/SimpleSelect";
 import SaveButton from "../components/SaveButton";
+import UnsavedBanner from "../components/UnsavedBanner";
+import { useUnsavedWarning } from "../hooks/useUnsavedWarning";
 
 const SYNCER_TYPES = ["Database", "Keycloak", "WeCom", "Azure AD", "Active Directory", "Google Workspace", "DingTalk", "Lark", "Okta", "SCIM", "AWS IAM"];
 const DB_TYPES = [
@@ -41,6 +43,7 @@ export default function SyncerEditPage() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   useEffect(() => { if (saved) { const t = setTimeout(() => setSaved(false), 1500); return () => clearTimeout(t); } }, [saved]);
+  const [originalJson, setOriginalJson] = useState("");
   const [testDbLoading, setTestDbLoading] = useState(false);
 
   const { entity, loading, invalidate: _invalidate, invalidateList } = useEntityEdit<Syncer>({
@@ -51,8 +54,11 @@ export default function SyncerEditPage() {
   });
 
   useEffect(() => {
-    if (entity) setSyncer(entity);
+    if (entity) { setSyncer(entity); setOriginalJson(JSON.stringify(entity)); }
   }, [entity]);
+
+  const isDirty = !!syncer && originalJson !== "" && JSON.stringify(syncer) !== originalJson;
+  const showBanner = useUnsavedWarning({ isAddMode, isDirty });
 
   if (loading || !syncer) {
     return (
@@ -73,6 +79,7 @@ export default function SyncerEditPage() {
       if (res.status === "ok") {
         modal.toast(t("common.saveSuccess" as any));
         setSaved(true);
+        setOriginalJson(JSON.stringify(syncer));
         setIsAddMode(false);
         invalidateList();
         if (syncer.name !== name) {
@@ -162,6 +169,8 @@ export default function SyncerEditPage() {
           </button>
         </div>
       </div>
+
+      {showBanner && <UnsavedBanner isAddMode={isAddMode} />}
 
       {/* Basic */}
       <FormSection title={t("syncers.section.basic" as any)}>

@@ -10,6 +10,8 @@ import * as ModelBackend from "../backend/ModelBackend";
 import type { Model } from "../backend/ModelBackend";
 import { friendlyError } from "../utils/errorHelper";
 import SaveButton from "../components/SaveButton";
+import UnsavedBanner from "../components/UnsavedBanner";
+import { useUnsavedWarning } from "../hooks/useUnsavedWarning";
 
 export default function ModelEditPage() {
   const { owner, name } = useParams<{ owner: string; name: string }>();
@@ -22,6 +24,7 @@ export default function ModelEditPage() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   useEffect(() => { if (saved) { const t = setTimeout(() => setSaved(false), 1500); return () => clearTimeout(t); } }, [saved]);
+  const [originalJson, setOriginalJson] = useState("");
 
   const { entity, loading, invalidate: _invalidate, invalidateList } = useEntityEdit<Model>({
     queryKey: "model",
@@ -31,8 +34,11 @@ export default function ModelEditPage() {
   });
 
   useEffect(() => {
-    if (entity) setModel(entity);
+    if (entity) { setModel(entity); setOriginalJson(JSON.stringify(entity)); }
   }, [entity]);
+
+  const isDirty = !!model && originalJson !== "" && JSON.stringify(model) !== originalJson;
+  const showBanner = useUnsavedWarning({ isAddMode, isDirty });
 
   if (loading || !model) {
     return (
@@ -53,6 +59,7 @@ export default function ModelEditPage() {
       if (res.status === "ok") {
         modal.toast(t("common.saveSuccess" as any));
         setSaved(true);
+        setOriginalJson(JSON.stringify(model));
         setIsAddMode(false);
         invalidateList();
         if (model.name !== name) {
@@ -133,6 +140,8 @@ export default function ModelEditPage() {
           </button>
         </div>
       </div>
+
+      {showBanner && <UnsavedBanner isAddMode={isAddMode} />}
 
       {/* Basic Info */}
       <FormSection title={t("models.section.basic" as any)}>

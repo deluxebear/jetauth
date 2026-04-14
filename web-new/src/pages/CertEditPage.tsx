@@ -11,6 +11,8 @@ import type { Cert } from "../backend/CertBackend";
 import { friendlyError } from "../utils/errorHelper";
 import SimpleSelect from "../components/SimpleSelect";
 import SaveButton from "../components/SaveButton";
+import UnsavedBanner from "../components/UnsavedBanner";
+import { useUnsavedWarning } from "../hooks/useUnsavedWarning";
 
 const SCOPE_OPTIONS = [{ id: "JWT", name: "JWT" }];
 const TYPE_OPTIONS = [
@@ -58,6 +60,7 @@ export default function CertEditPage() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   useEffect(() => { if (saved) { const t = setTimeout(() => setSaved(false), 1500); return () => clearTimeout(t); } }, [saved]);
+  const [originalJson, setOriginalJson] = useState("");
 
   const { entity, loading, invalidate: _invalidate, invalidateList } = useEntityEdit<Cert>({
     queryKey: "cert",
@@ -67,8 +70,11 @@ export default function CertEditPage() {
   });
 
   useEffect(() => {
-    if (entity) setCert(entity);
+    if (entity) { setCert(entity); setOriginalJson(JSON.stringify(entity)); }
   }, [entity]);
+
+  const isDirty = !!cert && originalJson !== "" && JSON.stringify(cert) !== originalJson;
+  const showBanner = useUnsavedWarning({ isAddMode, isDirty });
 
   if (loading || !cert) {
     return (
@@ -119,6 +125,7 @@ export default function CertEditPage() {
       if (res.status === "ok") {
         modal.toast(t("common.saveSuccess" as any));
         setSaved(true);
+        setOriginalJson(JSON.stringify(cert));
         setIsAddMode(false);
         invalidateList();
         if (cert.name !== name) {
@@ -218,6 +225,8 @@ export default function CertEditPage() {
           </button>
         </div>
       </div>
+
+      {showBanner && <UnsavedBanner isAddMode={isAddMode} />}
 
       {/* Basic Info */}
       <FormSection title={t("certs.section.basic" as any)}>

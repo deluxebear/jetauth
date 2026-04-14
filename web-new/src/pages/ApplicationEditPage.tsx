@@ -13,6 +13,8 @@ import { friendlyError } from "../utils/errorHelper";
 import SimpleSelect from "../components/SimpleSelect";
 import ImageUrlInput from "../components/ImageUrlInput";
 import SaveButton from "../components/SaveButton";
+import UnsavedBanner from "../components/UnsavedBanner";
+import { useUnsavedWarning } from "../hooks/useUnsavedWarning";
 
 type AppData = Partial<Application>;
 
@@ -52,6 +54,7 @@ export default function ApplicationEditPage() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   useEffect(() => { if (saved) { const t = setTimeout(() => setSaved(false), 1500); return () => clearTimeout(t); } }, [saved]);
+  const [originalJson, setOriginalJson] = useState("");
   const [activeTab, setActiveTab] = useState("basic");
 
   const invalidateList = () => queryClient.invalidateQueries({ queryKey: ["applications"] });
@@ -70,6 +73,7 @@ export default function ApplicationEditPage() {
           application.tags = [];
         }
         setApp(application);
+        setOriginalJson(JSON.stringify(application));
       }
     } catch (e: any) { modal.toast(e?.message || t("common.saveFailed" as any), "error"); }
     finally { setLoading(false); }
@@ -88,6 +92,7 @@ export default function ApplicationEditPage() {
       if (res.status === "ok") {
         modal.toast(t("common.saveSuccess" as any));
         setSaved(true);
+        setOriginalJson(JSON.stringify(app));
         setIsAddMode(false);
         invalidateList();
       } else {
@@ -145,6 +150,9 @@ export default function ApplicationEditPage() {
     navigator.clipboard.writeText(text);
     modal.toast(t("common.copySuccess" as any));
   };
+
+  const isDirty = originalJson !== "" && JSON.stringify(app) !== originalJson;
+  const showBanner = useUnsavedWarning({ isAddMode, isDirty });
 
   if (loading) {
     return (
@@ -753,6 +761,8 @@ export default function ApplicationEditPage() {
           </button>
         </div>
       </div>
+
+      {showBanner && <UnsavedBanner isAddMode={isAddMode} />}
 
       {/* Tab Bar */}
       <div className="flex border-b border-border">

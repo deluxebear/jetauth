@@ -10,6 +10,8 @@ import * as PricingBackend from "../backend/PricingBackend";
 import type { Pricing } from "../backend/PricingBackend";
 import { friendlyError } from "../utils/errorHelper";
 import SaveButton from "../components/SaveButton";
+import UnsavedBanner from "../components/UnsavedBanner";
+import { useUnsavedWarning } from "../hooks/useUnsavedWarning";
 
 export default function PricingEditPage() {
   const { owner, name } = useParams<{ owner: string; name: string }>();
@@ -22,6 +24,7 @@ export default function PricingEditPage() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   useEffect(() => { if (saved) { const t = setTimeout(() => setSaved(false), 1500); return () => clearTimeout(t); } }, [saved]);
+  const [originalJson, setOriginalJson] = useState("");
 
   const { entity, loading, invalidate: _invalidate, invalidateList } = useEntityEdit<Pricing>({
     queryKey: "pricing",
@@ -31,8 +34,11 @@ export default function PricingEditPage() {
   });
 
   useEffect(() => {
-    if (entity) setPricing(entity);
+    if (entity) { setPricing(entity); setOriginalJson(JSON.stringify(entity)); }
   }, [entity]);
+
+  const isDirty = !!pricing && originalJson !== "" && JSON.stringify(pricing) !== originalJson;
+  const showBanner = useUnsavedWarning({ isAddMode, isDirty });
 
   if (loading || !pricing) {
     return (
@@ -53,6 +59,7 @@ export default function PricingEditPage() {
       if (res.status === "ok") {
         modal.toast(t("common.saveSuccess" as any));
         setSaved(true);
+        setOriginalJson(JSON.stringify(pricing));
         setIsAddMode(false);
         invalidateList();
         if (pricing.name !== name) {
@@ -133,6 +140,8 @@ export default function PricingEditPage() {
           </button>
         </div>
       </div>
+
+      {showBanner && <UnsavedBanner isAddMode={isAddMode} />}
 
       {/* Basic Info */}
       <FormSection title={t("pricings.section.basic" as any)}>

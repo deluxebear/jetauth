@@ -82,6 +82,8 @@ const DEFAULT_EDITABLE = ["displayName", "logo", "logoDark", "favicon", "website
 import type { Application } from "../backend/ApplicationBackend";
 import type { Ldap } from "../backend/LdapBackend";
 import SaveButton from "../components/SaveButton";
+import UnsavedBanner from "../components/UnsavedBanner";
+import { useUnsavedWarning } from "../hooks/useUnsavedWarning";
 
 const PASSWORD_TYPES = [
   { value: "plain", label: "Plain" }, { value: "salt", label: "Salt" },
@@ -121,6 +123,7 @@ export default function OrganizationEditPage() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   useEffect(() => { if (saved) { const t = setTimeout(() => setSaved(false), 1500); return () => clearTimeout(t); } }, [saved]);
+  const [originalJson, setOriginalJson] = useState("");
 
   const invalidateList = () => queryClient.invalidateQueries({ queryKey: ["organizations"] });
 
@@ -159,6 +162,7 @@ export default function OrganizationEditPage() {
       ]);
       if (orgRes.status === "ok" && orgRes.data) {
         setOrg(orgRes.data as Organization);
+        setOriginalJson(JSON.stringify(orgRes.data));
       } else {
         modal.showError(orgRes.msg || t("orgs.error.loadFailed" as any));
         navigate("/organizations");
@@ -178,6 +182,9 @@ export default function OrganizationEditPage() {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
+  const isDirty = !!org && originalJson !== "" && JSON.stringify(org) !== originalJson;
+  const showBanner = useUnsavedWarning({ isAddMode, isDirty });
+
   if (loading || !org) {
     return <div className="flex items-center justify-center py-24"><div className="h-8 w-8 rounded-full border-2 border-accent/30 border-t-accent animate-spin" /></div>;
   }
@@ -195,6 +202,7 @@ export default function OrganizationEditPage() {
         if (org.name !== name) navigate(`/organizations/${org.owner}/${org.name}`, { replace: true });
         modal.toast(t("common.saveSuccess" as any));
         setSaved(true);
+        setOriginalJson(JSON.stringify(org));
         setIsAddMode(false);
       } else {
         modal.toast(friendlyError(res.msg, t) || t("common.saveFailed" as any), "error");
@@ -301,6 +309,8 @@ export default function OrganizationEditPage() {
           </>)}
         </div>
       </div>
+
+      {showBanner && <UnsavedBanner isAddMode={isAddMode} />}
 
       {/* ══ Tabbed Form ══ */}
       <Tabs tabs={[

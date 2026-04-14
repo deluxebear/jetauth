@@ -10,6 +10,8 @@ import * as AgentBackend from "../backend/AgentBackend";
 import type { Agent } from "../backend/AgentBackend";
 import { friendlyError } from "../utils/errorHelper";
 import SaveButton from "../components/SaveButton";
+import UnsavedBanner from "../components/UnsavedBanner";
+import { useUnsavedWarning } from "../hooks/useUnsavedWarning";
 
 export default function AgentEditPage() {
   const { owner, name } = useParams<{ owner: string; name: string }>();
@@ -22,6 +24,7 @@ export default function AgentEditPage() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   useEffect(() => { if (saved) { const t = setTimeout(() => setSaved(false), 1500); return () => clearTimeout(t); } }, [saved]);
+  const [originalJson, setOriginalJson] = useState("");
 
   const { entity, loading, invalidate: _invalidate, invalidateList } = useEntityEdit<Agent>({
     queryKey: "agent",
@@ -31,8 +34,11 @@ export default function AgentEditPage() {
   });
 
   useEffect(() => {
-    if (entity) setAgent(entity);
+    if (entity) { setAgent(entity); setOriginalJson(JSON.stringify(entity)); }
   }, [entity]);
+
+  const isDirty = !!agent && originalJson !== "" && JSON.stringify(agent) !== originalJson;
+  const showBanner = useUnsavedWarning({ isAddMode, isDirty });
 
   if (loading || !agent) {
     return (
@@ -53,6 +59,7 @@ export default function AgentEditPage() {
       if (res.status === "ok") {
         modal.toast(t("common.saveSuccess" as any));
         setSaved(true);
+        setOriginalJson(JSON.stringify(agent));
         setIsAddMode(false);
         invalidateList();
         if (agent.name !== name) {
@@ -133,6 +140,8 @@ export default function AgentEditPage() {
           </button>
         </div>
       </div>
+
+      {showBanner && <UnsavedBanner isAddMode={isAddMode} />}
 
       {/* Basic Info */}
       <FormSection title={t("agents.section.basic" as any)}>

@@ -225,7 +225,12 @@
   },
   "webauthn": {
     "Found no credentials for this user": "无法找到此用户的证书",
-    "Please call WebAuthnSigninBegin first": "请先调用WebAuthnSigninBegin函数"
+    "Please call WebAuthnSigninBegin first": "请先调用WebAuthnSigninBegin函数",
+    "Failed to begin WebAuthn registration: %s": "WebAuthn 注册初始化失败：%s",
+    "Failed to finish WebAuthn registration: %s": "WebAuthn 注册完成失败：%s",
+    "Failed to get WebAuthn configuration: %s": "获取 WebAuthn 配置失败：%s",
+    "Failed to begin WebAuthn login: %s": "WebAuthn 登录初始化失败：%s",
+    "Failed to finish WebAuthn login: %s": "WebAuthn 登录完成失败：%s"
   },
   "mfa": {
     "Invalid MFA type": "无效的 MFA 类型",

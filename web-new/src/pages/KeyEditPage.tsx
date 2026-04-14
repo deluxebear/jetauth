@@ -11,6 +11,8 @@ import type { Key } from "../backend/KeyBackend";
 import { friendlyError } from "../utils/errorHelper";
 import SimpleSelect from "../components/SimpleSelect";
 import SaveButton from "../components/SaveButton";
+import UnsavedBanner from "../components/UnsavedBanner";
+import { useUnsavedWarning } from "../hooks/useUnsavedWarning";
 
 const TYPE_VALUES = ["Organization", "Application", "User", "General"] as const;
 const STATE_VALUES = ["Active", "Inactive"] as const;
@@ -38,6 +40,7 @@ export default function KeyEditPage() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   useEffect(() => { if (saved) { const t = setTimeout(() => setSaved(false), 1500); return () => clearTimeout(t); } }, [saved]);
+  const [originalJson, setOriginalJson] = useState("");
   const [showSecret, setShowSecret] = useState(false);
 
   const { entity, loading, invalidate: _invalidate, invalidateList } = useEntityEdit<Key>({
@@ -48,8 +51,11 @@ export default function KeyEditPage() {
   });
 
   useEffect(() => {
-    if (entity) setKey(entity);
+    if (entity) { setKey(entity); setOriginalJson(JSON.stringify(entity)); }
   }, [entity]);
+
+  const isDirty = !!key && originalJson !== "" && JSON.stringify(key) !== originalJson;
+  const showBanner = useUnsavedWarning({ isAddMode, isDirty });
 
   if (loading || !key) {
     return (
@@ -70,6 +76,7 @@ export default function KeyEditPage() {
       if (res.status === "ok") {
         modal.toast(t("common.saveSuccess" as any));
         setSaved(true);
+        setOriginalJson(JSON.stringify(key));
         setIsAddMode(false);
         invalidateList();
         if (key.name !== name) {
@@ -145,6 +152,8 @@ export default function KeyEditPage() {
           </button>
         </div>
       </div>
+
+      {showBanner && <UnsavedBanner isAddMode={isAddMode} />}
 
       <FormSection title={t("keys.section.basic" as any)}>
         <FormField label={t("field.owner")}><input value={key.owner} disabled className={inputClass} /></FormField>

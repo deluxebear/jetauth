@@ -11,6 +11,8 @@ import type { Product } from "../backend/ProductBackend";
 import { friendlyError } from "../utils/errorHelper";
 import SimpleSelect from "../components/SimpleSelect";
 import SaveButton from "../components/SaveButton";
+import UnsavedBanner from "../components/UnsavedBanner";
+import { useUnsavedWarning } from "../hooks/useUnsavedWarning";
 
 const STATE_OPTIONS = [
   { id: "Published", name: "Published" },
@@ -28,6 +30,7 @@ export default function ProductEditPage() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   useEffect(() => { if (saved) { const t = setTimeout(() => setSaved(false), 1500); return () => clearTimeout(t); } }, [saved]);
+  const [originalJson, setOriginalJson] = useState("");
 
   const { entity, loading, invalidate: _invalidate, invalidateList } = useEntityEdit<Product>({
     queryKey: "product",
@@ -37,8 +40,11 @@ export default function ProductEditPage() {
   });
 
   useEffect(() => {
-    if (entity) setProduct(entity);
+    if (entity) { setProduct(entity); setOriginalJson(JSON.stringify(entity)); }
   }, [entity]);
+
+  const isDirty = !!product && originalJson !== "" && JSON.stringify(product) !== originalJson;
+  const showBanner = useUnsavedWarning({ isAddMode, isDirty });
 
   if (loading || !product) {
     return (
@@ -59,6 +65,7 @@ export default function ProductEditPage() {
       if (res.status === "ok") {
         modal.toast(t("common.saveSuccess" as any));
         setSaved(true);
+        setOriginalJson(JSON.stringify(product));
         setIsAddMode(false);
         invalidateList();
         if (product.name !== name) {
@@ -139,6 +146,8 @@ export default function ProductEditPage() {
           </button>
         </div>
       </div>
+
+      {showBanner && <UnsavedBanner isAddMode={isAddMode} />}
 
       {/* Basic Info */}
       <FormSection title={t("products.section.basic" as any)}>

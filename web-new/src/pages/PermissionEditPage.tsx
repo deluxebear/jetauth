@@ -11,6 +11,8 @@ import * as PermissionBackend from "../backend/PermissionBackend";
 import type { Permission } from "../backend/PermissionBackend";
 import { friendlyError } from "../utils/errorHelper";
 import SaveButton from "../components/SaveButton";
+import UnsavedBanner from "../components/UnsavedBanner";
+import { useUnsavedWarning } from "../hooks/useUnsavedWarning";
 
 const RESOURCE_TYPE_OPTIONS = [
   { value: "Application", label: "Application" },
@@ -51,6 +53,7 @@ export default function PermissionEditPage() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   useEffect(() => { if (saved) { const t = setTimeout(() => setSaved(false), 1500); return () => clearTimeout(t); } }, [saved]);
+  const [originalJson, setOriginalJson] = useState("");
 
   const { entity, loading, invalidate: _invalidate, invalidateList } = useEntityEdit<Permission>({
     queryKey: "permission",
@@ -60,8 +63,11 @@ export default function PermissionEditPage() {
   });
 
   useEffect(() => {
-    if (entity) setPermission(entity);
+    if (entity) { setPermission(entity); setOriginalJson(JSON.stringify(entity)); }
   }, [entity]);
+
+  const isDirty = !!permission && originalJson !== "" && JSON.stringify(permission) !== originalJson;
+  const showBanner = useUnsavedWarning({ isAddMode, isDirty });
 
   if (loading || !permission) {
     return (
@@ -82,6 +88,7 @@ export default function PermissionEditPage() {
       if (res.status === "ok") {
         modal.toast(t("common.saveSuccess" as any));
         setSaved(true);
+        setOriginalJson(JSON.stringify(permission));
         setIsAddMode(false);
         invalidateList();
         if (permission.name !== name) {
@@ -170,6 +177,8 @@ export default function PermissionEditPage() {
           </button>
         </div>
       </div>
+
+      {showBanner && <UnsavedBanner isAddMode={isAddMode} />}
 
       {/* Basic Info */}
       <FormSection title={t("permissions.section.basic" as any)}>

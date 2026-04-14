@@ -10,6 +10,8 @@ import * as ServerBackend from "../backend/ServerBackend";
 import type { Server, Tool } from "../backend/ServerBackend";
 import { friendlyError } from "../utils/errorHelper";
 import SaveButton from "../components/SaveButton";
+import UnsavedBanner from "../components/UnsavedBanner";
+import { useUnsavedWarning } from "../hooks/useUnsavedWarning";
 
 export default function ServerEditPage() {
   const { owner, name } = useParams<{ owner: string; name: string }>();
@@ -22,6 +24,7 @@ export default function ServerEditPage() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   useEffect(() => { if (saved) { const t = setTimeout(() => setSaved(false), 1500); return () => clearTimeout(t); } }, [saved]);
+  const [originalJson, setOriginalJson] = useState("");
   const [syncing, setSyncing] = useState(false);
 
   const { entity, loading, invalidate, invalidateList } = useEntityEdit<Server>({
@@ -32,8 +35,11 @@ export default function ServerEditPage() {
   });
 
   useEffect(() => {
-    if (entity) setServer(entity);
+    if (entity) { setServer(entity); setOriginalJson(JSON.stringify(entity)); }
   }, [entity]);
+
+  const isDirty = !!server && originalJson !== "" && JSON.stringify(server) !== originalJson;
+  const showBanner = useUnsavedWarning({ isAddMode, isDirty });
 
   if (loading || !server) {
     return (
@@ -54,6 +60,7 @@ export default function ServerEditPage() {
       if (res.status === "ok") {
         modal.toast(t("common.saveSuccess" as any));
         setSaved(true);
+        setOriginalJson(JSON.stringify(server));
         setIsAddMode(false);
         invalidateList();
         if (server.name !== name) {
@@ -169,6 +176,8 @@ export default function ServerEditPage() {
           </button>
         </div>
       </div>
+
+      {showBanner && <UnsavedBanner isAddMode={isAddMode} />}
 
       {/* Basic Info */}
       <FormSection title={t("servers.section.basic" as any)}>

@@ -11,6 +11,8 @@ import type { Subscription } from "../backend/SubscriptionBackend";
 import { friendlyError } from "../utils/errorHelper";
 import SimpleSelect from "../components/SimpleSelect";
 import SaveButton from "../components/SaveButton";
+import UnsavedBanner from "../components/UnsavedBanner";
+import { useUnsavedWarning } from "../hooks/useUnsavedWarning";
 
 const PERIOD_OPTIONS = [
   { id: "Monthly", name: "Monthly" },
@@ -37,6 +39,7 @@ export default function SubscriptionEditPage() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   useEffect(() => { if (saved) { const t = setTimeout(() => setSaved(false), 1500); return () => clearTimeout(t); } }, [saved]);
+  const [originalJson, setOriginalJson] = useState("");
 
   const { entity, loading, invalidate: _invalidate, invalidateList } = useEntityEdit<Subscription>({
     queryKey: "subscription",
@@ -46,8 +49,11 @@ export default function SubscriptionEditPage() {
   });
 
   useEffect(() => {
-    if (entity) setSub(entity);
+    if (entity) { setSub(entity); setOriginalJson(JSON.stringify(entity)); }
   }, [entity]);
+
+  const isDirty = !!sub && originalJson !== "" && JSON.stringify(sub) !== originalJson;
+  const showBanner = useUnsavedWarning({ isAddMode, isDirty });
 
   if (loading || !sub) {
     return (
@@ -68,6 +74,7 @@ export default function SubscriptionEditPage() {
       if (res.status === "ok") {
         modal.toast(t("common.saveSuccess" as any));
         setSaved(true);
+        setOriginalJson(JSON.stringify(sub));
         setIsAddMode(false);
         invalidateList();
         if (sub.name !== name) {
@@ -148,6 +155,8 @@ export default function SubscriptionEditPage() {
           </button>
         </div>
       </div>
+
+      {showBanner && <UnsavedBanner isAddMode={isAddMode} />}
 
       {/* Basic Info */}
       <FormSection title={t("subscriptions.section.basic" as any)}>

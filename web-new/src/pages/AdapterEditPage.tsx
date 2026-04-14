@@ -11,6 +11,8 @@ import type { Adapter } from "../backend/AdapterBackend";
 import { friendlyError } from "../utils/errorHelper";
 import SimpleSelect from "../components/SimpleSelect";
 import SaveButton from "../components/SaveButton";
+import UnsavedBanner from "../components/UnsavedBanner";
+import { useUnsavedWarning } from "../hooks/useUnsavedWarning";
 
 const DATABASE_TYPE_OPTIONS = [
   { id: "mysql", name: "MySQL" },
@@ -31,6 +33,7 @@ export default function AdapterEditPage() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   useEffect(() => { if (saved) { const t = setTimeout(() => setSaved(false), 1500); return () => clearTimeout(t); } }, [saved]);
+  const [originalJson, setOriginalJson] = useState("");
 
   const { entity, loading, invalidate: _invalidate, invalidateList } = useEntityEdit<Adapter>({
     queryKey: "adapter",
@@ -40,8 +43,11 @@ export default function AdapterEditPage() {
   });
 
   useEffect(() => {
-    if (entity) setAdapter(entity);
+    if (entity) { setAdapter(entity); setOriginalJson(JSON.stringify(entity)); }
   }, [entity]);
+
+  const isDirty = !!adapter && originalJson !== "" && JSON.stringify(adapter) !== originalJson;
+  const showBanner = useUnsavedWarning({ isAddMode, isDirty });
 
   if (loading || !adapter) {
     return (
@@ -83,6 +89,7 @@ export default function AdapterEditPage() {
       if (res.status === "ok") {
         modal.toast(t("common.saveSuccess" as any));
         setSaved(true);
+        setOriginalJson(JSON.stringify(adapter));
         setIsAddMode(false);
         invalidateList();
         if (adapter.name !== name) {
@@ -177,6 +184,8 @@ export default function AdapterEditPage() {
           </button>
         </div>
       </div>
+
+      {showBanner && <UnsavedBanner isAddMode={isAddMode} />}
 
       {/* Basic Info */}
       <FormSection title={t("adapters.section.basic" as any)}>
