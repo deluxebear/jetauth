@@ -65,11 +65,15 @@ export default function UserListPage() {
         user.avatar = orgData.defaultAvatar;
       }
     } catch { /* ignore */ }
-    const res = await UserBackend.addUser(user);
-    if (res.status === "ok") {
-      navigate(`/users/${user.owner}/${user.name}`, { state: { mode: "add" } });
-    } else {
-      modal.toast(res.msg || t("common.addFailed" as any), "error");
+    try {
+      const res = await UserBackend.addUser(user);
+      if (res.status === "ok") {
+        navigate(`/users/${user.owner}/${user.name}`, { state: { mode: "add" } });
+      } else {
+        modal.showError(res.msg || t("common.addFailed" as any));
+      }
+    } catch (e: any) {
+      modal.showError(e?.message || t("common.addFailed" as any));
     }
   };
 

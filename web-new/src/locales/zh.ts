@@ -19,6 +19,8 @@ const zh: Record<string, string> = {
   "common.ok": "确定",
   "common.success": "成功",
   "common.error": "错误",
+  "common.unsavedChanges": "有未保存的更改",
+  "common.unsavedNewRecord": "记录已创建，编辑完成后请点击「保存」确认，或点击「←」删除此记录",
   "common.info": "提示",
   "common.refresh": "刷新",
   "common.viewAll": "查看全部",

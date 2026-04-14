@@ -19,6 +19,8 @@ const en = {
   "common.ok": "OK",
   "common.success": "Success",
   "common.error": "Error",
+  "common.unsavedChanges": "You have unsaved changes",
+  "common.unsavedNewRecord": "Record created. Click Save when done, or ← to delete",
   "common.info": "Info",
   "common.refresh": "Refresh",
   "common.viewAll": "View all",

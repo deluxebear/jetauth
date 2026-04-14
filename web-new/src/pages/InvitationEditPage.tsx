@@ -14,6 +14,8 @@ import * as GroupBackend from "../backend/GroupBackend";
 import type { Invitation } from "../backend/InvitationBackend";
 import { friendlyError } from "../utils/errorHelper";
 import SaveButton from "../components/SaveButton";
+import UnsavedBanner from "../components/UnsavedBanner";
+import { useUnsavedWarning } from "../hooks/useUnsavedWarning";
 
 // ---------------------------------------------------------------------------
 // Obfuscation helpers
@@ -156,6 +158,7 @@ export default function InvitationEditPage() {
   useEffect(() => { if (saved) { const t = setTimeout(() => setSaved(false), 1500); return () => clearTimeout(t); } }, [saved]);
   const [sendEmails, setSendEmails] = useState("");
   const [sending, setSending] = useState(false);
+  const [originalJson, setOriginalJson] = useState("");
 
   // --- Obfuscation settings ------------------------------------------------
   const [obfuscate, setObfuscate] = useState(false);
@@ -216,6 +219,7 @@ export default function InvitationEditPage() {
       const res = await InvBackend.getInvitation(owner, name);
       if (res.status === "ok" && res.data) {
         setInv(res.data);
+        setOriginalJson(JSON.stringify(res.data));
         // Detect if existing code uses obfuscation (regex)
         if (res.data.code && /[.*+?^${}()|[\]\\]/.test(res.data.code)) {
           setObfuscate(true);
@@ -246,6 +250,9 @@ export default function InvitationEditPage() {
     fetchData();
   }, [fetchData]);
 
+  const isDirty = !!inv && originalJson !== "" && JSON.stringify(inv) !== originalJson;
+  const showBanner = useUnsavedWarning({ isAddMode, isDirty });
+
   if (loading || !inv) {
     return (
       <div className="flex items-center justify-center py-24">
@@ -269,6 +276,7 @@ export default function InvitationEditPage() {
         modal.toast(t("common.saveSuccess" as any));
         setSaved(true);
         setIsAddMode(false);
+        setOriginalJson(JSON.stringify(inv));
       } else {
         modal.toast(friendlyError(res.msg, t) || t("common.saveFailed" as any), "error");
       }
@@ -467,6 +475,8 @@ export default function InvitationEditPage() {
           </button>
         </div>
       </div>
+
+      {showBanner && <UnsavedBanner isAddMode={isAddMode} />}
 
       {/* Basic Info */}
       <FormSection title={t("invitations.section.basic" as any)}>
