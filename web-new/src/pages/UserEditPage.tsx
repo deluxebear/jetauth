@@ -293,6 +293,18 @@ export default function UserEditPage() {
     { value: "Other", label: t("users.gender.other" as any) },
   ];
 
+  const EDUCATION_OPTIONS = [
+    { value: "", label: t("users.education.none" as any) },
+    { value: "Doctorate", label: t("users.education.doctorate" as any) },
+    { value: "Master", label: t("users.education.master" as any) },
+    { value: "Bachelor", label: t("users.education.bachelor" as any) },
+    { value: "Junior College", label: t("users.education.juniorCollege" as any) },
+    { value: "High School", label: t("users.education.highSchool" as any) },
+    { value: "Middle School", label: t("users.education.middleSchool" as any) },
+    { value: "Primary School", label: t("users.education.primarySchool" as any) },
+    { value: "Other", label: t("users.education.other" as any) },
+  ];
+
   const ID_CARD_TYPES = [
     { value: "", label: "" },
     { value: "ID card", label: t("users.idCardType.idCard" as any) },
@@ -423,7 +435,12 @@ export default function UserEditPage() {
             {GENDER_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
           </select>)}
         {dynField("Birthday", undefined, <input type="date" value={user.birthday ?? ""} onChange={(e) => setWithValidation("Birthday", "birthday", e.target.value)} disabled={isFieldDisabled("Birthday")} className={inputClass} />)}
-        {dynField("Education", undefined, <input value={user.education ?? ""} onChange={(e) => setWithValidation("Education", "education", e.target.value)} disabled={isFieldDisabled("Education")} className={inputClass} />)}
+        {dynField("Education", undefined, <SingleSearchSelect
+            value={user.education ?? ""}
+            options={EDUCATION_OPTIONS}
+            onChange={(v) => set("education", v)}
+            placeholder={t("common.search" as any)}
+          />)}
       </FormSection>
 
       <FormSection title={t("users.section.verification" as any)}>
