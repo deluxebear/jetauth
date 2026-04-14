@@ -567,6 +567,23 @@ export default function UserEditPage() {
           </div>
         )}
       </FormSection>
+
+      {anySectionFieldVisible("Properties") && (
+      <FormSection title={t("users.section.properties" as any)} action={!isFieldDisabled("Properties") ? (
+        <button onClick={() => { const key = `key_${Date.now()}`; set("properties", { ...(user.properties ?? {}), [key]: "" }); }}
+          className="rounded-lg bg-accent px-2 py-0.5 text-[11px] font-medium text-white hover:bg-accent-hover transition-colors">{t("common.add")}</button>
+      ) : undefined}>
+        {dynBlock("Properties",
+          <PropertyTable
+            properties={user.properties ?? {}}
+            onChange={(v) => set("properties", v)}
+            disabled={isFieldDisabled("Properties")}
+            t={t}
+            hideHeader
+          />
+        )}
+      </FormSection>
+      )}
     </div>
   );
 
@@ -575,15 +592,19 @@ export default function UserEditPage() {
     <div className="space-y-5">
       {anySectionFieldVisible("Password", "IP whitelist", "Last change password time") && (
       <FormSection title={t("users.section.security" as any)}>
-        {dynField("Password", undefined, isSelf ? (
-          <PasswordModal
-            userOwner={user.owner}
-            userName={user.name}
-            hasExistingPassword={!!user.password && user.password !== ""}
-            isAdmin={isAdmin}
-            disabled={isFieldDisabled("Password")}
-          />
-        ) : (
+        {isSelf ? (
+          isFieldVisible("Password") && (
+            <div className="col-span-2">
+              <PasswordModal
+                userOwner={user.owner}
+                userName={user.name}
+                hasExistingPassword={!!user.password && user.password !== ""}
+                isAdmin={isAdmin}
+                disabled={isFieldDisabled("Password")}
+              />
+            </div>
+          )
+        ) : dynField("Password", undefined, (
           <div className="flex gap-2 items-center">
             <div className="relative flex-1">
               <input type={showPassword ? "text" : "password"} value={user.password ?? ""} onChange={(e) => set("password", e.target.value)} disabled={isFieldDisabled("Password")} className={monoInputClass} placeholder="***" />
@@ -779,18 +800,6 @@ export default function UserEditPage() {
       </FormSection>
       )}
 
-      {anySectionFieldVisible("Properties") && (
-      <FormSection title={t("users.section.properties" as any)}>
-        {dynBlock("Properties",
-          <PropertyTable
-            properties={user.properties ?? {}}
-            onChange={(v) => set("properties", v)}
-            disabled={isFieldDisabled("Properties")}
-            t={t}
-          />
-        )}
-      </FormSection>
-      )}
     </div>
   );
 
@@ -1172,7 +1181,7 @@ function MfaItemsTable({ items, onChange, t }: { items: { name: string; rule: st
 
   return (
     <div className="rounded-xl border border-border bg-surface-1 overflow-visible">
-      <div className="px-4 py-2.5 border-b border-border-subtle bg-surface-2/30 flex items-center gap-2">
+      <div className="px-4 py-2.5 border-b border-border-subtle bg-surface-2/30 flex items-center justify-between">
         <span className="text-[12px] font-semibold text-text-primary">{t("users.field.mfaItems" as any)}</span>
         <button disabled={items.length >= 4} onClick={addRow}
           className="rounded-lg bg-accent px-2 py-0.5 text-[11px] font-medium text-white hover:bg-accent-hover disabled:opacity-50 transition-colors">{t("common.add")}</button>
@@ -1259,7 +1268,7 @@ function WebAuthnTable({ items, onChange, isSelf, t, onRefresh }: {
 
   return (
     <div className="rounded-xl border border-border bg-surface-1 overflow-visible">
-      <div className="px-4 py-2.5 border-b border-border-subtle bg-surface-2/30 flex items-center gap-2">
+      <div className="px-4 py-2.5 border-b border-border-subtle bg-surface-2/30 flex items-center justify-between">
         <span className="text-[12px] font-semibold text-text-primary">{t("users.field.webauthnCredentials" as any)}</span>
         <button onClick={handleRegister} disabled={!isSelf || registering}
           className="rounded-lg bg-accent px-2 py-0.5 text-[11px] font-medium text-white hover:bg-accent-hover disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
@@ -1311,7 +1320,7 @@ function ManagedAccountsTable({ items, onChange, applications, t }: {
 
   return (
     <div className="rounded-xl border border-border bg-surface-1 overflow-visible">
-      <div className="px-4 py-2.5 border-b border-border-subtle bg-surface-2/30 flex items-center gap-2">
+      <div className="px-4 py-2.5 border-b border-border-subtle bg-surface-2/30 flex items-center justify-between">
         <span className="text-[12px] font-semibold text-text-primary">{t("users.field.managedAccounts" as any)}</span>
         <button onClick={addRow}
           className="rounded-lg bg-accent px-2 py-0.5 text-[11px] font-medium text-white hover:bg-accent-hover transition-colors">{t("common.add")}</button>
@@ -1594,11 +1603,12 @@ function MfaSection({ multiFactorAuths, user, isSelf, isAdmin, onRefresh, t }: {
 }
 
 // ── Editable Property Table (key-value pairs) ──
-function PropertyTable({ properties, onChange, disabled, t }: {
+function PropertyTable({ properties, onChange, disabled, t, hideHeader }: {
   properties: Record<string, unknown>;
   onChange: (v: Record<string, unknown>) => void;
   disabled?: boolean;
   t: (k: string) => string;
+  hideHeader?: boolean;
 }) {
   const entries = Object.entries(properties);
   const addRow = () => {
@@ -1626,14 +1636,16 @@ function PropertyTable({ properties, onChange, disabled, t }: {
   const ic = "w-full rounded-lg border border-border bg-surface-2 px-2 py-1 text-[12px] text-text-primary outline-none focus:border-accent transition-colors";
 
   return (
-    <div className="rounded-xl border border-border bg-surface-1 overflow-visible">
-      <div className="px-4 py-2.5 border-b border-border-subtle bg-surface-2/30 flex items-center gap-2">
-        <span className="text-[12px] font-semibold text-text-primary">{t("users.section.properties" as any)}</span>
-        {!disabled && (
-          <button onClick={addRow}
-            className="rounded-lg bg-accent px-2 py-0.5 text-[11px] font-medium text-white hover:bg-accent-hover transition-colors">{t("common.add")}</button>
-        )}
-      </div>
+    <div className={hideHeader ? "" : "rounded-xl border border-border bg-surface-1 overflow-visible"}>
+      {!hideHeader && (
+        <div className="px-4 py-2.5 border-b border-border-subtle bg-surface-2/30 flex items-center justify-between">
+          <span className="text-[12px] font-semibold text-text-primary">{t("users.section.properties" as any)}</span>
+          {!disabled && (
+            <button onClick={addRow}
+              className="rounded-lg bg-accent px-2 py-0.5 text-[11px] font-medium text-white hover:bg-accent-hover transition-colors">{t("common.add")}</button>
+          )}
+        </div>
+      )}
       {entries.length === 0 ? (
         <div className="px-4 py-6 text-center text-[12px] text-text-muted">{t("common.noData")}</div>
       ) : (
@@ -1688,7 +1700,7 @@ function AddressesTable({ items, onChange, t }: {
 
   return (
     <div className="rounded-xl border border-border bg-surface-1 overflow-visible">
-      <div className="px-4 py-2.5 border-b border-border-subtle bg-surface-2/30 flex items-center gap-2">
+      <div className="px-4 py-2.5 border-b border-border-subtle bg-surface-2/30 flex items-center justify-between">
         <span className="text-[12px] font-semibold text-text-primary">{t("users.field.addresses" as any)}</span>
         <button onClick={addRow} className="rounded-lg bg-accent px-2 py-0.5 text-[11px] font-medium text-white hover:bg-accent-hover transition-colors">{t("common.add")}</button>
       </div>

@@ -77,20 +77,22 @@ export default function FaceIdTable({ table, onUpdateTable, account }: Props) {
 
   return (
     <div className="rounded-xl border border-border bg-surface-1 overflow-visible">
-      <div className="px-4 py-2.5 border-b border-border-subtle bg-surface-2/30 flex items-center gap-2 flex-wrap">
+      <div className="px-4 py-2.5 border-b border-border-subtle bg-surface-2/30 flex items-center justify-between">
         <span className="text-[12px] font-semibold text-text-primary">{t("faceId.title" as any)}</span>
-        <button disabled={maxReached} onClick={() => { setWithImage(false); setModalOpen(true); }}
-          className="flex items-center gap-1 rounded-lg bg-accent px-2 py-0.5 text-[11px] font-medium text-white hover:bg-accent-hover disabled:opacity-50 transition-colors">
-          <Plus size={11} /> {t("faceId.addFaceId" as any)}
-        </button>
-        <button disabled={maxReached} onClick={() => { setWithImage(true); setModalOpen(true); }}
-          className="flex items-center gap-1 rounded-lg border border-border px-2 py-0.5 text-[11px] font-medium text-text-secondary hover:bg-surface-2 disabled:opacity-50 transition-colors">
-          <ImageIcon size={11} /> {t("faceId.addFaceIdImage" as any)}
-        </button>
-        <label className={`flex items-center gap-1 rounded-lg border border-border px-2 py-0.5 text-[11px] font-medium text-text-secondary hover:bg-surface-2 transition-colors cursor-pointer ${maxReached || uploading ? "opacity-50 pointer-events-none" : ""}`}>
-          <Upload size={11} /> {uploading ? t("faceId.uploading" as any) : t("faceId.uploadFile" as any)}
-          <input type="file" accept="image/*" onChange={handleUpload} className="hidden" disabled={maxReached || uploading} />
-        </label>
+        <div className="flex items-center gap-2 flex-wrap">
+          <button disabled={maxReached} onClick={() => { setWithImage(false); setModalOpen(true); }}
+            className="flex items-center gap-1 rounded-lg bg-accent px-2 py-0.5 text-[11px] font-medium text-white hover:bg-accent-hover disabled:opacity-50 transition-colors">
+            <Plus size={11} /> {t("faceId.addFaceId" as any)}
+          </button>
+          <button disabled={maxReached} onClick={() => { setWithImage(true); setModalOpen(true); }}
+            className="flex items-center gap-1 rounded-lg border border-border px-2 py-0.5 text-[11px] font-medium text-text-secondary hover:bg-surface-2 disabled:opacity-50 transition-colors">
+            <ImageIcon size={11} /> {t("faceId.addFaceIdImage" as any)}
+          </button>
+          <label className={`flex items-center gap-1 rounded-lg border border-border px-2 py-0.5 text-[11px] font-medium text-text-secondary hover:bg-surface-2 transition-colors cursor-pointer ${maxReached || uploading ? "opacity-50 pointer-events-none" : ""}`}>
+            <Upload size={11} /> {uploading ? t("faceId.uploading" as any) : t("faceId.uploadFile" as any)}
+            <input type="file" accept="image/*" onChange={handleUpload} className="hidden" disabled={maxReached || uploading} />
+          </label>
+        </div>
       </div>
 
       {items.length === 0 ? (
