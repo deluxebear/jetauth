@@ -152,7 +152,7 @@ export default function Login({ onLogin, error, themeData, orgBranding, onOrgani
           </p>
 
           <div className="flex flex-wrap gap-2">
-            {["SSO", "OAuth 2.0", "OIDC", "SAML", "LDAP", "RBAC"].map((tag, i) => (
+            {(t("login.brand.tags" as any) || "SSO,OAuth 2.0,OIDC,SAML,LDAP,RBAC").split(",").map((tag: string, i: number) => (
               <motion.span
                 key={tag}
                 initial={{ opacity: 0, scale: 0.8 }}

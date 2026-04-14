@@ -911,10 +911,10 @@ function MfaItemsEditor({ items, onChange, t }: { items: { name: string; rule: s
             {items.map((item, idx) => (
               <tr key={idx} className="border-b border-border-subtle hover:bg-surface-2/50">
                 <td className="py-1.5 px-2">
-                  <SimpleSelect value={item.name} options={MFA_TYPES.filter((t) => t.value === item.name || !usedNames.includes(t.value))} onChange={(v) => updateItem(idx, "name", v)} className="rounded border border-border bg-surface-2 px-2 py-1 text-[12px] text-text-primary outline-none focus:border-accent" />
+                  <SimpleSelect value={item.name} options={MFA_TYPES.filter((t) => t.value === item.name || !usedNames.includes(t.value))} onChange={(v) => updateItem(idx, "name", v)} compact />
                 </td>
                 <td className="py-1.5 px-2">
-                  <SimpleSelect value={item.rule} options={MFA_RULES.map((r) => ({ value: r, label: t(`orgs.mfa.${r}` as any) }))} onChange={(v) => updateItem(idx, "rule", v)} className="rounded border border-border bg-surface-2 px-2 py-1 text-[12px] text-text-primary outline-none focus:border-accent" />
+                  <SimpleSelect value={item.rule} options={MFA_RULES.map((r) => ({ value: r, label: t(`orgs.mfa.${r}` as any) }))} onChange={(v) => updateItem(idx, "rule", v)} compact />
                 </td>
                 <td className="py-1.5 px-2 text-right">
                   <div className="flex items-center justify-end gap-1">
@@ -1393,8 +1393,7 @@ function AccountItemsTable({ items, onChange, t }: {
                           const k = `accountItem.${n}`; const v = t(k as any);
                           return { value: n, label: v === k ? n : v };
                         }),
-                      ]} onChange={(v) => updateField(idx, "name", v)}
-                        className="w-full rounded-lg border border-border bg-surface-2 px-2 py-1 text-[12px] text-text-primary outline-none focus:border-accent transition-colors" />
+                      ]} onChange={(v) => updateField(idx, "name", v)} compact />
                     </td>
                     <td className="px-3 py-1.5">
                       <Switch checked={item.visible} onChange={(v) => updateField(idx, "visible", v)} />
@@ -1411,14 +1410,12 @@ function AccountItemsTable({ items, onChange, t }: {
                           { value: "Public", label: t("orgs.rule.Public" as any) },
                           { value: "Self", label: t("orgs.rule.Self" as any) },
                           { value: "Admin", label: t("orgs.rule.Admin" as any) },
-                        ]} onChange={(v) => updateField(idx, "viewRule", v)}
-                          className="w-full rounded border border-border bg-surface-2 px-2 py-1 text-[12px] text-text-primary outline-none" />
+                        ]} onChange={(v) => updateField(idx, "viewRule", v)} compact />
                       ) : null}
                     </td>
                     <td className="px-3 py-1.5">
                       {item.visible ? (
-                        <SimpleSelect value={item.modifyRule} options={modifyOptions.map((o) => ({ value: o, label: t(`orgs.rule.${o}` as any) }))} onChange={(v) => updateField(idx, "modifyRule", v)}
-                          className="w-full rounded border border-border bg-surface-2 px-2 py-1 text-[12px] text-text-primary outline-none" />
+                        <SimpleSelect value={item.modifyRule} options={modifyOptions.map((o) => ({ value: o, label: t(`orgs.rule.${o}` as any) }))} onChange={(v) => updateField(idx, "modifyRule", v)} compact />
                       ) : null}
                     </td>
                     <td className="px-3 py-1.5">

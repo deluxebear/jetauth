@@ -68,6 +68,7 @@ const zh: Record<string, string> = {
   "login.brand.heading3": "一站式",
   "login.brand.description":
     "集中式身份认证与授权平台。SSO、OAuth 2.0、OIDC、SAML 和 LDAP —— 尽在一处。",
+  "login.brand.tags": "单点登录,多因素认证,权限管理,用户目录,安全合规,开箱即用",
   "login.brand.secure": "默认安全",
 
   // Sidebar

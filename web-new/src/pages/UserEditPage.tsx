@@ -1092,12 +1092,12 @@ function MfaItemsTable({ items, onChange, t }: { items: { name: string; rule: st
                       { value: item.name, label: t(`users.mfaName.${item.name}` as any) },
                       ...MFA_NAME_KEYS.filter((n) => !usedNames.has(n)).map((n) => ({ value: n, label: t(`users.mfaName.${n}` as any) })),
                     ]}
-                    onChange={(v) => updateField(idx, "name", v)} />
+                    onChange={(v) => updateField(idx, "name", v)} compact />
                 </td>
                 <td className="px-3 py-1.5">
                   <SimpleSelect value={item.rule}
                     options={MFA_RULE_KEYS.map((r) => ({ value: r, label: t(`users.mfaRule.${r}` as any) }))}
-                    onChange={(v) => updateField(idx, "rule", v)} />
+                    onChange={(v) => updateField(idx, "rule", v)} compact />
                 </td>
                 <td className="px-3 py-1.5">
                   <div className="flex items-center gap-0.5">
@@ -1193,7 +1193,7 @@ function ManagedAccountsTable({ items, onChange, applications, t }: {
                         { value: "", label: "—" },
                         ...applications.map((a) => ({ value: a.name, label: (a as any).displayName || a.name })),
                       ]}
-                      onChange={(v) => updateField(idx, "application", v)} />
+                      onChange={(v) => updateField(idx, "application", v)} compact />
                   </td>
                   <td className="px-3 py-1.5">
                     <input value={item.signinUrl ?? ""} onChange={(e) => updateField(idx, "signinUrl", e.target.value)}

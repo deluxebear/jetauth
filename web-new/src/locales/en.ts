@@ -68,6 +68,7 @@ const en = {
   "login.brand.heading3": "Unified",
   "login.brand.description":
     "Centralized authentication and authorization platform. SSO, OAuth 2.0, OIDC, SAML, and LDAP — all in one place.",
+  "login.brand.tags": "Single Sign-On,Multi-Factor Auth,Access Control,User Directory,Compliance,Ready to Use",
   "login.brand.secure": "SECURE BY DEFAULT",
 
   // Sidebar
