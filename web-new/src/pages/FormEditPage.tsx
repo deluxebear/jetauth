@@ -9,8 +9,7 @@ import { useEntityEdit } from "../hooks/useEntityEdit";
 import * as FormBackend from "../backend/FormBackend";
 import type { Form } from "../backend/FormBackend";
 import { friendlyError } from "../utils/errorHelper";
-
-const selectClass = "w-full rounded-lg border border-border bg-surface-2 px-3 py-2 text-[13px] text-text-primary focus:border-accent focus:ring-1 focus:ring-accent/30 outline-none transition-all";
+import SimpleSelect from "../components/SimpleSelect";
 
 export default function FormEditPage() {
   const { owner, name } = useParams<{ owner: string; name: string }>();
@@ -137,10 +136,10 @@ export default function FormEditPage() {
           <input value={form.displayName} onChange={(e) => set("displayName", e.target.value)} className={inputClass} />
         </FormField>
         <FormField label={t("col.type" as any)}>
-          <select value={form.type} onChange={(e) => set("type", e.target.value)} className={selectClass}>
-            <option value="">--</option>
-            {typeOptions.map((opt) => <option key={opt.id} value={opt.id}>{t(opt.name as any)}</option>)}
-          </select>
+          <SimpleSelect value={form.type} options={[
+            { value: "", label: "--" },
+            ...typeOptions.map((opt) => ({ value: opt.id, label: t(opt.name as any) })),
+          ]} onChange={(v) => set("type", v)} />
         </FormField>
         <FormField label={t("forms.field.tag" as any)}>
           <input value={form.tag ?? ""} onChange={(e) => set("tag", e.target.value)} className={inputClass} />

@@ -15,6 +15,7 @@ import type { User } from "../backend/UserBackend";
 import * as OrgBackend from "../backend/OrganizationBackend";
 import { useOrganization } from "../OrganizationContext";
 import { friendlyError } from "../utils/errorHelper";
+import SimpleSelect from "../components/SimpleSelect";
 
 export default function GroupEditPage() {
   const { owner, name } = useParams<{ owner: string; name: string }>();
@@ -243,16 +244,7 @@ export default function GroupEditPage() {
       {/* Basic Info */}
       <FormSection title={t("orgs.section.basic" as any)}>
         <FormField label={t("field.owner")}>
-          <select
-            value={group.owner}
-            onChange={(e) => set("owner", e.target.value)}
-            disabled={!isGlobalAdmin}
-            className={inputClass}
-          >
-            {organizations.map((o) => (
-              <option key={o.name} value={o.name}>{o.displayName || o.name}</option>
-            ))}
-          </select>
+          <SimpleSelect value={group.owner} options={organizations.map((o) => ({ value: o.name, label: o.displayName || o.name }))} onChange={(v) => set("owner", v)} disabled={!isGlobalAdmin} />
         </FormField>
         <FormField label={t("field.name")} required>
           <input value={group.name} onChange={(e) => set("name", e.target.value)} className={monoInputClass} />
@@ -261,21 +253,13 @@ export default function GroupEditPage() {
           <input value={group.displayName ?? ""} onChange={(e) => set("displayName", e.target.value)} className={inputClass} />
         </FormField>
         <FormField label={t("field.type")}>
-          <select value={group.type ?? "Virtual"} onChange={(e) => set("type", e.target.value)} className={inputClass}>
-            <option value="Virtual">{t("groups.type.virtual" as any)}</option>
-            <option value="Physical">{t("groups.type.physical" as any)}</option>
-          </select>
+          <SimpleSelect value={group.type ?? "Virtual"} options={[
+            { value: "Virtual", label: t("groups.type.virtual" as any) },
+            { value: "Physical", label: t("groups.type.physical" as any) },
+          ]} onChange={(v) => set("type", v)} />
         </FormField>
         <FormField label={t("groups.field.parentGroup" as any)}>
-          <select
-            value={group.parentId ?? ""}
-            onChange={(e) => set("parentId", e.target.value)}
-            className={inputClass}
-          >
-            {parentOptions.map((o) => (
-              <option key={o.value} value={o.value}>{o.label}</option>
-            ))}
-          </select>
+          <SimpleSelect value={group.parentId ?? ""} options={parentOptions} onChange={(v) => set("parentId", v)} />
         </FormField>
         <FormField label={t("field.isEnabled")}>
           <Switch checked={!!group.isEnabled} onChange={(v) => set("isEnabled", v)} />

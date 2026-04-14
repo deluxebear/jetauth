@@ -9,6 +9,7 @@ import { useEntityEdit } from "../hooks/useEntityEdit";
 import * as SubscriptionBackend from "../backend/SubscriptionBackend";
 import type { Subscription } from "../backend/SubscriptionBackend";
 import { friendlyError } from "../utils/errorHelper";
+import SimpleSelect from "../components/SimpleSelect";
 
 const PERIOD_OPTIONS = [
   { id: "Monthly", name: "Monthly" },
@@ -172,9 +173,7 @@ export default function SubscriptionEditPage() {
           <input type="date" value={sub.endTime ? sub.endTime.substring(0, 10) : ""} onChange={(e) => set("endTime", e.target.value ? new Date(e.target.value).toISOString() : "")} className={monoInputClass} />
         </FormField>
         <FormField label={t("subscriptions.field.period" as any)}>
-          <select value={sub.period} onChange={(e) => set("period", e.target.value)} className={inputClass}>
-            {PERIOD_OPTIONS.map((o) => <option key={o.id} value={o.id}>{o.name}</option>)}
-          </select>
+          <SimpleSelect value={sub.period} options={PERIOD_OPTIONS.map((o) => ({ value: o.id, label: o.name }))} onChange={(v) => set("period", v)} />
         </FormField>
       </FormSection>
 
@@ -197,9 +196,7 @@ export default function SubscriptionEditPage() {
       {/* State */}
       <FormSection title={t("subscriptions.section.state" as any)}>
         <FormField label={t("col.state" as any)}>
-          <select value={sub.state} onChange={(e) => set("state", e.target.value)} className={inputClass}>
-            {STATE_OPTIONS.map((o) => <option key={o.id} value={o.id}>{o.name}</option>)}
-          </select>
+          <SimpleSelect value={sub.state} options={STATE_OPTIONS.map((o) => ({ value: o.id, label: o.name }))} onChange={(v) => set("state", v)} />
         </FormField>
       </FormSection>
     </motion.div>

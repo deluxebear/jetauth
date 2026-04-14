@@ -9,6 +9,7 @@ import { useEntityEdit } from "../hooks/useEntityEdit";
 import * as PlanBackend from "../backend/PlanBackend";
 import type { Plan } from "../backend/PlanBackend";
 import { friendlyError } from "../utils/errorHelper";
+import SimpleSelect from "../components/SimpleSelect";
 
 const PERIOD_OPTIONS = [
   { id: "Monthly", name: "Monthly" },
@@ -166,9 +167,7 @@ export default function PlanEditPage() {
           <input value={plan.currency} onChange={(e) => set("currency", e.target.value)} className={inputClass} />
         </FormField>
         <FormField label={t("plans.field.period" as any)}>
-          <select value={plan.period} onChange={(e) => set("period", e.target.value)} className={inputClass}>
-            {PERIOD_OPTIONS.map((o) => <option key={o.id} value={o.id}>{o.name}</option>)}
-          </select>
+          <SimpleSelect value={plan.period} options={PERIOD_OPTIONS.map((o) => ({ value: o.id, label: o.name }))} onChange={(v) => set("period", v)} />
         </FormField>
       </FormSection>
 

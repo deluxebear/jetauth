@@ -3,6 +3,7 @@ import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Save, ArrowLeft, Trash2, LogOut} from "lucide-react";
 import { FormField, FormSection, inputClass, monoInputClass, Switch, TagsDisplay } from "../components/FormSection";
+import SimpleSelect from "../components/SimpleSelect";
 import { useTranslation } from "../i18n";
 import { useModal } from "../components/Modal";
 import { useEntityEdit } from "../hooks/useEntityEdit";
@@ -227,9 +228,7 @@ export default function PermissionEditPage() {
       {/* Resources & Actions */}
       <FormSection title={t("permissions.section.resources" as any)}>
         <FormField label={t("permissions.field.resourceType" as any)}>
-          <select value={permission.resourceType} onChange={(e) => { set("resourceType", e.target.value); set("resources", []); }} className={inputClass}>
-            {RESOURCE_TYPE_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-          </select>
+          <SimpleSelect value={permission.resourceType} options={RESOURCE_TYPE_OPTIONS} onChange={(v) => { set("resourceType", v); set("resources", []); }} />
         </FormField>
         <FormField label={t("permissions.field.resources" as any)} span="full">
           <div className="mb-2"><TagsDisplay tags={permission.resources || []} /></div>
@@ -249,9 +248,7 @@ export default function PermissionEditPage() {
           />
         </FormField>
         <FormField label={t("permissions.field.effect" as any)}>
-          <select value={permission.effect} onChange={(e) => set("effect", e.target.value)} className={inputClass}>
-            {EFFECT_OPTIONS.map((o) => <option key={o.value} value={o.value}>{t(`permissions.effect${o.label}` as any)}</option>)}
-          </select>
+          <SimpleSelect value={permission.effect} options={EFFECT_OPTIONS.map((o) => ({ value: o.value, label: t(`permissions.effect${o.label}` as any) }))} onChange={(v) => set("effect", v)} />
         </FormField>
         <FormField label={t("col.isEnabled" as any)}>
           <Switch checked={permission.isEnabled} onChange={(v) => set("isEnabled", v)} />
@@ -270,18 +267,15 @@ export default function PermissionEditPage() {
           <input value={permission.approveTime ? new Date(permission.approveTime).toLocaleString() : "\u2014"} disabled className={inputClass} />
         </FormField>
         <FormField label={t("permissions.field.state" as any)}>
-          <select value={permission.state} onChange={(e) => {
-            const newState = e.target.value;
-            if (newState === "Approved") {
+          <SimpleSelect value={permission.state} options={STATE_OPTIONS.map((o) => ({ value: o.value, label: t(`permissions.state${o.label}` as any) }))} onChange={(v) => {
+            if (v === "Approved") {
               set("approveTime", new Date().toISOString());
             } else {
               set("approver", "");
               set("approveTime", "");
             }
-            set("state", newState);
-          }} className={inputClass}>
-            {STATE_OPTIONS.map((o) => <option key={o.value} value={o.value}>{t(`permissions.state${o.label}` as any)}</option>)}
-          </select>
+            set("state", v);
+          }} />
         </FormField>
       </FormSection>
     </motion.div>

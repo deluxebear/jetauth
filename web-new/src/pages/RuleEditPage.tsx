@@ -9,6 +9,7 @@ import { useEntityEdit } from "../hooks/useEntityEdit";
 import * as RuleBackend from "../backend/RuleBackend";
 import type { Rule, Expression } from "../backend/RuleBackend";
 import { friendlyError } from "../utils/errorHelper";
+import SimpleSelect from "../components/SimpleSelect";
 
 const TYPE_OPTIONS = [
   { id: "WAF", name: "WAF" },
@@ -184,15 +185,11 @@ export default function RuleEditPage() {
       {/* Type & Action */}
       <FormSection title={t("rules.section.config" as any)}>
         <FormField label={t("rules.field.type" as any)}>
-          <select value={rule.type} onChange={(e) => set("type", e.target.value)} className={inputClass}>
-            {TYPE_OPTIONS.map((o) => <option key={o.id} value={o.id}>{o.name}</option>)}
-          </select>
+          <SimpleSelect value={rule.type} options={TYPE_OPTIONS.map((o) => ({ value: o.id, label: o.name }))} onChange={(v) => set("type", v)} />
         </FormField>
         {showAction && (
           <FormField label={t("common.action" as any)}>
-            <select value={rule.action} onChange={(e) => set("action", e.target.value)} className={inputClass}>
-              {ACTION_OPTIONS.map((o) => <option key={o.id} value={o.id}>{o.name}</option>)}
-            </select>
+            <SimpleSelect value={rule.action} options={ACTION_OPTIONS.map((o) => ({ value: o.id, label: o.name }))} onChange={(v) => set("action", v)} />
           </FormField>
         )}
         {showStatusCode && (

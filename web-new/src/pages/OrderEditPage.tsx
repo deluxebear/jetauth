@@ -9,6 +9,7 @@ import { useEntityEdit } from "../hooks/useEntityEdit";
 import * as OrderBackend from "../backend/OrderBackend";
 import type { Order } from "../backend/OrderBackend";
 import { friendlyError } from "../utils/errorHelper";
+import SimpleSelect from "../components/SimpleSelect";
 
 const STATE_OPTIONS = [
   { id: "Created", name: "Created" },
@@ -175,9 +176,7 @@ export default function OrderEditPage() {
       {/* State */}
       <FormSection title={t("orders.section.state" as any)}>
         <FormField label={t("col.state" as any)}>
-          <select value={order.state} onChange={(e) => set("state", e.target.value)} className={inputClass}>
-            {STATE_OPTIONS.map((o) => <option key={o.id} value={o.id}>{o.name}</option>)}
-          </select>
+          <SimpleSelect value={order.state} options={STATE_OPTIONS.map((o) => ({ value: o.id, label: o.name }))} onChange={(v) => set("state", v)} />
         </FormField>
         <FormField label={t("orders.field.message" as any)}>
           <input value={order.message} onChange={(e) => set("message", e.target.value)} className={inputClass} />

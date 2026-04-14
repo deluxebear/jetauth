@@ -9,6 +9,7 @@ import { useEntityEdit } from "../hooks/useEntityEdit";
 import * as SiteBackend from "../backend/SiteBackend";
 import type { Site } from "../backend/SiteBackend";
 import { friendlyError } from "../utils/errorHelper";
+import SimpleSelect from "../components/SimpleSelect";
 
 const SSL_MODE_OPTIONS = [
   { id: "HTTP", name: "HTTP" },
@@ -254,9 +255,7 @@ export default function SiteEditPage() {
       {/* SSL */}
       <FormSection title={t("sites.section.ssl" as any)}>
         <FormField label={t("sites.field.sslMode" as any)}>
-          <select value={site.sslMode} onChange={(e) => set("sslMode", e.target.value)} className={inputClass}>
-            {SSL_MODE_OPTIONS.map((o) => <option key={o.id} value={o.id}>{o.name}</option>)}
-          </select>
+          <SimpleSelect value={site.sslMode} options={SSL_MODE_OPTIONS.map((o) => ({ value: o.id, label: o.name }))} onChange={(v) => set("sslMode", v)} />
         </FormField>
         <FormField label={t("sites.field.sslCert" as any)}>
           <input value={site.sslCert ?? ""} disabled className={inputClass} />
@@ -269,9 +268,7 @@ export default function SiteEditPage() {
           <input value={site.casdoorApplication ?? ""} onChange={(e) => set("casdoorApplication", e.target.value)} className={inputClass} />
         </FormField>
         <FormField label={t("sites.field.status" as any)}>
-          <select value={site.status ?? "Active"} onChange={(e) => set("status", e.target.value)} className={inputClass}>
-            {STATUS_OPTIONS.map((o) => <option key={o.id} value={o.id}>{o.name}</option>)}
-          </select>
+          <SimpleSelect value={site.status ?? "Active"} options={STATUS_OPTIONS.map((o) => ({ value: o.id, label: o.name }))} onChange={(v) => set("status", v)} />
         </FormField>
       </FormSection>
     </motion.div>

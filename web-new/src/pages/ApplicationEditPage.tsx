@@ -10,6 +10,7 @@ import { useOrganization } from "../OrganizationContext";
 import * as AppBackend from "../backend/ApplicationBackend";
 import type { Application } from "../backend/ApplicationBackend";
 import { friendlyError } from "../utils/errorHelper";
+import SimpleSelect from "../components/SimpleSelect";
 import ImageUrlInput from "../components/ImageUrlInput";
 
 type AppData = Partial<Application>;
@@ -165,10 +166,7 @@ export default function ApplicationEditPage() {
     <div className="space-y-5">
       <FormSection title={t("field.name")}>
         <FormField label={t("field.owner")}>
-          <select value={String(app.organization ?? "")} onChange={(e) => set("organization", e.target.value)} disabled={!isGlobalAdmin} className={inputClass}>
-            <option value="">—</option>
-            {orgOptions.map((o) => <option key={o.name} value={o.name}>{o.displayName || o.name}</option>)}
-          </select>
+          <SimpleSelect value={String(app.organization ?? "")} options={[{ value: "", label: "—" }, ...orgOptions.map((o) => ({ value: o.name, label: o.displayName || o.name }))]} onChange={(v) => set("organization", v)} disabled={!isGlobalAdmin} />
         </FormField>
         <FormField label={t("field.name")} required>
           <input
@@ -183,29 +181,24 @@ export default function ApplicationEditPage() {
           <input value={String(app.displayName ?? "")} onChange={(e) => set("displayName", e.target.value)} className={inputClass} />
         </FormField>
         <FormField label={t("apps.field.category" as any)}>
-          <select
+          <SimpleSelect
             value={String(app.category ?? "Default")}
-            onChange={(e) => {
-              set("category", e.target.value);
-              if (e.target.value === "Agent") {
+            options={[{ value: "Default", label: "Default" }, { value: "Agent", label: "Agent" }]}
+            onChange={(v) => {
+              set("category", v);
+              if (v === "Agent") {
                 set("type", "MCP");
               } else {
                 set("type", "All");
               }
             }}
-            className={inputClass}
-          >
-            <option value="Default">Default</option>
-            <option value="Agent">Agent</option>
-          </select>
+          />
         </FormField>
         <FormField label={t("field.type")}>
-          <select value={String(app.type ?? "")} onChange={(e) => set("type", e.target.value)} className={inputClass}>
-            {(app.category === "Agent"
+          <SimpleSelect value={String(app.type ?? "")} options={(app.category === "Agent"
               ? ["MCP", "A2A"]
               : ["All", "OIDC", "OAuth", "SAML", "CAS"]
-            ).map((v) => <option key={v} value={v}>{v}</option>)}
-          </select>
+            ).map((v) => ({ value: v, label: v }))} onChange={(v) => set("type", v)} />
         </FormField>
         <FormField label={t("apps.field.isShared" as any)}>
           <Switch checked={!!app.isShared} onChange={(v) => set("isShared", v)} />
@@ -372,14 +365,10 @@ export default function ApplicationEditPage() {
           </div>
         </FormField>
         <FormField label={t("apps.field.tokenFormat")}>
-          <select value={String(app.tokenFormat ?? "JWT")} onChange={(e) => set("tokenFormat", e.target.value)} className={inputClass}>
-            {TOKEN_FORMATS.map((f) => <option key={f} value={f}>{f}</option>)}
-          </select>
+          <SimpleSelect value={String(app.tokenFormat ?? "JWT")} options={TOKEN_FORMATS.map((f) => ({ value: f, label: f }))} onChange={(v) => set("tokenFormat", v)} />
         </FormField>
         <FormField label={t("apps.field.signingMethod" as any)}>
-          <select value={String(app.tokenSigningMethod || "RS256")} onChange={(e) => set("tokenSigningMethod", e.target.value)} className={inputClass}>
-            {SIGNING_METHODS.map((m) => <option key={m} value={m}>{m}</option>)}
-          </select>
+          <SimpleSelect value={String(app.tokenSigningMethod || "RS256")} options={SIGNING_METHODS.map((m) => ({ value: m, label: m }))} onChange={(v) => set("tokenSigningMethod", v)} />
         </FormField>
         {app.tokenFormat === "JWT-Custom" && (
           <FormField label={t("apps.field.tokenFields" as any)} span="full">
@@ -421,9 +410,7 @@ export default function ApplicationEditPage() {
           <Switch checked={!!app.enableSamlPostBinding} onChange={(v) => set("enableSamlPostBinding", v)} />
         </FormField>
         <FormField label={t("apps.field.samlHashAlgorithm" as any)}>
-          <select value={String(app.samlHashAlgorithm ?? "")} onChange={(e) => set("samlHashAlgorithm", e.target.value)} className={inputClass}>
-            {SAML_HASH_ALGORITHMS.map((a) => <option key={a} value={a}>{a}</option>)}
-          </select>
+          <SimpleSelect value={String(app.samlHashAlgorithm ?? "")} options={SAML_HASH_ALGORITHMS.map((a) => ({ value: a, label: a }))} onChange={(v) => set("samlHashAlgorithm", v)} />
         </FormField>
         <FormField label={t("apps.field.disableSamlAttributes" as any)}>
           <Switch checked={!!app.disableSamlAttributes} onChange={(v) => set("disableSamlAttributes", v)} />
@@ -530,11 +517,7 @@ export default function ApplicationEditPage() {
     <div className="space-y-5">
       <FormSection title={t("apps.section.signinUi" as any)}>
         <FormField label={t("apps.field.orgChoiceMode" as any)}>
-          <select value={String(app.orgChoiceMode ?? "None")} onChange={(e) => set("orgChoiceMode", e.target.value)} className={inputClass}>
-            <option value="None">None</option>
-            <option value="Select">Select</option>
-            <option value="Input">Input</option>
-          </select>
+          <SimpleSelect value={String(app.orgChoiceMode ?? "None")} options={[{ value: "None", label: "None" }, { value: "Select", label: "Select" }, { value: "Input", label: "Input" }]} onChange={(v) => set("orgChoiceMode", v)} />
         </FormField>
         <FormField label={t("apps.field.signinMethods" as any)} span="full">
           <div className="text-[12px] text-text-muted">
@@ -718,9 +701,7 @@ export default function ApplicationEditPage() {
 
       <FormSection title={t("apps.section.ssl" as any)}>
         <FormField label={t("apps.field.sslMode" as any)}>
-          <select value={String(app.sslMode ?? "")} onChange={(e) => set("sslMode", e.target.value)} className={inputClass}>
-            {SSL_MODES.map((m) => <option key={m.value} value={m.value}>{m.label}</option>)}
-          </select>
+          <SimpleSelect value={String(app.sslMode ?? "")} options={SSL_MODES} onChange={(v) => set("sslMode", v)} />
         </FormField>
         <FormField label={t("apps.field.sslCert" as any)}>
           <input value={String(app.sslCert ?? "")} onChange={(e) => set("sslCert", e.target.value)} className={inputClass} />

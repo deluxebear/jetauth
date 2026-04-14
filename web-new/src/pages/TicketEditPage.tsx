@@ -9,8 +9,8 @@ import { useEntityEdit } from "../hooks/useEntityEdit";
 import * as TicketBackend from "../backend/TicketBackend";
 import type { Ticket, TicketMessage } from "../backend/TicketBackend";
 import { friendlyError } from "../utils/errorHelper";
+import SimpleSelect from "../components/SimpleSelect";
 
-const selectClass = "w-full rounded-lg border border-border bg-surface-2 px-3 py-2 text-[13px] text-text-primary focus:border-accent focus:ring-1 focus:ring-accent/30 outline-none transition-all";
 const STATES = ["Open", "In Progress", "Resolved", "Closed"];
 
 export default function TicketEditPage() {
@@ -216,9 +216,7 @@ export default function TicketEditPage() {
           <input value={ticket.user} disabled className={inputClass} />
         </FormField>
         <FormField label={t("tickets.field.state" as any)}>
-          <select value={ticket.state} onChange={(e) => set("state", e.target.value)} className={selectClass}>
-            {STATES.map((s) => <option key={s} value={s}>{s}</option>)}
-          </select>
+          <SimpleSelect value={ticket.state} options={STATES.map((s) => ({ value: s, label: s }))} onChange={(v) => set("state", v)} />
         </FormField>
       </FormSection>
 

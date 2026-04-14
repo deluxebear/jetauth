@@ -9,6 +9,7 @@ import { useEntityEdit } from "../hooks/useEntityEdit";
 import * as ProductBackend from "../backend/ProductBackend";
 import type { Product } from "../backend/ProductBackend";
 import { friendlyError } from "../utils/errorHelper";
+import SimpleSelect from "../components/SimpleSelect";
 
 const STATE_OPTIONS = [
   { id: "Published", name: "Published" },
@@ -208,9 +209,7 @@ export default function ProductEditPage() {
       {/* State */}
       <FormSection title={t("products.section.state" as any)}>
         <FormField label={t("col.state" as any)}>
-          <select value={product.state} onChange={(e) => set("state", e.target.value)} className={inputClass}>
-            {STATE_OPTIONS.map((o) => <option key={o.id} value={o.id}>{o.name}</option>)}
-          </select>
+          <SimpleSelect value={product.state} options={STATE_OPTIONS.map((o) => ({ value: o.id, label: o.name }))} onChange={(v) => set("state", v)} />
         </FormField>
       </FormSection>
     </motion.div>

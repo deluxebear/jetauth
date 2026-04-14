@@ -4,6 +4,7 @@ import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Save, ArrowLeft, Trash2, LogOut} from "lucide-react";
 import { FormField, FormSection, Switch, inputClass, monoInputClass } from "../components/FormSection";
+import SimpleSelect from "../components/SimpleSelect";
 import { useTranslation } from "../i18n";
 import { useModal } from "../components/Modal";
 import * as ProvBackend from "../backend/ProviderBackend";
@@ -187,11 +188,11 @@ export default function ProviderEditPage() {
               <input value={String(prov.clientSecret ?? "")} onChange={(e) => set("clientSecret", e.target.value)} type="password" className={inputClass} />
             </FormField>
             <FormField label={t("providers.field.sslMode" as any)}>
-              <select value={String(prov.sslMode ?? "")} onChange={(e) => set("sslMode", e.target.value)} className={inputClass}>
-                <option value="">{t("providers.sslMode.none" as any)}</option>
-                <option value="SSL">{t("providers.sslMode.ssl" as any)}</option>
-                <option value="STARTTLS">{t("providers.sslMode.starttls" as any)}</option>
-              </select>
+              <SimpleSelect value={String(prov.sslMode ?? "")} options={[
+                { value: "", label: t("providers.sslMode.none" as any) },
+                { value: "SSL", label: t("providers.sslMode.ssl" as any) },
+                { value: "STARTTLS", label: t("providers.sslMode.starttls" as any) },
+              ]} onChange={(v) => set("sslMode", v)} />
             </FormField>
             <FormField label={t("providers.field.emailTitle" as any)}>
               <input value={String(prov.title ?? "")} onChange={(e) => set("title", e.target.value)} className={inputClass} />
@@ -330,23 +331,18 @@ export default function ProviderEditPage() {
         </FormField>
         <div />
         <FormField label={t("providers.field.category")}>
-          <select
+          <SimpleSelect
             value={category}
-            onChange={(e) => {
-              const cat = e.target.value;
-              const types = TYPE_BY_CATEGORY[cat] ?? [];
-              set("category", cat);
+            options={CATEGORIES.map((c) => ({ value: c, label: c }))}
+            onChange={(v) => {
+              const types = TYPE_BY_CATEGORY[v] ?? [];
+              set("category", v);
               set("type", types[0] ?? "");
             }}
-            className={inputClass}
-          >
-            {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
-          </select>
+          />
         </FormField>
         <FormField label={t("field.type")}>
-          <select value={String(prov.type ?? "")} onChange={(e) => set("type", e.target.value)} className={inputClass}>
-            {(TYPE_BY_CATEGORY[category] ?? []).map((t) => <option key={t} value={t}>{t}</option>)}
-          </select>
+          <SimpleSelect value={String(prov.type ?? "")} options={(TYPE_BY_CATEGORY[category] ?? []).map((t) => ({ value: t, label: t }))} onChange={(v) => set("type", v)} />
         </FormField>
       </FormSection>
 

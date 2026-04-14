@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Save, ArrowLeft, RefreshCw, LogOut, Plus, X } from "lucide-react";
 import { FormField, FormSection, Switch, inputClass, monoInputClass } from "../components/FormSection";
+import SimpleSelect from "../components/SimpleSelect";
 import { useTranslation } from "../i18n";
 import { useModal } from "../components/Modal";
 import { friendlyError } from "../utils/errorHelper";
@@ -203,18 +204,13 @@ export default function LdapEditPage() {
             <input type="password" value={ldap.password} onChange={(e) => set("password", e.target.value)} className={inputClass} />
           </FormField>
           <FormField label={t("ldap.field.passwordType" as any)} help={t("ldap.help.passwordType" as any)}>
-            <select value={ldap.passwordType ?? "Plain"} onChange={(e) => set("passwordType", e.target.value)} className={inputClass}>
-              {PASSWORD_TYPES.map((p) => <option key={p} value={p}>{p}</option>)}
-            </select>
+            <SimpleSelect value={ldap.passwordType ?? "Plain"} options={PASSWORD_TYPES.map((p) => ({ value: p, label: p }))} onChange={(v) => set("passwordType", v)} />
           </FormField>
         </FormSection>
 
         <FormSection title={t("ldap.section.sync" as any)}>
           <FormField label={t("ldap.field.defaultGroup" as any)} help={t("ldap.help.defaultGroup" as any)}>
-            <select value={ldap.defaultGroup ?? ""} onChange={(e) => set("defaultGroup", e.target.value)} className={inputClass}>
-              <option value="">—</option>
-              {groups.map((g: any) => <option key={g.name} value={`${g.owner}/${g.name}`}>{g.displayName || g.name}</option>)}
-            </select>
+            <SimpleSelect value={ldap.defaultGroup ?? ""} options={[{ value: "", label: "—" }, ...groups.map((g: any) => ({ value: `${g.owner}/${g.name}`, label: g.displayName || g.name }))]} onChange={(v) => set("defaultGroup", v)} />
           </FormField>
           <FormField label={t("ldap.field.autoSync" as any)} help={t("ldap.field.autoSync.help" as any)}>
             <input type="number" value={ldap.autoSync ?? 0} onChange={(e) => set("autoSync", Math.max(0, Number(e.target.value)))} min={0} className={monoInputClass} />

@@ -9,6 +9,7 @@ import { useEntityEdit } from "../hooks/useEntityEdit";
 import * as CertBackend from "../backend/CertBackend";
 import type { Cert } from "../backend/CertBackend";
 import { friendlyError } from "../utils/errorHelper";
+import SimpleSelect from "../components/SimpleSelect";
 
 const SCOPE_OPTIONS = [{ id: "JWT", name: "JWT" }];
 const TYPE_OPTIONS = [
@@ -233,25 +234,17 @@ export default function CertEditPage() {
       {/* Type & Algorithm */}
       <FormSection title={t("certs.section.algorithm" as any)}>
         <FormField label={t("certs.field.scope" as any)}>
-          <select value={cert.scope} onChange={(e) => set("scope", e.target.value)} className={inputClass}>
-            {SCOPE_OPTIONS.map((o) => <option key={o.id} value={o.id}>{o.name}</option>)}
-          </select>
+          <SimpleSelect value={cert.scope} options={SCOPE_OPTIONS.map((o) => ({ value: o.id, label: o.name }))} onChange={(v) => set("scope", v)} />
         </FormField>
         <FormField label={t("field.type")}>
-          <select value={cert.type} onChange={(e) => handleTypeChange(e.target.value)} className={inputClass}>
-            {TYPE_OPTIONS.map((o) => <option key={o.id} value={o.id}>{o.name}</option>)}
-          </select>
+          <SimpleSelect value={cert.type} options={TYPE_OPTIONS.map((o) => ({ value: o.id, label: o.name }))} onChange={(v) => handleTypeChange(v)} />
         </FormField>
         <FormField label={t("certs.field.cryptoAlgorithm" as any)}>
-          <select value={cert.cryptoAlgorithm} onChange={(e) => handleAlgorithmChange(e.target.value)} className={inputClass}>
-            {algorithmOptions.map((o) => <option key={o.id} value={o.id}>{o.name}</option>)}
-          </select>
+          <SimpleSelect value={cert.cryptoAlgorithm} options={algorithmOptions.map((o) => ({ value: o.id, label: o.name }))} onChange={(v) => handleAlgorithmChange(v)} />
         </FormField>
         {showBitSize && (
           <FormField label={t("certs.field.bitSize" as any)}>
-            <select value={cert.bitSize} onChange={(e) => { set("bitSize", Number(e.target.value)); set("certificate", ""); set("privateKey", ""); }} className={inputClass}>
-              {BIT_SIZE_OPTIONS.map((o) => <option key={o.id} value={o.id}>{o.name}</option>)}
-            </select>
+            <SimpleSelect value={String(cert.bitSize)} options={BIT_SIZE_OPTIONS.map((o) => ({ value: String(o.id), label: o.name }))} onChange={(v) => { set("bitSize", Number(v)); set("certificate", ""); set("privateKey", ""); }} />
           </FormField>
         )}
         {!isSSL && (
@@ -271,10 +264,10 @@ export default function CertEditPage() {
             <input value={cert.domainExpireTime ? new Date(cert.domainExpireTime).toLocaleString() : "—"} disabled className={inputClass} />
           </FormField>
           <FormField label={t("col.provider" as any)}>
-            <select value={cert.provider} onChange={(e) => set("provider", e.target.value)} className={inputClass}>
-              <option value="">{t("common.none" as any)}</option>
-              {SSL_PROVIDERS.map((o) => <option key={o.id} value={o.id}>{o.name}</option>)}
-            </select>
+            <SimpleSelect value={cert.provider} options={[
+              { value: "", label: t("common.none" as any) },
+              ...SSL_PROVIDERS.map((o) => ({ value: o.id, label: o.name })),
+            ]} onChange={(v) => set("provider", v)} />
           </FormField>
           <FormField label={t("certs.field.account" as any)}>
             <input value={cert.account} onChange={(e) => set("account", e.target.value)} className={inputClass} />

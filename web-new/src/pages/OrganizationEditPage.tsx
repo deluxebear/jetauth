@@ -11,6 +11,7 @@ import TreeCheckbox, { type TreeNode } from "../components/TreeCheckbox";
 import CurrencySelect from "../components/CurrencySelect";
 import CountryCodeSelect from "../components/CountryCodeSelect";
 import LanguageSelect from "../components/LanguageSelect";
+import SimpleSelect from "../components/SimpleSelect";
 import ImageUrlInput from "../components/ImageUrlInput";
 import { navGroups as navGroupsDef, widgetItems as widgetItemsDef } from "../navConfig";
 import { THEME_PRESETS, matchPreset } from "../theme-presets";
@@ -412,9 +413,7 @@ export default function OrganizationEditPage() {
             <div className="space-y-5">
               <FormSection title={t("orgs.section.password" as any)}>
                 <FormField label={t("orgs.field.passwordType" as any)} help={t("orgs.help.passwordType" as any)}>
-                  <select value={org.passwordType ?? "bcrypt"} onChange={(e) => set("passwordType", e.target.value)} disabled={!canEditField("passwordType")} className={inputClass}>
-                    {PASSWORD_TYPES.map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}
-                  </select>
+                  <SimpleSelect value={org.passwordType ?? "bcrypt"} options={PASSWORD_TYPES} onChange={(v) => set("passwordType", v)} disabled={!canEditField("passwordType")} />
                 </FormField>
                 <FormField label={t("orgs.field.passwordSalt" as any)} help={t("orgs.help.passwordSalt" as any)}>
                   <input value={org.passwordSalt ?? ""} onChange={(e) => set("passwordSalt", e.target.value)} disabled={!canEditField("passwordSalt")} className={monoInputClass} />
@@ -430,8 +429,11 @@ export default function OrganizationEditPage() {
                   </div>
                 </FormField>
                 <FormField label={t("orgs.field.passwordObfuscatorType" as any)} help={t("orgs.help.passwordObfuscatorType" as any)}>
-                  <select value={(org as any).passwordObfuscatorType ?? "Plain"} onChange={(e) => {
-                    const v = e.target.value;
+                  <SimpleSelect value={(org as any).passwordObfuscatorType ?? "Plain"} options={[
+                    { value: "Plain", label: "Plain" },
+                    { value: "AES", label: "AES" },
+                    { value: "DES", label: "DES" },
+                  ]} onChange={(v) => {
                     set("passwordObfuscatorType", v);
                     // Auto-generate random key when switching to AES/DES
                     if (v === "AES") {
@@ -441,11 +443,7 @@ export default function OrganizationEditPage() {
                     } else {
                       set("passwordObfuscatorKey", "");
                     }
-                  }} disabled={!canEditField("passwordObfuscatorType")} className={inputClass}>
-                    <option value="Plain">Plain</option>
-                    <option value="AES">AES</option>
-                    <option value="DES">DES</option>
-                  </select>
+                  }} disabled={!canEditField("passwordObfuscatorType")} />
                 </FormField>
                 {(org as any).passwordObfuscatorType && (org as any).passwordObfuscatorType !== "Plain" && (
                   <FormField label={t("orgs.field.passwordObfuscatorKey" as any)}>
@@ -557,15 +555,15 @@ export default function OrganizationEditPage() {
                   {/* Custom controls */}
                   <FormSection title={t("orgs.section.customizeTheme" as any)}>
                     <FormField label={t("orgs.field.lightDarkMode" as any)}>
-                      <select
+                      <SimpleSelect
                         value={(org as any).themeData?.themeType ?? "light"}
-                        onChange={(e) => set("themeData", { ...(org as any).themeData, themeType: e.target.value })}
-                        className={inputClass}
-                      >
-                        <option value="system">{t("theme.followSystem" as any)}</option>
-                        <option value="light">Light</option>
-                        <option value="dark">Dark</option>
-                      </select>
+                        options={[
+                          { value: "system", label: t("theme.followSystem" as any) },
+                          { value: "light", label: "Light" },
+                          { value: "dark", label: "Dark" },
+                        ]}
+                        onChange={(v) => set("themeData", { ...(org as any).themeData, themeType: v })}
+                      />
                     </FormField>
                     <FormField label={t("orgs.field.primaryColor" as any)}>
                       <div className="flex gap-2 items-center">
@@ -913,16 +911,10 @@ function MfaItemsEditor({ items, onChange, t }: { items: { name: string; rule: s
             {items.map((item, idx) => (
               <tr key={idx} className="border-b border-border-subtle hover:bg-surface-2/50">
                 <td className="py-1.5 px-2">
-                  <select value={item.name} onChange={(e) => updateItem(idx, "name", e.target.value)} className="rounded border border-border bg-surface-2 px-2 py-1 text-[12px] text-text-primary outline-none focus:border-accent">
-                    {MFA_TYPES.filter((t) => t.value === item.name || !usedNames.includes(t.value)).map((t) => (
-                      <option key={t.value} value={t.value}>{t.label}</option>
-                    ))}
-                  </select>
+                  <SimpleSelect value={item.name} options={MFA_TYPES.filter((t) => t.value === item.name || !usedNames.includes(t.value))} onChange={(v) => updateItem(idx, "name", v)} className="rounded border border-border bg-surface-2 px-2 py-1 text-[12px] text-text-primary outline-none focus:border-accent" />
                 </td>
                 <td className="py-1.5 px-2">
-                  <select value={item.rule} onChange={(e) => updateItem(idx, "rule", e.target.value)} className="rounded border border-border bg-surface-2 px-2 py-1 text-[12px] text-text-primary outline-none focus:border-accent">
-                    {MFA_RULES.map((r) => <option key={r} value={r}>{t(`orgs.mfa.${r}` as any)}</option>)}
-                  </select>
+                  <SimpleSelect value={item.rule} options={MFA_RULES.map((r) => ({ value: r, label: t(`orgs.mfa.${r}` as any) }))} onChange={(v) => updateItem(idx, "rule", v)} className="rounded border border-border bg-surface-2 px-2 py-1 text-[12px] text-text-primary outline-none focus:border-accent" />
                 </td>
                 <td className="py-1.5 px-2 text-right">
                   <div className="flex items-center justify-end gap-1">
@@ -1395,14 +1387,14 @@ function AccountItemsTable({ items, onChange, t }: {
                 return (
                   <tr key={idx} className="border-b border-border-subtle hover:bg-surface-2/30">
                     <td className="px-3 py-1.5">
-                      <select value={item.name} onChange={(e) => updateField(idx, "name", e.target.value)}
-                        className="w-full rounded-lg border border-border bg-surface-2 px-2 py-1 text-[12px] text-text-primary outline-none focus:border-accent transition-colors">
-                        <option value={item.name}>{(() => { const k = `accountItem.${item.name}`; const v = t(k as any); return v === k ? item.name : v; })()}</option>
-                        {ACCOUNT_ITEM_NAMES.filter((n) => !usedNames.has(n)).map((n) => {
+                      <SimpleSelect value={item.name} options={[
+                        { value: item.name, label: (() => { const k = `accountItem.${item.name}`; const v = t(k as any); return v === k ? item.name : v; })() },
+                        ...ACCOUNT_ITEM_NAMES.filter((n) => !usedNames.has(n)).map((n) => {
                           const k = `accountItem.${n}`; const v = t(k as any);
-                          return <option key={n} value={n}>{v === k ? n : v}</option>;
-                        })}
-                      </select>
+                          return { value: n, label: v === k ? n : v };
+                        }),
+                      ]} onChange={(v) => updateField(idx, "name", v)}
+                        className="w-full rounded-lg border border-border bg-surface-2 px-2 py-1 text-[12px] text-text-primary outline-none focus:border-accent transition-colors" />
                     </td>
                     <td className="px-3 py-1.5">
                       <Switch checked={item.visible} onChange={(v) => updateField(idx, "visible", v)} />
@@ -1415,20 +1407,18 @@ function AccountItemsTable({ items, onChange, t }: {
                     </td>
                     <td className="px-3 py-1.5">
                       {item.visible ? (
-                        <select value={item.viewRule} onChange={(e) => updateField(idx, "viewRule", e.target.value)}
-                          className="w-full rounded border border-border bg-surface-2 px-2 py-1 text-[12px] text-text-primary outline-none">
-                          <option value="Public">{t("orgs.rule.Public" as any)}</option>
-                          <option value="Self">{t("orgs.rule.Self" as any)}</option>
-                          <option value="Admin">{t("orgs.rule.Admin" as any)}</option>
-                        </select>
+                        <SimpleSelect value={item.viewRule} options={[
+                          { value: "Public", label: t("orgs.rule.Public" as any) },
+                          { value: "Self", label: t("orgs.rule.Self" as any) },
+                          { value: "Admin", label: t("orgs.rule.Admin" as any) },
+                        ]} onChange={(v) => updateField(idx, "viewRule", v)}
+                          className="w-full rounded border border-border bg-surface-2 px-2 py-1 text-[12px] text-text-primary outline-none" />
                       ) : null}
                     </td>
                     <td className="px-3 py-1.5">
                       {item.visible ? (
-                        <select value={item.modifyRule} onChange={(e) => updateField(idx, "modifyRule", e.target.value)}
-                          className="w-full rounded border border-border bg-surface-2 px-2 py-1 text-[12px] text-text-primary outline-none">
-                          {modifyOptions.map((o) => <option key={o} value={o}>{t(`orgs.rule.${o}` as any)}</option>)}
-                        </select>
+                        <SimpleSelect value={item.modifyRule} options={modifyOptions.map((o) => ({ value: o, label: t(`orgs.rule.${o}` as any) }))} onChange={(v) => updateField(idx, "modifyRule", v)}
+                          className="w-full rounded border border-border bg-surface-2 px-2 py-1 text-[12px] text-text-primary outline-none" />
                       ) : null}
                     </td>
                     <td className="px-3 py-1.5">

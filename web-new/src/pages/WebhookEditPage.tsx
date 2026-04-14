@@ -10,6 +10,7 @@ import { useOrganization } from "../OrganizationContext";
 import * as WebhookBackend from "../backend/WebhookBackend";
 import type { Webhook, Header } from "../backend/WebhookBackend";
 import { friendlyError } from "../utils/errorHelper";
+import SimpleSelect from "../components/SimpleSelect";
 
 const METHODS = ["POST", "GET", "PUT", "DELETE"];
 const CONTENT_TYPES = ["application/json", "application/x-www-form-urlencoded"];
@@ -20,8 +21,6 @@ const EVENT_OPTIONS = [
   "add-provider", "update-provider", "delete-provider",
 ];
 const OBJECT_FIELD_OPTIONS = ["All", "owner", "name", "createdTime", "updatedTime", "deletedTime", "id", "displayName"];
-
-const selectClass = "w-full rounded-lg border border-border bg-surface-2 px-3 py-2 text-[13px] text-text-primary focus:border-accent focus:ring-1 focus:ring-accent/30 outline-none transition-all";
 
 export default function WebhookEditPage() {
   const { owner, name } = useParams<{ owner: string; name: string }>();
@@ -170,14 +169,10 @@ export default function WebhookEditPage() {
           <input value={webhook.url} onChange={(e) => set("url", e.target.value)} className={inputClass} placeholder="https://example.com/callback" />
         </FormField>
         <FormField label={t("webhooks.field.method" as any)}>
-          <select value={webhook.method} onChange={(e) => set("method", e.target.value)} className={selectClass}>
-            {METHODS.map((m) => <option key={m} value={m}>{m}</option>)}
-          </select>
+          <SimpleSelect value={webhook.method} options={METHODS.map((m) => ({ value: m, label: m }))} onChange={(v) => set("method", v)} />
         </FormField>
         <FormField label={t("webhooks.field.contentType" as any)}>
-          <select value={webhook.contentType} onChange={(e) => set("contentType", e.target.value)} className={selectClass}>
-            {CONTENT_TYPES.map((ct) => <option key={ct} value={ct}>{ct}</option>)}
-          </select>
+          <SimpleSelect value={webhook.contentType} options={CONTENT_TYPES.map((ct) => ({ value: ct, label: ct }))} onChange={(v) => set("contentType", v)} />
         </FormField>
       </FormSection>
 

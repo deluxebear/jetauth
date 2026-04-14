@@ -4,6 +4,7 @@ import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Save, ArrowLeft, Trash2, Copy, Send, LogOut, RefreshCw } from "lucide-react";
 import { FormField, FormSection, Switch, inputClass, monoInputClass } from "../components/FormSection";
+import SimpleSelect from "../components/SimpleSelect";
 import { useTranslation } from "../i18n";
 import { useModal } from "../components/Modal";
 import { useOrganization } from "../OrganizationContext";
@@ -595,13 +596,14 @@ export default function InvitationEditPage() {
                   </div>
                   <div>
                     <label className="block text-[11px] font-medium text-text-muted mb-1">{t("invitations.obfuscate.charType" as any)}</label>
-                    <select value={charSet}
-                      onChange={(e) => { const v = e.target.value as CharSet; setCharSet(v); rebuildObfuscation(coreCode, prefixLen, suffixLen, v); }}
-                      className={`${inputClass} w-full`}>
-                      <option value="alphanumeric">{t("invitations.charType.alphanumeric" as any)}</option>
-                      <option value="numbers">{t("invitations.charType.numbers" as any)}</option>
-                      <option value="letters">{t("invitations.charType.letters" as any)}</option>
-                    </select>
+                    <SimpleSelect value={charSet}
+                      options={[
+                        { value: "alphanumeric", label: t("invitations.charType.alphanumeric" as any) },
+                        { value: "numbers", label: t("invitations.charType.numbers" as any) },
+                        { value: "letters", label: t("invitations.charType.letters" as any) },
+                      ]}
+                      onChange={(v) => { setCharSet(v as CharSet); rebuildObfuscation(coreCode, prefixLen, suffixLen, v as CharSet); }}
+                      className="w-full" />
                   </div>
                 </div>
                 {/* Visual preview */}
@@ -747,14 +749,14 @@ export default function InvitationEditPage() {
       {/* State */}
       <FormSection title={t("invitations.section.state" as any)}>
         <FormField label={t("field.state")}>
-          <select
+          <SimpleSelect
             value={inv.state ?? "Active"}
-            onChange={(e) => set("state", e.target.value)}
-            className={inputClass}
-          >
-            <option value="Active">{t("invitations.state.active" as any)}</option>
-            <option value="Suspended">{t("invitations.state.suspended" as any)}</option>
-          </select>
+            options={[
+              { value: "Active", label: t("invitations.state.active" as any) },
+              { value: "Suspended", label: t("invitations.state.suspended" as any) },
+            ]}
+            onChange={(v) => set("state", v)}
+          />
         </FormField>
       </FormSection>
     </motion.div>

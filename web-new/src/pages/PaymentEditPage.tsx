@@ -9,6 +9,7 @@ import { useEntityEdit } from "../hooks/useEntityEdit";
 import * as PaymentBackend from "../backend/PaymentBackend";
 import type { Payment } from "../backend/PaymentBackend";
 import { friendlyError } from "../utils/errorHelper";
+import SimpleSelect from "../components/SimpleSelect";
 
 export default function PaymentEditPage() {
   const { owner, name } = useParams<{ owner: string; name: string }>();
@@ -183,11 +184,11 @@ export default function PaymentEditPage() {
           <input value={payment.personPhone} onChange={(e) => set("personPhone", e.target.value)} disabled={!!payment.invoiceUrl} className={inputClass} />
         </FormField>
         <FormField label={t("payments.field.invoiceType" as any)}>
-          <select value={payment.invoiceType} onChange={(e) => set("invoiceType", e.target.value)} disabled={!!payment.invoiceUrl} className={inputClass}>
-            <option value="">{t("common.none" as any)}</option>
-            <option value="Individual">{t("payments.field.individual" as any)}</option>
-            <option value="Organization">{t("col.organization" as any)}</option>
-          </select>
+          <SimpleSelect value={payment.invoiceType} options={[
+            { value: "", label: t("common.none" as any) },
+            { value: "Individual", label: t("payments.field.individual" as any) },
+            { value: "Organization", label: t("col.organization" as any) },
+          ]} onChange={(v) => set("invoiceType", v)} disabled={!!payment.invoiceUrl} />
         </FormField>
         <FormField label={t("payments.field.invoiceTitle" as any)}>
           <input value={payment.invoiceTitle} onChange={(e) => set("invoiceTitle", e.target.value)} disabled={!!payment.invoiceUrl || payment.invoiceType === "Individual"} className={inputClass} />

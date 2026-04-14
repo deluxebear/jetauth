@@ -9,6 +9,7 @@ import { useEntityEdit } from "../hooks/useEntityEdit";
 import * as KeyBackend from "../backend/KeyBackend";
 import type { Key } from "../backend/KeyBackend";
 import { friendlyError } from "../utils/errorHelper";
+import SimpleSelect from "../components/SimpleSelect";
 
 const TYPE_VALUES = ["Organization", "Application", "User", "General"] as const;
 const STATE_VALUES = ["Active", "Inactive"] as const;
@@ -149,9 +150,7 @@ export default function KeyEditPage() {
         <FormField label={t("field.name")} required><input value={key.name} onChange={(e) => set("name", e.target.value)} className={monoInputClass} /></FormField>
         <FormField label={t("field.displayName")}><input value={key.displayName} onChange={(e) => set("displayName", e.target.value)} className={inputClass} /></FormField>
         <FormField label={t("field.type")}>
-          <select value={key.type} onChange={(e) => set("type", e.target.value)} className={inputClass}>
-            {TYPE_VALUES.map((o) => <option key={o} value={o}>{t(TYPE_LABEL_KEYS[o] as any)}</option>)}
-          </select>
+          <SimpleSelect value={key.type} options={TYPE_VALUES.map((o) => ({ value: o, label: t(TYPE_LABEL_KEYS[o] as any) }))} onChange={(v) => set("type", v)} />
         </FormField>
         {key.type === "Application" && (
           <FormField label={t("col.application" as any)}><input value={key.application} onChange={(e) => set("application", e.target.value)} className={inputClass} /></FormField>
@@ -178,9 +177,7 @@ export default function KeyEditPage() {
           <input type="datetime-local" value={key.expireTime ? key.expireTime.slice(0, 16) : ""} onChange={(e) => set("expireTime", e.target.value ? new Date(e.target.value).toISOString() : "")} className={inputClass} />
         </FormField>
         <FormField label={t("field.state")}>
-          <select value={key.state} onChange={(e) => set("state", e.target.value)} className={inputClass}>
-            {STATE_VALUES.map((o) => <option key={o} value={o}>{t(STATE_LABEL_KEYS[o] as any)}</option>)}
-          </select>
+          <SimpleSelect value={key.state} options={STATE_VALUES.map((o) => ({ value: o, label: t(STATE_LABEL_KEYS[o] as any) }))} onChange={(v) => set("state", v)} />
         </FormField>
       </FormSection>
     </motion.div>

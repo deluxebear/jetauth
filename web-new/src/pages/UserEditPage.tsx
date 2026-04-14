@@ -18,6 +18,7 @@ import { obfuscatePassword } from "../utils/obfuscator";
 import FaceIdTable from "../components/FaceIdTable";
 import ImageUrlInput from "../components/ImageUrlInput";
 import CurrencySelect from "../components/CurrencySelect";
+import SimpleSelect from "../components/SimpleSelect";
 
 export default function UserEditPage() {
   const { owner, name } = useParams<{ owner: string; name: string }>();
@@ -431,16 +432,9 @@ export default function UserEditPage() {
       <FormSection title={t("users.section.personal" as any)}>
         {dynField("Tag", undefined, <input value={user.tag ?? ""} onChange={(e) => set("tag", e.target.value)} disabled={isFieldDisabled("Tag")} className={inputClass} />)}
         {dynField("Language", undefined, <input value={user.language ?? ""} onChange={(e) => set("language", e.target.value)} disabled={isFieldDisabled("Language")} className={inputClass} />)}
-        {dynField("Gender", undefined, <select value={user.gender ?? ""} onChange={(e) => set("gender", e.target.value)} disabled={isFieldDisabled("Gender")} className={inputClass}>
-            {GENDER_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-          </select>)}
+        {dynField("Gender", undefined, <SimpleSelect value={user.gender ?? ""} options={GENDER_OPTIONS} onChange={(v) => set("gender", v)} disabled={isFieldDisabled("Gender")} />)}
         {dynField("Birthday", undefined, <input type="date" value={user.birthday ?? ""} onChange={(e) => setWithValidation("Birthday", "birthday", e.target.value)} disabled={isFieldDisabled("Birthday")} className={inputClass} />)}
-        {dynField("Education", undefined, <SingleSearchSelect
-            value={user.education ?? ""}
-            options={EDUCATION_OPTIONS}
-            onChange={(v) => set("education", v)}
-            placeholder={t("common.search" as any)}
-          />)}
+        {dynField("Education", undefined, <SimpleSelect value={user.education ?? ""} options={EDUCATION_OPTIONS} onChange={(v) => set("education", v)} disabled={isFieldDisabled("Education")} />)}
       </FormSection>
 
       <FormSection title={t("users.section.verification" as any)}>
@@ -451,9 +445,7 @@ export default function UserEditPage() {
               {isFieldVisible("ID card type") && (
                 <div>
                   <label className="block text-[12px] font-medium text-text-secondary mb-1.5">{t("users.field.idCardType" as any)}</label>
-                  <select value={user.idCardType ?? ""} onChange={(e) => set("idCardType", e.target.value)} disabled={user.isVerified === true} className={inputClass}>
-                    {ID_CARD_TYPES.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-                  </select>
+                  <SimpleSelect value={user.idCardType ?? ""} options={ID_CARD_TYPES} onChange={(v) => set("idCardType", v)} disabled={user.isVerified === true} />
                 </div>
               )}
               {isFieldVisible("ID card") && (
@@ -1095,17 +1087,17 @@ function MfaItemsTable({ items, onChange, t }: { items: { name: string; rule: st
             {items.map((item, idx) => (
               <tr key={idx} className="border-b border-border-subtle">
                 <td className="px-3 py-1.5">
-                  <select value={item.name} onChange={(e) => updateField(idx, "name", e.target.value)}
-                    className="rounded-lg border border-border bg-surface-2 px-2 py-1 text-[12px] text-text-primary outline-none focus:border-accent transition-colors">
-                    <option value={item.name}>{t(`users.mfaName.${item.name}` as any)}</option>
-                    {MFA_NAME_KEYS.filter((n) => !usedNames.has(n)).map((n) => <option key={n} value={n}>{t(`users.mfaName.${n}` as any)}</option>)}
-                  </select>
+                  <SimpleSelect value={item.name}
+                    options={[
+                      { value: item.name, label: t(`users.mfaName.${item.name}` as any) },
+                      ...MFA_NAME_KEYS.filter((n) => !usedNames.has(n)).map((n) => ({ value: n, label: t(`users.mfaName.${n}` as any) })),
+                    ]}
+                    onChange={(v) => updateField(idx, "name", v)} />
                 </td>
                 <td className="px-3 py-1.5">
-                  <select value={item.rule} onChange={(e) => updateField(idx, "rule", e.target.value)}
-                    className="rounded border border-border bg-surface-2 px-2 py-1 text-[12px] text-text-primary outline-none">
-                    {MFA_RULE_KEYS.map((r) => <option key={r} value={r}>{t(`users.mfaRule.${r}` as any)}</option>)}
-                  </select>
+                  <SimpleSelect value={item.rule}
+                    options={MFA_RULE_KEYS.map((r) => ({ value: r, label: t(`users.mfaRule.${r}` as any) }))}
+                    onChange={(v) => updateField(idx, "rule", v)} />
                 </td>
                 <td className="px-3 py-1.5">
                   <div className="flex items-center gap-0.5">
@@ -1196,11 +1188,12 @@ function ManagedAccountsTable({ items, onChange, applications, t }: {
               {items.map((item, idx) => (
                 <tr key={idx} className="border-b border-border-subtle">
                   <td className="px-3 py-1.5">
-                    <select value={item.application ?? ""} onChange={(e) => updateField(idx, "application", e.target.value)}
-                      className="rounded-lg border border-border bg-surface-2 px-2 py-1 text-[12px] text-text-primary outline-none focus:border-accent transition-colors">
-                      <option value="">—</option>
-                      {applications.map((a) => <option key={a.name} value={a.name}>{(a as any).displayName || a.name}</option>)}
-                    </select>
+                    <SimpleSelect value={item.application ?? ""}
+                      options={[
+                        { value: "", label: "—" },
+                        ...applications.map((a) => ({ value: a.name, label: (a as any).displayName || a.name })),
+                      ]}
+                      onChange={(v) => updateField(idx, "application", v)} />
                   </td>
                   <td className="px-3 py-1.5">
                     <input value={item.signinUrl ?? ""} onChange={(e) => updateField(idx, "signinUrl", e.target.value)}

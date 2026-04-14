@@ -10,6 +10,7 @@ import { useOrganization } from "../OrganizationContext";
 import * as SyncerBackend from "../backend/SyncerBackend";
 import type { Syncer } from "../backend/SyncerBackend";
 import { friendlyError } from "../utils/errorHelper";
+import SimpleSelect from "../components/SimpleSelect";
 
 const SYNCER_TYPES = ["Database", "Keycloak", "WeCom", "Azure AD", "Active Directory", "Google Workspace", "DingTalk", "Lark", "Okta", "SCIM", "AWS IAM"];
 const DB_TYPES = [
@@ -26,8 +27,6 @@ const NO_HOST_TYPES = ["WeCom", "DingTalk", "Lark"];
 const NO_USER_TYPES = ["Google Workspace"];
 const NO_DB_TYPES = ["WeCom", "Azure AD", "Google Workspace", "DingTalk", "Lark", "Okta", "SCIM", "AWS IAM"];
 const NO_TABLE_TYPES = ["WeCom", "Azure AD", "Google Workspace", "DingTalk", "Lark", "Okta", "SCIM", "AWS IAM"];
-
-const selectClass = "w-full rounded-lg border border-border bg-surface-2 px-3 py-2 text-[13px] text-text-primary focus:border-accent focus:ring-1 focus:ring-accent/30 outline-none transition-all";
 
 export default function SyncerEditPage() {
   const { owner, name } = useParams<{ owner: string; name: string }>();
@@ -172,22 +171,16 @@ export default function SyncerEditPage() {
           <input value={syncer.name} onChange={(e) => set("name", e.target.value)} className={monoInputClass} />
         </FormField>
         <FormField label={t("col.type" as any)}>
-          <select value={syncer.type} onChange={(e) => set("type", e.target.value)} className={selectClass}>
-            {SYNCER_TYPES.map((tp) => <option key={tp} value={tp}>{tp}</option>)}
-          </select>
+          <SimpleSelect value={syncer.type} options={SYNCER_TYPES.map((tp) => ({ value: tp, label: tp }))} onChange={(v) => set("type", v)} />
         </FormField>
         {!isNonDb && (
           <FormField label={t("syncers.field.databaseType" as any)}>
-            <select value={syncer.databaseType} onChange={(e) => { set("databaseType", e.target.value); if (e.target.value === "postgres") set("sslMode", "disable"); else set("sslMode", ""); }} className={selectClass}>
-              {DB_TYPES.map((db) => <option key={db.id} value={db.id}>{db.name}</option>)}
-            </select>
+            <SimpleSelect value={syncer.databaseType} options={DB_TYPES.map((db) => ({ value: db.id, label: db.name }))} onChange={(v) => { set("databaseType", v); if (v === "postgres") set("sslMode", "disable"); else set("sslMode", ""); }} />
           </FormField>
         )}
         {showSslMode && (
           <FormField label={t("syncers.field.sslMode" as any)}>
-            <select value={syncer.sslMode} onChange={(e) => set("sslMode", e.target.value)} className={selectClass}>
-              {SSL_MODES.map((m) => <option key={m} value={m}>{m}</option>)}
-            </select>
+            <SimpleSelect value={syncer.sslMode} options={SSL_MODES.map((m) => ({ value: m, label: m }))} onChange={(v) => set("sslMode", v)} />
           </FormField>
         )}
       </FormSection>
@@ -234,11 +227,11 @@ export default function SyncerEditPage() {
       {needSshFields && (
         <FormSection title={t("syncers.section.ssh" as any)}>
           <FormField label={t("syncers.field.sshType" as any)}>
-            <select value={syncer.sshType} onChange={(e) => set("sshType", e.target.value)} className={selectClass}>
-              <option value="">{t("common.none" as any)}</option>
-              <option value="password">{t("syncers.field.password" as any)}</option>
-              <option value="cert">{t("syncers.field.cert" as any)}</option>
-            </select>
+            <SimpleSelect value={syncer.sshType} options={[
+              { value: "", label: t("common.none" as any) },
+              { value: "password", label: t("syncers.field.password" as any) },
+              { value: "cert", label: t("syncers.field.cert" as any) },
+            ]} onChange={(v) => set("sshType", v)} />
           </FormField>
           {syncer.sshType && (
             <>

@@ -9,6 +9,7 @@ import { useEntityEdit } from "../hooks/useEntityEdit";
 import * as AdapterBackend from "../backend/AdapterBackend";
 import type { Adapter } from "../backend/AdapterBackend";
 import { friendlyError } from "../utils/errorHelper";
+import SimpleSelect from "../components/SimpleSelect";
 
 const DATABASE_TYPE_OPTIONS = [
   { id: "mysql", name: "MySQL" },
@@ -196,14 +197,12 @@ export default function AdapterEditPage() {
       {!adapter.useSameDb && (
         <FormSection title={t("adapters.section.database" as any)}>
           <FormField label={t("col.type" as any)}>
-            <select value={adapter.type} onChange={(e) => set("type", e.target.value)} className={inputClass}>
-              <option value="Database">Database</option>
-            </select>
+            <SimpleSelect value={adapter.type} options={[
+              { value: "Database", label: "Database" },
+            ]} onChange={(v) => set("type", v)} />
           </FormField>
           <FormField label={t("adapters.field.databaseType" as any)}>
-            <select value={adapter.databaseType} onChange={(e) => set("databaseType", e.target.value)} className={inputClass}>
-              {DATABASE_TYPE_OPTIONS.map((o) => <option key={o.id} value={o.id}>{o.name}</option>)}
-            </select>
+            <SimpleSelect value={adapter.databaseType} options={DATABASE_TYPE_OPTIONS.map((o) => ({ value: o.id, label: o.name }))} onChange={(v) => set("databaseType", v)} />
           </FormField>
           <FormField label={t("adapters.field.host" as any)}>
             <input value={adapter.host} onChange={(e) => set("host", e.target.value)} className={inputClass} />
