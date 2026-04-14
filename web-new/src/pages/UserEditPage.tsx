@@ -295,6 +295,12 @@ export default function UserEditPage() {
     );
   };
 
+  /** Like dynField but without label wrapper — for table components that have their own header */
+  const dynBlock = (name: string, children: React.ReactNode) => {
+    if (!isFieldVisible(name)) return null;
+    return <div className="col-span-2">{children}</div>;
+  };
+
   const TYPE_OPTIONS = orgUserTypes.length > 0
     ? orgUserTypes.map((ut) => ({ value: ut, label: ut }))
     : [
@@ -333,7 +339,7 @@ export default function UserEditPage() {
     { key: "profile", label: t("users.tab.profile" as any), icon: <Heart size={14} /> },
     { key: "security", label: t("users.tab.security" as any), icon: <Shield size={14} /> },
     { key: "finance", label: t("users.tab.finance" as any), icon: <Wallet size={14} /> },
-    { key: "admin", label: t("users.tab.admin" as any), icon: <Settings size={14} /> },
+    ...(!isSelf ? [{ key: "admin", label: t("users.tab.admin" as any), icon: <Settings size={14} /> }] : []),
   ];
 
   // Tab 1: Basic Info — Identity + Signup Application + Contact
@@ -429,7 +435,7 @@ export default function UserEditPage() {
               <input value={Array.isArray(user.address) ? user.address[1] ?? "" : ""} onChange={(e) => { const arr = Array.isArray(user.address) ? [...user.address] : [String(user.address ?? ""), ""]; arr[1] = e.target.value; set("address", arr as any); }} className={inputClass} />
             </div>
           </div>)}
-        {dynField("Addresses", "full", <AddressesTable items={(user as any).addresses ?? []} onChange={(v) => setAny("addresses", v)} t={t} />)}
+        {dynBlock("Addresses", <AddressesTable items={(user as any).addresses ?? []} onChange={(v) => setAny("addresses", v)} t={t} />)}
       </FormSection>
     </div>
   );
@@ -646,17 +652,17 @@ export default function UserEditPage() {
             t={t}
           />
         )}
-        {dynField("MFA accounts", "full",
-          <SimpleTable data={(user as any).mfaAccounts ?? []} columns={["issuer", "accountName"]} emptyText={t("common.noData")} />
+        {dynBlock("MFA accounts",
+          <SimpleTable data={(user as any).mfaAccounts ?? []} columns={["issuer", "accountName"]} emptyText={t("common.noData")} title={t("users.field.mfaAccounts" as any)} />
         )}
-        {dynField("MFA items", "full",
+        {dynBlock("MFA items",
           <MfaItemsTable
             items={(user as any).mfaItems ?? []}
             onChange={(v) => setAny("mfaItems", v)}
             t={t}
           />
         )}
-        {dynField("WebAuthn credentials", "full",
+        {dynBlock("WebAuthn credentials",
           <WebAuthnTable
             items={(user as any).webauthnCredentials ?? []}
             onChange={(v) => setAny("webauthnCredentials", v)}
@@ -668,7 +674,7 @@ export default function UserEditPage() {
         {dynField("Last change password time", undefined,
           <input value={(user as any).lastChangePasswordTime ?? ""} disabled className={monoInputClass} />
         )}
-        {dynField("Managed accounts", "full",
+        {dynBlock("Managed accounts",
           <ManagedAccountsTable
             items={(user as any).managedAccounts ?? []}
             onChange={(v) => setAny("managedAccounts", v)}
@@ -676,7 +682,7 @@ export default function UserEditPage() {
             t={t}
           />
         )}
-        {dynField("Face ID", "full",
+        {dynBlock("Face ID",
           <FaceIdTable
             table={(user as any).faceIds ?? []}
             onUpdateTable={(v) => setAny("faceIds", v)}
@@ -702,11 +708,11 @@ export default function UserEditPage() {
 
       {anySectionFieldVisible("Cart", "Transactions") && (
         <FormSection title={t("users.section.cart" as any)}>
-          {dynField("Cart", "full",
-            <SimpleTable data={(user as any).cart ?? []} columns={["name", "price", "quantity", "currency"]} emptyText={t("common.noData")} />
+          {dynBlock("Cart",
+            <SimpleTable data={(user as any).cart ?? []} columns={["name", "price", "quantity", "currency"]} emptyText={t("common.noData")} title={getFieldLabel("Cart")} />
           )}
-          {dynField("Transactions", "full",
-            <SimpleTable data={(user as any).transactions ?? []} columns={["name", "amount", "currency", "createdTime"]} emptyText={t("common.noData")} />
+          {dynBlock("Transactions",
+            <SimpleTable data={(user as any).transactions ?? []} columns={["name", "amount", "currency", "createdTime"]} emptyText={t("common.noData")} title={getFieldLabel("Transactions")} />
           )}
         </FormSection>
       )}
@@ -759,7 +765,7 @@ export default function UserEditPage() {
 
       {anySectionFieldVisible("Consents") && (
       <FormSection title={t("users.section.consents" as any)}>
-        {dynField("Consents", "full",
+        {dynBlock("Consents",
           <SimpleTable data={(user as any).consents ?? []} columns={["application", "grantedScopes"]} emptyText={t("common.noData")} />
         )}
       </FormSection>
@@ -767,7 +773,7 @@ export default function UserEditPage() {
 
       {anySectionFieldVisible("Properties") && (
       <FormSection title={t("users.section.properties" as any)}>
-        {dynField("Properties", "full",
+        {dynBlock("Properties",
           <PropertyTable
             properties={user.properties ?? {}}
             onChange={(v) => set("properties", v)}
@@ -1097,12 +1103,18 @@ function SingleSearchSelect({ value, options, onChange, placeholder }: {
 }
 
 // Generic table for displaying array data (read-only)
-function SimpleTable({ data, columns, emptyText }: { data: Record<string, unknown>[]; columns: string[]; emptyText: string }) {
-  if (!data || data.length === 0) {
-    return <div className="rounded-lg border border-border bg-surface-2/30 px-4 py-6 text-center text-[12px] text-text-muted">{emptyText}</div>;
-  }
+function SimpleTable({ data, columns, emptyText, title }: { data: Record<string, unknown>[]; columns: string[]; emptyText: string; title?: string }) {
   return (
-    <div className="overflow-x-auto rounded-lg border border-border">
+    <div className="rounded-xl border border-border bg-surface-1 overflow-visible">
+      {title && (
+        <div className="px-4 py-2.5 border-b border-border-subtle bg-surface-2/30">
+          <span className="text-[12px] font-semibold text-text-primary">{title}</span>
+        </div>
+      )}
+      {(!data || data.length === 0) ? (
+        <div className="px-4 py-6 text-center text-[12px] text-text-muted">{emptyText}</div>
+      ) : (
+      <div className="overflow-x-auto">
       <table className="w-full text-left" style={{ minWidth: "max-content" }}>
         <thead>
           <tr className="border-b border-border bg-surface-2/30">
@@ -1121,6 +1133,8 @@ function SimpleTable({ data, columns, emptyText }: { data: Record<string, unknow
           ))}
         </tbody>
       </table>
+      </div>
+      )}
     </div>
   );
 }
