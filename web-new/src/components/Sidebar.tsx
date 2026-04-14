@@ -101,6 +101,7 @@ function SidebarOrgSelector({
 }) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
+  const [favicon, setFavicon] = useState<string | null>(null);
   const ref = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
 
@@ -115,6 +116,21 @@ function SidebarOrgSelector({
     if (open) requestAnimationFrame(() => searchRef.current?.focus());
   }, [open]);
 
+  // Fetch favicon for the selected org
+  useEffect(() => {
+    if (selectedOrg === "All") { setFavicon(null); return; }
+    // Try localStorage first (user's own org)
+    try {
+      const orgData = JSON.parse(localStorage.getItem("organizationData") ?? "null");
+      if (orgData?.name === selectedOrg && orgData?.favicon) { setFavicon(orgData.favicon); return; }
+    } catch {}
+    // Fetch from API for other orgs
+    fetch(`/api/get-organization?id=admin/${encodeURIComponent(selectedOrg)}`, { credentials: "include" })
+      .then((r) => r.json())
+      .then((res) => { if (res.status === "ok" && res.data?.favicon) setFavicon(res.data.favicon); else setFavicon(null); })
+      .catch(() => setFavicon(null));
+  }, [selectedOrg]);
+
   const currentLabel = selectedOrg === "All"
     ? t("common.all" as any)
     : orgOptions.find((o) => o.name === selectedOrg)?.displayName || selectedOrg;
@@ -124,6 +140,14 @@ function SidebarOrgSelector({
     const s = search.toLowerCase();
     return o.name.toLowerCase().includes(s) || (o.displayName || "").toLowerCase().includes(s);
   });
+
+  const orgIcon = favicon
+    ? <img src={favicon} alt="" className="h-[18px] w-[18px] rounded object-contain shrink-0" />
+    : <Building2 size={18} className="text-text-muted shrink-0" />;
+
+  const orgIconSmall = favicon
+    ? <img src={favicon} alt="" className="h-4 w-4 rounded object-contain shrink-0" />
+    : <Building2 size={16} className="text-text-muted shrink-0" />;
 
   // Collapsed: show icon only, click to expand dropdown
   if (collapsed) {
@@ -136,7 +160,7 @@ function SidebarOrgSelector({
             isGlobalAdmin ? "hover:bg-surface-2 cursor-pointer" : "cursor-default"
           }`}
         >
-          <Building2 size={18} className="text-text-muted" />
+          {orgIcon}
         </button>
         {open && (
           <div className="absolute left-full top-14 ml-1 z-50 w-64 rounded-xl border border-border bg-surface-1 shadow-[var(--shadow-elevated)] overflow-hidden">
@@ -181,7 +205,7 @@ function SidebarOrgSelector({
           isGlobalAdmin ? "hover:bg-surface-2 cursor-pointer" : "cursor-default"
         } ${open ? "bg-surface-2" : ""}`}
       >
-        <Building2 size={16} className="text-text-muted shrink-0" />
+        {orgIconSmall}
         <span className="text-[13px] font-medium text-text-primary truncate flex-1 text-left">{currentLabel}</span>
         {isGlobalAdmin && <ChevronsUpDown size={14} className="text-text-muted shrink-0" />}
       </button>
