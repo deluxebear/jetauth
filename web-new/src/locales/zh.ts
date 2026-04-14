@@ -1126,8 +1126,26 @@ const zh: Record<string, string> = {
   "apps.ui.addCustom": "添加自定义项",
 
   // Application Providers
-  "apps.providers.prompted": "提示",
+  "apps.providers.prompted": "注册后提醒绑定",
   "apps.providers.signupGroup": "注册分组",
+  "apps.providers.selectProvider": "选择提供商",
+  "apps.providers.canSignUp": "可用于注册",
+  "apps.providers.canSignIn": "可用于登录",
+  "apps.providers.canUnlink": "可解绑定",
+  "apps.providers.bindingRule": "绑定规则",
+  "apps.providers.countryCodes": "国家/地区",
+  "apps.providers.rule.default": "默认",
+  "apps.providers.rule.none": "无",
+  "apps.providers.rule.dynamic": "动态",
+  "apps.providers.rule.always": "始终",
+  "apps.providers.rule.internetOnly": "仅互联网",
+  "apps.providers.rule.all": "全部",
+  "apps.providers.rule.signup": "注册",
+  "apps.providers.rule.login": "登录",
+  "apps.providers.rule.forget": "忘记密码",
+  "apps.providers.rule.reset": "重置密码",
+  "apps.providers.rule.mfaSetup": "MFA 设置",
+  "apps.providers.rule.mfaAuth": "MFA 认证",
 
   // Providers
   "providers.title": "提供商管理",

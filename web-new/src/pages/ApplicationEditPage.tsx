@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Save, ArrowLeft, Trash2, Copy, LogOut, Link as LinkIcon } from "lucide-react";
+import { Save, ArrowLeft, Trash2, Copy, LogOut, Link as LinkIcon, Plus } from "lucide-react";
 import { FormField, FormSection, Switch, inputClass, monoInputClass } from "../components/FormSection";
 import { useTranslation } from "../i18n";
 import { useModal } from "../components/Modal";
@@ -11,6 +11,8 @@ import * as AppBackend from "../backend/ApplicationBackend";
 import type { Application } from "../backend/ApplicationBackend";
 import * as GroupBackend from "../backend/GroupBackend";
 import * as CertBackend from "../backend/CertBackend";
+import * as ProviderBackend from "../backend/ProviderBackend";
+import type { Provider } from "../backend/ProviderBackend";
 import { friendlyError } from "../utils/errorHelper";
 import SimpleSelect from "../components/SimpleSelect";
 import SingleSearchSelect from "../components/SingleSearchSelect";
@@ -135,6 +137,7 @@ export default function ApplicationEditPage() {
   const [loadingMetadata, setLoadingMetadata] = useState(false);
   const [groupOptions, setGroupOptions] = useState<{ value: string; label: string }[]>([]);
   const [certOptions, setCertOptions] = useState<{ value: string; label: string }[]>([]);
+  const [orgProviders, setOrgProviders] = useState<Provider[]>([]);
 
   const invalidateList = () => queryClient.invalidateQueries({ queryKey: ["applications"] });
 
@@ -181,6 +184,17 @@ export default function ApplicationEditPage() {
     CertBackend.getCerts({ owner: certOwner, pageSize: 100 }).then((res) => {
       if (res.status === "ok" && Array.isArray(res.data)) {
         setCertOptions(res.data.map((c) => ({ value: c.name, label: c.name })));
+      }
+    }).catch(() => {});
+  }, [app.organization, app.isShared, orgName]);
+
+  // Fetch providers for the application's organization
+  useEffect(() => {
+    const provOwner = app.isShared ? "admin" : (app.organization || orgName);
+    if (!provOwner) return;
+    ProviderBackend.getProviders({ owner: provOwner, pageSize: -1 }).then((res) => {
+      if (res.status === "ok" && Array.isArray(res.data)) {
+        setOrgProviders(res.data);
       }
     }).catch(() => {});
   }, [app.organization, app.isShared, orgName]);
@@ -669,111 +683,215 @@ export default function ApplicationEditPage() {
   );
 
   // ── Providers Tab ──
+  const providerItems = (app.providers as any[]) ?? [];
+  const usedProviderNames = providerItems.map((p: any) => p.name);
+  const availableProviders = orgProviders.filter((p) => !usedProviderNames.includes(p.name));
+
+  const getProviderObj = (name: string): Provider | undefined =>
+    orgProviders.find((p) => p.name === name);
+
+  const getRuleOptions = (prov: Provider | undefined): { value: string; label: string }[] | null => {
+    if (!prov) return null;
+    if (prov.type === "Google") return [{ value: "Default", label: t("apps.providers.rule.default" as any) }, { value: "OneTap", label: "OneTap" }];
+    if (prov.category === "Captcha") return [
+      { value: "None", label: t("apps.providers.rule.none" as any) },
+      { value: "Dynamic", label: t("apps.providers.rule.dynamic" as any) },
+      { value: "Always", label: t("apps.providers.rule.always" as any) },
+      { value: "Internet-Only", label: t("apps.providers.rule.internetOnly" as any) },
+    ];
+    if (prov.category === "SMS" || prov.category === "Email") return [
+      { value: "All", label: t("apps.providers.rule.all" as any) },
+      { value: "signup", label: t("apps.providers.rule.signup" as any) },
+      { value: "login", label: t("apps.providers.rule.login" as any) },
+      { value: "forget", label: t("apps.providers.rule.forget" as any) },
+      { value: "reset", label: t("apps.providers.rule.reset" as any) },
+      { value: "mfaSetup", label: t("apps.providers.rule.mfaSetup" as any) },
+      { value: "mfaAuth", label: t("apps.providers.rule.mfaAuth" as any) },
+    ];
+    return null;
+  };
+
+  const isOAuthLike = (cat?: string) => cat === "OAuth" || cat === "Web3" || cat === "SAML";
+
+  const updateProvider = (index: number, key: string, val: unknown) => {
+    const next = [...providerItems];
+    next[index] = { ...next[index], [key]: val };
+    set("providers", next);
+  };
+
   const providersTab = (
     <div className="space-y-5">
-      <FormSection title={t("apps.section.providers" as any)}>
-        <FormField label={t("apps.field.providers")} span="full">
-          <div className="text-[12px] text-text-muted">
-            {Array.isArray(app.providers) && app.providers.length > 0 ? (
-              <div className="space-y-2">
-                {(app.providers as any[]).map((provider: any, i: number) => (
-                  <div key={i} className="flex items-center gap-3 rounded-lg border border-border bg-surface-2 px-3 py-2">
-                    <span className="font-medium text-text-primary text-[13px] flex-1">{provider.name}</span>
-                    <label className="flex items-center gap-1 text-[11px]">
-                      <input
-                        type="checkbox"
-                        checked={!!provider.canSignUp}
-                        onChange={(e) => {
-                          const next = [...(app.providers as any[])];
-                          next[i] = { ...next[i], canSignUp: e.target.checked };
-                          set("providers", next);
-                        }}
-                        className="rounded"
-                      />
-                      SignUp
-                    </label>
-                    <label className="flex items-center gap-1 text-[11px]">
-                      <input
-                        type="checkbox"
-                        checked={!!provider.canSignIn}
-                        onChange={(e) => {
-                          const next = [...(app.providers as any[])];
-                          next[i] = { ...next[i], canSignIn: e.target.checked };
-                          set("providers", next);
-                        }}
-                        className="rounded"
-                      />
-                      SignIn
-                    </label>
-                    <label className="flex items-center gap-1 text-[11px]">
-                      <input
-                        type="checkbox"
-                        checked={!!provider.canUnlink}
-                        onChange={(e) => {
-                          const next = [...(app.providers as any[])];
-                          next[i] = { ...next[i], canUnlink: e.target.checked };
-                          set("providers", next);
-                        }}
-                        className="rounded"
-                      />
-                      Unlink
-                    </label>
-                    <label className="flex items-center gap-1 text-[11px]">
-                      <input
-                        type="checkbox"
-                        checked={!!provider.prompted}
-                        onChange={(e) => {
-                          const next = [...(app.providers as any[])];
-                          next[i] = { ...next[i], prompted: e.target.checked };
-                          set("providers", next);
-                        }}
-                        className="rounded"
-                      />
-                      {t("apps.providers.prompted" as any)}
-                    </label>
-                    <input
-                      value={provider.signupGroup ?? ""}
-                      onChange={(e) => {
-                        const next = [...(app.providers as any[])];
-                        next[i] = { ...next[i], signupGroup: e.target.value };
-                        set("providers", next);
-                      }}
-                      placeholder={t("apps.providers.signupGroup" as any)}
-                      className={`${inputClass} !py-1 !text-[11px] w-24`}
-                    />
-                    <SimpleSelect
-                      value={provider.rule ?? "None"}
-                      options={[{ value: "None", label: "None" }, { value: "all", label: "All" }]}
-                      onChange={(v) => {
-                        const next = [...(app.providers as any[])];
-                        next[i] = { ...next[i], rule: v };
-                        set("providers", next);
-                      }}
-                    />
-                    <button
-                      onClick={() => {
-                        const next = (app.providers as any[]).filter((_, j) => j !== i);
-                        set("providers", next);
-                      }}
-                      className="rounded p-1 text-text-muted hover:text-danger hover:bg-danger/10 transition-colors"
-                    >
-                      <Trash2 size={13} />
-                    </button>
-                  </div>
-                ))}
+      <div className="rounded-xl border border-border bg-surface-1 overflow-visible">
+        {/* Title bar */}
+        <div className="px-4 py-2.5 border-b border-border-subtle bg-surface-2/30 flex items-center justify-between">
+          <h4 className="text-[13px] font-semibold text-text-primary">{t("apps.section.providers" as any)}</h4>
+          <button
+            onClick={() => {
+              set("providers", [...providerItems, { name: "", canSignUp: true, canSignIn: true, canUnlink: true, prompted: false, signupGroup: "", rule: "None" }]);
+            }}
+            className="flex items-center gap-1 rounded-lg bg-accent px-2.5 py-1 text-[12px] font-medium text-white hover:bg-accent-hover transition-colors"
+          >
+            <Plus size={13} /> {t("common.add")}
+          </button>
+        </div>
+
+        {/* Provider rows */}
+        {providerItems.length === 0 && (
+          <div className="py-6 text-center text-[12px] text-text-muted">{t("common.noData")}</div>
+        )}
+        {providerItems.map((item: any, i: number) => {
+          const prov = getProviderObj(item.name);
+          const cat = prov?.category;
+          const ruleOptions = getRuleOptions(prov);
+          const showOAuthFields = isOAuthLike(cat);
+
+          return (
+            <div key={i} className="border-b border-border last:border-b-0 px-4 py-3 space-y-2">
+              {/* Row 1: Name selector + category/type badges */}
+              <div className="flex items-center gap-2">
+                <div className="flex-1">
+                  <SingleSearchSelect
+                    value={item.name ?? ""}
+                    options={[
+                      ...(item.name && prov ? [{ value: prov.name, label: prov.displayName && prov.displayName !== prov.name ? `${prov.name} (${prov.displayName})` : prov.name }] : []),
+                      ...availableProviders.map((p) => ({
+                        value: p.name,
+                        label: p.displayName && p.displayName !== p.name ? `${p.name} (${p.displayName})` : p.name,
+                      })),
+                    ]}
+                    onChange={(v) => {
+                      const selected = orgProviders.find((p) => p.name === v);
+                      const next = [...providerItems];
+                      next[i] = { ...next[i], name: v };
+                      if (selected && (selected.category === "Email" || selected.category === "SMS")) {
+                        next[i].rule = "All";
+                      }
+                      set("providers", next);
+                    }}
+                    placeholder={t("apps.providers.selectProvider" as any)}
+                  />
+                </div>
+                {cat && (
+                  <span className="rounded-full bg-surface-3 px-2 py-0.5 text-[11px] font-medium text-text-secondary">{cat}</span>
+                )}
+                {prov?.type && (
+                  <span className="rounded-full bg-accent/10 px-2 py-0.5 text-[11px] font-medium text-accent">{prov.type}</span>
+                )}
+                <button
+                  onClick={() => set("providers", providerItems.filter((_: any, j: number) => j !== i))}
+                  className="rounded p-1 text-text-muted hover:text-danger hover:bg-danger/10 transition-colors"
+                >
+                  <Trash2 size={13} />
+                </button>
               </div>
-            ) : (
-              <span>No providers configured</span>
-            )}
-            <ProviderAdder
-              onAdd={(name) => {
-                const current = Array.isArray(app.providers) ? (app.providers as any[]) : [];
-                set("providers", [...current, { name, canSignUp: true, canSignIn: true, canUnlink: true, prompted: false, signupGroup: "" }]);
-              }}
-            />
-          </div>
-        </FormField>
-      </FormSection>
+
+              {/* Row 2: Conditional fields based on provider category */}
+              {(showOAuthFields || cat === "SMS" || ruleOptions) && (
+                <div className="flex items-center gap-3 flex-wrap text-[11px]">
+                  {/* SMS: Country/Region codes */}
+                  {cat === "SMS" && (
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-text-muted font-medium">{t("apps.providers.countryCodes" as any)}</span>
+                      <div className="flex flex-wrap gap-1">
+                        {(Array.isArray(item.countryCodes) && item.countryCodes.length > 0 ? item.countryCodes : ["All"]).map((code: string, ci: number) => (
+                          <span key={ci} className="rounded bg-surface-3 px-1.5 py-0.5 text-[10px] font-mono">{code}</span>
+                        ))}
+                        <input
+                          value=""
+                          onChange={() => {}}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" && (e.target as HTMLInputElement).value.trim()) {
+                              const val = (e.target as HTMLInputElement).value.trim();
+                              const codes = Array.isArray(item.countryCodes) ? item.countryCodes : [];
+                              updateProvider(i, "countryCodes", [...codes.filter((c: string) => c !== "All"), val]);
+                              (e.target as HTMLInputElement).value = "";
+                            }
+                          }}
+                          placeholder="+"
+                          className={`${inputClass} !py-0.5 !text-[10px] !px-1.5 w-12`}
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* OAuth/Web3/SAML: canSignUp/canSignIn/canUnlink/prompted/bindingRule */}
+                  {showOAuthFields && (
+                    <>
+                      <label className="flex items-center gap-1">
+                        <input type="checkbox" checked={!!item.canSignUp} onChange={(e) => updateProvider(i, "canSignUp", e.target.checked)} className="rounded" />
+                        {t("apps.providers.canSignUp" as any)}
+                      </label>
+                      <label className="flex items-center gap-1">
+                        <input type="checkbox" checked={!!item.canSignIn} onChange={(e) => updateProvider(i, "canSignIn", e.target.checked)} className="rounded" />
+                        {t("apps.providers.canSignIn" as any)}
+                      </label>
+                      <label className="flex items-center gap-1">
+                        <input type="checkbox" checked={!!item.canUnlink} onChange={(e) => updateProvider(i, "canUnlink", e.target.checked)} className="rounded" />
+                        {t("apps.providers.canUnlink" as any)}
+                      </label>
+                      <label className="flex items-center gap-1">
+                        <input type="checkbox" checked={!!item.prompted} onChange={(e) => updateProvider(i, "prompted", e.target.checked)} className="rounded" />
+                        {t("apps.providers.prompted" as any)}
+                      </label>
+                      {/* Binding rule multi-select */}
+                      <div className="flex items-center gap-1">
+                        <span className="text-text-muted font-medium">{t("apps.providers.bindingRule" as any)}</span>
+                        {["Email", "Name", "Phone"].map((opt) => {
+                          const rules: string[] = Array.isArray(item.bindingRule) ? item.bindingRule : ["Email", "Phone", "Name"];
+                          const checked = rules.includes(opt);
+                          return (
+                            <label key={opt} className="flex items-center gap-0.5">
+                              <input
+                                type="checkbox"
+                                checked={checked}
+                                onChange={(e) => {
+                                  const next = e.target.checked ? [...rules, opt] : rules.filter((r: string) => r !== opt);
+                                  updateProvider(i, "bindingRule", next);
+                                }}
+                                className="rounded"
+                              />
+                              {opt}
+                            </label>
+                          );
+                        })}
+                      </div>
+                    </>
+                  )}
+
+                  {/* OAuth/Web3 only: signupGroup */}
+                  {(cat === "OAuth" || cat === "Web3") && (
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-text-muted font-medium">{t("apps.providers.signupGroup" as any)}</span>
+                      <div className="w-64">
+                        <SingleSearchSelect
+                          value={item.signupGroup ?? ""}
+                          options={groupOptions}
+                          onChange={(v) => updateProvider(i, "signupGroup", v)}
+                          placeholder={t("common.search" as any)}
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Rule dropdown (varies by type) */}
+                  {ruleOptions && (
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-text-muted font-medium">{t("apps.ui.rule" as any)}</span>
+                      <div className="w-32">
+                        <SimpleSelect
+                          value={item.rule ?? "None"}
+                          options={ruleOptions}
+                          onChange={(v) => updateProvider(i, "rule", v)}
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 
@@ -1233,31 +1351,3 @@ function AutocompleteInput({ value, onChange, suggestions, placeholder }: {
   );
 }
 
-// ── Provider adder sub-component ──
-function ProviderAdder({ onAdd }: { onAdd: (name: string) => void }) {
-  const [input, setInput] = useState("");
-  const { t } = useTranslation();
-
-  return (
-    <div className="flex gap-2 mt-3">
-      <input
-        value={input}
-        onChange={(e) => setInput(e.target.value)}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" && input.trim()) {
-            onAdd(input.trim());
-            setInput("");
-          }
-        }}
-        placeholder="Provider name"
-        className={`${inputClass} flex-1 text-[12px]`}
-      />
-      <button
-        onClick={() => { if (input.trim()) { onAdd(input.trim()); setInput(""); } }}
-        className="rounded-lg bg-accent px-3 py-2 text-[12px] font-medium text-white hover:bg-accent-hover transition-colors"
-      >
-        {t("common.add" as any)}
-      </button>
-    </div>
-  );
-}
