@@ -17,12 +17,7 @@ import { friendlyError } from "../utils/errorHelper";
 import { obfuscatePassword } from "../utils/obfuscator";
 import FaceIdTable from "../components/FaceIdTable";
 import ImageUrlInput from "../components/ImageUrlInput";
-
-const CURRENCIES = [
-  { value: "USD", label: "USD" }, { value: "CNY", label: "CNY" },
-  { value: "EUR", label: "EUR" }, { value: "JPY", label: "JPY" },
-  { value: "GBP", label: "GBP" },
-];
+import CurrencySelect from "../components/CurrencySelect";
 
 export default function UserEditPage() {
   const { owner, name } = useParams<{ owner: string; name: string }>();
@@ -624,9 +619,7 @@ export default function UserEditPage() {
         <FormSection title={t("users.section.finance" as any)}>
           {dynField("Balance", undefined, <input type="number" value={user.balance ?? 0} onChange={(e) => set("balance", Number(e.target.value))} disabled={isFieldDisabled("Balance")} className={monoInputClass} />)}
           {dynField("Balance credit", undefined, <input type="number" value={user.balanceCredit ?? 0} onChange={(e) => set("balanceCredit", Number(e.target.value))} disabled={isFieldDisabled("Balance credit")} className={monoInputClass} />)}
-          {dynField("Balance currency", undefined, <select value={user.balanceCurrency ?? "CNY"} onChange={(e) => set("balanceCurrency", e.target.value)} disabled={isFieldDisabled("Balance currency")} className={inputClass}>
-              {CURRENCIES.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
-            </select>)}
+          {dynField("Balance currency", undefined, <CurrencySelect value={user.balanceCurrency ?? "CNY"} onChange={(v) => set("balanceCurrency", v)} disabled={isFieldDisabled("Balance currency")} />)}
         </FormSection>
       )}
 

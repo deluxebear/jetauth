@@ -205,7 +205,7 @@ export function newUser(orgName: string): Partial<User> {
     countryCode: "",
     address: [],
     groups: [],
-    affiliation: "Example Inc.",
+    affiliation: "",
     tag: "staff",
     region: "",
     realName: "",
