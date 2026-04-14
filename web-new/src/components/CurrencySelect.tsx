@@ -74,7 +74,7 @@ export default function CurrencySelect({ value, onChange, disabled }: {
         <ChevronDown size={14} className={`text-text-muted shrink-0 transition-transform duration-200 ${open ? "rotate-180" : ""}`} />
       </div>
       {open && (
-        <div className="absolute z-[60] mt-1 max-h-56 w-full overflow-y-auto rounded-lg border border-border bg-surface-1 py-1 shadow-lg">
+        <div className="absolute z-[60] mt-1 max-h-56 w-full overflow-y-auto rounded-xl border border-border bg-surface-1 py-1 shadow-[var(--shadow-elevated)]">
           {filtered.map((c) => {
             const selected = c.code === value;
             return (

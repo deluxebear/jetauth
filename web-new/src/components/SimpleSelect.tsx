@@ -28,7 +28,7 @@ export default function SimpleSelect({ value, options, onChange, disabled, class
         <ChevronDown size={14} className={`text-text-muted shrink-0 transition-transform duration-200 ${open ? "rotate-180" : ""}`} />
       </div>
       {open && (
-        <div className="absolute z-[60] mt-1 w-full max-h-60 overflow-y-auto rounded-lg border border-border bg-surface-1 py-1 shadow-lg">
+        <div className="absolute z-[60] mt-1 w-full max-h-60 overflow-y-auto rounded-xl border border-border bg-surface-1 py-1 shadow-[var(--shadow-elevated)]">
           {options.map((opt) => (
             <button key={opt.value} type="button" onClick={() => { onChange(opt.value); setOpen(false); }}
               className={`flex w-full items-center px-3 py-2 text-[13px] text-left transition-colors ${

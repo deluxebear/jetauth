@@ -335,7 +335,7 @@ export default function Sidebar({ account }: { account?: Account | null }) {
         {filteredGroups.map((group) => (
           <div key={group.key} className="mb-4">
             {!collapsed && (
-              <div className="px-2 mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-text-muted">
+              <div className="px-2 mb-1.5 text-[11px] font-semibold uppercase tracking-wider text-text-muted">
                 {t(group.labelKey)}
               </div>
             )}

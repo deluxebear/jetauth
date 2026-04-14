@@ -959,7 +959,7 @@ function MultiSearchSelect({ selected, options, onChange, placeholder }: {
         <ChevronDown size={14} className={`absolute right-2.5 top-1/2 -translate-y-1/2 text-text-muted transition-transform duration-200 ${open ? "rotate-180" : ""}`} />
       </div>
       {open && filtered.length > 0 && (
-        <div className="absolute z-[60] mt-1 max-h-48 w-full overflow-y-auto rounded-lg border border-border bg-surface-1 py-1 shadow-lg" style={{ width: ref.current?.offsetWidth }}>
+        <div className="absolute z-[60] mt-1 max-h-48 w-full overflow-y-auto rounded-xl border border-border bg-surface-1 py-1 shadow-[var(--shadow-elevated)]" style={{ width: ref.current?.offsetWidth }}>
           {filtered.map((opt) => (
             <button key={opt.value} type="button" onClick={() => { onChange([...selected, opt.value]); setSearch(""); }}
               className="flex w-full items-center px-3 py-2 text-[13px] text-left text-text-primary hover:bg-surface-2 transition-colors">
@@ -1006,7 +1006,7 @@ function SingleSearchSelect({ value, options, onChange, placeholder }: {
         <ChevronDown size={14} className={`text-text-muted shrink-0 transition-transform duration-200 ${open ? "rotate-180" : ""}`} />
       </div>
       {open && (
-        <div className="absolute z-[60] mt-1 max-h-48 w-full overflow-y-auto rounded-lg border border-border bg-surface-1 py-1 shadow-lg">
+        <div className="absolute z-[60] mt-1 max-h-48 w-full overflow-y-auto rounded-xl border border-border bg-surface-1 py-1 shadow-[var(--shadow-elevated)]">
           <button type="button" onClick={() => { onChange(""); setOpen(false); setSearch(""); }}
             className={`flex w-full items-center px-3 py-2 text-[13px] text-left transition-colors ${!value ? "text-accent bg-accent/5" : "text-text-muted hover:bg-surface-2"}`}>—</button>
           {filtered.map((opt) => (
@@ -1277,7 +1277,7 @@ function RegionSelect({ value, onChange }: { value: string; onChange: (v: string
         <ChevronDown size={14} className={`text-text-muted shrink-0 transition-transform duration-200 ${open ? "rotate-180" : ""}`} />
       </div>
       {open && (
-        <div className={`absolute z-[60] max-h-56 w-full overflow-y-auto rounded-lg border border-border bg-surface-1 py-1 shadow-lg ${dropUp ? "bottom-full mb-1" : "top-full mt-1"}`}>
+        <div className={`absolute z-[60] max-h-56 w-full overflow-y-auto rounded-xl border border-border bg-surface-1 py-1 shadow-[var(--shadow-elevated)] ${dropUp ? "bottom-full mb-1" : "top-full mt-1"}`}>
           <button type="button" onClick={() => { onChange(""); setOpen(false); setSearch(""); }}
             className={`flex w-full items-center gap-2 px-3 py-2 text-[13px] text-left transition-colors ${!value ? "text-accent bg-accent/5" : "text-text-muted hover:bg-surface-2"}`}>—</button>
           {filtered.map((c) => (

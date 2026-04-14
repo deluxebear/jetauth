@@ -171,8 +171,18 @@ export default function DataTable<T extends Record<string, unknown>>({
               ))
             ) : data.length === 0 ? (
               <tr>
-                <td colSpan={columns.length} className="px-4 py-16 text-center text-sm text-text-muted">
-                  {emptyText}
+                <td colSpan={columns.length} className="px-4 py-20 text-center">
+                  <div className="flex flex-col items-center gap-3">
+                    <div className="rounded-full bg-surface-2 p-4">
+                      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-text-muted/50">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                        <polyline points="14 2 14 8 20 8" />
+                        <line x1="9" y1="13" x2="15" y2="13" />
+                        <line x1="9" y1="17" x2="15" y2="17" />
+                      </svg>
+                    </div>
+                    <span className="text-[13px] text-text-muted">{emptyText}</span>
+                  </div>
                 </td>
               </tr>
             ) : (

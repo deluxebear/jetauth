@@ -30,7 +30,6 @@ export default function Header({ user, onLogout }: HeaderProps) {
 
   return (
     <header className="sticky top-0 z-20 flex h-14 items-center justify-end border-b border-border bg-surface-1/80 backdrop-blur-md px-6">
-      {/* Right side */}
       <div className="flex items-center gap-1.5">
         {/* Theme toggle */}
         <button
