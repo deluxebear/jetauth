@@ -304,6 +304,10 @@ export default function ProviderEditPage() {
   const [displayNameAutoGen, setDisplayNameAutoGen] = useState(isAddMode);
   const [samlMetadataUrl, setSamlMetadataUrl] = useState("");
   const [samlMetadataLoading, setSamlMetadataLoading] = useState(false);
+  const [captchaPreviewOpen, setCaptchaPreviewOpen] = useState(false);
+  const [captchaImg, setCaptchaImg] = useState("");
+  const [captchaId, setCaptchaId] = useState("");
+  const [captchaInput, setCaptchaInput] = useState("");
 
   const invalidateList = () => queryClient.invalidateQueries({ queryKey: ["providers"] });
 
@@ -865,9 +869,100 @@ export default function ProviderEditPage() {
     </FormSection>
   );
 
+  const loadCaptchaPreview = async () => {
+    try {
+      const res = await fetch(`/api/get-captcha?applicationId=${prov.owner}/${encodeURIComponent(String(prov.name))}&isCurrentProvider=true`);
+      const json = await res.json();
+      const captcha = json.data ?? json; // API wraps in { status, data: {...} }
+      if (captcha.type === "Default") {
+        setCaptchaImg(captcha.captchaImage);
+        setCaptchaId(captcha.captchaId);
+        setCaptchaInput("");
+        setCaptchaPreviewOpen(true);
+      } else if (captcha.type && captcha.type !== "none") {
+        // Third-party captcha — show notice
+        modal.toast(t("providers.captcha.thirdPartyNotice" as any));
+      }
+    } catch (e: any) {
+      modal.toast(e?.message || "Failed to load captcha", "error");
+    }
+  };
+
+  const verifyCaptchaPreview = async () => {
+    try {
+      const form = new FormData();
+      form.append("captchaType", String(prov.type));
+      form.append("captchaToken", captchaInput);
+      form.append("clientSecret", captchaId);
+      form.append("applicationId", `${prov.owner}/${prov.name}`);
+      const res = await fetch("/api/verify-captcha", { method: "POST", credentials: "include", body: form });
+      const data = await res.json();
+      if (data.status === "ok" && data.data === true) {
+        modal.toast(t("providers.captcha.verifySuccess" as any));
+        setCaptchaPreviewOpen(false);
+      } else {
+        modal.toast(data.msg || t("providers.captcha.verifyFailed" as any), "error");
+        loadCaptchaPreview(); // Reload on failure
+      }
+    } catch {
+      modal.toast(t("providers.captcha.verifyFailed" as any), "error");
+    }
+  };
+
   const renderCaptchaFields = () => {
-    if (type === "Default") return null;
-    return null; // Captcha types only need clientId/Secret which is handled by renderCredentials
+    const isPreviewDisabled = () => {
+      if (type === "Default") return false;
+      if (!prov.clientId || !prov.clientSecret) return true;
+      if (type === "Aliyun Captcha" && (!prov.subType || !prov.clientId2 || !prov.clientSecret2)) return true;
+      return false;
+    };
+
+    return (
+      <FormSection>
+        <FormField label={t("providers.captcha.preview" as any)} help={t("providers.captcha.previewHelp" as any)} span="full">
+          <div className="space-y-3">
+            <button
+              onClick={loadCaptchaPreview}
+              disabled={isPreviewDisabled()}
+              className="rounded-lg bg-accent px-4 py-2 text-[13px] font-medium text-white hover:bg-accent-hover disabled:opacity-50 transition-colors"
+            >
+              {t("providers.captcha.preview" as any)}
+            </button>
+            {/* Default captcha preview inline */}
+            {captchaPreviewOpen && captchaImg && (
+              <div className="flex items-start gap-3 rounded-lg border border-border bg-surface-2 p-4">
+                <div className="space-y-2">
+                  <img
+                    src={`data:image/png;base64,${captchaImg}`}
+                    alt="captcha"
+                    onClick={loadCaptchaPreview}
+                    className="h-[50px] w-[200px] rounded border border-border cursor-pointer object-contain bg-white"
+                  />
+                  <p className="text-[11px] text-text-muted">{t("providers.captcha.clickRefresh" as any)}</p>
+                </div>
+                <div className="flex gap-2">
+                  <input
+                    value={captchaInput}
+                    onChange={(e) => setCaptchaInput(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === "Enter") verifyCaptchaPreview(); }}
+                    placeholder={t("providers.captcha.inputCode" as any)}
+                    maxLength={5}
+                    className={`${monoInputClass} w-28 text-center text-lg tracking-widest`}
+                  />
+                  <button
+                    onClick={verifyCaptchaPreview}
+                    disabled={!/^\d{5}$/.test(captchaInput)}
+                    className="rounded-lg bg-accent px-3 py-2 text-[13px] font-medium text-white hover:bg-accent-hover disabled:opacity-50 transition-colors whitespace-nowrap"
+                  >
+                    {t("providers.captcha.verify" as any)}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </FormField>
+      </FormSection>
+    );
   };
 
   const renderNotificationFields = () => (

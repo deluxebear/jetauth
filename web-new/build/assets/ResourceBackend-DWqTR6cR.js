@@ -1,1 +1,0 @@
-import{s as e}from"./index-Be2p8b-I.js";export{e as uploadResource};
