@@ -1097,6 +1097,8 @@ const zh: Record<string, string> = {
   "providers.label.scene": "场景",
   "providers.label.clientId2": "客户端 ID 2",
   "providers.label.clientSecret2": "客户端密钥 2",
+  "providers.label.merchantAccount": "商户账号",
+  "providers.payment.rootCert": "根证书",
   "providers.state.enabled": "启用",
   "providers.state.disabled": "禁用",
   "providers.help.testReceiver": "测试接收邮箱地址",

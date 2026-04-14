@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Save, ArrowLeft, Trash2, LogOut, ExternalLink, Copy, ChevronDown, ShieldCheck } from "lucide-react";
+import { Save, ArrowLeft, Trash2, LogOut, ExternalLink, Copy, ChevronDown, ShieldCheck, Bell, HardDrive, CreditCard, Wallet, MessageSquare, Smartphone, Key, Globe, Link, Settings } from "lucide-react";
 import { FormField, FormSection, Switch, inputClass, monoInputClass } from "../components/FormSection";
 import SimpleSelect from "../components/SimpleSelect";
 import SingleSearchSelect from "../components/SingleSearchSelect";
@@ -27,38 +27,43 @@ const CATEGORIES = [
 
 const TYPE_BY_CATEGORY: Record<string, string[]> = {
   OAuth: [
-    "Google", "GitHub", "QQ", "WeChat", "Facebook", "DingTalk", "Weibo", "Gitee",
-    "LinkedIn", "WeCom", "Lark", "GitLab", "ADFS", "Baidu", "Alipay", "Casdoor",
-    "Infoflow", "Apple", "AzureAD", "AzureADB2C", "Slack", "Steam", "Bilibili",
-    "Okta", "Douyin", "Line", "Amazon", "Auth0", "BattleNet", "Bitbucket", "Discord",
-    "Dropbox", "Gitea", "Instagram", "Kakao", "Naver", "PayPal", "Spotify", "Telegram",
-    "TikTok", "Twitter", "VK", "Zoom",
+    "ADFS", "Alipay", "Amazon", "Apple", "Auth0", "AzureAD", "AzureADB2C",
+    "Baidu", "BattleNet", "Bilibili", "Bitbucket", "Casdoor",
+    "DingTalk", "Discord", "Douyin", "Dropbox",
+    "Facebook", "Gitea", "Gitee", "GitHub", "GitLab", "Google",
+    "Infoflow", "Instagram", "Kakao", "Lark", "Line", "LinkedIn",
+    "Naver", "Okta", "PayPal", "QQ", "Slack", "Spotify", "Steam",
+    "Telegram", "TikTok", "Twitter", "VK", "WeChat", "WeCom", "Weibo", "Zoom",
     "Custom",
   ],
-  Email: ["Default", "SUBMAIL", "Mailtrap", "Azure ACS", "SendGrid", "Custom HTTP Email", "Resend"],
+  Email: ["Azure ACS", "Default", "Mailtrap", "Resend", "SendGrid", "SUBMAIL", "Custom HTTP Email"],
   SMS: [
-    "Aliyun SMS", "Tencent Cloud SMS", "Twilio SMS", "Amazon SNS", "Azure ACS",
-    "Volc Engine SMS", "Huawei Cloud SMS", "Baidu Cloud SMS", "UCloud SMS",
-    "Infobip SMS", "OSON SMS", "SmsBao SMS", "SUBMAIL SMS", "Msg91 SMS",
-    "Custom HTTP SMS", "Mock SMS",
+    "Aliyun SMS", "Amazon SNS", "Azure ACS", "Baidu Cloud SMS",
+    "Huawei Cloud SMS", "Infobip SMS", "Mock SMS", "Msg91 SMS",
+    "OSON SMS", "SmsBao SMS", "SUBMAIL SMS", "Tencent Cloud SMS",
+    "Twilio SMS", "UCloud SMS", "Volc Engine SMS",
+    "Custom HTTP SMS",
   ],
   Storage: [
-    "Local File System", "AWS S3", "MinIO", "Aliyun OSS", "Tencent Cloud COS",
-    "Azure Blob", "Qiniu Cloud Kodo", "Google Cloud Storage", "Synology", "Casdoor", "CUCloud OSS",
+    "Aliyun OSS", "AWS S3", "Azure Blob", "Casdoor", "CUCloud OSS",
+    "Google Cloud Storage", "Local File System", "MinIO",
+    "Qiniu Cloud Kodo", "Synology", "Tencent Cloud COS",
   ],
   SAML: ["Aliyun IDaaS", "Keycloak", "Custom"],
-  Payment: ["Dummy", "Balance", "Alipay", "WeChat Pay", "PayPal", "Stripe", "GC"],
+  Payment: ["Adyen", "AirWallex", "Alipay", "Balance", "Dummy", "FastSpring", "GC", "Lemon Squeezy", "Paddle", "PayPal", "Polar", "Stripe", "WeChat Pay"],
   Captcha: ["Aliyun Captcha", "Cloudflare Turnstile", "Default", "GEETEST", "hCaptcha", "reCAPTCHA v2", "reCAPTCHA v3"],
   Web3: ["MetaMask", "Web3Onboard"],
   Notification: [
-    "Telegram", "Custom HTTP", "DingTalk", "Lark", "Microsoft Teams", "Bark",
-    "Pushover", "Pushbullet", "Slack", "Webpush", "Discord", "Google Chat",
-    "Line", "Matrix", "Twitter", "Reddit", "Rocket Chat", "Viber", "WeCom",
+    "Bark", "Discord", "DingTalk", "Google Chat", "Lark", "Line",
+    "Matrix", "Microsoft Teams", "Pushbullet", "Pushover",
+    "Reddit", "Rocket Chat", "Slack", "Telegram", "Twitter",
+    "Viber", "WeCom", "Webpush",
+    "Custom HTTP",
   ],
   "Face ID": ["Alibaba Cloud Facebody"],
   MFA: ["RADIUS"],
-  "ID Verification": ["Jumio", "Alibaba Cloud"],
-  Log: ["JetAuth Permission Log", "System Log", "Agent", "SELinux Log"],
+  "ID Verification": ["Alibaba Cloud", "Jumio"],
+  Log: ["Agent", "JetAuth Permission Log", "SELinux Log", "System Log"],
 };
 
 const DEFAULT_TYPE_FOR_CATEGORY: Record<string, string> = {
@@ -131,12 +136,13 @@ function shouldHideCredentials(cat: string, type: string): boolean {
   if (cat === "SMS" && type === "Custom HTTP SMS") return true;
   if (cat === "Email" && type === "Custom HTTP Email") return true;
   if (cat === "Notification" && ["Google Chat", "Custom HTTP", "Balance"].includes(type)) return true;
+  if (cat === "Payment" && ["Dummy", "Balance"].includes(type)) return true;
   return false;
 }
 
 function shouldShowClientId2(cat: string, type: string): boolean {
   if (cat === "Email") return true;
-  return ["WeChat", "Apple", "Aliyun Captcha", "WeChat Pay", "Twitter", "Reddit", "CUCloud"].includes(type);
+  return ["WeChat", "Apple", "Aliyun Captcha", "WeChat Pay", "Twitter", "Reddit", "CUCloud", "Adyen"].includes(type);
 }
 
 function getClientId2Label(cat: string, type: string, t: (k: string) => string): string {
@@ -144,6 +150,7 @@ function getClientId2Label(cat: string, type: string, t: (k: string) => string):
   if (cat === "Email") return t("providers.label.fromAddress" as any);
   if (type === "Aliyun Captcha") return t("providers.label.scene" as any);
   if (type === "WeChat Pay" || type === "CUCloud") return t("providers.label.appId" as any);
+  if (type === "Adyen") return t("providers.label.merchantAccount" as any);
   return t("providers.label.clientId2" as any);
 }
 
@@ -155,7 +162,7 @@ function getClientSecret2Label(cat: string, type: string, t: (k: string) => stri
 }
 
 function shouldHideClientSecret2(cat: string, type: string): boolean {
-  if (type === "WeChat Pay" || type === "CUCloud") return true;
+  if (type === "WeChat Pay" || type === "CUCloud" || type === "Adyen") return true;
   if (cat === "Email" && type === "Azure ACS") return true;
   return false;
 }
@@ -198,29 +205,33 @@ const PROVIDER_ICON_SLUGS: Record<string, string> = {
   Line: "line", Kakao: "kakaotalk", VK: "vk", Naver: "naver",
   AzureAD: "microsoftazure", AzureADB2C: "microsoftazure",
   ADFS: "microsoft", Lark: "lark", Douyin: "tiktok",
+  Gitee: "gitee", BattleNet: "battledotnet", WeCom: "wechat",
   // Captcha
   "reCAPTCHA v2": "google", "reCAPTCHA v3": "google",
   hCaptcha: "hcaptcha", "Cloudflare Turnstile": "cloudflare",
-  "Aliyun Captcha": "alibabacloud", GEETEST: "g",
+  "Aliyun Captcha": "alibabacloud",
   // Email
   SendGrid: "sendgrid", Mailtrap: "mailtrap", Resend: "resend",
-  "Azure ACS": "microsoftazure",
   // SMS
   "Aliyun SMS": "alibabacloud", "Tencent Cloud SMS": "tencentqq",
   "Twilio SMS": "twilio", "Amazon SNS": "amazonaws",
+  "Azure ACS": "microsoftazure",
   "Huawei Cloud SMS": "huawei", "Baidu Cloud SMS": "baidu",
   // Storage
   "AWS S3": "amazons3", MinIO: "minio", "Aliyun OSS": "alibabacloud",
   "Tencent Cloud COS": "tencentqq", "Azure Blob": "microsoftazure",
-  "Google Cloud Storage": "googlecloud",
+  "Google Cloud Storage": "googlecloud", Synology: "synology",
+  // SAML
+  "Aliyun IDaaS": "alibabacloud", Keycloak: "keycloak",
   // Payment
-  "WeChat Pay": "wechat",
+  Alipay: "alipay", "WeChat Pay": "wechat",
   // Notification
   "Microsoft Teams": "microsoftteams", Pushover: "pushover",
   "Google Chat": "googlechat", Matrix: "matrix", Reddit: "reddit",
-  Bark: "swift",
   // Web3
-  MetaMask: "metamask",
+  MetaMask: "metamask", Web3Onboard: "web3dotjs",
+  // ID Verification
+  "Alibaba Cloud": "alibabacloud",
 };
 
 // Fallback slugs by category (used when type has no specific icon)
@@ -232,9 +243,84 @@ const CATEGORY_ICON_SLUGS: Record<string, string> = {
   "ID Verification": "keycdn",
 };
 
-// Special local icons (not from CDN)
+// Local brand icons (from /img/brand/) or lucide icons
 const LOCAL_ICONS: Record<string, string> = {
+  // Captcha
   "Captcha:Default": "local:shield",
+  "Captcha:GEETEST": "brand:geetest.svg",
+  "Captcha:hCaptcha": "brand:hcaptcha.svg",
+  // OAuth
+  "OAuth:Infoflow": "brand:infoflow.png",
+  "OAuth:Casdoor": "brand:casdoor.png",
+  "OAuth:QQ": "brand:QQ.svg",
+  "OAuth:AzureAD": "brand:azure.svg",
+  "OAuth:AzureADB2C": "brand:azure.svg",
+  "OAuth:Slack": "brand:slack-icon.svg",
+  "OAuth:Lark": "brand:lark.svg",
+  "OAuth:DingTalk": "brand:dingtalk.svg",
+  "OAuth:LinkedIn": "brand:linkedin.png",
+  "OAuth:Amazon": "brand:amazon-web-services.svg",
+  "OAuth:ADFS": "brand:azure.svg",
+  "OAuth:Custom": "local:settings",
+  // Email
+  "Email:SUBMAIL": "brand:submail.svg",
+  "Email:SendGrid": "brand:sendgrid.svg",
+  // SMS
+  "SMS:SUBMAIL SMS": "brand:submail.svg",
+  "SMS:Tencent Cloud SMS": "brand:tencent-cloud.png",
+  "SMS:Twilio SMS": "brand:twilio.png",
+  "SMS:Amazon SNS": "brand:amazon-sns.png",
+  "SMS:Volc Engine SMS": "brand:volcengine.png",
+  "SMS:UCloud SMS": "brand:ucloud.png",
+  "SMS:Infobip SMS": "brand:infobip.png",
+  "SMS:OSON SMS": "local:messageSquare",
+  "SMS:SmsBao SMS": "brand:smsbao.png",
+  "SMS:Msg91 SMS": "brand:msg91.png",
+  "SMS:Mock SMS": "local:smartphone",
+  "SMS:Custom HTTP SMS": "local:messageSquare",
+  "SMS:Azure ACS": "brand:azure.svg",
+  "Email:Azure ACS": "brand:azure.svg",
+  "Storage:Azure Blob": "brand:azure.svg",
+  // Storage
+  "Storage:Local File System": "local:hardDrive",
+  "Storage:Qiniu Cloud Kodo": "brand:qiniu.png",
+  "Storage:Tencent Cloud COS": "brand:tencent-cloud.png",
+  "Storage:Casdoor": "brand:casdoor.png",
+  "Storage:CUCloud OSS": "brand:cucloud.png",
+  "Storage:AWS S3": "brand:amazon-web-services.svg",
+  // SAML
+  "SAML:Custom": "local:key",
+  // Payment
+  "Payment:Dummy": "local:creditCard",
+  "Payment:Balance": "local:wallet",
+  "Payment:GC": "local:creditCard",
+  "Payment:AirWallex": "brand:airwallex.png",
+  "Payment:Polar": "brand:polar.png",
+  "Payment:Paddle": "brand:paddle.png",
+  "Payment:FastSpring": "brand:fastspring.png",
+  "Payment:Lemon Squeezy": "brand:lemonsqueezy.png",
+  "Payment:Adyen": "brand:adyen.png",
+  "Payment:Casdoor": "brand:casdoor.png",
+  // Notification
+  "Notification:Microsoft Teams": "brand:microsoft-teams-icon.svg",
+  "Notification:Pushover": "brand:pushover.svg",
+  "Notification:Bark": "local:bell",
+  "Notification:Pushbullet": "brand:pushbullet_1.svg",
+  "Notification:Webpush": "brand:webpush.svg",
+  "Notification:Rocket Chat": "brand:rocket-chat.svg",
+  "Notification:Viber": "brand:viber.svg",
+  "Notification:WeCom": "brand:wecom.svg",
+  "Notification:DingTalk": "brand:dingtalk.svg",
+  "Notification:Lark": "brand:lark.svg",
+  "Notification:Slack": "brand:slack-icon.svg",
+  "Notification:Custom HTTP": "local:globe",
+  // Web3
+  "Web3:MetaMask": "brand:metamask.png",
+  "Web3:Web3Onboard": "local:link",
+  // ID Verification
+  "ID Verification:Jumio": "brand:jumio.png",
+  // Email Custom
+  "Email:Custom HTTP Email": "local:globe",
 };
 
 function getProviderLogoUrl(category: string, type: string, isDark: boolean): string {
@@ -933,12 +1019,24 @@ export default function ProviderEditPage() {
 
   const renderPaymentFields = () => (
     <FormSection title={t("providers.section.paymentConfig" as any)}>
-      <FormField label={t("providers.field.host")} help={t("help.webhookUrl" as any)}>
-        <input value={String(prov.host ?? "")} onChange={(e) => set("host", e.target.value)} className={inputClass} />
-      </FormField>
-      <FormField label={t("providers.field.cert" as any)}>
-        <input value={String(prov.cert ?? "")} onChange={(e) => set("cert", e.target.value)} className={monoInputClass} />
-      </FormField>
+      {/* Cert — Alipay, WeChat Pay, Casdoor */}
+      {["Alipay", "WeChat Pay"].includes(type) && (
+        <FormField label={t("providers.field.cert" as any)}>
+          <input value={String(prov.cert ?? "")} onChange={(e) => set("cert", e.target.value)} className={monoInputClass} />
+        </FormField>
+      )}
+      {/* Root cert — Alipay only (stored in metadata) */}
+      {type === "Alipay" && (
+        <FormField label={t("providers.payment.rootCert" as any)}>
+          <input value={String(prov.metadata ?? "")} onChange={(e) => set("metadata", e.target.value)} className={monoInputClass} />
+        </FormField>
+      )}
+      {/* Host — GC, FastSpring */}
+      {["GC", "FastSpring"].includes(type) && (
+        <FormField label={t("providers.field.host")} help={t("help.webhookUrl" as any)}>
+          <input value={String(prov.host ?? "")} onChange={(e) => set("host", e.target.value)} className={inputClass} />
+        </FormField>
+      )}
     </FormSection>
   );
 
@@ -1270,9 +1368,27 @@ function HttpHeadersEditor({ headers, onChange }: {
 }
 
 // ── Provider icon renderer ──
+const LUCIDE_ICONS: Record<string, React.FC<{ size: number; className: string }>> = {
+  shield: ShieldCheck, bell: Bell, hardDrive: HardDrive, creditCard: CreditCard,
+  wallet: Wallet, messageSquare: MessageSquare, smartphone: Smartphone,
+  key: Key, globe: Globe, link: Link, settings: Settings,
+};
+
 function ProviderIcon({ url, isDark }: { url: string; isDark?: boolean }) {
   if (!url) return null;
-  if (url === "local:shield") return <ShieldCheck size={16} className={`${isDark ? "text-white" : "text-accent"} shrink-0`} />;
+  // Lucide local icons
+  if (url.startsWith("local:")) {
+    const iconName = url.slice(6);
+    const Icon = LUCIDE_ICONS[iconName];
+    if (Icon) return <Icon size={16} className={`${isDark ? "text-white" : "text-accent"} shrink-0`} />;
+    return null;
+  }
+  // Local brand SVG files
+  if (url.startsWith("brand:")) {
+    const file = url.slice(6);
+    return <img src={`/img/brand/${file}`} alt="" className="h-4 w-4 object-contain shrink-0" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />;
+  }
+  // External CDN URL
   return <img src={url} alt="" className="h-4 w-4 object-contain shrink-0" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />;
 }
 

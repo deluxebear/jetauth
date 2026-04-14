@@ -1016,6 +1016,8 @@ const en = {
   "providers.label.scene": "Scene",
   "providers.label.clientId2": "Client ID 2",
   "providers.label.clientSecret2": "Client Secret 2",
+  "providers.label.merchantAccount": "Merchant Account",
+  "providers.payment.rootCert": "Root Certificate",
   "providers.state.enabled": "Enabled",
   "providers.state.disabled": "Disabled",
   "providers.help.testReceiver": "Test receiver email address",
