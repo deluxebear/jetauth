@@ -139,6 +139,12 @@ button:not(:disabled) {
 [data-compact="true"] .login-input { padding: 0.5rem 0.75rem; font-size: 13px; }
 [data-compact="true"] .login-btn { padding: 0.5rem; }
 
+/* Checkboxes and radios follow the theme accent color */
+input[type="checkbox"],
+input[type="radio"] {
+  accent-color: var(--accent);
+}
+
 /* Custom select arrow — replaces native browser chevron */
 select {
   -webkit-appearance: none;
