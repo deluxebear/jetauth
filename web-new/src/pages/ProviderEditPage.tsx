@@ -1,8 +1,8 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Save, ArrowLeft, Trash2, LogOut, ExternalLink, Copy } from "lucide-react";
+import { Save, ArrowLeft, Trash2, LogOut, ExternalLink, Copy, ChevronDown, ShieldCheck } from "lucide-react";
 import { FormField, FormSection, Switch, inputClass, monoInputClass } from "../components/FormSection";
 import SimpleSelect from "../components/SimpleSelect";
 import SingleSearchSelect from "../components/SingleSearchSelect";
@@ -15,6 +15,7 @@ import { friendlyError } from "../utils/errorHelper";
 import SaveButton from "../components/SaveButton";
 import UnsavedBanner from "../components/UnsavedBanner";
 import { useUnsavedWarning } from "../hooks/useUnsavedWarning";
+import { useTheme } from "../theme";
 
 // ── Category & Type constants (matching original) ──
 
@@ -57,14 +58,14 @@ const TYPE_BY_CATEGORY: Record<string, string[]> = {
   "Face ID": ["Alibaba Cloud Facebody"],
   MFA: ["RADIUS"],
   "ID Verification": ["Jumio", "Alibaba Cloud"],
-  Log: ["Casdoor Permission Log", "System Log", "Agent", "SELinux Log"],
+  Log: ["JetAuth Permission Log", "System Log", "Agent", "SELinux Log"],
 };
 
 const DEFAULT_TYPE_FOR_CATEGORY: Record<string, string> = {
   OAuth: "Google", Email: "Default", SMS: "Twilio SMS", Storage: "AWS S3",
   SAML: "Keycloak", Payment: "PayPal", Captcha: "Default", Web3: "MetaMask",
   Notification: "Telegram", "Face ID": "Alibaba Cloud Facebody", MFA: "RADIUS",
-  "ID Verification": "Jumio", Log: "Casdoor Permission Log",
+  "ID Verification": "Jumio", Log: "JetAuth Permission Log",
 };
 
 // SubType options
@@ -181,6 +182,77 @@ function getAppIdLabel(cat: string, type: string): string | null {
   return null;
 }
 
+// ── Provider logo URL (Simple Icons CDN — SVG, theme-aware) ──
+
+// Map provider types to Simple Icons slugs
+const PROVIDER_ICON_SLUGS: Record<string, string> = {
+  // OAuth
+  Google: "google", GitHub: "github", Facebook: "facebook", Twitter: "x",
+  LinkedIn: "linkedin", Apple: "apple", WeChat: "wechat", DingTalk: "dingtalk",
+  Weibo: "sinaweibo", GitLab: "gitlab", Baidu: "baidu", Alipay: "alipay",
+  Slack: "slack", Steam: "steam", Bilibili: "bilibili", Okta: "okta",
+  Discord: "discord", Dropbox: "dropbox", Instagram: "instagram",
+  Spotify: "spotify", Telegram: "telegram", TikTok: "tiktok",
+  Amazon: "amazon", Auth0: "auth0", Bitbucket: "bitbucket",
+  Gitea: "gitea", PayPal: "paypal", Stripe: "stripe", Zoom: "zoom",
+  Line: "line", Kakao: "kakaotalk", VK: "vk", Naver: "naver",
+  AzureAD: "microsoftazure", AzureADB2C: "microsoftazure",
+  ADFS: "microsoft", Lark: "lark", Douyin: "tiktok",
+  // Captcha
+  "reCAPTCHA v2": "google", "reCAPTCHA v3": "google",
+  hCaptcha: "hcaptcha", "Cloudflare Turnstile": "cloudflare",
+  "Aliyun Captcha": "alibabacloud", GEETEST: "g",
+  // Email
+  SendGrid: "sendgrid", Mailtrap: "mailtrap", Resend: "resend",
+  "Azure ACS": "microsoftazure",
+  // SMS
+  "Aliyun SMS": "alibabacloud", "Tencent Cloud SMS": "tencentqq",
+  "Twilio SMS": "twilio", "Amazon SNS": "amazonaws",
+  "Huawei Cloud SMS": "huawei", "Baidu Cloud SMS": "baidu",
+  // Storage
+  "AWS S3": "amazons3", MinIO: "minio", "Aliyun OSS": "alibabacloud",
+  "Tencent Cloud COS": "tencentqq", "Azure Blob": "microsoftazure",
+  "Google Cloud Storage": "googlecloud",
+  // Payment
+  "WeChat Pay": "wechat",
+  // Notification
+  "Microsoft Teams": "microsoftteams", Pushover: "pushover",
+  "Google Chat": "googlechat", Matrix: "matrix", Reddit: "reddit",
+  Bark: "swift",
+  // Web3
+  MetaMask: "metamask",
+};
+
+// Fallback slugs by category (used when type has no specific icon)
+const CATEGORY_ICON_SLUGS: Record<string, string> = {
+  Email: "gmail",
+  Log: "logstash",
+  MFA: "authelia",
+  "Face ID": "alibabacloud",
+  "ID Verification": "keycdn",
+};
+
+// Special local icons (not from CDN)
+const LOCAL_ICONS: Record<string, string> = {
+  "Captcha:Default": "local:shield",
+};
+
+function getProviderLogoUrl(category: string, type: string, isDark: boolean): string {
+  // Check local icons first
+  const localKey = `${category}:${type}`;
+  if (LOCAL_ICONS[localKey]) return LOCAL_ICONS[localKey];
+  // Custom types have no icon
+  if (type.startsWith("Custom")) return "";
+  // Try direct type match first
+  let slug = PROVIDER_ICON_SLUGS[type];
+  // Fallback to category icon
+  if (!slug) slug = CATEGORY_ICON_SLUGS[category] ?? "";
+  if (!slug) return "";
+  // Simple Icons CDN: returns SVG with specified color
+  const color = isDark ? "white" : "";
+  return color ? `https://cdn.simpleicons.org/${slug}/${color}` : `https://cdn.simpleicons.org/${slug}`;
+}
+
 // ── Default email templates ──
 
 const DEFAULT_EMAIL_HTML = `<!DOCTYPE html>
@@ -288,6 +360,7 @@ export default function ProviderEditPage() {
   const { t } = useTranslation();
   const modal = useModal();
   const { orgOptions, isGlobalAdmin } = useOrganization();
+  const { theme } = useTheme();
   const queryClient = useQueryClient();
   const [prov, setProv] = useState<Record<string, unknown>>({
     owner: "admin",
@@ -1084,11 +1157,13 @@ export default function ProviderEditPage() {
           />
         </FormField>
         <FormField label={t("field.type")}>
-          <SingleSearchSelect
+          <ProviderTypeSelect
+            category={category}
             value={type}
-            options={(TYPE_BY_CATEGORY[category] ?? []).map((t) => ({ value: t, label: t }))}
+            options={TYPE_BY_CATEGORY[category] ?? []}
             onChange={handleTypeChange}
             placeholder={t("common.search" as any)}
+            isDark={theme === "dark"}
           />
         </FormField>
         {showSubType && (
@@ -1190,6 +1265,85 @@ function HttpHeadersEditor({ headers, onChange }: {
       >
         {t("common.add")}
       </button>
+    </div>
+  );
+}
+
+// ── Provider icon renderer ──
+function ProviderIcon({ url, isDark }: { url: string; isDark?: boolean }) {
+  if (!url) return null;
+  if (url === "local:shield") return <ShieldCheck size={16} className={`${isDark ? "text-white" : "text-accent"} shrink-0`} />;
+  return <img src={url} alt="" className="h-4 w-4 object-contain shrink-0" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />;
+}
+
+// ── Provider type select with logos ──
+function ProviderTypeSelect({ category, value, options, onChange, placeholder, isDark }: {
+  category: string;
+  value: string;
+  options: string[];
+  onChange: (v: string) => void;
+  placeholder?: string;
+  isDark?: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState("");
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) { setOpen(false); setSearch(""); }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [open]);
+
+  const filtered = options.filter((o) => o.toLowerCase().includes(search.toLowerCase()));
+  const logoUrl = getProviderLogoUrl(category, value, !!isDark);
+
+  return (
+    <div ref={ref} className="relative">
+      <div
+        onClick={() => setOpen(!open)}
+        className={`flex items-center rounded-lg border bg-surface-2 px-2.5 py-2 min-h-[38px] cursor-pointer transition-colors ${open ? "border-accent ring-1 ring-accent/30" : "border-border"}`}
+      >
+        {open ? (
+          <input
+            autoFocus
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder={placeholder}
+            className="flex-1 bg-transparent text-[13px] text-text-primary outline-none placeholder:text-text-muted"
+          />
+        ) : (
+          <span className="flex items-center gap-2 text-[13px] flex-1 text-text-primary">
+            <ProviderIcon url={logoUrl} isDark={isDark} />
+            {value || "—"}
+          </span>
+        )}
+        <ChevronDown size={14} className={`text-text-muted shrink-0 transition-transform duration-200 ${open ? "rotate-180" : ""}`} />
+      </div>
+      {open && (
+        <div className="absolute z-[60] mt-1 max-h-48 w-full overflow-y-auto rounded-xl border border-border bg-surface-1 py-1 shadow-[var(--shadow-elevated)]">
+          {filtered.map((opt) => {
+            const optLogo = getProviderLogoUrl(category, opt, !!isDark);
+            return (
+              <button
+                key={opt}
+                type="button"
+                onClick={() => { onChange(opt); setOpen(false); setSearch(""); }}
+                className={`flex w-full items-center gap-2 px-3 py-2 text-[13px] text-left transition-colors ${
+                  opt === value ? "text-accent bg-accent/5 font-medium" : "text-text-primary hover:bg-surface-2"
+                }`}
+              >
+                <ProviderIcon url={optLogo} isDark={isDark} />
+                {opt}
+              </button>
+            );
+          })}
+          {filtered.length === 0 && <div className="px-3 py-2 text-[12px] text-text-muted">No results</div>}
+        </div>
+      )}
     </div>
   );
 }

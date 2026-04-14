@@ -456,9 +456,9 @@ export const OtherProviderInfo = {
     },
   },
   Log: {
-    "Casdoor Permission Log": {
+    "JetAuth Permission Log": {
       logo: `${StaticBaseUrl}/img/social_default.png`,
-      url: "https://casdoor.org",
+      url: "",
     },
     "System Log": {
       logo: `${StaticBaseUrl}/img/social_default.png`,
@@ -1439,7 +1439,7 @@ export function getProviderTypeOptions(category) {
     ]);
   } else if (category === "Log") {
     return ([
-      {id: "Casdoor Permission Log", name: "Casdoor Permission Log"},
+      {id: "JetAuth Permission Log", name: "JetAuth Permission Log"},
       {id: "System Log", name: "System Log"},
       {id: "Agent", name: "Agent"},
       {id: "SELinux Log", name: "SELinux Log"},

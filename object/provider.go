@@ -642,7 +642,7 @@ func GetLogProviderFromProvider(provider *Provider) (log.LogProvider, error) {
 		return nil, fmt.Errorf("provider %s category is not Log", provider.Name)
 	}
 
-	if provider.Type == "Casdoor Permission Log" {
+	if provider.Type == "Casdoor Permission Log" || provider.Type == "JetAuth Permission Log" {
 		return log.NewPermissionLogProvider(provider.Name, func(owner, createdTime, providerName, message string) error {
 			name := log.GenerateEntryName()
 			entry := &Entry{
