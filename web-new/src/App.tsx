@@ -330,16 +330,12 @@ export default function App() {
     try {
       await apiLogout();
     } catch {}
-    setUser(null);
     localStorage.removeItem("account");
     localStorage.removeItem("organizationData");
     localStorage.removeItem("selectedOrganization");
-    // Reset favicon and title to defaults
-    const link = document.querySelector("link[rel*='icon']") as HTMLLinkElement | null;
-    if (link) link.href = "/img/favicon.png";
-    document.title = "JetAuth";
-    window.dispatchEvent(new Event("accountChanged"));
-    navigate(userOrg && userOrg !== "built-in" ? `/login/${userOrg}` : "/login");
+    // Hard redirect to org login page — React Router can't handle this
+    // because the logged-in route's "*" catch-all intercepts before user state clears
+    window.location.href = userOrg && userOrg !== "built-in" ? `/login/${userOrg}` : "/login";
   };
 
   const handleMfaSetupComplete = async () => {

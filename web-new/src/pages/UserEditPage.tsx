@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate, useLocation, Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Save, ArrowLeft, Trash2, User, Heart, Shield, Settings, ChevronDown, LogOut, Eye, EyeOff, Wallet, Search, Check } from "lucide-react";
+import { Save, ArrowLeft, Trash2, User, Heart, Shield, Settings, ChevronDown, LogOut, Eye, EyeOff, Wallet, Search, Check, LockKeyhole } from "lucide-react";
 import { FormField, FormSection, Switch, inputClass, monoInputClass } from "../components/FormSection";
 import { useTranslation } from "../i18n";
 import { useOrganization } from "../OrganizationContext";
@@ -821,6 +821,38 @@ export default function UserEditPage() {
       </div>
 
       {showBanner && <UnsavedBanner isAddMode={isAddMode} />}
+
+      {/* Account locked banner */}
+      {isAdmin && !isSelf && (user as any).signinWrongTimes >= 5 && (
+        <div className="flex items-center justify-between rounded-xl border border-danger/30 bg-danger/5 px-4 py-3">
+          <div className="flex items-center gap-2">
+            <LockKeyhole size={16} className="text-danger" />
+            <span className="text-[13px] font-medium text-danger">
+              {t("users.locked.message" as any)}
+            </span>
+            <span className="text-[12px] text-text-muted">
+              ({t("users.locked.wrongTimes" as any)}: {(user as any).signinWrongTimes})
+            </span>
+          </div>
+          <button
+            onClick={async () => {
+              setAny("signinWrongTimes", 0);
+              setAny("lastSigninWrongTime", "");
+              const userData = { ...user, signinWrongTimes: 0, lastSigninWrongTime: "" };
+              const res = await UserBackend.updateUser(owner!, name!, userData);
+              if (res.status === "ok") {
+                modal.toast(t("users.locked.unlockSuccess" as any));
+                invalidate();
+              } else {
+                modal.toast(res.msg || t("common.saveFailed" as any), "error");
+              }
+            }}
+            className="rounded-lg bg-danger px-3 py-1.5 text-[12px] font-semibold text-white hover:bg-danger/90 transition-colors"
+          >
+            {t("users.locked.unlock" as any)}
+          </button>
+        </div>
+      )}
 
       {/* Tab bar */}
       <div className="flex border-b border-border">

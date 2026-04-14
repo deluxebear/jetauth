@@ -251,6 +251,10 @@ const zh: Record<string, string> = {
   // Users
   "users.title": "用户管理",
   "users.myProfile": "个人设置",
+  "users.locked.message": "该账户因密码错误次数过多已被锁定",
+  "users.locked.wrongTimes": "错误次数",
+  "users.locked.unlock": "解锁",
+  "users.locked.unlockSuccess": "账户已成功解锁",
   "users.subtitle": "管理用户账户与身份信息",
   "users.addUser": "添加用户",
   "users.downloadTemplate": "下载模板",

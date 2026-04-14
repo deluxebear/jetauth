@@ -251,6 +251,10 @@ const en = {
   // Users
   "users.title": "Users",
   "users.myProfile": "Personal Settings",
+  "users.locked.message": "This account is locked due to too many failed login attempts",
+  "users.locked.wrongTimes": "Failed attempts",
+  "users.locked.unlock": "Unlock",
+  "users.locked.unlockSuccess": "Account unlocked successfully",
   "users.subtitle": "Manage user accounts and identities",
   "users.addUser": "Add User",
   "users.downloadTemplate": "Download Template",
