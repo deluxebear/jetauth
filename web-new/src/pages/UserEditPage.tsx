@@ -1,13 +1,13 @@
 import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate, useLocation, Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Save, ArrowLeft, Trash2, User, Heart, Shield, Settings, ChevronDown, LogOut, Eye, EyeOff, Wallet } from "lucide-react";
+import { Save, ArrowLeft, Trash2, User, Heart, Shield, Settings, ChevronDown, LogOut, Eye, EyeOff, Wallet, Search, Check } from "lucide-react";
 import { FormField, FormSection, Switch, inputClass, monoInputClass } from "../components/FormSection";
 import { useTranslation } from "../i18n";
 import { useOrganization } from "../OrganizationContext";
 import { useModal } from "../components/Modal";
 import { useEntityEdit } from "../hooks/useEntityEdit";
-import { COUNTRIES } from "../components/CountryCodeSelect";
+import { COUNTRIES, getCountriesByLocale } from "../components/CountryCodeSelect";
 import * as UserBackend from "../backend/UserBackend";
 import * as GroupBackend from "../backend/GroupBackend";
 import * as AppBackend from "../backend/ApplicationBackend";
@@ -377,7 +377,7 @@ export default function UserEditPage() {
             <PhoneCodeSelect value={user.countryCode ?? ""} onChange={(v) => set("countryCode", v)} />
             <input value={user.phone ?? ""} onChange={(e) => setWithValidation("Phone", "phone", e.target.value)} disabled={isFieldDisabled("Phone")} className={`${inputClass} flex-1`} />
           </div>)}
-        {dynField("Country/Region", undefined, <RegionSelect value={user.region ?? ""} onChange={(v) => set("region", v)} t={t} />)}
+        {dynField("Country/Region", undefined, <RegionSelect value={user.region ?? ""} onChange={(v) => set("region", v)} />)}
         {dynField("Location", undefined, <input value={user.location ?? ""} onChange={(e) => setWithValidation("Location", "location", e.target.value)} disabled={isFieldDisabled("Location")} className={inputClass} />)}
         {dynField("Address", "full", <div className="grid grid-cols-2 gap-3">
             <div>
@@ -782,66 +782,115 @@ function PhoneCodeSelect({ value, onChange }: { value: string; onChange: (v: str
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
   const ref = useRef<HTMLDivElement>(null);
-  const locale = localStorage.getItem("locale") ?? "en";
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const searchRef = useRef<HTMLInputElement>(null);
+  const { t, locale } = useTranslation();
   const isZh = locale.startsWith("zh");
+  const [dropStyle, setDropStyle] = useState<React.CSSProperties>({});
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
     };
-    if (open) { document.addEventListener("mousedown", handler); return () => document.removeEventListener("mousedown", handler); }
+    if (open) {
+      document.addEventListener("mousedown", handler);
+      return () => document.removeEventListener("mousedown", handler);
+    }
   }, [open]);
 
+  // Position dropdown using fixed positioning
+  useEffect(() => {
+    if (!open || !triggerRef.current) return;
+    const updatePos = () => {
+      const rect = triggerRef.current!.getBoundingClientRect();
+      const spaceBelow = window.innerHeight - rect.bottom - 8;
+      const dropH = Math.min(340, Math.max(spaceBelow, 200));
+      setDropStyle({
+        position: "fixed",
+        left: rect.left,
+        top: rect.bottom + 4,
+        width: Math.max(280, rect.width),
+        maxHeight: dropH,
+      });
+    };
+    updatePos();
+    window.addEventListener("scroll", updatePos, true);
+    window.addEventListener("resize", updatePos);
+    requestAnimationFrame(() => searchRef.current?.focus());
+    return () => {
+      window.removeEventListener("scroll", updatePos, true);
+      window.removeEventListener("resize", updatePos);
+    };
+  }, [open]);
+
+  const countries = getCountriesByLocale(locale);
   const current = COUNTRIES.find((c) => c.code === value);
-  const filtered = COUNTRIES.filter((c) => {
+  const filtered = countries.filter((c) => {
     if (!search) return true;
     const s = search.toLowerCase();
     return c.code.toLowerCase().includes(s) || c.phone.includes(s) || c.en.toLowerCase().includes(s) || c.zh.includes(s);
   });
 
   return (
-    <div className="relative" ref={ref}>
+    <div ref={ref}>
       <button
+        ref={triggerRef}
         type="button"
-        onClick={() => setOpen(!open)}
-        className={`${inputClass} flex items-center gap-1.5 w-[130px] text-left`}
+        onClick={() => { setOpen(!open); setSearch(""); }}
+        className={`flex items-center gap-1.5 rounded-lg border bg-surface-2 px-2.5 py-2 text-[13px] transition-colors shrink-0 ${
+          open ? "border-accent ring-1 ring-accent/30" : "border-border hover:border-border-hover"
+        }`}
       >
         {current ? (
           <>
-            <span>{current.flag}</span>
-            <span className="font-mono text-[12px]">{current.phone}</span>
+            <span className="text-base leading-none">{current.flag}</span>
+            <span className="font-mono text-[12px] text-text-primary">{current.phone}</span>
           </>
         ) : (
-          <span className="text-text-muted text-[13px]">{value || "—"}</span>
+          <span className="text-text-muted">—</span>
         )}
-        <ChevronDown size={12} className="text-text-muted ml-auto" />
+        <ChevronDown size={12} className={`text-text-muted transition-transform ${open ? "rotate-180" : ""}`} />
       </button>
       {open && (
-        <div className="absolute left-0 top-full mt-1 z-50 w-72 rounded-lg border border-border bg-surface-2 shadow-[var(--shadow-elevated)] overflow-hidden">
+        <div ref={ref} style={dropStyle} className="z-[60] rounded-xl border border-border bg-surface-1 shadow-[var(--shadow-elevated)] overflow-hidden flex flex-col">
+          {/* Search */}
           <div className="p-2 border-b border-border-subtle">
-            <input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder={isZh ? "搜索国家..." : "Search country..."}
-              className="w-full rounded border border-border bg-surface-1 px-2.5 py-1.5 text-[12px] text-text-primary placeholder:text-text-muted outline-none focus:border-accent"
-              autoFocus
-            />
+            <div className="relative">
+              <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none" />
+              <input
+                ref={searchRef}
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder={t("common.searchCountry" as any)}
+                className="w-full rounded-lg border border-border bg-surface-2 pl-8 pr-3 py-1.5 text-[12px] text-text-primary placeholder:text-text-muted outline-none focus:border-accent transition-colors"
+              />
+            </div>
           </div>
-          <div className="max-h-60 overflow-y-auto">
-            {filtered.map((c) => (
-              <button
-                key={c.code}
-                type="button"
-                onClick={() => { onChange(c.code); setOpen(false); setSearch(""); }}
-                className={`flex w-full items-center gap-2.5 px-3 py-2 text-[13px] transition-colors ${
-                  value === c.code ? "text-accent bg-accent-subtle" : "text-text-secondary hover:bg-surface-3"
-                }`}
-              >
-                <span className="text-base">{c.flag}</span>
-                <span className="flex-1 truncate">{isZh ? c.zh : c.en}</span>
-                <span className="font-mono text-[11px] text-text-muted">{c.phone}</span>
-              </button>
-            ))}
+          {/* List */}
+          <div className="overflow-y-auto flex-1">
+            {filtered.map((c) => {
+              const selected = value === c.code;
+              return (
+                <button
+                  key={c.code}
+                  type="button"
+                  onClick={() => { onChange(c.code); setOpen(false); setSearch(""); }}
+                  className={`flex w-full items-center gap-2.5 px-3 py-2 text-[13px] transition-colors ${
+                    selected ? "bg-accent/8 text-accent" : "text-text-primary hover:bg-surface-2"
+                  }`}
+                >
+                  <span className="text-base leading-none w-6 text-center">{c.flag}</span>
+                  <span className="flex-1 truncate text-left">{isZh ? c.zh : c.en}</span>
+                  <span className="font-mono text-[11px] text-text-muted shrink-0">{c.phone}</span>
+                  {selected && <Check size={14} className="text-accent shrink-0" />}
+                </button>
+              );
+            })}
+            {filtered.length === 0 && (
+              <div className="px-3 py-6 text-center text-[12px] text-text-muted">
+                {t("common.noResults" as any)}
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -1164,12 +1213,13 @@ function ManagedAccountsTable({ items, onChange, applications, t }: {
 }
 
 // ── Region (Country) Select with flags ──
-function RegionSelect({ value, onChange, t }: { value: string; onChange: (v: string) => void; t: (k: string) => string }) {
+function RegionSelect({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const { t, locale } = useTranslation();
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [dropUp, setDropUp] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
-  const isZh = t("common.yes" as any) === "是";
+  const isZh = locale.startsWith("zh");
 
   useEffect(() => {
     const handler = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) { setOpen(false); setSearch(""); } };
@@ -1185,7 +1235,8 @@ function RegionSelect({ value, onChange, t }: { value: string; onChange: (v: str
     }
   }, [open]);
 
-  const filtered = COUNTRIES.filter((c) => {
+  const countries = getCountriesByLocale(locale);
+  const filtered = countries.filter((c) => {
     if (!search) return true;
     const s = search.toLowerCase();
     return c.en.toLowerCase().includes(s) || c.zh.includes(s) || c.code.toLowerCase().includes(s);
@@ -1200,7 +1251,7 @@ function RegionSelect({ value, onChange, t }: { value: string; onChange: (v: str
         className={`flex items-center rounded-lg border bg-surface-2 px-3 py-2 min-h-[38px] cursor-pointer transition-colors ${open ? "border-accent ring-1 ring-accent/30" : "border-border"}`}>
         {open ? (
           <input autoFocus value={search} onChange={(e) => setSearch(e.target.value)}
-            placeholder={isZh ? "搜索国家/地区..." : "Search country/region..."}
+            placeholder={t("common.searchCountryRegion" as any)}
             className="flex-1 bg-transparent text-[13px] text-text-primary outline-none placeholder:text-text-muted" />
         ) : (
           <span className="text-[13px] text-text-primary flex-1">{displayLabel}</span>
@@ -1268,7 +1319,7 @@ function AddressesTable({ items, onChange, t }: {
                   <td className="px-3 py-1.5"><input value={item.city ?? ""} onChange={(e) => updateField(idx, "city", e.target.value)} className={ic} /></td>
                   <td className="px-3 py-1.5"><input value={item.state ?? ""} onChange={(e) => updateField(idx, "state", e.target.value)} className={ic} /></td>
                   <td className="px-3 py-1.5"><input value={item.zipCode ?? ""} onChange={(e) => updateField(idx, "zipCode", e.target.value)} className={ic} /></td>
-                  <td className="px-3 py-1.5" style={{ minWidth: "180px" }}><RegionSelect value={item.region ?? ""} onChange={(v) => updateField(idx, "region", v)} t={t} /></td>
+                  <td className="px-3 py-1.5" style={{ minWidth: "180px" }}><RegionSelect value={item.region ?? ""} onChange={(v) => updateField(idx, "region", v)} /></td>
                   <td className="px-3 py-1.5">
                     <button onClick={() => deleteRow(idx)} className="rounded p-0.5 text-text-muted hover:text-danger hover:bg-danger/10 transition-colors text-[12px]">✕</button>
                   </td>

@@ -843,6 +843,8 @@ const zh: Record<string, string> = {
   "common.all": "全部",
   "common.copy": "复制",
   "common.noResults": "无匹配结果",
+  "common.searchCountry": "搜索国家...",
+  "common.searchCountryRegion": "搜索国家/地区...",
   "common.download": "下载",
   "common.shared": "{name} (共享)",
   "common.adminShared": "admin (共享)",

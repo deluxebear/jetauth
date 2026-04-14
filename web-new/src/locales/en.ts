@@ -762,6 +762,8 @@ const en = {
   "common.all": "All",
   "common.copy": "Copy",
   "common.noResults": "No results",
+  "common.searchCountry": "Search country...",
+  "common.searchCountryRegion": "Search country/region...",
   "common.download": "Download",
   "common.shared": "{name} (Shared)",
   "common.adminShared": "admin (Shared)",

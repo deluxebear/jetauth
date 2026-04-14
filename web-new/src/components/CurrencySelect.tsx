@@ -1,4 +1,5 @@
 import { inputClass } from "./FormSection";
+import { useTranslation } from "../i18n";
 
 const CURRENCIES = [
   { code: "USD", flag: "\u{1F1FA}\u{1F1F8}", en: "US Dollar", zh: "美元" },
@@ -28,8 +29,8 @@ export default function CurrencySelect({ value, onChange, disabled }: {
   onChange: (v: string) => void;
   disabled?: boolean;
 }) {
-  const locale = localStorage.getItem("locale") ?? navigator.language ?? "en";
-  const isZh = locale.toLowerCase().startsWith("zh");
+  const { locale } = useTranslation();
+  const isZh = locale.startsWith("zh");
 
   return (
     <select

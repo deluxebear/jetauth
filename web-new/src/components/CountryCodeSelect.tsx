@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Search, X } from "lucide-react";
+import { useTranslation } from "../i18n";
 
 export const COUNTRIES = [
   { code: "US", phone: "+1", flag: "\u{1F1FA}\u{1F1F8}", en: "United States", zh: "美国" },
@@ -52,6 +53,15 @@ export const COUNTRIES = [
   { code: "IE", phone: "+353", flag: "\u{1F1EE}\u{1F1EA}", en: "Ireland", zh: "爱尔兰" },
 ];
 
+/** Return COUNTRIES with the locale-preferred country first (CN for zh, US for en) */
+export function getCountriesByLocale(locale: string) {
+  const first = locale.startsWith("zh") ? "CN" : "US";
+  return [
+    ...COUNTRIES.filter((c) => c.code === first),
+    ...COUNTRIES.filter((c) => c.code !== first),
+  ];
+}
+
 export default function CountryCodeSelect({ selected, onChange }: {
   selected: string[];
   onChange: (v: string[]) => void;
@@ -61,8 +71,8 @@ export default function CountryCodeSelect({ selected, onChange }: {
   const ref = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLDivElement>(null);
   const [dropStyle, setDropStyle] = useState<React.CSSProperties>({});
-  const locale = localStorage.getItem("locale") ?? navigator.language ?? "en";
-  const isZh = locale.toLowerCase().startsWith("zh");
+  const { t, locale } = useTranslation();
+  const isZh = locale.startsWith("zh");
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -108,7 +118,8 @@ export default function CountryCodeSelect({ selected, onChange }: {
     return c ? `${c.flag} ${isZh ? c.zh : c.en}${c.phone}` : code;
   };
 
-  const filtered = COUNTRIES.filter((c) => {
+  const countries = getCountriesByLocale(locale);
+  const filtered = countries.filter((c) => {
     if (!search) return true;
     const s = search.toLowerCase();
     return c.code.toLowerCase().includes(s) || c.en.toLowerCase().includes(s) || c.zh.includes(s) || c.phone.includes(s);
@@ -141,7 +152,7 @@ export default function CountryCodeSelect({ selected, onChange }: {
               <input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder={isZh ? "搜索国家..." : "Search countries..."}
+                placeholder={t("common.searchCountry" as any)}
                 autoFocus
                 className="w-full rounded border border-border bg-surface-2 pl-8 pr-2 py-1.5 text-[12px] text-text-primary outline-none focus:border-accent placeholder:text-text-muted"
               />
@@ -173,7 +184,7 @@ export default function CountryCodeSelect({ selected, onChange }: {
             })}
             {filtered.length === 0 && (
               <div className="px-3 py-4 text-[12px] text-text-muted text-center">
-                {isZh ? "无匹配结果" : "No matches"}
+                {t("common.noResults" as any)}
               </div>
             )}
           </div>
