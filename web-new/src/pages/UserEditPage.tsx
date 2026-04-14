@@ -24,7 +24,7 @@ export default function UserEditPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const [isAddMode, setIsAddMode] = useState((location.state as any)?.mode === "add");
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const modal = useModal();
   const { orgOptions, isGlobalAdmin } = useOrganization();
   const [user, setUser] = useState<UserType | null>(null);
@@ -337,8 +337,17 @@ export default function UserEditPage() {
         {dynField("Name", undefined, <input value={user.name} onChange={(e) => set("name", e.target.value)} disabled={isBuiltInAdmin || isFieldDisabled("Name")} className={monoInputClass} />)}
         {dynField("ID", undefined, <input value={user.id ?? ""} disabled className={`${monoInputClass} text-[12px]`} />)}
         {dynField("Display name", undefined, <input value={user.displayName ?? ""} onChange={(e) => setWithValidation("Display name", "displayName", e.target.value)} disabled={isFieldDisabled("Display name")} className={inputClass} />)}
-        {dynField("First name", undefined, <input value={user.firstName ?? ""} onChange={(e) => set("firstName", e.target.value)} disabled={isFieldDisabled("First name")} className={inputClass} />)}
-        {dynField("Last name", undefined, <input value={user.lastName ?? ""} onChange={(e) => set("lastName", e.target.value)} disabled={isFieldDisabled("Last name")} className={inputClass} />)}
+        {locale.startsWith("zh") ? (
+          <>
+            {dynField("Last name", undefined, <input value={user.lastName ?? ""} onChange={(e) => set("lastName", e.target.value)} disabled={isFieldDisabled("Last name")} className={inputClass} />)}
+            {dynField("First name", undefined, <input value={user.firstName ?? ""} onChange={(e) => set("firstName", e.target.value)} disabled={isFieldDisabled("First name")} className={inputClass} />)}
+          </>
+        ) : (
+          <>
+            {dynField("First name", undefined, <input value={user.firstName ?? ""} onChange={(e) => set("firstName", e.target.value)} disabled={isFieldDisabled("First name")} className={inputClass} />)}
+            {dynField("Last name", undefined, <input value={user.lastName ?? ""} onChange={(e) => set("lastName", e.target.value)} disabled={isFieldDisabled("Last name")} className={inputClass} />)}
+          </>
+        )}
         {dynField("Avatar", "full",
           <ImageUrlInput
             value={user.avatar || ""}
@@ -351,9 +360,12 @@ export default function UserEditPage() {
             previewClass="h-12 w-12 rounded-full border border-border object-cover bg-surface-2"
           />
         )}
-        {dynField("User type", undefined, <select value={user.type ?? "normal-user"} onChange={(e) => set("type", e.target.value)} disabled={isFieldDisabled("User type")} className={inputClass}>
-            {TYPE_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-          </select>)}
+        {dynField("User type", undefined, <SingleSearchSelect
+            value={user.type ?? "normal-user"}
+            options={TYPE_OPTIONS}
+            onChange={(v) => set("type", v || "normal-user")}
+            placeholder={t("common.search" as any)}
+          />)}
       </FormSection>
 
       <FormSection title={t("users.section.membership" as any)}>

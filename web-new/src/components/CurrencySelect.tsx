@@ -1,4 +1,5 @@
-import { inputClass } from "./FormSection";
+import { useState, useRef, useEffect } from "react";
+import { ChevronDown, Check } from "lucide-react";
 import { useTranslation } from "../i18n";
 
 const CURRENCIES = [
@@ -29,22 +30,68 @@ export default function CurrencySelect({ value, onChange, disabled }: {
   onChange: (v: string) => void;
   disabled?: boolean;
 }) {
-  const { locale } = useTranslation();
+  const { t, locale } = useTranslation();
   const isZh = locale.startsWith("zh");
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState("");
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) { setOpen(false); setSearch(""); }
+    };
+    if (open) { document.addEventListener("mousedown", handler); return () => document.removeEventListener("mousedown", handler); }
+  }, [open]);
+
+  const current = CURRENCIES.find((c) => c.code === value);
+  const filtered = CURRENCIES.filter((c) => {
+    if (!search) return true;
+    const s = search.toLowerCase();
+    return c.code.toLowerCase().includes(s) || c.en.toLowerCase().includes(s) || c.zh.includes(s);
+  });
+
+  const label = current ? `${current.flag} ${isZh ? current.zh : current.en} (${current.code})` : value;
+
+  if (disabled) {
+    return (
+      <div className="flex items-center rounded-lg border border-border bg-surface-2 px-2.5 py-2 min-h-[38px] opacity-50 cursor-not-allowed">
+        <span className="text-[13px] text-text-primary flex-1">{label}</span>
+      </div>
+    );
+  }
 
   return (
-    <select
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      disabled={disabled}
-      className={inputClass}
-    >
-      {CURRENCIES.map((c) => (
-        <option key={c.code} value={c.code}>
-          {c.flag} {isZh ? c.zh : c.en} ({c.code})
-        </option>
-      ))}
-    </select>
+    <div ref={ref} className="relative">
+      <div onClick={() => { setOpen(!open); setSearch(""); }}
+        className={`flex items-center rounded-lg border bg-surface-2 px-2.5 py-2 min-h-[38px] cursor-pointer transition-colors ${open ? "border-accent ring-1 ring-accent/30" : "border-border"}`}>
+        {open ? (
+          <input autoFocus value={search} onChange={(e) => setSearch(e.target.value)}
+            placeholder={t("common.search" as any)}
+            className="flex-1 bg-transparent text-[13px] text-text-primary outline-none placeholder:text-text-muted" />
+        ) : (
+          <span className="text-[13px] text-text-primary flex-1">{label}</span>
+        )}
+        <ChevronDown size={14} className={`text-text-muted shrink-0 transition-transform duration-200 ${open ? "rotate-180" : ""}`} />
+      </div>
+      {open && (
+        <div className="absolute z-[60] mt-1 max-h-56 w-full overflow-y-auto rounded-lg border border-border bg-surface-1 py-1 shadow-lg">
+          {filtered.map((c) => {
+            const selected = c.code === value;
+            return (
+              <button key={c.code} type="button" onClick={() => { onChange(c.code); setOpen(false); setSearch(""); }}
+                className={`flex w-full items-center gap-2 px-3 py-2 text-[13px] text-left transition-colors ${
+                  selected ? "text-accent bg-accent/5 font-medium" : "text-text-primary hover:bg-surface-2"
+                }`}>
+                <span className="text-base leading-none">{c.flag}</span>
+                <span className="flex-1">{isZh ? c.zh : c.en} ({c.code})</span>
+                {selected && <Check size={14} className="text-accent shrink-0" />}
+              </button>
+            );
+          })}
+          {filtered.length === 0 && <div className="px-3 py-4 text-center text-[12px] text-text-muted">{t("common.noResults" as any)}</div>}
+        </div>
+      )}
+    </div>
   );
 }
 
