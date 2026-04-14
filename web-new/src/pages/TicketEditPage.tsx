@@ -10,6 +10,7 @@ import * as TicketBackend from "../backend/TicketBackend";
 import type { Ticket, TicketMessage } from "../backend/TicketBackend";
 import { friendlyError } from "../utils/errorHelper";
 import SimpleSelect from "../components/SimpleSelect";
+import SaveButton from "../components/SaveButton";
 
 const STATES = ["Open", "In Progress", "Resolved", "Closed"];
 
@@ -21,6 +22,8 @@ export default function TicketEditPage() {
   const modal = useModal();
   const [ticket, setTicket] = useState<Ticket | null>(null);
   const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  useEffect(() => { if (saved) { const t = setTimeout(() => setSaved(false), 1500); return () => clearTimeout(t); } }, [saved]);
   const [messageText, setMessageText] = useState("");
   const [sending, setSending] = useState(false);
   // Detect if this is a new ticket being created (navigated from Add button)
@@ -58,6 +61,7 @@ export default function TicketEditPage() {
       const res = await TicketBackend.updateTicket(owner!, name!, ticket);
       if (res.status === "ok") {
         modal.toast(t("common.saveSuccess" as any));
+        setSaved(true);
         setIsAddMode(false);
         invalidateList();
         invalidate();
@@ -161,10 +165,7 @@ export default function TicketEditPage() {
               <button onClick={handleCancel} className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-[13px] font-medium text-text-secondary hover:bg-surface-2 transition-colors">
                 <X size={14} /> {t("common.cancel")}
               </button>
-              <button onClick={handleSave} disabled={saving} className="flex items-center gap-1.5 rounded-lg border border-accent px-3 py-2 text-[13px] font-semibold text-accent hover:bg-accent/10 disabled:opacity-50 transition-colors">
-                {saving ? <div className="h-3.5 w-3.5 rounded-full border-2 border-accent/30 border-t-accent animate-spin" /> : <Save size={14} />}
-                {t("common.save")}
-              </button>
+              <SaveButton onClick={handleSave} saving={saving} saved={saved} label={t("common.save")} />
               <button onClick={handleSaveAndExit} disabled={saving} className="flex items-center gap-1.5 rounded-lg bg-accent px-4 py-2 text-[13px] font-semibold text-white hover:bg-accent-hover disabled:opacity-50 transition-colors">
                 {saving ? <div className="h-3.5 w-3.5 rounded-full border-2 border-white/30 border-t-white animate-spin" /> : <LogOut size={14} />}
                 {t("common.saveAndExit" as any)}
@@ -176,10 +177,7 @@ export default function TicketEditPage() {
               <button onClick={handleDelete} className="flex items-center gap-1.5 rounded-lg border border-danger/30 px-3 py-2 text-[13px] font-medium text-danger hover:bg-danger/10 transition-colors">
                 <Trash2 size={14} /> {t("common.delete")}
               </button>
-              <button onClick={handleSave} disabled={saving} className="flex items-center gap-1.5 rounded-lg border border-accent px-3 py-2 text-[13px] font-semibold text-accent hover:bg-accent/10 disabled:opacity-50 transition-colors">
-                {saving ? <div className="h-3.5 w-3.5 rounded-full border-2 border-accent/30 border-t-accent animate-spin" /> : <Save size={14} />}
-                {t("common.save")}
-              </button>
+              <SaveButton onClick={handleSave} saving={saving} saved={saved} label={t("common.save")} />
               <button onClick={handleSaveAndExit} disabled={saving} className="flex items-center gap-1.5 rounded-lg bg-accent px-4 py-2 text-[13px] font-semibold text-white hover:bg-accent-hover disabled:opacity-50 transition-colors">
                 {saving ? <div className="h-3.5 w-3.5 rounded-full border-2 border-white/30 border-t-white animate-spin" /> : <LogOut size={14} />}
                 {t("common.saveAndExit" as any)}

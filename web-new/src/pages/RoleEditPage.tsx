@@ -9,6 +9,7 @@ import { useEntityEdit } from "../hooks/useEntityEdit";
 import * as RoleBackend from "../backend/RoleBackend";
 import type { Role } from "../backend/RoleBackend";
 import { friendlyError } from "../utils/errorHelper";
+import SaveButton from "../components/SaveButton";
 
 export default function RoleEditPage() {
   const { owner, name } = useParams<{ owner: string; name: string }>();
@@ -19,6 +20,8 @@ export default function RoleEditPage() {
   const modal = useModal();
   const [role, setRole] = useState<Role | null>(null);
   const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  useEffect(() => { if (saved) { const t = setTimeout(() => setSaved(false), 1500); return () => clearTimeout(t); } }, [saved]);
 
   const { entity, loading, invalidate: _invalidate, invalidateList } = useEntityEdit<Role>({
     queryKey: "role",
@@ -49,6 +52,7 @@ export default function RoleEditPage() {
       const res = await RoleBackend.updateRole(owner!, name!, role);
       if (res.status === "ok") {
         modal.toast(t("common.saveSuccess" as any));
+        setSaved(true);
         setIsAddMode(false);
         invalidateList();
         if (role.name !== name) {
@@ -127,10 +131,7 @@ export default function RoleEditPage() {
           <button onClick={handleDelete} className="flex items-center gap-1.5 rounded-lg border border-danger/30 px-3 py-2 text-[13px] font-medium text-danger hover:bg-danger/10 transition-colors">
             <Trash2 size={14} /> {t("common.delete")}
           </button>
-          <button onClick={handleSave} disabled={saving} className="flex items-center gap-1.5 rounded-lg border border-accent px-3 py-2 text-[13px] font-semibold text-accent hover:bg-accent/10 disabled:opacity-50 transition-colors">
-            {saving ? <div className="h-3.5 w-3.5 rounded-full border-2 border-accent/30 border-t-accent animate-spin" /> : <Save size={14} />}
-            {t("common.save")}
-          </button>
+                    <SaveButton onClick={handleSave} saving={saving} saved={saved} label={t("common.save")} />
           <button onClick={handleSaveAndExit} disabled={saving} className="flex items-center gap-1.5 rounded-lg bg-accent px-4 py-2 text-[13px] font-semibold text-white hover:bg-accent-hover disabled:opacity-50 transition-colors">
             {saving ? <div className="h-3.5 w-3.5 rounded-full border-2 border-white/30 border-t-white animate-spin" /> : <LogOut size={14} />}
             {t("common.saveAndExit" as any)}

@@ -10,6 +10,7 @@ import { useModal } from "../components/Modal";
 import * as ProvBackend from "../backend/ProviderBackend";
 import type { Provider } from "../backend/ProviderBackend";
 import { friendlyError } from "../utils/errorHelper";
+import SaveButton from "../components/SaveButton";
 
 const CATEGORIES = ["OAuth", "Email", "SMS", "Storage", "Payment", "Captcha", "Notification", "AI", "SAML", "Web3", "MFA"];
 
@@ -43,6 +44,8 @@ export default function ProviderEditPage() {
   });
   const [loading, setLoading] = useState(!isNew);
   const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  useEffect(() => { if (saved) { const t = setTimeout(() => setSaved(false), 1500); return () => clearTimeout(t); } }, [saved]);
 
   const invalidateList = () => queryClient.invalidateQueries({ queryKey: ["providers"] });
 
@@ -69,6 +72,7 @@ export default function ProviderEditPage() {
         : await ProvBackend.updateProvider(owner!, name!, prov as Provider);
       if (res.status === "ok") {
         modal.toast(t("common.saveSuccess" as any));
+        setSaved(true);
         setIsAddMode(false);
         invalidateList();
       } else {
@@ -307,10 +311,7 @@ export default function ProviderEditPage() {
               <Trash2 size={14} /> {t("common.delete")}
             </button>
           )}
-          <button onClick={handleSave} disabled={saving} className="flex items-center gap-1.5 rounded-lg border border-accent px-3 py-2 text-[13px] font-semibold text-accent hover:bg-accent/10 disabled:opacity-50 transition-colors">
-            {saving ? <div className="h-3.5 w-3.5 rounded-full border-2 border-accent/30 border-t-accent animate-spin" /> : <Save size={14} />}
-            {t("common.save")}
-          </button>
+                    <SaveButton onClick={handleSave} saving={saving} saved={saved} label={t("common.save")} />
           <button onClick={handleSaveAndExit} disabled={saving} className="flex items-center gap-1.5 rounded-lg bg-accent px-4 py-2 text-[13px] font-semibold text-white hover:bg-accent-hover disabled:opacity-50 transition-colors">
             {saving ? <div className="h-3.5 w-3.5 rounded-full border-2 border-white/30 border-t-white animate-spin" /> : <LogOut size={14} />}
             {t("common.saveAndExit" as any)}

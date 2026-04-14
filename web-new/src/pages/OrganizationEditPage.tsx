@@ -81,6 +81,7 @@ const ORG_ADMIN_FIELD_GROUPS = [
 const DEFAULT_EDITABLE = ["displayName", "logo", "logoDark", "favicon", "websiteUrl", "defaultAvatar", "themeData"];
 import type { Application } from "../backend/ApplicationBackend";
 import type { Ldap } from "../backend/LdapBackend";
+import SaveButton from "../components/SaveButton";
 
 const PASSWORD_TYPES = [
   { value: "plain", label: "Plain" }, { value: "salt", label: "Salt" },
@@ -118,6 +119,8 @@ export default function OrganizationEditPage() {
   const [ldaps, setLdaps] = useState<Ldap[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  useEffect(() => { if (saved) { const t = setTimeout(() => setSaved(false), 1500); return () => clearTimeout(t); } }, [saved]);
 
   const invalidateList = () => queryClient.invalidateQueries({ queryKey: ["organizations"] });
 
@@ -191,6 +194,7 @@ export default function OrganizationEditPage() {
         notifyOrgChange();
         if (org.name !== name) navigate(`/organizations/${org.owner}/${org.name}`, { replace: true });
         modal.toast(t("common.saveSuccess" as any));
+        setSaved(true);
         setIsAddMode(false);
       } else {
         modal.toast(friendlyError(res.msg, t) || t("common.saveFailed" as any), "error");
@@ -289,10 +293,7 @@ export default function OrganizationEditPage() {
             </button>
           )}
           {(isGA || editableFields.size > 0) && (<>
-            <button onClick={handleSave} disabled={saving} className="flex items-center gap-1.5 rounded-lg border border-accent px-3 py-2 text-[13px] font-semibold text-accent hover:bg-accent/10 disabled:opacity-50 transition-colors">
-              {saving ? <div className="h-3.5 w-3.5 rounded-full border-2 border-accent/30 border-t-accent animate-spin" /> : <Save size={14} />}
-              {t("common.save")}
-            </button>
+                        <SaveButton onClick={handleSave} saving={saving} saved={saved} label={t("common.save")} />
             <button onClick={handleSaveAndExit} disabled={saving} className="flex items-center gap-1.5 rounded-lg bg-accent px-4 py-2 text-[13px] font-semibold text-white hover:bg-accent-hover disabled:opacity-50 transition-colors">
               {saving ? <div className="h-3.5 w-3.5 rounded-full border-2 border-white/30 border-t-white animate-spin" /> : <LogOut size={14} />}
               {t("common.saveAndExit" as any)}

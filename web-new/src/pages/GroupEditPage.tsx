@@ -16,6 +16,7 @@ import * as OrgBackend from "../backend/OrganizationBackend";
 import { useOrganization } from "../OrganizationContext";
 import { friendlyError } from "../utils/errorHelper";
 import SimpleSelect from "../components/SimpleSelect";
+import SaveButton from "../components/SaveButton";
 
 export default function GroupEditPage() {
   const { owner, name } = useParams<{ owner: string; name: string }>();
@@ -31,6 +32,8 @@ export default function GroupEditPage() {
   const [organizations, setOrganizations] = useState<{ name: string; displayName: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  useEffect(() => { if (saved) { const t = setTimeout(() => setSaved(false), 1500); return () => clearTimeout(t); } }, [saved]);
   const [groupUsers, setGroupUsers] = useState<User[]>([]);
   const [userTotal, setUserTotal] = useState(0);
   const [userPage, setUserPage] = useState(1);
@@ -110,6 +113,7 @@ export default function GroupEditPage() {
           navigate(`/groups/${group.owner}/${group.name}`, { replace: true });
         }
         modal.toast(t("common.saveSuccess" as any));
+        setSaved(true);
         setIsAddMode(false);
       } else {
         modal.toast(friendlyError(res.msg, t) || t("common.saveFailed" as any), "error");
@@ -230,10 +234,7 @@ export default function GroupEditPage() {
           <button onClick={handleDelete} className="flex items-center gap-1.5 rounded-lg border border-danger/30 px-3 py-2 text-[13px] font-medium text-danger hover:bg-danger/10 transition-colors">
             <Trash2 size={14} /> {t("common.delete")}
           </button>
-          <button onClick={handleSave} disabled={saving} className="flex items-center gap-1.5 rounded-lg border border-accent px-3 py-2 text-[13px] font-semibold text-accent hover:bg-accent/10 disabled:opacity-50 transition-colors">
-            {saving ? <div className="h-3.5 w-3.5 rounded-full border-2 border-accent/30 border-t-accent animate-spin" /> : <Save size={14} />}
-            {t("common.save")}
-          </button>
+                    <SaveButton onClick={handleSave} saving={saving} saved={saved} label={t("common.save")} />
           <button onClick={handleSaveAndExit} disabled={saving} className="flex items-center gap-1.5 rounded-lg bg-accent px-4 py-2 text-[13px] font-semibold text-white hover:bg-accent-hover disabled:opacity-50 transition-colors">
             {saving ? <div className="h-3.5 w-3.5 rounded-full border-2 border-white/30 border-t-white animate-spin" /> : <LogOut size={14} />}
             {t("common.saveAndExit" as any)}

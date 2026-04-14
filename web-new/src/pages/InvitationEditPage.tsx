@@ -13,6 +13,7 @@ import * as AppBackend from "../backend/ApplicationBackend";
 import * as GroupBackend from "../backend/GroupBackend";
 import type { Invitation } from "../backend/InvitationBackend";
 import { friendlyError } from "../utils/errorHelper";
+import SaveButton from "../components/SaveButton";
 
 // ---------------------------------------------------------------------------
 // Obfuscation helpers
@@ -151,6 +152,8 @@ export default function InvitationEditPage() {
   const [inv, setInv] = useState<Invitation | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  useEffect(() => { if (saved) { const t = setTimeout(() => setSaved(false), 1500); return () => clearTimeout(t); } }, [saved]);
   const [sendEmails, setSendEmails] = useState("");
   const [sending, setSending] = useState(false);
 
@@ -264,6 +267,7 @@ export default function InvitationEditPage() {
           navigate(`/invitations/${inv.owner}/${inv.name}`, { replace: true });
         }
         modal.toast(t("common.saveSuccess" as any));
+        setSaved(true);
         setIsAddMode(false);
       } else {
         modal.toast(friendlyError(res.msg, t) || t("common.saveFailed" as any), "error");
@@ -448,18 +452,7 @@ export default function InvitationEditPage() {
           >
             <Trash2 size={14} /> {t("common.delete")}
           </button>
-          <button
-            onClick={handleSave}
-            disabled={saving}
-            className="flex items-center gap-1.5 rounded-lg border border-accent px-3 py-2 text-[13px] font-semibold text-accent hover:bg-accent/10 disabled:opacity-50 transition-colors"
-          >
-            {saving ? (
-              <div className="h-3.5 w-3.5 rounded-full border-2 border-accent/30 border-t-accent animate-spin" />
-            ) : (
-              <Save size={14} />
-            )}
-            {t("common.save")}
-          </button>
+          <SaveButton onClick={handleSave} saving={saving} saved={saved} label={t("common.save")} />
           <button
             onClick={handleSaveAndExit}
             disabled={saving}
