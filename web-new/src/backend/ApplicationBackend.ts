@@ -153,6 +153,13 @@ export function deleteApplication(app: Application) {
   return request("POST", "/api/delete-application", app);
 }
 
+export function getSamlMetadata(owner: string, name: string, enablePostBinding: boolean) {
+  return fetch(
+    `/api/saml/metadata?application=${owner}/${encodeURIComponent(name)}&enablePostBinding=${enablePostBinding}`,
+    { method: "GET" }
+  ).then((res) => res.text());
+}
+
 export function newApplication(orgName: string): Application {
   const rand = Math.random().toString(36).substring(2, 8);
   return {

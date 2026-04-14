@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Save, ArrowLeft, Trash2, Copy, LogOut } from "lucide-react";
+import { Save, ArrowLeft, Trash2, Copy, LogOut, Link as LinkIcon } from "lucide-react";
 import { FormField, FormSection, Switch, inputClass, monoInputClass } from "../components/FormSection";
 import { useTranslation } from "../i18n";
 import { useModal } from "../components/Modal";
@@ -15,6 +15,7 @@ import ImageUrlInput from "../components/ImageUrlInput";
 import SaveButton from "../components/SaveButton";
 import UnsavedBanner from "../components/UnsavedBanner";
 import { useUnsavedWarning } from "../hooks/useUnsavedWarning";
+import EditableTable, { type EditableColumn } from "../components/EditableTable";
 
 type AppData = Partial<Application>;
 
@@ -39,6 +40,77 @@ const SSL_MODES = [
   { value: "HTTPS Only", label: "HTTPS Only" },
 ];
 
+const SAML_NAME_FORMATS = [
+  { value: "urn:oasis:names:tc:SAML:2.0:attrname-format:unspecified", label: "Unspecified" },
+  { value: "urn:oasis:names:tc:SAML:2.0:attrname-format:basic", label: "Basic" },
+  { value: "urn:oasis:names:tc:SAML:2.0:attrname-format:uri", label: "UriReference" },
+  { value: "urn:oasis:names:tc:SAML:2.0:attrname-format:X500", label: "x500AttributeName" },
+];
+
+const SAML_USER_VARIABLES = [
+  "$user.owner", "$user.name", "$user.email", "$user.id",
+  "$user.phone", "$user.roles", "$user.permissions", "$user.groups",
+];
+
+const TOKEN_ATTR_CATEGORIES = [
+  { value: "Static Value", label: "Static Value" },
+  { value: "Existing Field", label: "Existing Field" },
+];
+
+const TOKEN_ATTR_TYPES = [
+  { value: "Array", label: "Array" },
+  { value: "String", label: "String" },
+];
+
+const TOKEN_ATTR_USER_FIELDS = [
+  "Owner", "Name", "Id", "DisplayName", "Email", "Phone",
+  "Tag", "Roles", "Permissions", "permissionNames", "Groups",
+];
+
+const SIGNIN_METHOD_OPTIONS = [
+  { name: "Password", displayName: "Password", rule: "All" },
+  { name: "Verification code", displayName: "Verification code", rule: "All" },
+  { name: "WebAuthn", displayName: "WebAuthn", rule: "None" },
+  { name: "LDAP", displayName: "LDAP", rule: "None" },
+  { name: "Face ID", displayName: "Face ID", rule: "None" },
+  { name: "WeChat", displayName: "WeChat", rule: "Tab" },
+];
+
+const SIGNIN_METHOD_RULES: Record<string, { value: string; label: string }[]> = {
+  "Password": [{ value: "All", label: "All" }, { value: "Non-LDAP", label: "Non-LDAP" }, { value: "Hide password", label: "Hide password" }],
+  "Verification code": [{ value: "All", label: "All" }, { value: "Email only", label: "Email only" }, { value: "Phone only", label: "Phone only" }],
+  "WeChat": [{ value: "Tab", label: "Tab" }, { value: "Login page", label: "Login page" }],
+};
+
+const SIGNUP_ITEM_NAMES = [
+  "ID", "Username", "Display name", "First name", "Last name", "Affiliation",
+  "Gender", "Bio", "Tag", "Education", "Country/Region", "ID card",
+  "Password", "Confirm password", "Email", "Phone", "Email or Phone",
+  "Phone or Email", "Invitation code", "Agreement", "Signup button", "Providers",
+];
+
+const SIGNUP_ITEM_RULES: Record<string, { value: string; label: string }[]> = {
+  "ID": [{ value: "Random", label: "Random" }, { value: "Incremental", label: "Incremental" }],
+  "Display name": [{ value: "None", label: "None" }, { value: "Real name", label: "Real name" }, { value: "First, last", label: "First, last" }],
+  "Email": [{ value: "Normal", label: "Normal" }, { value: "No verification", label: "No verification" }],
+  "Phone": [{ value: "Normal", label: "Normal" }, { value: "No verification", label: "No verification" }],
+  "Agreement": [{ value: "None", label: "None" }, { value: "Signin", label: "Signin" }, { value: "Signin (Default True)", label: "Signin (Default True)" }],
+  "Providers": [{ value: "big", label: "Big" }, { value: "small", label: "Small" }],
+};
+
+const SIGNIN_ITEM_NAMES = [
+  "Signin methods", "Logo", "Back button", "Languages", "Username", "Password",
+  "Verification code", "Providers", "Agreement", "Forgot password?", "Login button",
+  "Signup link", "Captcha", "Auto sign in", "Select organization",
+];
+
+const SIGNIN_ITEM_RULES: Record<string, { value: string; label: string }[]> = {
+  "Providers": [{ value: "big", label: "Big" }, { value: "small", label: "Small" }],
+  "Captcha": [{ value: "pop up", label: "Pop up" }, { value: "inline", label: "Inline" }],
+  "Forgot password?": [{ value: "None", label: "Auto sign in - True" }, { value: "Auto sign in - False", label: "Auto sign in - False" }],
+  "Languages": [{ value: "None", label: "Default" }, { value: "Label", label: "Label" }],
+};
+
 export default function ApplicationEditPage() {
   const { owner: orgName, name } = useParams<{ owner: string; name: string }>();
   const isNew = !name || name === "new";
@@ -56,6 +128,8 @@ export default function ApplicationEditPage() {
   useEffect(() => { if (saved) { const t = setTimeout(() => setSaved(false), 1500); return () => clearTimeout(t); } }, [saved]);
   const [originalJson, setOriginalJson] = useState("");
   const [activeTab, setActiveTab] = useState("basic");
+  const [samlMetadata, setSamlMetadata] = useState("");
+  const [loadingMetadata, setLoadingMetadata] = useState(false);
 
   const invalidateList = () => queryClient.invalidateQueries({ queryKey: ["applications"] });
 
@@ -80,6 +154,22 @@ export default function ApplicationEditPage() {
   }, [name, isNew]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
+
+  const fetchSamlMetadata = useCallback(async () => {
+    if (!orgName || !name) return;
+    setLoadingMetadata(true);
+    try {
+      const xml = await AppBackend.getSamlMetadata(orgName, name, !!app.enableSamlPostBinding);
+      setSamlMetadata(xml);
+    } catch { setSamlMetadata(""); }
+    finally { setLoadingMetadata(false); }
+  }, [orgName, name, app.enableSamlPostBinding]);
+
+  useEffect(() => {
+    if (activeTab === "saml" && !samlMetadata && !loadingMetadata) {
+      fetchSamlMetadata();
+    }
+  }, [activeTab, samlMetadata, loadingMetadata, fetchSamlMetadata]);
 
   const set = (key: string, val: unknown) => setApp((p) => ({ ...p, [key]: val }));
 
@@ -392,6 +482,29 @@ export default function ApplicationEditPage() {
             />
           </FormField>
         )}
+        {app.tokenFormat === "JWT-Custom" && (
+          <FormField label={t("apps.oauth.tokenAttributes" as any)} span="full">
+            <EditableTable
+              columns={[
+                { key: "name", title: t("col.name" as any), width: "25%", placeholder: "e.g., department" },
+                { key: "category", title: t("apps.oauth.category" as any), width: "20%", type: "select", options: TOKEN_ATTR_CATEGORIES },
+                {
+                  key: "value", title: t("col.value" as any), width: "30%",
+                  render: (row, _i, onChange) => (
+                    row.category === "Existing Field"
+                      ? <SimpleSelect value={String(row.value ?? "")} options={TOKEN_ATTR_USER_FIELDS.map((f) => ({ value: f, label: f }))} onChange={(v) => onChange("value", v)} />
+                      : <input value={String(row.value ?? "")} onChange={(e) => onChange("value", e.target.value)} className={`${inputClass} !py-1 !text-[12px]`} />
+                  ),
+                },
+                { key: "type", title: t("field.type" as any), width: "15%", type: "select", options: TOKEN_ATTR_TYPES },
+              ]}
+              rows={(app.tokenAttributes as Record<string, unknown>[]) ?? []}
+              onChange={(rows) => set("tokenAttributes", rows)}
+              newRow={() => ({ name: "", value: "", type: "Array", category: "Static Value" })}
+              addLabel={t("common.add")}
+            />
+          </FormField>
+        )}
         <FormField label={t("apps.field.expireInHours")} help={t("help.tokenLifetime" as any)}>
           <input type="number" value={app.expireInHours ?? 168} onChange={(e) => set("expireInHours", Number(e.target.value))} min={0.01} step={0.01} className={monoInputClass} />
         </FormField>
@@ -399,10 +512,48 @@ export default function ApplicationEditPage() {
           <input type="number" value={app.refreshExpireInHours ?? 168} onChange={(e) => set("refreshExpireInHours", Number(e.target.value))} min={0.01} step={0.01} className={monoInputClass} />
         </FormField>
       </FormSection>
+
+      {/* Scopes table — only for Agent category */}
+      {app.category === "Agent" && (
+        <FormSection title={t("apps.oauth.scopes" as any)}>
+          <FormField label="" span="full">
+            <EditableTable
+              columns={[
+                { key: "name", title: t("col.name" as any), width: "25%", placeholder: "e.g., files:read" },
+                { key: "displayName", title: t("col.displayName" as any), width: "25%", placeholder: "e.g., Read Files" },
+                { key: "description", title: t("field.description" as any), placeholder: "e.g., Allow reading your files" },
+              ]}
+              rows={(app.scopes as Record<string, unknown>[]) ?? []}
+              onChange={(rows) => set("scopes", rows)}
+              newRow={() => ({ name: "", displayName: "", description: "" })}
+              addLabel={t("common.add")}
+            />
+          </FormField>
+        </FormSection>
+      )}
     </div>
   );
 
   // ── SAML Tab ──
+  const samlAttributeColumns: EditableColumn<Record<string, unknown>>[] = [
+    { key: "Name", title: t("col.name" as any), width: "25%", placeholder: "e.g., email" },
+    {
+      key: "nameFormat", title: t("apps.saml.nameFormat" as any), width: "30%", type: "select",
+      options: SAML_NAME_FORMATS,
+    },
+    {
+      key: "value", title: t("col.value" as any), width: "30%",
+      render: (row, _i, onChange) => (
+        <AutocompleteInput
+          value={String(row.value ?? "")}
+          onChange={(v) => onChange("value", v)}
+          suggestions={SAML_USER_VARIABLES}
+          placeholder="e.g., $user.email"
+        />
+      ),
+    },
+  ];
+
   const samlTab = (
     <div className="space-y-5">
       <FormSection title={t("apps.section.saml" as any)}>
@@ -419,7 +570,13 @@ export default function ApplicationEditPage() {
           <Switch checked={!!app.useEmailAsSamlNameId} onChange={(v) => set("useEmailAsSamlNameId", v)} />
         </FormField>
         <FormField label={t("apps.field.enableSamlPostBinding" as any)}>
-          <Switch checked={!!app.enableSamlPostBinding} onChange={(v) => set("enableSamlPostBinding", v)} />
+          <Switch
+            checked={!!app.enableSamlPostBinding}
+            onChange={(v) => {
+              set("enableSamlPostBinding", v);
+              setSamlMetadata(""); // triggers re-fetch
+            }}
+          />
         </FormField>
         <FormField label={t("apps.field.samlHashAlgorithm" as any)}>
           <SimpleSelect value={String(app.samlHashAlgorithm ?? "")} options={SAML_HASH_ALGORITHMS.map((a) => ({ value: a, label: a }))} onChange={(v) => set("samlHashAlgorithm", v)} />
@@ -429,6 +586,55 @@ export default function ApplicationEditPage() {
         </FormField>
         <FormField label={t("apps.field.enableSamlAssertionSig" as any)}>
           <Switch checked={!!app.enableSamlAssertionSignature} onChange={(v) => set("enableSamlAssertionSignature", v)} />
+        </FormField>
+      </FormSection>
+
+      {/* SAML Attributes Table */}
+      {!app.disableSamlAttributes && (
+        <FormSection title={t("apps.saml.attributes" as any)}>
+          <FormField label="" span="full">
+            <EditableTable
+              columns={samlAttributeColumns}
+              rows={(app.samlAttributes as Record<string, unknown>[]) ?? []}
+              onChange={(rows) => set("samlAttributes", rows)}
+              newRow={() => ({ Name: "", nameFormat: "", value: "" })}
+              addLabel={t("common.add")}
+            />
+          </FormField>
+        </FormSection>
+      )}
+
+      {/* SAML Metadata */}
+      <FormSection title={t("apps.saml.metadata" as any)}>
+        <FormField label="" span="full">
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => {
+                  const url = `${window.location.origin}/api/saml/metadata?application=${orgName}/${name}`;
+                  navigator.clipboard.writeText(url);
+                  modal.toast(t("common.copySuccess" as any));
+                }}
+                className="flex items-center gap-1.5 rounded-lg border border-border px-2.5 py-1.5 text-[12px] font-medium text-text-secondary hover:bg-surface-2 transition-colors"
+              >
+                <Copy size={13} /> {t("apps.saml.copyMetadataUrl" as any)}
+              </button>
+              <button
+                onClick={fetchSamlMetadata}
+                disabled={loadingMetadata}
+                className="flex items-center gap-1.5 rounded-lg border border-border px-2.5 py-1.5 text-[12px] font-medium text-text-secondary hover:bg-surface-2 transition-colors disabled:opacity-50"
+              >
+                {t("common.refresh")}
+              </button>
+            </div>
+            <textarea
+              value={samlMetadata}
+              readOnly
+              rows={10}
+              className={`${inputClass} font-mono text-[11px] bg-surface-2 cursor-default`}
+              placeholder={loadingMetadata ? t("common.loading" as any) : t("apps.saml.metadataPlaceholder" as any)}
+            />
+          </div>
         </FormField>
       </FormSection>
     </div>
@@ -495,8 +701,27 @@ export default function ApplicationEditPage() {
                         }}
                         className="rounded"
                       />
-                      Prompted
+                      {t("apps.providers.prompted" as any)}
                     </label>
+                    <input
+                      value={provider.signupGroup ?? ""}
+                      onChange={(e) => {
+                        const next = [...(app.providers as any[])];
+                        next[i] = { ...next[i], signupGroup: e.target.value };
+                        set("providers", next);
+                      }}
+                      placeholder={t("apps.providers.signupGroup" as any)}
+                      className={`${inputClass} !py-1 !text-[11px] w-24`}
+                    />
+                    <SimpleSelect
+                      value={provider.rule ?? "None"}
+                      options={[{ value: "None", label: "None" }, { value: "all", label: "All" }]}
+                      onChange={(v) => {
+                        const next = [...(app.providers as any[])];
+                        next[i] = { ...next[i], rule: v };
+                        set("providers", next);
+                      }}
+                    />
                     <button
                       onClick={() => {
                         const next = (app.providers as any[]).filter((_, j) => j !== i);
@@ -525,6 +750,112 @@ export default function ApplicationEditPage() {
   );
 
   // ── UI Customization Tab ──
+
+  const existingSigninMethodNames = ((app.signinMethods as any[]) ?? []).map((m: any) => m.name);
+  const availableSigninMethods = SIGNIN_METHOD_OPTIONS.filter((m) => !existingSigninMethodNames.includes(m.name));
+
+  const signinMethodColumns: EditableColumn<Record<string, unknown>>[] = [
+    {
+      key: "name", title: t("col.name" as any), width: "30%",
+      render: (row, _i, onChange) => {
+        const available = [...availableSigninMethods, ...(row.name ? [SIGNIN_METHOD_OPTIONS.find((m) => m.name === row.name)].filter(Boolean) : [])];
+        return (
+          <SimpleSelect
+            value={String(row.name ?? "")}
+            options={available.map((m: any) => ({ value: m.name, label: m.name }))}
+            onChange={(v) => {
+              const def = SIGNIN_METHOD_OPTIONS.find((m) => m.name === v);
+              onChange("name", v);
+              if (def) {
+                onChange("displayName", def.displayName);
+                onChange("rule", def.rule);
+              }
+            }}
+          />
+        );
+      },
+    },
+    { key: "displayName", title: t("col.displayName" as any), width: "30%" },
+    {
+      key: "rule", title: t("apps.ui.rule" as any), width: "25%",
+      render: (row, _i, onChange) => {
+        const rules = SIGNIN_METHOD_RULES[String(row.name)] ?? [];
+        if (rules.length === 0) {
+          return <span className="text-[12px] text-text-muted">—</span>;
+        }
+        return <SimpleSelect value={String(row.rule ?? "None")} options={rules} onChange={(v) => onChange("rule", v)} />;
+      },
+    },
+  ];
+
+  const signinItemColumns: EditableColumn<Record<string, unknown>>[] = [
+    {
+      key: "name", title: t("col.name" as any), width: "25%",
+      render: (row, _i, onChange) => {
+        if (row.isCustom) {
+          return <input value={String(row.name ?? "")} disabled className={`${inputClass} !py-1 !text-[12px] opacity-60`} />;
+        }
+        const usedNames = ((app.signinItems as any[]) ?? []).filter((it: any) => !it.isCustom && it.name !== row.name).map((it: any) => it.name);
+        const available = SIGNIN_ITEM_NAMES.filter((n) => !usedNames.includes(n));
+        return (
+          <SimpleSelect
+            value={String(row.name ?? "")}
+            options={available.map((n) => ({ value: n, label: n }))}
+            onChange={(v) => {
+              onChange("name", v);
+              if (v === "Captcha") onChange("rule", "pop up");
+            }}
+          />
+        );
+      },
+    },
+    { key: "visible", title: t("apps.ui.visible" as any), width: "10%", type: "switch" },
+    {
+      key: "label", title: t("apps.ui.label" as any), width: "20%",
+      visible: (row) => {
+        const n = String(row.name);
+        return !!row.isCustom || n.startsWith("Text ") || ["Username", "Password", "Verification code", "Signup link", "Forgot password?", "Login button"].includes(n);
+      },
+    },
+    {
+      key: "rule", title: t("apps.ui.rule" as any), width: "20%",
+      render: (row, _i, onChange) => {
+        const rules = SIGNIN_ITEM_RULES[String(row.name)] ?? [];
+        if (rules.length === 0) return <span className="text-[12px] text-text-muted">—</span>;
+        return <SimpleSelect value={String(row.rule ?? "None")} options={rules} onChange={(v) => onChange("rule", v)} />;
+      },
+    },
+  ];
+
+  const signupItemColumns: EditableColumn<Record<string, unknown>>[] = [
+    {
+      key: "name", title: t("col.name" as any), width: "22%",
+      render: (row, _i, onChange) => {
+        const usedNames = ((app.signupItems as any[]) ?? []).filter((it: any) => it.name !== row.name).map((it: any) => it.name);
+        const available = SIGNUP_ITEM_NAMES.filter((n) => !usedNames.includes(n));
+        return <SimpleSelect value={String(row.name ?? "")} options={available.map((n) => ({ value: n, label: n }))} onChange={(v) => onChange("name", v)} />;
+      },
+    },
+    {
+      key: "visible", title: t("apps.ui.visible" as any), width: "10%", type: "switch",
+      visible: (row) => row.name !== "ID",
+    },
+    {
+      key: "required", title: t("apps.ui.required" as any), width: "10%", type: "switch",
+      visible: (row) => !!row.visible && !["Signup button", "Providers", "ID"].includes(String(row.name)),
+      disabled: (row) => row.name === "Password",
+    },
+    {
+      key: "rule", title: t("apps.ui.rule" as any), width: "20%",
+      render: (row, _i, onChange) => {
+        const rules = SIGNUP_ITEM_RULES[String(row.name)] ?? [];
+        if (rules.length === 0) return <span className="text-[12px] text-text-muted">—</span>;
+        return <SimpleSelect value={String(row.rule ?? "None")} options={rules} onChange={(v) => onChange("rule", v)} />;
+      },
+    },
+    { key: "customCss", title: "CSS", width: "20%", placeholder: ".signup-xxx {}" },
+  ];
+
   const uiTab = (
     <div className="space-y-5">
       <FormSection title={t("apps.section.signinUi" as any)}>
@@ -532,19 +863,15 @@ export default function ApplicationEditPage() {
           <SimpleSelect value={String(app.orgChoiceMode ?? "None")} options={[{ value: "None", label: "None" }, { value: "Select", label: "Select" }, { value: "Input", label: "Input" }]} onChange={(v) => set("orgChoiceMode", v)} />
         </FormField>
         <FormField label={t("apps.field.signinMethods" as any)} span="full">
-          <div className="text-[12px] text-text-muted">
-            {Array.isArray(app.signinMethods) && app.signinMethods.length > 0 ? (
-              <div className="flex flex-wrap gap-1.5">
-                {(app.signinMethods as any[]).map((m: any, i: number) => (
-                  <span key={i} className="rounded-full bg-accent/15 border border-accent/20 px-2 py-0.5 text-[11px] font-mono font-medium text-accent">
-                    {m.name} ({m.rule})
-                  </span>
-                ))}
-              </div>
-            ) : (
-              <span>No signin methods configured</span>
-            )}
-          </div>
+          <EditableTable
+            columns={signinMethodColumns}
+            rows={(app.signinMethods as Record<string, unknown>[]) ?? []}
+            onChange={(rows) => set("signinMethods", rows)}
+            newRow={() => ({ name: "", displayName: "", rule: "None" })}
+            addLabel={t("common.add")}
+            minRows={1}
+            disableAdd={availableSigninMethods.length === 0}
+          />
         </FormField>
         <FormField label={t("apps.field.signupHtml" as any)} span="full">
           <textarea value={String(app.signupHtml ?? "")} onChange={(e) => set("signupHtml", e.target.value)} rows={3} className={`${inputClass} font-mono text-[12px]`} />
@@ -553,38 +880,31 @@ export default function ApplicationEditPage() {
           <textarea value={String(app.signinHtml ?? "")} onChange={(e) => set("signinHtml", e.target.value)} rows={3} className={`${inputClass} font-mono text-[12px]`} />
         </FormField>
         <FormField label={t("apps.field.signinItems" as any)} span="full">
-          <div className="text-[12px] text-text-muted">
-            {Array.isArray(app.signinItems) && app.signinItems.length > 0 ? (
-              <div className="flex flex-wrap gap-1.5">
-                {(app.signinItems as any[]).map((item: any, i: number) => (
-                  <span key={i} className="rounded-md bg-surface-3 border border-border px-2 py-0.5 text-[11px] font-mono text-text-secondary">
-                    {item.name}
-                  </span>
-                ))}
-              </div>
-            ) : (
-              <span>No signin items configured</span>
-            )}
-          </div>
+          <EditableTable
+            columns={signinItemColumns}
+            rows={(app.signinItems as Record<string, unknown>[]) ?? []}
+            onChange={(rows) => set("signinItems", rows)}
+            newRow={() => ({ name: "", visible: true, required: true, rule: "None" })}
+            addLabel={t("common.add")}
+            onAddCustom={() => {
+              const items = (app.signinItems as Record<string, unknown>[]) ?? [];
+              set("signinItems", [...items, { name: `Text ${Date.now()}`, visible: true, isCustom: true }]);
+            }}
+            addCustomLabel={t("apps.ui.addCustom" as any)}
+          />
         </FormField>
       </FormSection>
 
       {!!app.enableSignUp && (
         <FormSection title={t("apps.section.signupUi" as any)}>
           <FormField label={t("apps.field.signupItems" as any)} span="full">
-            <div className="text-[12px] text-text-muted">
-              {Array.isArray(app.signupItems) && app.signupItems.length > 0 ? (
-                <div className="flex flex-wrap gap-1.5">
-                  {(app.signupItems as any[]).map((item: any, i: number) => (
-                    <span key={i} className="rounded-md bg-surface-3 border border-border px-2 py-0.5 text-[11px] font-mono text-text-secondary">
-                      {item.name} {item.required ? "(required)" : ""}
-                    </span>
-                  ))}
-                </div>
-              ) : (
-                <span>No signup items configured</span>
-              )}
-            </div>
+            <EditableTable
+              columns={signupItemColumns}
+              rows={(app.signupItems as Record<string, unknown>[]) ?? []}
+              onChange={(rows) => set("signupItems", rows)}
+              newRow={() => ({ name: "", visible: true, required: true, options: [], rule: "None", customCss: "" })}
+              addLabel={t("common.add")}
+            />
           </FormField>
         </FormSection>
       )}
@@ -833,6 +1153,43 @@ function RedirectUriEditor({ uris, onChange }: { uris: string[]; onChange: (v: s
           {t("apps.addUri" as any)}
         </button>
       </div>
+    </div>
+  );
+}
+
+// ── Autocomplete input for SAML variables ──
+function AutocompleteInput({ value, onChange, suggestions, placeholder }: {
+  value: string; onChange: (v: string) => void; suggestions: string[]; placeholder?: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const [filter, setFilter] = useState("");
+  const filtered = suggestions.filter((s) => s.toLowerCase().includes((filter || value).toLowerCase()));
+
+  return (
+    <div className="relative">
+      <input
+        value={value}
+        onChange={(e) => { onChange(e.target.value); setFilter(e.target.value); setOpen(true); }}
+        onFocus={() => setOpen(true)}
+        onBlur={() => setTimeout(() => setOpen(false), 150)}
+        placeholder={placeholder}
+        className={`${inputClass} !py-1 !text-[12px]`}
+      />
+      {open && filtered.length > 0 && (
+        <div className="absolute z-20 mt-1 w-full rounded-lg border border-border bg-surface-1 shadow-lg max-h-32 overflow-y-auto">
+          {filtered.map((s) => (
+            <button
+              key={s}
+              type="button"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => { onChange(s); setOpen(false); }}
+              className="block w-full text-left px-2.5 py-1.5 text-[12px] font-mono text-text-secondary hover:bg-accent/10 hover:text-accent transition-colors"
+            >
+              {s}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

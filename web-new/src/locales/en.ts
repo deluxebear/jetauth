@@ -1023,6 +1023,29 @@ const en = {
   "apps.addUri": "Add",
   "apps.cannotDeleteBuiltIn": "Cannot delete built-in application",
 
+  // Application SAML table
+  "apps.saml.attributes": "SAML Attributes",
+  "apps.saml.nameFormat": "Name Format",
+  "apps.saml.metadata": "SAML Metadata",
+  "apps.saml.copyMetadataUrl": "Copy Metadata URL",
+  "apps.saml.metadataPlaceholder": "SAML metadata will appear here...",
+
+  // Application OAuth table
+  "apps.oauth.tokenAttributes": "Token Attributes",
+  "apps.oauth.category": "Category",
+  "apps.oauth.scopes": "Scopes",
+
+  // Application UI table
+  "apps.ui.rule": "Rule",
+  "apps.ui.visible": "Visible",
+  "apps.ui.required": "Required",
+  "apps.ui.label": "Label",
+  "apps.ui.addCustom": "Add Custom",
+
+  // Application Providers
+  "apps.providers.prompted": "Prompted",
+  "apps.providers.signupGroup": "Signup Group",
+
   // Providers
   "providers.title": "Providers",
   "providers.subtitle": "Manage identity & service providers",

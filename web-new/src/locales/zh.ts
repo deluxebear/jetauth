@@ -1104,6 +1104,29 @@ const zh: Record<string, string> = {
   "apps.addUri": "添加",
   "apps.cannotDeleteBuiltIn": "无法删除内置应用",
 
+  // Application SAML table
+  "apps.saml.attributes": "SAML 属性",
+  "apps.saml.nameFormat": "名称格式",
+  "apps.saml.metadata": "SAML 元数据",
+  "apps.saml.copyMetadataUrl": "复制元数据 URL",
+  "apps.saml.metadataPlaceholder": "SAML 元数据将在此显示...",
+
+  // Application OAuth table
+  "apps.oauth.tokenAttributes": "令牌属性",
+  "apps.oauth.category": "类别",
+  "apps.oauth.scopes": "作用域",
+
+  // Application UI table
+  "apps.ui.rule": "规则",
+  "apps.ui.visible": "可见",
+  "apps.ui.required": "必填",
+  "apps.ui.label": "标签",
+  "apps.ui.addCustom": "添加自定义项",
+
+  // Application Providers
+  "apps.providers.prompted": "提示",
+  "apps.providers.signupGroup": "注册分组",
+
   // Providers
   "providers.title": "提供商管理",
   "providers.subtitle": "管理身份和服务提供商",

@@ -1,7 +1,7 @@
 import { useCallback } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Plus, RefreshCw, Trash2, Pencil } from "lucide-react";
+import { Plus, RefreshCw, Trash2, Pencil, Copy } from "lucide-react";
 import DataTable, { type Column } from "../components/DataTable";
 import { useTranslation } from "../i18n";
 import { useModal } from "../components/Modal";
@@ -36,6 +36,24 @@ export default function ApplicationListPage() {
     const res = await AppBackend.addApplication(app);
     if (res.status === "ok") {
       navigate(`/applications/${app.organization}/${app.name}`, { state: { mode: "add" } });
+    } else {
+      modal.toast(res.msg || t("common.addFailed" as any), "error");
+    }
+  };
+
+  const handleCopy = async (record: Application, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const rand = Math.random().toString(36).substring(2, 8);
+    const copied: Application = {
+      ...record,
+      name: `${record.name}_${rand}`,
+      displayName: `Copy of ${record.displayName || record.name}`,
+      clientId: "",
+      clientSecret: "",
+    };
+    const res = await AppBackend.addApplication(copied);
+    if (res.status === "ok") {
+      navigate(`/applications/${copied.organization}/${copied.name}`, { state: { mode: "add" } });
     } else {
       modal.toast(res.msg || t("common.addFailed" as any), "error");
     }
@@ -100,10 +118,11 @@ export default function ApplicationListPage() {
       },
     },
     {
-      key: "__actions", fixed: "right" as const, title: t("common.action" as any), width: "170px",
+      key: "__actions", fixed: "right" as const, title: t("common.action" as any), width: "200px",
       render: (_, r) => (
         <div className="flex items-center gap-1">
           <Link to={`/applications/${r.organization}/${r.name}`} className="rounded p-1.5 text-text-muted hover:text-warning hover:bg-warning/10 transition-colors" title={t("common.edit")} onClick={(e) => e.stopPropagation()}><Pencil size={14} /></Link>
+          <button onClick={(e) => handleCopy(r, e)} className="rounded p-1.5 text-text-muted hover:text-accent hover:bg-accent/10 transition-colors" title={t("common.copy" as any)}><Copy size={14} /></button>
           <button onClick={(e) => handleDelete(r, e)} disabled={r.name === "app-built-in"} className="rounded p-1.5 text-text-muted hover:text-danger hover:bg-danger/10 transition-colors disabled:opacity-30 disabled:cursor-not-allowed" title={t("common.delete")}><Trash2 size={14} /></button>
         </div>
       ),
