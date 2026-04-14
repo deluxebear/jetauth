@@ -573,7 +573,7 @@ export default function UserEditPage() {
   // Tab 3: Security & Finance
   const securityTab = (
     <div className="space-y-5">
-      {anySectionFieldVisible("Password", "IP whitelist") && (
+      {anySectionFieldVisible("Password", "IP whitelist", "Last change password time") && (
       <FormSection title={t("users.section.security" as any)}>
         {dynField("Password", undefined, isSelf ? (
           <PasswordModal
@@ -601,6 +601,17 @@ export default function UserEditPage() {
           </div>
         ))}
         {dynField("IP whitelist", undefined, <input value={user.ipWhitelist ?? ""} onChange={(e) => set("ipWhitelist", e.target.value)} disabled={isFieldDisabled("IP whitelist")} className={inputClass} placeholder="192.168.1.1, 10.0.0.0/8" />)}
+        {isFieldVisible("Last change password time") && (user as any).lastChangePasswordTime && (
+          <div className="col-span-2 flex items-center gap-2 text-[12px] text-text-muted">
+            <span>{getFieldLabel("Last change password time")}:</span>
+            <span className="font-mono text-text-secondary">{(() => {
+              try {
+                const d = new Date((user as any).lastChangePasswordTime);
+                return `${d.getFullYear()}年${String(d.getMonth() + 1).padStart(2, "0")}月${String(d.getDate()).padStart(2, "0")}日 ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+              } catch { return (user as any).lastChangePasswordTime; }
+            })()}</span>
+          </div>
+        )}
       </FormSection>
       )}
 
@@ -640,7 +651,7 @@ export default function UserEditPage() {
       </FormSection>
       )}
 
-      {anySectionFieldVisible("Multi-factor authentication", "MFA accounts", "MFA items", "WebAuthn credentials", "Last change password time", "Managed accounts", "Face ID") && (
+      {anySectionFieldVisible("Multi-factor authentication", "MFA accounts", "MFA items", "WebAuthn credentials", "Managed accounts", "Face ID") && (
       <FormSection title={t("users.section.mfa" as any)}>
         {dynField("Multi-factor authentication", "full",
           <MfaSection
@@ -670,9 +681,6 @@ export default function UserEditPage() {
             t={t}
             onRefresh={invalidate}
           />
-        )}
-        {dynField("Last change password time", undefined,
-          <input value={(user as any).lastChangePasswordTime ?? ""} disabled className={monoInputClass} />
         )}
         {dynBlock("Managed accounts",
           <ManagedAccountsTable
