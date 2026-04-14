@@ -923,7 +923,7 @@ function MultiSearchSelect({ selected, options, onChange, placeholder }: {
   return (
     <div ref={ref}>
       <div onClick={() => { setOpen(true); setTimeout(() => inputRef.current?.focus(), 0); }}
-        className={`flex flex-wrap gap-1.5 rounded-lg border bg-surface-2 px-2.5 py-2 min-h-[38px] cursor-text transition-colors ${open ? "border-accent ring-1 ring-accent/30" : "border-border"}`}>
+        className={`relative flex flex-wrap gap-1.5 rounded-lg border bg-surface-2 px-2.5 py-2 pr-8 min-h-[38px] cursor-text transition-colors ${open ? "border-accent ring-1 ring-accent/30" : "border-border"}`}>
         {selected.map((val) => {
           const label = options.find((o) => o.value === val)?.label ?? val;
           return (
@@ -935,9 +935,7 @@ function MultiSearchSelect({ selected, options, onChange, placeholder }: {
         })}
         <input ref={inputRef} value={search} onChange={(e) => { setSearch(e.target.value); setOpen(true); }}
           placeholder={selected.length === 0 ? placeholder : ""} className="flex-1 min-w-[80px] bg-transparent text-[12px] text-text-primary outline-none placeholder:text-text-muted" />
-        <svg className="h-4 w-4 text-text-muted shrink-0" viewBox="0 0 20 20" fill="currentColor">
-          <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clipRule="evenodd" />
-        </svg>
+        <ChevronDown size={14} className={`absolute right-2.5 top-1/2 -translate-y-1/2 text-text-muted transition-transform duration-200 ${open ? "rotate-180" : ""}`} />
       </div>
       {open && filtered.length > 0 && (
         <div className="absolute z-[60] mt-1 max-h-48 w-full overflow-y-auto rounded-lg border border-border bg-surface-1 py-1 shadow-lg" style={{ width: ref.current?.offsetWidth }}>
@@ -984,9 +982,7 @@ function SingleSearchSelect({ value, options, onChange, placeholder }: {
         ) : (
           <span className={`text-[13px] flex-1 ${value ? "text-text-primary" : "text-text-muted"}`}>{value ? selectedLabel : "—"}</span>
         )}
-        <svg className="h-4 w-4 text-text-muted shrink-0" viewBox="0 0 20 20" fill="currentColor">
-          <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clipRule="evenodd" />
-        </svg>
+        <ChevronDown size={14} className={`text-text-muted shrink-0 transition-transform duration-200 ${open ? "rotate-180" : ""}`} />
       </div>
       {open && (
         <div className="absolute z-[60] mt-1 max-h-48 w-full overflow-y-auto rounded-lg border border-border bg-surface-1 py-1 shadow-lg">
@@ -1256,9 +1252,7 @@ function RegionSelect({ value, onChange }: { value: string; onChange: (v: string
         ) : (
           <span className="text-[13px] text-text-primary flex-1">{displayLabel}</span>
         )}
-        <svg className="h-4 w-4 text-text-muted shrink-0" viewBox="0 0 20 20" fill="currentColor">
-          <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clipRule="evenodd" />
-        </svg>
+        <ChevronDown size={14} className={`text-text-muted shrink-0 transition-transform duration-200 ${open ? "rotate-180" : ""}`} />
       </div>
       {open && (
         <div className={`absolute z-[60] max-h-56 w-full overflow-y-auto rounded-lg border border-border bg-surface-1 py-1 shadow-lg ${dropUp ? "bottom-full mb-1" : "top-full mt-1"}`}>
