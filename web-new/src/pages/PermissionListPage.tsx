@@ -9,12 +9,15 @@ import { useEntityList } from "../hooks/useEntityList";
 import { useOrganization } from "../OrganizationContext";
 import * as PermissionBackend from "../backend/PermissionBackend";
 import type { Permission } from "../backend/PermissionBackend";
+import { getStoredAccount, isGlobalAdmin } from "../utils/auth";
 
 export default function PermissionListPage() {
   const navigate = useNavigate();
   const { t } = useTranslation();
   const modal = useModal();
   const { getNewEntityOwner } = useOrganization();
+  const account = getStoredAccount();
+  const isAdmin = isGlobalAdmin(account);
 
   const list = useEntityList<Permission>({
     queryKey: "permissions",
@@ -78,7 +81,7 @@ export default function PermissionListPage() {
       render: (_, r) => <span className="text-[12px] text-text-muted">{r.domains?.length ?? 0}</span>,
     },
     {
-      key: "resourceType", title: t("permissions.field.resourceType" as any), sortable: true, width: "170px",
+      key: "resourceType", title: t("permissions.field.resourceType" as any), sortable: true, filterable: true, width: "170px",
     },
     {
       key: "resources", title: t("permissions.field.resources" as any), sortable: true, filterable: true,
@@ -89,7 +92,7 @@ export default function PermissionListPage() {
       render: (_, r) => <span className="text-[12px] text-text-muted">{r.actions?.join(", ") || "\u2014"}</span>,
     },
     {
-      key: "effect", title: t("permissions.field.effect" as any), sortable: true, width: "120px",
+      key: "effect", title: t("permissions.field.effect" as any), sortable: true, filterable: true, width: "120px",
       render: (_, r) => {
         if (r.effect === "Allow") return <span className="inline-block rounded-full px-2 py-0.5 text-[11px] font-medium bg-success/15 text-success">{t("permissions.effectAllow" as any)}</span>;
         if (r.effect === "Deny") return <span className="inline-block rounded-full px-2 py-0.5 text-[11px] font-medium bg-danger/15 text-danger">{t("permissions.effectDeny" as any)}</span>;
@@ -122,12 +125,15 @@ export default function PermissionListPage() {
     },
     {
       key: "__actions", fixed: "right" as const, title: t("common.action" as any), width: "110px",
-      render: (_, r) => (
-        <div className="flex items-center gap-1">
-          <Link to={`/permissions/${r.owner}/${encodeURIComponent(r.name)}`} className="rounded p-1.5 text-text-muted hover:text-warning hover:bg-warning/10 transition-colors" title={t("common.edit")} onClick={(e) => e.stopPropagation()}><Pencil size={14} /></Link>
-          <button onClick={(e) => handleDelete(r, e)} className="rounded p-1.5 text-text-muted hover:text-danger hover:bg-danger/10 transition-colors" title={t("common.delete")}><Trash2 size={14} /></button>
-        </div>
-      ),
+      render: (_, r) => {
+        const canOp = isAdmin || r.owner === account?.owner;
+        return (
+          <div className="flex items-center gap-1">
+            <Link to={`/permissions/${r.owner}/${encodeURIComponent(r.name)}`} className={`rounded p-1.5 transition-colors ${canOp ? "text-text-muted hover:text-warning hover:bg-warning/10" : "text-text-muted opacity-30 pointer-events-none"}`} title={t("common.edit")} onClick={(e) => e.stopPropagation()}><Pencil size={14} /></Link>
+            <button onClick={(e) => handleDelete(r, e)} disabled={!canOp} className="rounded p-1.5 text-text-muted hover:text-danger hover:bg-danger/10 transition-colors disabled:opacity-30 disabled:cursor-not-allowed" title={t("common.delete")}><Trash2 size={14} /></button>
+          </div>
+        );
+      },
     },
   ];
 
