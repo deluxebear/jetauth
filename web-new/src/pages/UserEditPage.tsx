@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate, useLocation, Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Save, Trash2, User, Heart, Shield, Settings, ChevronDown, LogOut, Eye, EyeOff, Wallet, Search, Check, LockKeyhole } from "lucide-react";
+import { Save, Trash2, User, Heart, Shield, Settings, ChevronDown, LogOut, Eye, EyeOff, Wallet, Search, Check, LockKeyhole, ShieldCheck } from "lucide-react";
 import StickyEditHeader from "../components/StickyEditHeader";
 import { FormField, FormSection, Switch, inputClass, monoInputClass } from "../components/FormSection";
 import { useTranslation } from "../i18n";
@@ -23,6 +23,7 @@ import SimpleSelect from "../components/SimpleSelect";
 import SingleSearchSelect from "../components/SingleSearchSelect";
 import SaveButton from "../components/SaveButton";
 import PasswordModal from "../components/PasswordModal";
+import UserPermissionOverview from "../components/UserPermissionOverview";
 import UnsavedBanner from "../components/UnsavedBanner";
 import { useUnsavedWarning } from "../hooks/useUnsavedWarning";
 
@@ -341,6 +342,7 @@ export default function UserEditPage() {
     { key: "profile", label: t("users.tab.profile" as any), icon: <Heart size={14} /> },
     { key: "security", label: t("users.tab.security" as any), icon: <Shield size={14} /> },
     { key: "finance", label: t("users.tab.finance" as any), icon: <Wallet size={14} /> },
+    { key: "permissions", label: t("authz.userPerms.tab" as any), icon: <ShieldCheck size={14} /> },
     ...(!isSelf ? [{ key: "admin", label: t("users.tab.admin" as any), icon: <Settings size={14} /> }] : []),
   ];
 
@@ -810,6 +812,7 @@ export default function UserEditPage() {
     profile: profileTab,
     security: securityTab,
     finance: financeTab,
+    permissions: user ? <UserPermissionOverview userOwner={user.owner} userName={user.name} /> : null,
     admin: adminTab,
   };
 

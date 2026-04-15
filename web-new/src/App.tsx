@@ -36,6 +36,8 @@ import CertEditPage from "./pages/CertEditPage";
 import KeyListPage from "./pages/KeyListPage";
 import KeyEditPage from "./pages/KeyEditPage";
 // Authorization
+import AuthorizationPage from "./pages/AuthorizationPage";
+import AppAuthorizationPage from "./pages/AppAuthorizationPage";
 import RoleListPage from "./pages/RoleListPage";
 import RoleEditPage from "./pages/RoleEditPage";
 import PermissionListPage from "./pages/PermissionListPage";
@@ -625,6 +627,8 @@ export default function App() {
       <EnableMfaNotification account={mfaAccount as any} justLoggedIn={justLoggedIn} onDismiss={() => setJustLoggedIn(false)} />
       <Routes>
         <Route path="/" element={<Dashboard />} />
+        <Route path="/authorization" element={<AuthorizationPage />} />
+        <Route path="/authorization/:owner/:appName" element={<AppAuthorizationPage />} />
         {entityRoutes}
         <Route path="/trees/:organizationName/:groupName" element={<GroupTreePage />} />
         <Route path="/trees/:organizationName" element={<GroupTreePage />} />

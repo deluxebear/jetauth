@@ -48,6 +48,7 @@ export const navGroups: NavGroupDef[] = [
     key: "/authorization-top",
     labelKey: "nav.authorization",
     items: [
+      { to: "/authorization", labelKey: "nav.authzManagement" as TranslationKeys, iconName: "ShieldCheck" },
       { to: "/roles", labelKey: "nav.roles", iconName: "Crown" },
       { to: "/permissions", labelKey: "nav.permissions", iconName: "ShieldCheck" },
       { to: "/models", labelKey: "nav.models", iconName: "Blocks" },

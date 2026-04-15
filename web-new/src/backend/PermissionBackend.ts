@@ -59,6 +59,39 @@ export function deletePermission(permission: Permission) {
   return request("POST", "/api/delete-permission", permission);
 }
 
+export function getPermissionsByRole(roleId: string) {
+  return request<Permission[]>(
+    "GET",
+    `/api/get-permissions-by-role?id=${encodeURIComponent(roleId)}`
+  );
+}
+
+export function enforce(params: {
+  permissionId?: string;
+  modelId?: string;
+  resourceId?: string;
+  enforcerId?: string;
+  owner?: string;
+}, casbinRequest: unknown[]) {
+  const qs = Object.entries(params)
+    .filter(([, v]) => v !== undefined && v !== "")
+    .map(([k, v]) => `${k}=${encodeURIComponent(String(v))}`)
+    .join("&");
+  return request<boolean[]>("POST", `/api/enforce?${qs}`, casbinRequest);
+}
+
+export function batchEnforce(params: {
+  permissionId?: string;
+  modelId?: string;
+  owner?: string;
+}, casbinRequests: unknown[][]) {
+  const qs = Object.entries(params)
+    .filter(([, v]) => v !== undefined && v !== "")
+    .map(([k, v]) => `${k}=${encodeURIComponent(String(v))}`)
+    .join("&");
+  return request<boolean[][]>("POST", `/api/batch-enforce?${qs}`, casbinRequests);
+}
+
 export function newPermission(owner: string): Permission {
   const rand = Math.random().toString(36).substring(2, 8);
   return {
