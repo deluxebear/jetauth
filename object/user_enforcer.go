@@ -4,9 +4,9 @@ import (
 	errors2 "errors"
 	"fmt"
 
-	"github.com/casbin/casbin/v2/errors"
+	"github.com/casbin/casbin/v3/errors"
 
-	"github.com/casbin/casbin/v2"
+	"github.com/casbin/casbin/v3"
 	"github.com/deluxebear/casdoor/util"
 )
 

@@ -132,7 +132,7 @@ func TestPermissionRuntimeGroupingIgnoresPersistedG(t *testing.T) {
 		t.Fatalf("expected exactly one persisted p rule, got %+v", rules)
 	}
 
-	allowed, err := Enforce(permission, []string{owner + "/alice", "data1", "read"})
+	allowed, err := Enforce(permission, []interface{}{owner + "/alice", "data1", "read"})
 	if err != nil {
 		t.Fatalf("Enforce() for alice error: %v", err)
 	}
@@ -150,7 +150,7 @@ func TestPermissionRuntimeGroupingIgnoresPersistedG(t *testing.T) {
 		t.Fatalf("failed to insert legacy g rule: %v", err)
 	}
 
-	allowed, err = Enforce(permission, []string{owner + "/mallory", "data1", "read"})
+	allowed, err = Enforce(permission, []interface{}{owner + "/mallory", "data1", "read"})
 	if err != nil {
 		t.Fatalf("Enforce() for mallory error: %v", err)
 	}
@@ -201,7 +201,7 @@ func TestUpdateRoleUsesRuntimeGroupingAndOnlyRenameRewritesP(t *testing.T) {
 		t.Fatalf("expected membership change to keep persisted permission rules unchanged")
 	}
 
-	allowed, err := Enforce(permission, []string{owner + "/alice", "data1", "read"})
+	allowed, err := Enforce(permission, []interface{}{owner + "/alice", "data1", "read"})
 	if err != nil {
 		t.Fatalf("Enforce() for alice after membership change error: %v", err)
 	}
@@ -209,7 +209,7 @@ func TestUpdateRoleUsesRuntimeGroupingAndOnlyRenameRewritesP(t *testing.T) {
 		t.Fatalf("expected alice to lose permission after membership change")
 	}
 
-	allowed, err = Enforce(permission, []string{owner + "/bob", "data1", "read"})
+	allowed, err = Enforce(permission, []interface{}{owner + "/bob", "data1", "read"})
 	if err != nil {
 		t.Fatalf("Enforce() for bob after membership change error: %v", err)
 	}
@@ -240,7 +240,7 @@ func TestUpdateRoleUsesRuntimeGroupingAndOnlyRenameRewritesP(t *testing.T) {
 		t.Fatalf("expected rename to rebuild persisted p rule with new role id, got %+v", rulesAfterRename)
 	}
 
-	allowed, err = Enforce(updatedPermission, []string{owner + "/bob", "data1", "read"})
+	allowed, err = Enforce(updatedPermission, []interface{}{owner + "/bob", "data1", "read"})
 	if err != nil {
 		t.Fatalf("Enforce() for bob after rename error: %v", err)
 	}
@@ -297,11 +297,19 @@ func TestPermissionEnforcerDeduplicatesRuntimeGroupingPoliciesAcross1000Permissi
 		t.Fatalf("getPermissionEnforcer() error: %v", err)
 	}
 
-	if len(enforcer.GetPolicy()) != permissionCount {
-		t.Fatalf("expected %d p rules in merged enforcer, got %d", permissionCount, len(enforcer.GetPolicy()))
+	policies, err := enforcer.GetPolicy()
+	if err != nil {
+		t.Fatalf("GetPolicy() error: %v", err)
 	}
-	if len(enforcer.GetGroupingPolicy()) != userCount {
-		t.Fatalf("expected deduplicated runtime g rules to stay at %d, got %d", userCount, len(enforcer.GetGroupingPolicy()))
+	if len(policies) != permissionCount {
+		t.Fatalf("expected %d p rules in merged enforcer, got %d", permissionCount, len(policies))
+	}
+	groupingPolicies, err := enforcer.GetGroupingPolicy()
+	if err != nil {
+		t.Fatalf("GetGroupingPolicy() error: %v", err)
+	}
+	if len(groupingPolicies) != userCount {
+		t.Fatalf("expected deduplicated runtime g rules to stay at %d, got %d", userCount, len(groupingPolicies))
 	}
 
 	allowed, err := enforcer.Enforce(users[userCount-1], "data1", "read")

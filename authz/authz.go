@@ -17,11 +17,11 @@ package authz
 import (
 	"strings"
 
-	"github.com/casbin/casbin/v2"
+	"github.com/casbin/casbin/v3"
 	"github.com/deluxebear/casdoor/conf"
 	"github.com/deluxebear/casdoor/object"
 	"github.com/deluxebear/casdoor/util"
-	stringadapter "github.com/qiangmzsx/string-adapter/v2"
+	stringadapter "github.com/deluxebear/casdoor/adapters/stringadapter"
 )
 
 var Enforcer *casbin.Enforcer

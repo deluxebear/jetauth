@@ -18,20 +18,19 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/casbin/casbin/v2"
-	"github.com/casbin/casbin/v2/config"
-	"github.com/casbin/casbin/v2/log"
-	"github.com/casbin/casbin/v2/model"
+	"github.com/casbin/casbin/v3"
+	"github.com/casbin/casbin/v3/config"
+	"github.com/casbin/casbin/v3/model"
 	"github.com/deluxebear/casdoor/conf"
 	"github.com/deluxebear/casdoor/util"
-	xormadapter "github.com/casdoor/xorm-adapter/v3"
+	xormadapter "github.com/deluxebear/casdoor/adapters/xormadapter"
 )
 
 func getPermissionEnforcer(p *Permission, permissionIDs ...string) (*casbin.Enforcer, error) {
 	// Init an enforcer instance without specifying a model or adapter.
 	// If you specify an adapter, it will load all policies, which is a
 	// heavy process that can slow down the application.
-	enforcer, err := casbin.NewEnforcer(&log.DefaultLogger{}, false)
+	enforcer, err := casbin.NewEnforcer()
 	if err != nil {
 		return nil, err
 	}
@@ -424,7 +423,10 @@ func GetAllObjects(userId string) ([]string, error) {
 
 	res := []string{}
 	for _, enforcer := range enforcers {
-		items := enforcer.GetAllObjects()
+		items, err := enforcer.GetAllObjects()
+		if err != nil {
+			return nil, err
+		}
 		res = append(res, items...)
 	}
 	return res, nil
@@ -438,7 +440,10 @@ func GetAllActions(userId string) ([]string, error) {
 
 	res := []string{}
 	for _, enforcer := range enforcers {
-		items := enforcer.GetAllActions()
+		items, err := enforcer.GetAllActions()
+		if err != nil {
+			return nil, err
+		}
 		res = append(res, items...)
 	}
 	return res, nil

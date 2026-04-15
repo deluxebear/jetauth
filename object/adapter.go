@@ -20,7 +20,7 @@ import (
 
 	"github.com/deluxebear/casdoor/conf"
 	"github.com/deluxebear/casdoor/util"
-	xormadapter "github.com/casdoor/xorm-adapter/v3"
+	xormadapter "github.com/deluxebear/casdoor/adapters/xormadapter"
 	"github.com/xorm-io/core"
 	"github.com/xorm-io/xorm"
 )
