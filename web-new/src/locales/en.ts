@@ -1916,7 +1916,12 @@ const en = {
   "roles.field.usersPlaceholder": "Select users...",
   "roles.field.groupsPlaceholder": "Select groups...",
   "roles.field.rolesPlaceholder": "Select roles...",
-  "roles.field.domainsPlaceholder": "Select domains...",
+  "roles.field.domainsPlaceholder": "Type a domain and press Enter...",
+  "roles.tooltip.users": "Users directly assigned to this role",
+  "roles.tooltip.groups": "User groups whose members automatically inherit this role",
+  "roles.tooltip.roles": "Sub-roles included in this role (role inheritance — permissions flow upward)",
+  "roles.tooltip.domains": "Domains/applications where this role is effective. Leave empty for global scope",
+  "roles.tooltip.isEnabled": "Disabled roles are ignored during permission checks",
 
   // Rules
   "rules.title": "Rules",

@@ -1997,7 +1997,12 @@ const zh: Record<string, string> = {
   "roles.field.usersPlaceholder": "选择用户...",
   "roles.field.groupsPlaceholder": "选择分组...",
   "roles.field.rolesPlaceholder": "选择角色...",
-  "roles.field.domainsPlaceholder": "选择域...",
+  "roles.field.domainsPlaceholder": "输入域名后按回车...",
+  "roles.tooltip.users": "直接分配到此角色的用户",
+  "roles.tooltip.groups": "成员自动继承此角色的用户组",
+  "roles.tooltip.roles": "包含在此角色中的子角色（角色继承 — 权限向上传递）",
+  "roles.tooltip.domains": "此角色生效的域名/应用范围。留空表示全局生效",
+  "roles.tooltip.isEnabled": "禁用的角色在权限检查时会被忽略",
 
   // Rules
   "rules.title": "规则管理",
