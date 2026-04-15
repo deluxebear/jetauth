@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Save, ArrowLeft, Trash2, LogOut, ExternalLink, Copy, ChevronDown, ShieldCheck, Bell, HardDrive, CreditCard, Wallet, MessageSquare, Smartphone, Key, Globe, Link, Settings } from "lucide-react";
+import { Save, ArrowLeft, Trash2, LogOut, ExternalLink, Copy, ChevronDown, ChevronRight, ShieldCheck, Bell, HardDrive, CreditCard, Wallet, MessageSquare, Smartphone, Key, Globe, Link, Settings, HelpCircle } from "lucide-react";
 import { FormField, FormSection, Switch, inputClass, monoInputClass } from "../components/FormSection";
 import SimpleSelect from "../components/SimpleSelect";
 import SingleSearchSelect from "../components/SingleSearchSelect";
@@ -54,7 +54,7 @@ const TYPE_BY_CATEGORY: Record<string, string[]> = {
   Captcha: ["Aliyun Captcha", "Cloudflare Turnstile", "Default", "GEETEST", "hCaptcha", "reCAPTCHA v2", "reCAPTCHA v3"],
   Web3: ["MetaMask", "Web3Onboard"],
   Notification: [
-    "Bark", "Discord", "DingTalk", "Google Chat", "Lark", "Line",
+    "Bark", "CUCloud", "Discord", "DingTalk", "Google Chat", "Lark", "Line",
     "Matrix", "Microsoft Teams", "Pushbullet", "Pushover",
     "Reddit", "Rocket Chat", "Slack", "Telegram", "Twitter",
     "Viber", "WeCom", "Webpush",
@@ -97,6 +97,15 @@ function getClientIdLabel(cat: string, type: string, t: (k: string) => string): 
     if (type === "Aliyun Captcha") return t("providers.label.accessKey" as any);
     return t("providers.label.siteKey" as any);
   }
+  if (cat === "Notification") {
+    if (type === "DingTalk") return t("providers.label.accessToken" as any);
+    if (type === "Webpush") return t("providers.label.publicKey" as any);
+    if (type === "Matrix") return t("providers.label.userId" as any);
+    if (type === "Twitter") return t("providers.label.consumerKey" as any);
+    if (type === "Viber") return t("providers.label.senderName" as any);
+    if (type === "CUCloud") return t("providers.label.accessKey" as any);
+    return t("providers.field.clientId");
+  }
   return t("providers.field.clientId");
 }
 
@@ -120,8 +129,19 @@ function getClientSecretLabel(cat: string, type: string, t: (k: string) => strin
     return t("providers.label.secretKey" as any);
   }
   if (cat === "Notification") {
-    if (["Line", "Telegram", "Bark", "DingTalk", "Discord", "Slack", "Pushover", "Pushbullet"].includes(type)) return t("providers.label.secretKey" as any);
-    if (["Lark", "Microsoft Teams", "WeCom"].includes(type)) return t("providers.field.endpoint" as any);
+    if (["Lark", "Microsoft Teams", "WeCom"].includes(type)) return t("providers.label.webhookUrl" as any);
+    if (type === "Telegram") return t("providers.label.apiToken" as any);
+    if (type === "Bark") return t("providers.label.deviceKey" as any);
+    if (type === "Pushover") return t("providers.label.appToken" as any);
+    if (type === "Pushbullet") return t("providers.label.apiToken" as any);
+    if (type === "Slack") return t("providers.label.apiToken" as any);
+    if (type === "Discord") return t("providers.label.botToken" as any);
+    if (type === "DingTalk") return t("providers.label.secretKey" as any);
+    if (type === "Line") return t("providers.label.channelSecret" as any);
+    if (type === "Matrix") return t("providers.label.accessToken" as any);
+    if (type === "Webpush") return t("providers.label.privateKey" as any);
+    if (type === "Viber") return t("providers.label.appKey" as any);
+    if (type === "CUCloud") return t("providers.label.secretKey" as any);
     return t("providers.field.clientSecret");
   }
   return t("providers.field.clientSecret");
@@ -140,6 +160,22 @@ function shouldHideCredentials(cat: string, type: string): boolean {
   return false;
 }
 
+// Whether to hide clientId in the credentials section (type only needs clientSecret)
+function shouldHideClientId(cat: string, type: string): boolean {
+  if (cat === "Email" && ["Azure ACS", "SendGrid", "Resend"].includes(type)) return true;
+  if (cat === "SMS" && type === "Azure ACS") return true;
+  if (cat === "Payment" && ["Polar", "Paddle", "Adyen"].includes(type)) return true;
+  // Notification types that only use clientSecret (no clientId in constructor)
+  if (cat === "Notification" && ["Telegram", "Lark", "Microsoft Teams", "Bark", "Pushover", "Pushbullet", "Slack", "Discord", "Line", "WeCom"].includes(type)) return true;
+  return false;
+}
+
+// Whether to hide clientSecret in the credentials section (type only needs clientId or cert)
+function shouldHideClientSecret(cat: string, type: string): boolean {
+  if (cat === "Payment" && type === "Alipay") return true; // Alipay uses cert, not clientSecret
+  return false;
+}
+
 function shouldShowClientId2(cat: string, type: string): boolean {
   if (cat === "Email") return true;
   return ["WeChat", "Apple", "Aliyun Captcha", "WeChat Pay", "Twitter", "Reddit", "CUCloud", "Adyen"].includes(type);
@@ -149,8 +185,12 @@ function getClientId2Label(cat: string, type: string, t: (k: string) => string):
   if (cat === "OAuth" && type === "Apple") return t("providers.label.keyId" as any);
   if (cat === "Email") return t("providers.label.fromAddress" as any);
   if (type === "Aliyun Captcha") return t("providers.label.scene" as any);
-  if (type === "WeChat Pay" || type === "CUCloud") return t("providers.label.appId" as any);
+  if (type === "WeChat Pay") return t("providers.label.appId" as any);
   if (type === "Adyen") return t("providers.label.merchantAccount" as any);
+  // Notification
+  if (cat === "Notification" && type === "Twitter") return t("providers.label.accessToken" as any);
+  if (cat === "Notification" && type === "Reddit") return t("providers.label.username" as any);
+  if (cat === "Notification" && type === "CUCloud") return t("providers.label.accountId" as any);
   return t("providers.label.clientId2" as any);
 }
 
@@ -158,6 +198,9 @@ function getClientSecret2Label(cat: string, type: string, t: (k: string) => stri
   if (cat === "OAuth" && type === "Apple") return t("providers.label.keyText" as any);
   if (cat === "Email") return t("providers.label.fromName" as any);
   if (type === "Aliyun Captcha") return t("providers.label.appKey" as any);
+  // Notification
+  if (cat === "Notification" && type === "Twitter") return t("providers.label.accessTokenSecret" as any);
+  if (cat === "Notification" && type === "Reddit") return t("providers.label.password" as any);
   return t("providers.label.clientSecret2" as any);
 }
 
@@ -167,13 +210,14 @@ function shouldHideClientSecret2(cat: string, type: string): boolean {
   return false;
 }
 
-function getAppIdLabel(cat: string, type: string): string | null {
+function getAppIdLabel(cat: string, type: string, t?: (k: string) => string): string | null {
   // OAuth
   if (type === "WeCom") return "Agent ID";
   if (type === "Infoflow") return "Agent ID";
   if (type === "AzureADB2C") return "User Flow";
   // SMS
-  if (type === "Twilio SMS" || type === "Azure ACS") return "Sender Number";
+  if (type === "Twilio SMS") return t ? t("providers.label.senderNumber" as any) : "Sender Number";
+  if (cat === "SMS" && type === "Azure ACS") return t ? t("providers.label.senderNumber" as any) : "Sender Number";
   if (type === "Tencent Cloud SMS") return "App ID";
   if (type === "Volc Engine SMS") return "SMS Account";
   if (type === "Huawei Cloud SMS") return "Channel No.";
@@ -181,11 +225,13 @@ function getAppIdLabel(cat: string, type: string): string | null {
   if (type === "Baidu Cloud SMS") return "Endpoint";
   if (type === "Infobip SMS") return "Base URL";
   if (type === "UCloud SMS") return "Project Id";
-  // Email
-  if (cat === "Email" && type === "SUBMAIL") return "App ID";
+  // Email — SUBMAIL uses SMTP, no appId needed
   // Notification
-  if (type === "Viber") return "Domain";
-  if (["Line", "Matrix", "Rocket Chat"].includes(type)) return "App Key";
+  if (cat === "Notification" && type === "Line") return t ? t("providers.label.accessToken" as any) : "Access Token";
+  if (cat === "Notification" && type === "Matrix") return t ? t("providers.label.roomId" as any) : "Room ID";
+  if (cat === "Notification" && type === "Rocket Chat") return t ? t("providers.field.endpoint" as any) : "Endpoint";
+  if (cat === "Notification" && type === "Viber") return t ? t("providers.label.webhookUrl" as any) : "Webhook URL";
+  if (cat === "Notification" && type === "CUCloud") return t ? t("providers.label.topicName" as any) : "Topic Name";
   return null;
 }
 
@@ -251,6 +297,9 @@ const PROVIDER_URLS: Record<string, string> = {
   "Microsoft Teams": "https://dev.teams.microsoft.com", Pushover: "https://pushover.net",
   "Google Chat": "https://chat.google.com", Reddit: "https://www.reddit.com/prefs/apps",
   Matrix: "https://matrix.org", Viber: "https://www.viber.com",
+  Pushbullet: "https://www.pushbullet.com", "Rocket Chat": "https://rocket.chat",
+  Webpush: "https://developer.mozilla.org/en-US/docs/Web/API/Push_API",
+  CUCloud: "https://www.cucloud.cn",
   // Web3
   Web3Onboard: "https://onboard.blocknative.com",
   // ID Verification
@@ -383,6 +432,7 @@ const LOCAL_ICONS: Record<string, string> = {
   "Notification:DingTalk": "brand:dingtalk.svg",
   "Notification:Lark": "brand:lark.svg",
   "Notification:Slack": "brand:slack-icon.svg",
+  "Notification:CUCloud": "brand:cucloud.png",
   "Notification:Custom HTTP": "local:globe",
   // Web3
   "Web3:MetaMask": "brand:metamask.png",
@@ -537,6 +587,7 @@ export default function ProviderEditPage() {
   const [captchaImg, setCaptchaImg] = useState("");
   const [captchaId, setCaptchaId] = useState("");
   const [captchaInput, setCaptchaInput] = useState("");
+  const [showNotifGuide, setShowNotifGuide] = useState(false);
 
   const invalidateList = () => queryClient.invalidateQueries({ queryKey: ["providers"] });
 
@@ -684,21 +735,27 @@ export default function ProviderEditPage() {
   const hideCredentials = shouldHideCredentials(category, type);
   const showClientId2 = shouldShowClientId2(category, type);
   const showSubType = !!SUBTYPES[type];
-  const appIdLabel = getAppIdLabel(category, type);
+  const appIdLabel = getAppIdLabel(category, type, t);
   const isOAuthLike = category === "OAuth" || category === "Web3" || category === "SAML";
   const isCustomOAuth = category === "OAuth" && type === "Custom";
 
   // ── Category-specific fields ──
   const renderCredentials = () => {
     if (hideCredentials) return null;
+    const hideClientId = shouldHideClientId(category, type);
+    const hideClientSecret = shouldHideClientSecret(category, type);
     return (
       <FormSection title={t("providers.section.credentials" as any)}>
-        <FormField label={getClientIdLabel(category, type, t)}>
-          <input value={String(prov.clientId ?? "")} onChange={(e) => set("clientId", e.target.value)} className={monoInputClass} />
-        </FormField>
-        <FormField label={getClientSecretLabel(category, type, t)}>
-          <input value={String(prov.clientSecret ?? "")} onChange={(e) => set("clientSecret", e.target.value)} type="password" className={monoInputClass} />
-        </FormField>
+        {!hideClientId && (
+          <FormField label={getClientIdLabel(category, type, t)}>
+            <input value={String(prov.clientId ?? "")} onChange={(e) => set("clientId", e.target.value)} className={monoInputClass} />
+          </FormField>
+        )}
+        {!hideClientSecret && (
+          <FormField label={getClientSecretLabel(category, type, t)}>
+            <input value={String(prov.clientSecret ?? "")} onChange={(e) => set("clientSecret", e.target.value)} type="password" className={monoInputClass} />
+          </FormField>
+        )}
         {showClientId2 && (
           <>
             <FormField label={getClientId2Label(category, type, t)}>
@@ -799,6 +856,15 @@ export default function ProviderEditPage() {
     }
   };
 
+  // Email type field requirements (from backend code analysis)
+  // SMTP (Default/SUBMAIL/Mailtrap): clientId(username) + clientSecret(password) + clientId2(from) + clientSecret2(fromName) + host + port + sslMode + enableProxy
+  // Azure ACS: clientSecret(key) + clientId2(from) + clientSecret2(fromName) + host(endpoint)
+  // SendGrid: clientSecret(apiKey) + clientId2(from) + clientSecret2(fromName) + host + endpoint
+  // Resend: clientSecret(apiKey) + clientId2(from) + clientSecret2(fromName)
+  // Custom HTTP Email: endpoint + method + httpHeaders + userMapping + enableProxy + clientId2(from) + clientSecret2(fromName)
+
+  const isSmtpEmail = !["Azure ACS", "SendGrid", "Resend", "Custom HTTP Email"].includes(type);
+
   const renderEmailFields = () => (
     <>
       {type === "Custom HTTP Email" ? (
@@ -809,6 +875,9 @@ export default function ProviderEditPage() {
             </FormField>
             <FormField label={t("providers.field.method" as any)}>
               <SimpleSelect value={String(prov.method ?? "POST")} options={[{ value: "GET", label: "GET" }, { value: "POST", label: "POST" }]} onChange={(v) => set("method", v)} />
+            </FormField>
+            <FormField label={t("providers.field.enableProxy" as any)}>
+              <Switch checked={!!prov.enableProxy} onChange={(v) => set("enableProxy", v)} />
             </FormField>
           </FormSection>
           <FormSection title={t("providers.section.httpHeaders" as any)}>
@@ -834,12 +903,14 @@ export default function ProviderEditPage() {
         </>
       ) : (
         <FormSection title={t("providers.section.emailConfig" as any)}>
+          {/* Host: SMTP + Azure ACS + SendGrid (not Resend) */}
           {type !== "Resend" && (
-            <FormField label={t("providers.field.host")}>
-              <input value={String(prov.host ?? "")} onChange={(e) => set("host", e.target.value)} className={inputClass} placeholder={t("help.placeholder.smtpHost" as any)} />
+            <FormField label={type === "Azure ACS" ? t("providers.field.endpoint") : t("providers.field.host")}>
+              <input value={String(prov.host ?? "")} onChange={(e) => set("host", e.target.value)} className={inputClass} placeholder={isSmtpEmail ? t("help.placeholder.smtpHost" as any) : ""} />
             </FormField>
           )}
-          {!["Azure ACS", "SendGrid", "Resend"].includes(type) && (
+          {/* Port + SSL: SMTP only */}
+          {isSmtpEmail && (
             <>
               <FormField label={t("providers.field.port")}>
                 <input type="number" value={String(prov.port ?? 465)} onChange={(e) => set("port", Number(e.target.value))} className={monoInputClass} />
@@ -851,11 +922,17 @@ export default function ProviderEditPage() {
                   { value: "Disable", label: t("providers.state.disabled" as any) },
                 ]} onChange={(v) => set("sslMode", v)} />
               </FormField>
+              <FormField label={t("providers.field.enableProxy" as any)}>
+                <Switch checked={!!prov.enableProxy} onChange={(v) => set("enableProxy", v)} />
+              </FormField>
             </>
           )}
-          <FormField label={t("providers.field.enableProxy" as any)}>
-            <Switch checked={!!prov.enableProxy} onChange={(v) => set("enableProxy", v)} />
-          </FormField>
+          {/* Endpoint: SendGrid only */}
+          {type === "SendGrid" && (
+            <FormField label={t("providers.field.endpoint")}>
+              <input value={String(prov.endpoint ?? "")} onChange={(e) => set("endpoint", e.target.value)} className={inputClass} />
+            </FormField>
+          )}
           <FormField label={t("providers.field.emailTitle" as any)} span="full">
             <input value={String(prov.title ?? "")} onChange={(e) => set("title", e.target.value)} className={inputClass} />
           </FormField>
@@ -925,6 +1002,12 @@ export default function ProviderEditPage() {
     </>
   );
 
+  // SMS type field requirements (from go-sms-sender analysis)
+  // SignName needed: Aliyun, Baidu, Huawei, OSON, SmsBao, Tencent, UCloud, Volc Engine
+  // SignName NOT needed: Amazon SNS, Azure ACS, Infobip, Msg91, SUBMAIL, Twilio
+  // AppId needed: Amazon SNS(Region), Azure ACS(Sender), Baidu(Endpoint), Huawei(Channel), Infobip(BaseURL), Tencent(AppID), Twilio(Sender), UCloud(ProjectId), Volc Engine(Account)
+  const smsNeedsSignName = ["Aliyun SMS", "Baidu Cloud SMS", "Huawei Cloud SMS", "OSON SMS", "SmsBao SMS", "Tencent Cloud SMS", "UCloud SMS", "Volc Engine SMS"].includes(type);
+
   const renderSmsFields = () => (
     <FormSection title={t("providers.section.smsConfig" as any)}>
       {type === "Mock SMS" && (
@@ -962,16 +1045,18 @@ export default function ProviderEditPage() {
             </FormField>
           ))}
         </>
-      ) : (
+      ) : type !== "Mock SMS" ? (
         <>
-          <FormField label={t("providers.field.signName" as any)}>
-            <input value={String(prov.signName ?? "")} onChange={(e) => set("signName", e.target.value)} className={inputClass} />
-          </FormField>
+          {smsNeedsSignName && (
+            <FormField label={t("providers.field.signName" as any)}>
+              <input value={String(prov.signName ?? "")} onChange={(e) => set("signName", e.target.value)} className={inputClass} />
+            </FormField>
+          )}
           <FormField label={t("providers.field.templateCode" as any)}>
             <input value={String(prov.templateCode ?? "")} onChange={(e) => set("templateCode", e.target.value)} className={monoInputClass} />
           </FormField>
         </>
-      )}
+      ) : null}
     </FormSection>
   );
 
@@ -1223,18 +1308,243 @@ export default function ProviderEditPage() {
     );
   };
 
-  const renderNotificationFields = () => (
-    <FormSection title={t("providers.section.notificationConfig" as any)}>
-      <FormField label={t("providers.field.receiver" as any)} span="full">
-        <input
-          value={String(prov.receiver ?? "")}
-          onChange={(e) => set("receiver", e.target.value)}
-          className={inputClass}
-          placeholder={["Telegram", "Pushover", "Pushbullet", "Slack", "Discord", "Line"].includes(type) ? "Chat ID" : "Endpoint"}
-        />
-      </FormField>
-    </FormSection>
-  );
+  // Notification: dynamic receiver label
+  const getNotificationReceiverLabel = (): string | null => {
+    if (["Telegram", "Pushover", "Pushbullet", "Slack", "Discord", "Line", "Twitter", "Reddit", "Rocket Chat", "Viber"].includes(type))
+      return t("providers.notif.chatId" as any);
+    if (["Custom HTTP", "Webpush", "Matrix"].includes(type))
+      return t("providers.field.endpoint" as any);
+    return null; // Google Chat, DingTalk, Lark, MS Teams, Bark, WeCom, CUCloud — no receiver
+  };
+
+  const sendTestNotification = async () => {
+    try {
+      // Auto-save first — the backend reads provider from DB, not from the request body
+      const saveRes = await ProvBackend.updateProvider(owner!, name!, prov as Provider);
+      if (saveRes.status !== "ok") {
+        modal.toast(friendlyError(saveRes.msg, t) || t("common.saveFailed" as any), "error");
+        return;
+      }
+      setSaved(true);
+      setOriginalJson(JSON.stringify(prov));
+      setIsAddMode(false);
+      invalidateList();
+
+      const res = await fetch(`/api/send-notification?provider=${encodeURIComponent(prov.name)}`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ content: prov.content, owner: prov.owner, name: prov.name }),
+      });
+      const data = await res.json();
+      if (data.status === "ok") {
+        modal.toast(t("providers.notif.sendSuccess" as any));
+      } else {
+        modal.toast(data.msg || t("common.saveFailed" as any), "error");
+      }
+    } catch (e: any) {
+      modal.toast(e?.message || t("common.saveFailed" as any), "error");
+    }
+  };
+
+  // Notification setup guide content per type
+  const g = (key: string) => t(`providers.notif.guide.${key}` as any);
+  const NOTIF_GUIDE: Record<string, { title: string; steps: string[]; links?: { label: string; url: string }[] }> = {
+    Telegram: {
+      title: g("telegram.title"),
+      steps: [g("telegram.step1"), g("telegram.step2"), g("telegram.step3"), g("telegram.step4")],
+      links: [{ label: "BotFather", url: "https://t.me/BotFather" }, { label: "@userinfobot", url: "https://t.me/userinfobot" }],
+    },
+    Discord: {
+      title: g("discord.title"),
+      steps: [g("discord.step1"), g("discord.step2"), g("discord.step3"), g("discord.step4"), g("discord.step5")],
+      links: [{ label: "Developer Portal", url: "https://discord.com/developers/applications" }],
+    },
+    "Google Chat": {
+      title: g("googleChat.title"),
+      steps: [g("googleChat.step1"), g("googleChat.step2"), g("googleChat.step3"), g("googleChat.step4")],
+      links: [{ label: "Google Cloud Console", url: "https://console.cloud.google.com" }],
+    },
+    DingTalk: {
+      title: g("dingtalk.title"),
+      steps: [g("dingtalk.step1"), g("dingtalk.step2"), g("dingtalk.step3")],
+      links: [{ label: "DingTalk Open Platform", url: "https://open-dev.dingtalk.com" }],
+    },
+    Lark: {
+      title: g("lark.title"),
+      steps: [g("lark.step1"), g("lark.step2")],
+    },
+    "Microsoft Teams": {
+      title: g("teams.title"),
+      steps: [g("teams.step1"), g("teams.step2")],
+    },
+    Bark: {
+      title: g("bark.title"),
+      steps: [g("bark.step1"), g("bark.step2"), g("bark.step3")],
+      links: [{ label: "Bark App", url: "https://bark.day.app" }],
+    },
+    Pushover: {
+      title: g("pushover.title"),
+      steps: [g("pushover.step1"), g("pushover.step2"), g("pushover.step3")],
+      links: [{ label: "Pushover", url: "https://pushover.net" }],
+    },
+    Pushbullet: {
+      title: g("pushbullet.title"),
+      steps: [g("pushbullet.step1"), g("pushbullet.step2"), g("pushbullet.step3")],
+      links: [{ label: "Pushbullet Settings", url: "https://www.pushbullet.com/#settings/account" }],
+    },
+    Slack: {
+      title: g("slack.title"),
+      steps: [g("slack.step1"), g("slack.step2"), g("slack.step3"), g("slack.step4")],
+      links: [{ label: "Slack API", url: "https://api.slack.com/apps" }],
+    },
+    Webpush: {
+      title: g("webpush.title"),
+      steps: [g("webpush.step1"), g("webpush.step2"), g("webpush.step3")],
+    },
+    Line: {
+      title: g("line.title"),
+      steps: [g("line.step1"), g("line.step2"), g("line.step3"), g("line.step4")],
+      links: [{ label: "LINE Developers", url: "https://developers.line.biz/console" }],
+    },
+    Matrix: {
+      title: g("matrix.title"),
+      steps: [g("matrix.step1"), g("matrix.step2"), g("matrix.step3"), g("matrix.step4")],
+    },
+    Twitter: {
+      title: g("twitter.title"),
+      steps: [g("twitter.step1"), g("twitter.step2"), g("twitter.step3")],
+      links: [{ label: "Twitter Developer Portal", url: "https://developer.twitter.com/en/portal" }],
+    },
+    Reddit: {
+      title: g("reddit.title"),
+      steps: [g("reddit.step1"), g("reddit.step2"), g("reddit.step3")],
+      links: [{ label: "Reddit Apps", url: "https://www.reddit.com/prefs/apps" }],
+    },
+    "Rocket Chat": {
+      title: g("rocketchat.title"),
+      steps: [g("rocketchat.step1"), g("rocketchat.step2"), g("rocketchat.step3")],
+    },
+    Viber: {
+      title: g("viber.title"),
+      steps: [g("viber.step1"), g("viber.step2"), g("viber.step3")],
+      links: [{ label: "Viber Admin Panel", url: "https://partners.viber.com" }],
+    },
+    WeCom: {
+      title: g("wecom.title"),
+      steps: [g("wecom.step1"), g("wecom.step2")],
+    },
+    "Custom HTTP": {
+      title: g("customhttp.title"),
+      steps: [g("customhttp.step1"), g("customhttp.step2"), g("customhttp.step3")],
+    },
+  };
+
+  const renderNotificationFields = () => {
+    const receiverLabel = getNotificationReceiverLabel();
+    const showMethod = type === "Custom HTTP";
+    const showParameter = ["Custom HTTP", "CUCloud"].includes(type);
+    const showMetadata = ["Google Chat", "CUCloud"].includes(type);
+    const showRegionId = type === "CUCloud";
+    const guide = NOTIF_GUIDE[type];
+
+    return (
+      <FormSection title={t("providers.section.notificationConfig" as any)}>
+        {guide && (
+          <div className="col-span-full">
+            <button
+              onClick={() => setShowNotifGuide(!showNotifGuide)}
+              className="inline-flex items-center gap-1.5 text-[12px] text-accent hover:text-accent-hover transition-colors"
+            >
+              <HelpCircle size={13} />
+              <span>{t("providers.notif.guideToggle" as any)}</span>
+              <ChevronRight size={12} className={`transition-transform duration-200 ${showNotifGuide ? "rotate-90" : ""}`} />
+            </button>
+            {showNotifGuide && (
+              <div className="mt-2 rounded-lg border border-accent/20 bg-accent/5 px-4 py-3">
+                <h4 className="text-[13px] font-semibold text-text-primary mb-2">{guide.title}</h4>
+                <ol className="space-y-1.5 text-[12px] text-text-secondary list-decimal list-inside">
+                  {guide.steps.map((step, i) => (
+                    <li key={i} className="leading-relaxed">{step}</li>
+                  ))}
+                </ol>
+                {guide.links && guide.links.length > 0 && (
+                  <div className="mt-2.5 flex flex-wrap gap-3">
+                    {guide.links.map((link, i) => (
+                      <a key={i} href={link.url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-[11px] text-accent hover:text-accent-hover transition-colors">
+                        <ExternalLink size={10} />{link.label}
+                      </a>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+        {showRegionId && (
+          <FormField label={t("providers.notif.regionId" as any)}>
+            <input value={String(prov.regionId ?? "")} onChange={(e) => set("regionId", e.target.value)} className={inputClass} />
+          </FormField>
+        )}
+        {showMethod && (
+          <FormField label={t("providers.field.method" as any)}>
+            <SimpleSelect
+              value={String(prov.method ?? "GET")}
+              options={[{ value: "GET", label: "GET" }, { value: "POST", label: "POST" }]}
+              onChange={(v) => set("method", v)}
+            />
+          </FormField>
+        )}
+        {showParameter && (
+          <FormField label={t("providers.notif.parameter" as any)}>
+            <input value={String(prov.title ?? "")} onChange={(e) => set("title", e.target.value)} className={inputClass} />
+          </FormField>
+        )}
+        {showMetadata && (
+          <FormField label={t("providers.notif.metadata" as any)} span="full">
+            <textarea
+              rows={4}
+              value={String(prov.metadata ?? "")}
+              onChange={(e) => set("metadata", e.target.value)}
+              className={`${inputClass} resize-y`}
+            />
+          </FormField>
+        )}
+        <FormField label={t("providers.notif.content" as any)} span="full">
+          <textarea
+            rows={3}
+            value={String(prov.content ?? "")}
+            onChange={(e) => set("content", e.target.value)}
+            className={`${inputClass} resize-y`}
+          />
+        </FormField>
+        {/* Receiver + Test button row */}
+        <div className="col-span-full flex items-end gap-3">
+          {receiverLabel && (
+            <div className="flex-1">
+              <label className="block text-[13px] font-medium text-text-secondary mb-1.5">{receiverLabel}</label>
+              <input
+                value={String(prov.receiver ?? "")}
+                onChange={(e) => set("receiver", e.target.value)}
+                className={inputClass}
+              />
+            </div>
+          )}
+          <button
+            onClick={sendTestNotification}
+            className="rounded-lg bg-accent px-4 py-2 text-[13px] font-semibold text-white hover:bg-accent-hover transition-colors whitespace-nowrap shrink-0"
+          >
+            {t("providers.notif.sendTest" as any)}
+          </button>
+        </div>
+        {isAddMode && (
+          <p className="col-span-full text-[12px] text-text-muted">
+            {t("providers.notif.autoSaveHint" as any)}
+          </p>
+        )}
+      </FormSection>
+    );
+  };
 
   const renderMfaFields = () => (
     <FormSection title={t("providers.section.mfaConfig" as any)}>

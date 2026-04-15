@@ -1,16 +1,19 @@
 import type { ReactNode } from "react";
+import { Info } from "lucide-react";
 
 // Reusable form field wrapper
 export function FormField({
   label,
   required,
   help,
+  tooltip,
   span = "half",
   children,
 }: {
   label: string;
   required?: boolean;
   help?: string;
+  tooltip?: string;
   span?: "full" | "half";
   children: ReactNode;
 }) {
@@ -19,6 +22,14 @@ export function FormField({
       <label className="block text-[12px] font-medium text-text-secondary mb-1.5">
         {label}
         {required && <span className="text-danger ml-0.5">*</span>}
+        {tooltip && (
+          <span className="relative inline-flex ml-1 align-middle group">
+            <Info size={12} className="text-text-muted cursor-help" />
+            <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 w-max max-w-[240px] rounded-lg bg-surface-4 px-2.5 py-1.5 text-[11px] text-text-primary shadow-lg opacity-0 group-hover:opacity-100 transition-opacity z-50">
+              {tooltip}
+            </span>
+          </span>
+        )}
       </label>
       {children}
       {help && <p className="text-[11px] text-text-muted mt-1">{help}</p>}

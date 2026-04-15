@@ -237,7 +237,12 @@ func (c *ApiController) GetProviderFromContext(category string) (*object.Provide
 	}
 
 	if providerName != "" {
-		provider, err := object.GetProvider(util.GetId("admin", providerName))
+		// Support both "name" and "owner/name" formats
+		providerId := util.GetId("admin", providerName)
+		if strings.Contains(providerName, "/") {
+			providerId = providerName
+		}
+		provider, err := object.GetProvider(providerId)
 		if err != nil {
 			return nil, err
 		}
