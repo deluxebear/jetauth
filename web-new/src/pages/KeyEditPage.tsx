@@ -241,10 +241,10 @@ export default function KeyEditPage() {
           <input value={key.accessKey} disabled className={monoInputClass} />
         </FormField>
         <FormField label={t("keys.field.accessSecret" as any)} tooltip={t("keys.tooltip.accessSecret" as any)}>
-          <div className="flex gap-2">
-            <input type={showSecret ? "text" : "password"} value={key.accessSecret} disabled className={`${monoInputClass} flex-1`} />
-            <button type="button" onClick={() => setShowSecret(!showSecret)} className="rounded-lg border border-border p-2 text-text-muted hover:bg-surface-2 transition-colors">
-              {showSecret ? <EyeOff size={14} /> : <Eye size={14} />}
+          <div className="relative">
+            <input type={showSecret ? "text" : "password"} value={key.accessSecret} disabled className={`${monoInputClass} pr-10`} />
+            <button type="button" onClick={() => setShowSecret(!showSecret)} className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-text-muted hover:text-text-secondary transition-colors">
+              {showSecret ? <EyeOff size={15} /> : <Eye size={15} />}
             </button>
           </div>
         </FormField>
