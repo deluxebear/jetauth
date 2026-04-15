@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ArrowLeft, Trash2, Copy, Download, LogOut, RefreshCw } from "lucide-react";
+import { Trash2, Copy, Download, LogOut, RefreshCw } from "lucide-react";
 import { FormField, FormSection, inputClass, monoInputClass } from "../components/FormSection";
 import { useTranslation } from "../i18n";
 import { useModal } from "../components/Modal";
@@ -16,6 +16,7 @@ import SaveButton from "../components/SaveButton";
 import UnsavedBanner from "../components/UnsavedBanner";
 import { useUnsavedWarning } from "../hooks/useUnsavedWarning";
 import { getStoredAccount, isGlobalAdmin } from "../utils/auth";
+import StickyEditHeader from "../components/StickyEditHeader";
 
 const SCOPE_OPTIONS = [{ id: "JWT", name: "JWT" }];
 const TYPE_OPTIONS = [
@@ -248,34 +249,22 @@ export default function CertEditPage() {
   const showBitSize = !isECDSA && !isSSL;
   const algorithmOptions = isSSL ? SSL_ALGORITHMS : NON_SSL_ALGORITHMS;
 
-  const saveButtons = (
-    <div className="flex items-center gap-2">
-      <button onClick={handleDelete} className="flex items-center gap-1.5 rounded-lg border border-danger/30 px-3 py-2 text-[13px] font-medium text-danger hover:bg-danger/10 transition-colors">
-        <Trash2 size={14} /> {t("common.delete")}
-      </button>
-      <SaveButton onClick={handleSave} saving={saving} saved={saved} label={t("common.save")} />
-      <button onClick={handleSaveAndExit} disabled={saving} className="flex items-center gap-1.5 rounded-lg bg-accent px-4 py-2 text-[13px] font-semibold text-white hover:bg-accent-hover disabled:opacity-50 transition-colors">
-        {saving ? <div className="h-3.5 w-3.5 rounded-full border-2 border-white/30 border-t-white animate-spin" /> : <LogOut size={14} />}
-        {t("common.saveAndExit" as any)}
-      </button>
-    </div>
-  );
-
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <button onClick={handleBack} className="rounded-lg p-1.5 text-text-muted hover:bg-surface-2 transition-colors">
-            <ArrowLeft size={18} />
-          </button>
-          <div>
-            <h1 className="text-xl font-bold tracking-tight">{isAddMode ? t("common.add") : t("common.edit")} {t("certs.title" as any)}</h1>
-            <p className="text-[13px] text-text-muted font-mono mt-0.5">{owner}/{name}</p>
-          </div>
-        </div>
-        {saveButtons}
-      </div>
+      <StickyEditHeader
+        title={`${isAddMode ? t("common.add") : t("common.edit")} ${t("certs.title" as any)}`}
+        subtitle={`${owner}/${name}`}
+        onBack={handleBack}
+      >
+        <button onClick={handleDelete} className="flex items-center gap-1.5 rounded-lg border border-danger/30 px-3 py-2 text-[13px] font-medium text-danger hover:bg-danger/10 transition-colors">
+          <Trash2 size={14} /> {t("common.delete")}
+        </button>
+        <SaveButton onClick={handleSave} saving={saving} saved={saved} label={t("common.save")} />
+        <button onClick={handleSaveAndExit} disabled={saving} className="flex items-center gap-1.5 rounded-lg bg-accent px-4 py-2 text-[13px] font-semibold text-white hover:bg-accent-hover disabled:opacity-50 transition-colors">
+          {saving ? <div className="h-3.5 w-3.5 rounded-full border-2 border-white/30 border-t-white animate-spin" /> : <LogOut size={14} />}
+          {t("common.saveAndExit" as any)}
+        </button>
+      </StickyEditHeader>
 
       {showBanner && <UnsavedBanner isAddMode={isAddMode} />}
 
@@ -394,10 +383,6 @@ export default function CertEditPage() {
         </div>
       </FormSection>
 
-      {/* Bottom save buttons */}
-      <div className="flex items-center justify-end pt-2 pb-8">
-        {saveButtons}
-      </div>
     </motion.div>
   );
 }
