@@ -787,6 +787,43 @@ export default function ProviderEditPage() {
   const gk = (key: string) => t(`providers.guide.${key}` as any);
   type GuideEntry = { title: string; steps: string[]; links?: { label: string; url: string }[] };
   const PROVIDER_GUIDE: Record<string, GuideEntry> = {
+    // OAuth
+    "OAuth:Google": { title: gk("google.title"), steps: [gk("google.step1"), gk("google.step2"), gk("google.step3")], links: [{ label: "Google Cloud Console", url: "https://console.cloud.google.com/apis/credentials" }] },
+    "OAuth:GitHub": { title: gk("github.title"), steps: [gk("github.step1"), gk("github.step2"), gk("github.step3")], links: [{ label: "GitHub Developer Settings", url: "https://github.com/settings/developers" }] },
+    "OAuth:Facebook": { title: gk("facebook.title"), steps: [gk("facebook.step1"), gk("facebook.step2"), gk("facebook.step3")], links: [{ label: "Meta for Developers", url: "https://developers.facebook.com/apps" }] },
+    "OAuth:Twitter": { title: gk("twitter.title"), steps: [gk("twitter.step1"), gk("twitter.step2"), gk("twitter.step3")], links: [{ label: "Twitter Developer Portal", url: "https://developer.twitter.com/en/portal" }] },
+    "OAuth:LinkedIn": { title: gk("linkedin.title"), steps: [gk("linkedin.step1"), gk("linkedin.step2"), gk("linkedin.step3")], links: [{ label: "LinkedIn Developer", url: "https://www.linkedin.com/developers/apps" }] },
+    "OAuth:Apple": { title: gk("apple.title"), steps: [gk("apple.step1"), gk("apple.step2"), gk("apple.step3"), gk("apple.step4")], links: [{ label: "Apple Developer", url: "https://developer.apple.com/account" }] },
+    "OAuth:Discord": { title: gk("discord.title"), steps: [gk("discord.step1"), gk("discord.step2"), gk("discord.step3")], links: [{ label: "Discord Developer Portal", url: "https://discord.com/developers/applications" }] },
+    "OAuth:GitLab": { title: gk("gitlab.title"), steps: [gk("gitlab.step1"), gk("gitlab.step2"), gk("gitlab.step3")], links: [{ label: "GitLab Applications", url: "https://gitlab.com/-/profile/applications" }] },
+    "OAuth:Slack": { title: gk("oauthSlack.title"), steps: [gk("oauthSlack.step1"), gk("oauthSlack.step2"), gk("oauthSlack.step3")], links: [{ label: "Slack API", url: "https://api.slack.com/apps" }] },
+    "OAuth:AzureAD": { title: gk("azuread.title"), steps: [gk("azuread.step1"), gk("azuread.step2"), gk("azuread.step3")], links: [{ label: "Azure Portal", url: "https://portal.azure.com/#blade/Microsoft_AAD_RegisteredApps" }] },
+    "OAuth:AzureADB2C": { title: gk("azureadb2c.title"), steps: [gk("azureadb2c.step1"), gk("azureadb2c.step2"), gk("azureadb2c.step3")], links: [{ label: "Azure Portal", url: "https://portal.azure.com/#blade/Microsoft_AAD_RegisteredApps" }] },
+    "OAuth:WeChat": { title: gk("wechat.title"), steps: [gk("wechat.step1"), gk("wechat.step2"), gk("wechat.step3")], links: [{ label: "WeChat Open Platform", url: "https://open.weixin.qq.com" }] },
+    "OAuth:DingTalk": { title: gk("oauthDingtalk.title"), steps: [gk("oauthDingtalk.step1"), gk("oauthDingtalk.step2"), gk("oauthDingtalk.step3")], links: [{ label: "DingTalk Open Platform", url: "https://open-dev.dingtalk.com" }] },
+    "OAuth:Lark": { title: gk("oauthLark.title"), steps: [gk("oauthLark.step1"), gk("oauthLark.step2"), gk("oauthLark.step3")], links: [{ label: "Lark Open Platform", url: "https://open.larksuite.com" }] },
+    "OAuth:WeCom": { title: gk("oauthWecom.title"), steps: [gk("oauthWecom.step1"), gk("oauthWecom.step2"), gk("oauthWecom.step3")], links: [{ label: "WeCom Admin", url: "https://work.weixin.qq.com" }] },
+    "OAuth:Telegram": { title: gk("oauthTelegram.title"), steps: [gk("oauthTelegram.step1"), gk("oauthTelegram.step2")], links: [{ label: "Telegram Bots", url: "https://core.telegram.org/bots" }] },
+    "OAuth:Okta": { title: gk("okta.title"), steps: [gk("okta.step1"), gk("okta.step2"), gk("okta.step3")], links: [{ label: "Okta Developer", url: "https://developer.okta.com" }] },
+    "OAuth:Auth0": { title: gk("auth0.title"), steps: [gk("auth0.step1"), gk("auth0.step2"), gk("auth0.step3")], links: [{ label: "Auth0 Dashboard", url: "https://manage.auth0.com" }] },
+    "OAuth:Baidu": { title: gk("baidu.title"), steps: [gk("baidu.step1"), gk("baidu.step2")], links: [{ label: "Baidu Developer", url: "https://developer.baidu.com/console" }] },
+    "OAuth:Alipay": { title: gk("oauthAlipay.title"), steps: [gk("oauthAlipay.step1"), gk("oauthAlipay.step2")], links: [{ label: "Alipay Open Platform", url: "https://open.alipay.com" }] },
+    "OAuth:QQ": { title: gk("qq.title"), steps: [gk("qq.step1"), gk("qq.step2"), gk("qq.step3")], links: [{ label: "QQ Connect", url: "https://connect.qq.com" }] },
+    "OAuth:Gitee": { title: gk("gitee.title"), steps: [gk("gitee.step1"), gk("gitee.step2")], links: [{ label: "Gitee OAuth", url: "https://gitee.com/oauth/applications" }] },
+    "OAuth:Gitea": { title: gk("gitea.title"), steps: [gk("gitea.step1"), gk("gitea.step2")] },
+    "OAuth:Spotify": { title: gk("spotify.title"), steps: [gk("spotify.step1"), gk("spotify.step2"), gk("spotify.step3")], links: [{ label: "Spotify Developer", url: "https://developer.spotify.com/dashboard" }] },
+    "OAuth:Amazon": { title: gk("amazon.title"), steps: [gk("amazon.step1"), gk("amazon.step2"), gk("amazon.step3")], links: [{ label: "Login with Amazon", url: "https://developer.amazon.com/loginwithamazon/console" }] },
+    "OAuth:Line": { title: gk("oauthLine.title"), steps: [gk("oauthLine.step1"), gk("oauthLine.step2"), gk("oauthLine.step3")], links: [{ label: "LINE Developers", url: "https://developers.line.biz/console" }] },
+    "OAuth:Bitbucket": { title: gk("bitbucket.title"), steps: [gk("bitbucket.step1"), gk("bitbucket.step2")], links: [{ label: "Bitbucket Settings", url: "https://bitbucket.org/account/settings/app-passwords" }] },
+    "OAuth:Zoom": { title: gk("zoom.title"), steps: [gk("zoom.step1"), gk("zoom.step2"), gk("zoom.step3")], links: [{ label: "Zoom Marketplace", url: "https://marketplace.zoom.us" }] },
+    "OAuth:Kakao": { title: gk("kakao.title"), steps: [gk("kakao.step1"), gk("kakao.step2")], links: [{ label: "Kakao Developers", url: "https://developers.kakao.com" }] },
+    "OAuth:TikTok": { title: gk("tiktok.title"), steps: [gk("tiktok.step1"), gk("tiktok.step2")], links: [{ label: "TikTok for Developers", url: "https://developers.tiktok.com" }] },
+    "OAuth:Bilibili": { title: gk("bilibili.title"), steps: [gk("bilibili.step1"), gk("bilibili.step2")], links: [{ label: "Bilibili Open Platform", url: "https://open.bilibili.com" }] },
+    "OAuth:Steam": { title: gk("steam.title"), steps: [gk("steam.step1"), gk("steam.step2")], links: [{ label: "Steam Web API Key", url: "https://steamcommunity.com/dev/apikey" }] },
+    "OAuth:Instagram": { title: gk("instagram.title"), steps: [gk("instagram.step1"), gk("instagram.step2"), gk("instagram.step3")], links: [{ label: "Meta for Developers", url: "https://developers.facebook.com/apps" }] },
+    "OAuth:PayPal": { title: gk("oauthPaypal.title"), steps: [gk("oauthPaypal.step1"), gk("oauthPaypal.step2")], links: [{ label: "PayPal Developer", url: "https://developer.paypal.com/developer/applications" }] },
+    "OAuth:VK": { title: gk("vk.title"), steps: [gk("vk.step1"), gk("vk.step2")], links: [{ label: "VK Apps", url: "https://vk.com/apps?act=manage" }] },
+    "OAuth:Custom": { title: gk("customOauth.title"), steps: [gk("customOauth.step1"), gk("customOauth.step2"), gk("customOauth.step3")] },
     // Captcha
     "reCAPTCHA v2": { title: gk("recaptcha.title"), steps: [gk("recaptcha.step1"), gk("recaptcha.step2"), gk("recaptcha.step3")], links: [{ label: "Google reCAPTCHA", url: "https://www.google.com/recaptcha/admin" }] },
     "reCAPTCHA v3": { title: gk("recaptcha.title"), steps: [gk("recaptcha.step1"), gk("recaptcha.step2"), gk("recaptcha.step3")], links: [{ label: "Google reCAPTCHA", url: "https://www.google.com/recaptcha/admin" }] },
@@ -853,9 +890,15 @@ export default function ProviderEditPage() {
 
   const renderOAuthFields = () => (
     <>
+      {getGuide() && !isCustomOAuth && (
+        <FormSection title={t("providers.section.oauthConfig" as any)}>
+          {renderGuide()}
+        </FormSection>
+      )}
       {isCustomOAuth && (
         <>
           <FormSection title={t("providers.section.customOAuth" as any)}>
+            {renderGuide()}
             <FormField label={t("providers.field.customAuthUrl" as any)} span="full">
               <input value={String(prov.customAuthUrl ?? "")} onChange={(e) => set("customAuthUrl", e.target.value)} className={inputClass} placeholder="https://example.com/oauth/authorize" />
             </FormField>

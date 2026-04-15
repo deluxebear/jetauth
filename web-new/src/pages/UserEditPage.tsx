@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate, useLocation, Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Save, ArrowLeft, Trash2, User, Heart, Shield, Settings, ChevronDown, LogOut, Eye, EyeOff, Wallet, Search, Check, LockKeyhole } from "lucide-react";
+import { Save, Trash2, User, Heart, Shield, Settings, ChevronDown, LogOut, Eye, EyeOff, Wallet, Search, Check, LockKeyhole } from "lucide-react";
+import StickyEditHeader from "../components/StickyEditHeader";
 import { FormField, FormSection, Switch, inputClass, monoInputClass } from "../components/FormSection";
 import { useTranslation } from "../i18n";
 import { useOrganization } from "../OrganizationContext";
@@ -814,23 +815,11 @@ export default function UserEditPage() {
 
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-5 ">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          {!isSelf && (
-            <button onClick={handleBack} className="rounded-lg p-1.5 text-text-muted hover:bg-surface-2 transition-colors">
-              <ArrowLeft size={18} />
-            </button>
-          )}
-          <div className="flex items-center gap-3">
-            {imgPreview(user.avatar)}
-            <div>
-              <h1 className="text-xl font-bold tracking-tight">{isSelf ? t("users.myProfile" as any) : `${isAddMode ? t("common.add") : t("common.edit")} ${t("users.title" as any)}`}</h1>
-              {!isSelf && <p className="text-[13px] text-text-muted font-mono mt-0.5">{owner}/{name}</p>}
-            </div>
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
+      <StickyEditHeader
+        title={isSelf ? t("users.myProfile" as any) : `${isAddMode ? t("common.add") : t("common.edit")} ${t("users.title" as any)}`}
+        subtitle={!isSelf ? `${owner}/${name}` : undefined}
+        onBack={handleBack}
+      >
           {!isBuiltInAdmin && !isSelf && (
             <button onClick={handleDelete} className="flex items-center gap-1.5 rounded-lg border border-danger/30 px-3 py-2 text-[13px] font-medium text-danger hover:bg-danger/10 transition-colors">
               <Trash2 size={14} /> {t("common.delete")}
@@ -841,8 +830,7 @@ export default function UserEditPage() {
             {saving ? <div className="h-3.5 w-3.5 rounded-full border-2 border-white/30 border-t-white animate-spin" /> : <LogOut size={14} />}
             {t("common.saveAndExit" as any)}
           </button>
-        </div>
-      </div>
+      </StickyEditHeader>
 
       {showBanner && <UnsavedBanner isAddMode={isAddMode} />}
 

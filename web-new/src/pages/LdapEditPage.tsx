@@ -1,7 +1,8 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Save, ArrowLeft, RefreshCw, LogOut, Plus, X } from "lucide-react";
+import { Save, RefreshCw, LogOut, Plus, X } from "lucide-react";
+import StickyEditHeader from "../components/StickyEditHeader";
 import { FormField, FormSection, Switch, inputClass, monoInputClass } from "../components/FormSection";
 import SimpleSelect from "../components/SimpleSelect";
 import { useTranslation } from "../i18n";
@@ -81,6 +82,8 @@ export default function LdapEditPage() {
   const set = (key: string, val: unknown) =>
     setLdap((prev) => prev ? { ...prev, [key]: val } : prev);
 
+  const handleBack = () => navigate(-1);
+
   const handleSave = async () => {
     setSaving(true);
     try {
@@ -135,18 +138,11 @@ export default function LdapEditPage() {
 
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-5 ">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <button onClick={() => navigate(-1)} className="rounded-lg p-1.5 text-text-muted hover:bg-surface-2 transition-colors">
-            <ArrowLeft size={18} />
-          </button>
-          <div>
-            <h1 className="text-xl font-bold tracking-tight">{t("common.edit")} {t("ldap.title" as any)}</h1>
-            <p className="text-[13px] text-text-muted font-mono mt-0.5">{owner}/{id}</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
+      <StickyEditHeader
+        title={`${t("common.edit")} ${t("ldap.title" as any)}`}
+        subtitle={`${owner}/${id}`}
+        onBack={handleBack}
+      >
           <button onClick={() => navigate(`/ldap/sync/${owner}/${id}`)} className="flex items-center gap-1.5 rounded-lg border border-accent px-3 py-2 text-[13px] font-medium text-accent hover:bg-accent/10 transition-colors">
             <RefreshCw size={14} /> {t("ldap.syncLdap" as any)}
           </button>
@@ -155,8 +151,7 @@ export default function LdapEditPage() {
             {saving ? <div className="h-3.5 w-3.5 rounded-full border-2 border-white/30 border-t-white animate-spin" /> : <LogOut size={14} />}
             {t("common.saveAndExit")}
           </button>
-        </div>
-      </div>
+      </StickyEditHeader>
 
       {showBanner && <UnsavedBanner isAddMode={isAddMode} />}
 

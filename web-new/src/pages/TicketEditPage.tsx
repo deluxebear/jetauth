@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Save, LogOut, ArrowLeft, Trash2, Send, X } from "lucide-react";
+import { Save, LogOut, Trash2, Send, X } from "lucide-react";
+import StickyEditHeader from "../components/StickyEditHeader";
 import { FormField, FormSection, inputClass, monoInputClass } from "../components/FormSection";
 import { useTranslation } from "../i18n";
 import { useModal } from "../components/Modal";
@@ -117,6 +118,11 @@ export default function TicketEditPage() {
     }
   };
 
+  const handleBack = () => {
+    if (isAddMode) handleCancel();
+    else navigate("/tickets");
+  };
+
   // Delete (edit mode) — confirm then delete
   const handleDelete = () => {
     modal.showConfirm(t("common.confirmDelete"), async () => {
@@ -154,20 +160,11 @@ export default function TicketEditPage() {
 
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-6 ">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <button onClick={() => isAddMode ? handleCancel() : navigate("/tickets")} className="rounded-lg p-1.5 text-text-muted hover:bg-surface-2 transition-colors">
-            <ArrowLeft size={18} />
-          </button>
-          <div>
-            <h1 className="text-xl font-bold tracking-tight">
-              {isAddMode ? t("tickets.newTicket" as any) : `${t("common.edit")} ${t("tickets.title" as any)}`}
-            </h1>
-            <p className="text-[13px] text-text-muted font-mono mt-0.5">{owner}/{name}</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
+      <StickyEditHeader
+        title={isAddMode ? t("tickets.newTicket" as any) : `${t("common.edit")} ${t("tickets.title" as any)}`}
+        subtitle={`${owner}/${name}`}
+        onBack={handleBack}
+      >
           {isAddMode ? (
             // Add mode: Cancel + Save + Save & Exit
             <>
@@ -193,8 +190,7 @@ export default function TicketEditPage() {
               </button>
             </>
           )}
-        </div>
-      </div>
+      </StickyEditHeader>
 
       {showBanner && <UnsavedBanner isAddMode={isAddMode} />}
 
