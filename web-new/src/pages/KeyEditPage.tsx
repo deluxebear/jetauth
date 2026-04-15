@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Trash2, Eye, EyeOff, LogOut } from "lucide-react";
+import { Trash2, Eye, EyeOff, LogOut, Copy } from "lucide-react";
 import StickyEditHeader from "../components/StickyEditHeader";
 import { FormField, FormSection, inputClass, monoInputClass } from "../components/FormSection";
 import { useTranslation } from "../i18n";
@@ -238,14 +238,24 @@ export default function KeyEditPage() {
 
       <FormSection title={t("keys.section.credentials" as any)}>
         <FormField label={t("keys.field.accessKey" as any)} tooltip={t("keys.tooltip.accessKey" as any)}>
-          <input value={key.accessKey} disabled className={monoInputClass} />
+          <div className="relative">
+            <input value={key.accessKey} disabled className={`${monoInputClass} pr-10`} />
+            <button type="button" onClick={() => { navigator.clipboard.writeText(key.accessKey); modal.toast(t("common.copySuccess" as any)); }} className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-text-muted hover:text-text-secondary transition-colors" title={t("common.copy" as any)}>
+              <Copy size={15} />
+            </button>
+          </div>
         </FormField>
         <FormField label={t("keys.field.accessSecret" as any)} tooltip={t("keys.tooltip.accessSecret" as any)}>
           <div className="relative">
-            <input type={showSecret ? "text" : "password"} value={key.accessSecret} disabled className={`${monoInputClass} pr-10`} />
-            <button type="button" onClick={() => setShowSecret(!showSecret)} className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-text-muted hover:text-text-secondary transition-colors">
-              {showSecret ? <EyeOff size={15} /> : <Eye size={15} />}
-            </button>
+            <input type={showSecret ? "text" : "password"} value={key.accessSecret} disabled className={`${monoInputClass} pr-16`} />
+            <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-0.5">
+              <button type="button" onClick={() => { navigator.clipboard.writeText(key.accessSecret); modal.toast(t("common.copySuccess" as any)); }} className="rounded p-1 text-text-muted hover:text-text-secondary transition-colors" title={t("common.copy" as any)}>
+                <Copy size={15} />
+              </button>
+              <button type="button" onClick={() => setShowSecret(!showSecret)} className="rounded p-1 text-text-muted hover:text-text-secondary transition-colors">
+                {showSecret ? <EyeOff size={15} /> : <Eye size={15} />}
+              </button>
+            </div>
           </div>
         </FormField>
       </FormSection>
