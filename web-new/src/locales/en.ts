@@ -1060,6 +1060,7 @@ const en = {
   "providers.captcha.verifySuccess": "Captcha verified successfully",
   "providers.captcha.verifyFailed": "Captcha verification failed",
   "providers.captcha.saveFirst": "Please save the provider first before previewing",
+  "providers.officialSite": "Official Site",
   "providers.help.emailRegex": "Regular expression to filter allowed email addresses from this OAuth provider. Leave empty to allow all.",
   "providers.help.providerUrl": "The URL of the provider's admin console. Used for quick navigation only, not used by the platform (except for Huawei Cloud SMS / Azure ACS SMS where it serves as API endpoint).",
   "providers.email.resetText": "Reset to Default (Text)",

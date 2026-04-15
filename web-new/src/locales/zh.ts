@@ -1141,6 +1141,7 @@ const zh: Record<string, string> = {
   "providers.captcha.verifySuccess": "验证码验证成功",
   "providers.captcha.verifyFailed": "验证码验证失败",
   "providers.captcha.saveFirst": "请先保存提供商再预览",
+  "providers.officialSite": "官网",
   "providers.help.emailRegex": "正则表达式，用于过滤该 OAuth 提供商允许的邮箱地址。留空表示允许所有。",
   "providers.help.providerUrl": "提供商管理后台的 URL，仅用于方便跳转，平台不使用该字段（华为云短信 / Azure ACS 短信除外，会作为 API 端点使用）。",
   "providers.email.resetText": "恢复默认（文本）",

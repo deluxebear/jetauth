@@ -189,6 +189,65 @@ function getAppIdLabel(cat: string, type: string): string | null {
   return null;
 }
 
+// ── Provider official website URLs ──
+
+const PROVIDER_URLS: Record<string, string> = {
+  // OAuth
+  Google: "https://console.cloud.google.com/apis/credentials", GitHub: "https://github.com/settings/developers",
+  Facebook: "https://developers.facebook.com/apps", Twitter: "https://developer.twitter.com/en/portal",
+  LinkedIn: "https://www.linkedin.com/developers/apps", Apple: "https://developer.apple.com/account",
+  WeChat: "https://open.weixin.qq.com", DingTalk: "https://open-dev.dingtalk.com",
+  Lark: "https://open.larksuite.com", GitLab: "https://gitlab.com/-/profile/applications",
+  Baidu: "https://developer.baidu.com/console", Alipay: "https://open.alipay.com",
+  Slack: "https://api.slack.com/apps", Okta: "https://developer.okta.com",
+  Discord: "https://discord.com/developers/applications", Spotify: "https://developer.spotify.com/dashboard",
+  Telegram: "https://core.telegram.org/bots", Auth0: "https://manage.auth0.com",
+  AzureAD: "https://portal.azure.com/#blade/Microsoft_AAD_RegisteredApps",
+  AzureADB2C: "https://portal.azure.com/#blade/Microsoft_AAD_RegisteredApps",
+  ADFS: "https://docs.microsoft.com/en-us/windows-server/identity/ad-fs/ad-fs-overview",
+  PayPal: "https://developer.paypal.com/developer/applications", Stripe: "https://dashboard.stripe.com/apikeys",
+  Gitea: "https://gitea.com", Gitee: "https://gitee.com/oauth/applications",
+  Bitbucket: "https://bitbucket.org/account/settings/app-passwords",
+  Instagram: "https://developers.facebook.com/apps", Line: "https://developers.line.biz/console",
+  Amazon: "https://developer.amazon.com/loginwithamazon/console", Zoom: "https://marketplace.zoom.us",
+  QQ: "https://connect.qq.com", WeCom: "https://work.weixin.qq.com",
+  Steam: "https://steamcommunity.com/dev/apikey", VK: "https://vk.com/apps?act=manage",
+  MetaMask: "https://metamask.io", TikTok: "https://developers.tiktok.com",
+  BattleNet: "https://develop.battle.net", Kakao: "https://developers.kakao.com",
+  Naver: "https://developers.naver.com", Bilibili: "https://open.bilibili.com",
+  // Captcha
+  "reCAPTCHA v2": "https://www.google.com/recaptcha/admin", "reCAPTCHA v3": "https://www.google.com/recaptcha/admin",
+  hCaptcha: "https://dashboard.hcaptcha.com", "Cloudflare Turnstile": "https://dash.cloudflare.com",
+  "Aliyun Captcha": "https://www.alibabacloud.com/product/captcha", GEETEST: "https://www.geetest.com",
+  // Email
+  SendGrid: "https://app.sendgrid.com", Mailtrap: "https://mailtrap.io", Resend: "https://resend.com",
+  // SMS
+  "Aliyun SMS": "https://dysms.console.aliyun.com", "Tencent Cloud SMS": "https://console.cloud.tencent.com/smsv2",
+  "Twilio SMS": "https://www.twilio.com/console", "Amazon SNS": "https://console.aws.amazon.com/sns",
+  "Huawei Cloud SMS": "https://www.huaweicloud.com/product/msgsms.html",
+  "Baidu Cloud SMS": "https://cloud.baidu.com/product/sms.html",
+  "Volc Engine SMS": "https://console.volcengine.com/sms",
+  // Storage
+  "AWS S3": "https://s3.console.aws.amazon.com", MinIO: "https://min.io",
+  "Aliyun OSS": "https://oss.console.aliyun.com", "Tencent Cloud COS": "https://console.cloud.tencent.com/cos",
+  "Azure Blob": "https://portal.azure.com", "Google Cloud Storage": "https://console.cloud.google.com/storage",
+  Synology: "https://www.synology.com",
+  // SAML
+  Keycloak: "https://www.keycloak.org", "Aliyun IDaaS": "https://www.alibabacloud.com/product/idaas",
+  // Payment
+  "WeChat Pay": "https://pay.weixin.qq.com", Stripe: "https://dashboard.stripe.com/apikeys",
+  AirWallex: "https://www.airwallex.com", Polar: "https://polar.sh", Paddle: "https://www.paddle.com",
+  FastSpring: "https://fastspring.com", "Lemon Squeezy": "https://www.lemonsqueezy.com", Adyen: "https://www.adyen.com",
+  // Notification
+  "Microsoft Teams": "https://dev.teams.microsoft.com", Pushover: "https://pushover.net",
+  "Google Chat": "https://chat.google.com", Reddit: "https://www.reddit.com/prefs/apps",
+  Matrix: "https://matrix.org", Viber: "https://www.viber.com",
+  // Web3
+  Web3Onboard: "https://onboard.blocknative.com",
+  // ID Verification
+  Jumio: "https://www.jumio.com",
+};
+
 // ── Provider logo URL (Simple Icons CDN — SVG, theme-aware) ──
 
 // Map provider types to Simple Icons slugs
@@ -1255,14 +1314,29 @@ export default function ProviderEditPage() {
           />
         </FormField>
         <FormField label={t("field.type")}>
-          <ProviderTypeSelect
-            category={category}
-            value={type}
-            options={TYPE_BY_CATEGORY[category] ?? []}
-            onChange={handleTypeChange}
-            placeholder={t("common.search" as any)}
-            isDark={theme === "dark"}
-          />
+          <div className="flex items-center gap-2">
+            <div className="flex-1">
+              <ProviderTypeSelect
+                category={category}
+                value={type}
+                options={TYPE_BY_CATEGORY[category] ?? []}
+                onChange={handleTypeChange}
+                placeholder={t("common.search" as any)}
+                isDark={theme === "dark"}
+              />
+            </div>
+            {PROVIDER_URLS[type] && (
+              <a
+                href={PROVIDER_URLS[type]}
+                target="_blank"
+                rel="noreferrer"
+                className="flex items-center gap-1 rounded-lg border border-border px-2.5 py-2 text-[12px] text-text-muted hover:text-accent hover:border-accent/30 hover:bg-accent/5 transition-colors whitespace-nowrap"
+              >
+                <ExternalLink size={13} />
+                {t("providers.officialSite" as any)}
+              </a>
+            )}
+          </div>
         </FormField>
         {showSubType && (
           <FormField label={t("providers.field.subType" as any)}>
