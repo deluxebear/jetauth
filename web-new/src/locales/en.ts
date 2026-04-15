@@ -970,6 +970,7 @@ const en = {
   "providers.field.idpCert": "IdP Certificate",
   "providers.field.issuerUrl": "Issuer URL",
   "providers.field.enableSignUp": "Enable Sign Up",
+  "providers.field.enableProxy": "Enable Proxy",
   "providers.field.enablePkce": "Enable PKCE",
   "providers.field.enableSignAuthnRequest": "Enable Sign AuthN Request",
   "providers.field.sslMode": "SSL Mode",

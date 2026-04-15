@@ -1051,6 +1051,7 @@ const zh: Record<string, string> = {
   "providers.field.idpCert": "IdP 证书",
   "providers.field.issuerUrl": "颁发者 URL",
   "providers.field.enableSignUp": "启用注册",
+  "providers.field.enableProxy": "启用代理",
   "providers.field.enablePkce": "启用 PKCE",
   "providers.field.enableSignAuthnRequest": "启用签名认证请求",
   "providers.field.sslMode": "SSL 模式",

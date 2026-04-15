@@ -228,6 +228,11 @@ const PROVIDER_URLS: Record<string, string> = {
   "Huawei Cloud SMS": "https://www.huaweicloud.com/product/msgsms.html",
   "Baidu Cloud SMS": "https://cloud.baidu.com/product/sms.html",
   "Infobip SMS": "https://portal.infobip.com",
+  "Msg91 SMS": "https://msg91.com",
+  "OSON SMS": "https://oson.uz",
+  "SmsBao SMS": "https://www.smsbao.com",
+  "SUBMAIL SMS": "https://www.mysubmail.com",
+  "UCloud SMS": "https://www.ucloud.cn/site/product/usms.html",
   "Volc Engine SMS": "https://console.volcengine.com/sms",
   // Storage
   "AWS S3": "https://s3.console.aws.amazon.com", MinIO: "https://min.io",
@@ -848,6 +853,9 @@ export default function ProviderEditPage() {
               </FormField>
             </>
           )}
+          <FormField label={t("providers.field.enableProxy" as any)}>
+            <Switch checked={!!prov.enableProxy} onChange={(v) => set("enableProxy", v)} />
+          </FormField>
           <FormField label={t("providers.field.emailTitle" as any)} span="full">
             <input value={String(prov.title ?? "")} onChange={(e) => set("title", e.target.value)} className={inputClass} />
           </FormField>
@@ -931,6 +939,9 @@ export default function ProviderEditPage() {
           </FormField>
           <FormField label={t("providers.field.method" as any)}>
             <SimpleSelect value={String(prov.method ?? "GET")} options={[{ value: "GET", label: "GET" }, { value: "POST", label: "POST" }]} onChange={(v) => set("method", v)} />
+          </FormField>
+          <FormField label={t("providers.field.enableProxy" as any)}>
+            <Switch checked={!!prov.enableProxy} onChange={(v) => set("enableProxy", v)} />
           </FormField>
           {/* HTTP Headers */}
           <FormField label={t("providers.section.httpHeaders" as any)} span="full">
