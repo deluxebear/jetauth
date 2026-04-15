@@ -1,0 +1,1634 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>JetAuth — Authorization Redesign Concept</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300..700;1,9..40,300..700&family=JetBrains+Mono:wght@400;500;600&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-0: #0c0d10;
+    --bg-1: #14151a;
+    --bg-2: #1c1d24;
+    --bg-3: #24252e;
+    --bg-4: #2e303a;
+    --border: #2a2b36;
+    --border-subtle: #1f2029;
+    --text-0: #f0f0f4;
+    --text-1: #c8c9d2;
+    --text-2: #8e90a0;
+    --text-3: #5c5e6e;
+    --accent: #6366f1;
+    --accent-soft: rgba(99,102,241,0.12);
+    --accent-glow: rgba(99,102,241,0.25);
+    --green: #22c55e;
+    --green-soft: rgba(34,197,94,0.12);
+    --amber: #f59e0b;
+    --amber-soft: rgba(245,158,11,0.12);
+    --red: #ef4444;
+    --red-soft: rgba(239,68,68,0.12);
+    --cyan: #06b6d4;
+    --cyan-soft: rgba(6,182,212,0.12);
+    --radius: 10px;
+    --radius-sm: 6px;
+    --radius-lg: 16px;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'DM Sans', system-ui, sans-serif;
+    background: var(--bg-0);
+    color: var(--text-1);
+    line-height: 1.5;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  .mono { font-family: 'JetBrains Mono', monospace; }
+  .serif { font-family: 'Instrument Serif', Georgia, serif; }
+
+  /* ── Layout ── */
+  .container {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 0 32px;
+  }
+
+  /* ── Design Annotation ── */
+  .annotation {
+    position: relative;
+    padding: 32px 40px;
+    margin: 48px 0;
+    background: linear-gradient(135deg, rgba(99,102,241,0.06), rgba(6,182,212,0.04));
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent);
+    border-radius: var(--radius);
+  }
+  .annotation h2 {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--accent);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+  .annotation p {
+    font-size: 14px;
+    color: var(--text-2);
+    line-height: 1.7;
+    max-width: 720px;
+  }
+  .annotation p + p { margin-top: 8px; }
+  .annotation strong { color: var(--text-1); }
+
+  /* ── Hero / Title ── */
+  .hero {
+    padding: 80px 0 40px;
+    text-align: center;
+  }
+  .hero-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 14px;
+    border-radius: 100px;
+    background: var(--accent-soft);
+    border: 1px solid rgba(99,102,241,0.2);
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--accent);
+    letter-spacing: 0.03em;
+    margin-bottom: 20px;
+  }
+  .hero h1 {
+    font-size: 42px;
+    font-weight: 700;
+    color: var(--text-0);
+    letter-spacing: -0.03em;
+    line-height: 1.15;
+  }
+  .hero h1 em {
+    font-style: normal;
+    background: linear-gradient(135deg, #6366f1, #06b6d4);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .hero p {
+    margin-top: 14px;
+    font-size: 16px;
+    color: var(--text-2);
+    max-width: 560px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  /* ── Section Divider ── */
+  .section-divider {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin: 64px 0 32px;
+  }
+  .section-divider::before,
+  .section-divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+  .section-divider span {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text-3);
+    white-space: nowrap;
+  }
+
+  /* ── Before / After Comparison ── */
+  .comparison {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    margin: 32px 0;
+  }
+  .comparison-card {
+    padding: 28px;
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border);
+  }
+  .comparison-card.before {
+    background: linear-gradient(160deg, rgba(239,68,68,0.04), var(--bg-1));
+    border-color: rgba(239,68,68,0.15);
+  }
+  .comparison-card.after {
+    background: linear-gradient(160deg, rgba(34,197,94,0.04), var(--bg-1));
+    border-color: rgba(34,197,94,0.15);
+  }
+  .comparison-card .tag {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 3px 10px;
+    border-radius: 100px;
+    margin-bottom: 16px;
+  }
+  .before .tag { background: var(--red-soft); color: var(--red); }
+  .after .tag { background: var(--green-soft); color: var(--green); }
+  .comparison-card h3 {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text-0);
+    margin-bottom: 14px;
+  }
+
+  /* ── Tree Diagram ── */
+  .tree {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    line-height: 1.9;
+    color: var(--text-2);
+  }
+  .tree .dim { color: var(--text-3); }
+  .tree .hl { color: var(--accent); font-weight: 600; }
+  .tree .grn { color: var(--green); }
+  .tree .warn { color: var(--amber); }
+  .tree .cyn { color: var(--cyan); }
+
+  /* ── Mockup Frame ── */
+  .mockup-frame {
+    position: relative;
+    margin: 40px 0;
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border);
+    overflow: hidden;
+    background: var(--bg-1);
+  }
+  .mockup-titlebar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 16px;
+    background: var(--bg-2);
+    border-bottom: 1px solid var(--border);
+  }
+  .mockup-dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    background: var(--bg-4);
+  }
+  .mockup-dot:nth-child(1) { background: #ff5f57; }
+  .mockup-dot:nth-child(2) { background: #febc2e; }
+  .mockup-dot:nth-child(3) { background: #28c840; }
+  .mockup-url {
+    flex: 1;
+    text-align: center;
+    font-size: 11px;
+    color: var(--text-3);
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .mockup-body {
+    display: flex;
+    min-height: 640px;
+  }
+
+  /* ── Sidebar Mock ── */
+  .mock-sidebar {
+    width: 220px;
+    flex-shrink: 0;
+    background: var(--bg-0);
+    border-right: 1px solid var(--border);
+    padding: 16px 0;
+  }
+  .mock-sidebar .logo {
+    padding: 0 16px 16px;
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text-0);
+    letter-spacing: -0.02em;
+    border-bottom: 1px solid var(--border-subtle);
+    margin-bottom: 8px;
+  }
+  .mock-sidebar .logo span { color: var(--accent); }
+  .sidebar-section {
+    padding: 8px 10px 4px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-3);
+  }
+  .sidebar-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 14px;
+    margin: 1px 8px;
+    font-size: 13px;
+    color: var(--text-2);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .sidebar-item:hover { background: var(--bg-2); color: var(--text-1); }
+  .sidebar-item.active {
+    background: var(--accent-soft);
+    color: var(--accent);
+    font-weight: 600;
+  }
+  .sidebar-item svg { width: 16px; height: 16px; opacity: 0.6; }
+  .sidebar-item.active svg { opacity: 1; }
+  .sidebar-item .badge {
+    margin-left: auto;
+    font-size: 10px;
+    font-weight: 600;
+    padding: 1px 6px;
+    border-radius: 100px;
+    background: var(--bg-3);
+    color: var(--text-3);
+  }
+  .sidebar-item.active .badge {
+    background: rgba(99,102,241,0.2);
+    color: var(--accent);
+  }
+
+  /* ── Main Content ── */
+  .mock-main {
+    flex: 1;
+    padding: 24px 28px;
+    overflow-y: auto;
+  }
+
+  /* ── Page: Authorization Overview ── */
+  .auth-overview-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: 28px;
+  }
+  .auth-overview-header h1 {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--text-0);
+    letter-spacing: -0.02em;
+  }
+  .auth-overview-header p {
+    font-size: 13px;
+    color: var(--text-2);
+    margin-top: 3px;
+  }
+
+  /* ── App Cards Grid ── */
+  .app-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 16px;
+  }
+  .app-card {
+    position: relative;
+    padding: 22px;
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    background: var(--bg-2);
+    cursor: pointer;
+    transition: all 0.2s;
+    overflow: hidden;
+  }
+  .app-card:hover {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 1px var(--accent), 0 8px 32px rgba(0,0,0,0.3);
+    transform: translateY(-2px);
+  }
+  .app-card-top {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 16px;
+  }
+  .app-icon {
+    width: 42px; height: 42px;
+    border-radius: var(--radius-sm);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    font-weight: 700;
+    color: white;
+    flex-shrink: 0;
+  }
+  .app-card-top h3 {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text-0);
+  }
+  .app-card-top .app-org {
+    font-size: 11px;
+    color: var(--text-3);
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .app-stats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    padding-top: 14px;
+    border-top: 1px solid var(--border-subtle);
+  }
+  .app-stat {
+    text-align: center;
+  }
+  .app-stat-value {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text-0);
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .app-stat-label {
+    font-size: 10px;
+    color: var(--text-3);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-top: 2px;
+  }
+  .app-card-status {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11px;
+    font-weight: 600;
+  }
+  .status-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+  }
+  .status-active .status-dot { background: var(--green); box-shadow: 0 0 6px var(--green); }
+  .status-active { color: var(--green); }
+  .status-inactive .status-dot { background: var(--text-3); }
+  .status-inactive { color: var(--text-3); }
+
+  /* add-app card */
+  .app-card-add {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    border-style: dashed;
+    border-color: var(--bg-4);
+    background: transparent;
+    min-height: 160px;
+  }
+  .app-card-add:hover { border-color: var(--accent); background: var(--accent-soft); }
+  .app-card-add svg { color: var(--text-3); }
+  .app-card-add:hover svg { color: var(--accent); }
+  .app-card-add span { font-size: 13px; color: var(--text-3); font-weight: 500; }
+  .app-card-add:hover span { color: var(--accent); }
+
+  /* ── Page 2: App Authorization Detail ── */
+  .detail-header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 8px;
+  }
+  .detail-back {
+    width: 32px; height: 32px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    background: var(--bg-2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: var(--text-2);
+    transition: all 0.15s;
+  }
+  .detail-back:hover { border-color: var(--accent); color: var(--accent); }
+  .detail-header h1 {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--text-0);
+    letter-spacing: -0.02em;
+  }
+  .detail-header .app-icon-sm {
+    width: 36px; height: 36px;
+    border-radius: var(--radius-sm);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 15px;
+    font-weight: 700;
+    color: white;
+  }
+
+  /* Sub navigation tabs */
+  .detail-tabs {
+    display: flex;
+    gap: 0;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 24px;
+    margin-top: 16px;
+  }
+  .detail-tab {
+    padding: 10px 18px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-3);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: all 0.15s;
+    position: relative;
+    bottom: -1px;
+  }
+  .detail-tab:hover { color: var(--text-1); }
+  .detail-tab.active {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+    font-weight: 600;
+  }
+  .detail-tab .tab-count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    border-radius: 100px;
+    background: var(--bg-3);
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--text-3);
+    margin-left: 6px;
+  }
+  .detail-tab.active .tab-count {
+    background: var(--accent-soft);
+    color: var(--accent);
+  }
+
+  /* ── Summary Cards Row ── */
+  .summary-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+  .summary-card {
+    padding: 18px;
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    background: var(--bg-2);
+  }
+  .summary-card-label {
+    font-size: 11px;
+    color: var(--text-3);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-weight: 600;
+    margin-bottom: 8px;
+  }
+  .summary-card-value {
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--text-0);
+    font-family: 'JetBrains Mono', monospace;
+    letter-spacing: -0.03em;
+  }
+  .summary-card-sub {
+    font-size: 11px;
+    color: var(--text-3);
+    margin-top: 4px;
+  }
+
+  /* ── Roles / Permissions Table ── */
+  .data-section {
+    margin-bottom: 24px;
+  }
+  .data-section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+  }
+  .data-section-header h3 {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-0);
+  }
+  .btn-sm {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 6px 12px;
+    border-radius: var(--radius-sm);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    border: none;
+    transition: all 0.15s;
+  }
+  .btn-primary {
+    background: var(--accent);
+    color: white;
+  }
+  .btn-primary:hover { background: #5558e6; }
+  .btn-ghost {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-2);
+  }
+  .btn-ghost:hover { border-color: var(--text-2); color: var(--text-1); }
+
+  .mini-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+  }
+  .mini-table th {
+    text-align: left;
+    padding: 8px 12px;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-3);
+    background: var(--bg-2);
+    border-bottom: 1px solid var(--border);
+  }
+  .mini-table td {
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border-subtle);
+    color: var(--text-1);
+  }
+  .mini-table tr:hover td { background: rgba(99,102,241,0.03); }
+  .pill {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 100px;
+    font-size: 10px;
+    font-weight: 600;
+  }
+  .pill-green { background: var(--green-soft); color: var(--green); }
+  .pill-amber { background: var(--amber-soft); color: var(--amber); }
+  .pill-red { background: var(--red-soft); color: var(--red); }
+  .pill-accent { background: var(--accent-soft); color: var(--accent); }
+  .pill-cyan { background: var(--cyan-soft); color: var(--cyan); }
+
+  /* ── Config Section ── */
+  .config-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+  .config-card {
+    padding: 20px;
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    background: var(--bg-2);
+  }
+  .config-card h4 {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-0);
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .config-card h4 svg { color: var(--text-3); width: 15px; height: 15px; }
+  .config-field {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border-subtle);
+  }
+  .config-field:last-child { border-bottom: none; }
+  .config-field-label { font-size: 12px; color: var(--text-2); }
+  .config-field-value {
+    font-size: 12px;
+    color: var(--text-0);
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 500;
+  }
+
+  /* ── SDK Section ── */
+  .sdk-section {
+    margin-bottom: 24px;
+  }
+  .sdk-tabs {
+    display: flex;
+    gap: 0;
+    margin-bottom: 0;
+  }
+  .sdk-tab {
+    padding: 8px 16px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-3);
+    cursor: pointer;
+    border: 1px solid var(--border);
+    border-bottom: none;
+    background: var(--bg-1);
+    border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+    margin-right: -1px;
+    position: relative;
+    z-index: 0;
+  }
+  .sdk-tab.active {
+    background: var(--bg-2);
+    color: var(--text-0);
+    z-index: 1;
+  }
+  .code-block {
+    padding: 20px;
+    background: var(--bg-2);
+    border: 1px solid var(--border);
+    border-radius: 0 var(--radius) var(--radius) var(--radius);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    line-height: 1.7;
+    color: var(--text-1);
+    overflow-x: auto;
+    white-space: pre;
+  }
+  .code-block .comment { color: var(--text-3); }
+  .code-block .string { color: var(--green); }
+  .code-block .keyword { color: var(--accent); }
+  .code-block .func { color: var(--cyan); }
+
+  /* ── Enforce Test Playground ── */
+  .playground {
+    padding: 24px;
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    background: var(--bg-2);
+    margin-bottom: 24px;
+  }
+  .playground h4 {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-0);
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .playground-form {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr auto;
+    gap: 12px;
+    align-items: end;
+  }
+  .playground-field label {
+    display: block;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-3);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 6px;
+  }
+  .playground-field input {
+    width: 100%;
+    padding: 8px 12px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    background: var(--bg-1);
+    color: var(--text-0);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .playground-field input:focus { border-color: var(--accent); }
+  .playground-field input::placeholder { color: var(--text-3); }
+  .btn-test {
+    padding: 8px 20px;
+    border-radius: var(--radius-sm);
+    background: var(--accent);
+    color: white;
+    font-size: 12px;
+    font-weight: 600;
+    border: none;
+    cursor: pointer;
+    white-space: nowrap;
+    height: 36px;
+  }
+  .btn-test:hover { background: #5558e6; }
+  .playground-result {
+    margin-top: 14px;
+    padding: 12px 16px;
+    border-radius: var(--radius-sm);
+    font-size: 13px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .result-allow { background: var(--green-soft); color: var(--green); border: 1px solid rgba(34,197,94,0.2); }
+  .result-deny { background: var(--red-soft); color: var(--red); border: 1px solid rgba(239,68,68,0.2); }
+
+  /* ── Page indicator ── */
+  .page-indicator {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    display: flex;
+    gap: 8px;
+    z-index: 100;
+  }
+  .page-dot {
+    padding: 8px 16px;
+    border-radius: 100px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    border: 1px solid var(--border);
+    background: var(--bg-2);
+    color: var(--text-2);
+    transition: all 0.2s;
+    backdrop-filter: blur(12px);
+  }
+  .page-dot:hover { border-color: var(--accent); color: var(--accent); }
+  .page-dot.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: white;
+  }
+
+  /* ── Utility ── */
+  .flex-center { display: flex; align-items: center; }
+  .gap-2 { gap: 8px; }
+  .gap-3 { gap: 12px; }
+  .mt-1 { margin-top: 4px; }
+  .text-accent { color: var(--accent); }
+  .text-muted { color: var(--text-3); }
+  .hidden { display: none; }
+
+  /* ── Flow Diagram ── */
+  .flow-diagram {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+    padding: 40px 20px;
+    margin: 24px 0;
+  }
+  .flow-node {
+    padding: 14px 20px;
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    background: var(--bg-2);
+    text-align: center;
+    min-width: 120px;
+  }
+  .flow-node-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-0);
+    margin-bottom: 3px;
+  }
+  .flow-node-sub {
+    font-size: 10px;
+    color: var(--text-3);
+  }
+  .flow-node.highlight {
+    border-color: var(--accent);
+    background: var(--accent-soft);
+    box-shadow: 0 0 20px rgba(99,102,241,0.15);
+  }
+  .flow-node.highlight .flow-node-title { color: var(--accent); }
+  .flow-arrow {
+    display: flex;
+    align-items: center;
+    color: var(--text-3);
+    padding: 0 6px;
+    font-size: 18px;
+  }
+
+  /* ── Responsive ── */
+  @media (max-width: 900px) {
+    .comparison { grid-template-columns: 1fr; }
+    .summary-row { grid-template-columns: repeat(2, 1fr); }
+    .config-grid { grid-template-columns: 1fr; }
+    .playground-form { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+
+  <!-- ═══════ HERO ═══════ -->
+  <div class="hero">
+    <div class="hero-badge">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+      Design Concept
+    </div>
+    <h1>以<em>业务系统</em>为中心的<br>授权管理体验</h1>
+    <p>将扁平的资源列表重构为以 Application 为维度的权限管理视图，让每个业务系统的权限配置一目了然</p>
+  </div>
+
+  <!-- ═══════ PROBLEM STATEMENT ═══════ -->
+  <div class="annotation">
+    <h2>Design Problem</h2>
+    <p>当前「授权」模块将 <strong>角色、权限、模型、适配器、执行器</strong> 拆成 5 个独立的扁平列表。对于需要集成权限管理的业务系统来说，管理员必须在多个页面之间跳转，手动记忆哪些角色属于哪个应用、哪条权限绑定了哪个模型。</p>
+    <p>核心矛盾：<strong>权限管理的对象是「业务系统」，但 UI 的组织维度是「资源类型」</strong>。这就像把一个公司的组织架构按「姓名、职位、部门、薪资」分成 4 个独立列表来管理——信息在，但关系断了。</p>
+  </div>
+
+  <!-- ═══════ BEFORE / AFTER ═══════ -->
+  <div class="section-divider"><span>Before vs After</span></div>
+
+  <div class="comparison">
+    <div class="comparison-card before">
+      <div class="tag">Current — 按资源类型平铺</div>
+      <h3>用户心智模型碎片化</h3>
+      <div class="tree">
+<span class="dim">授权</span>
+├── <span class="warn">角色</span> <span class="dim">(所有应用的角色混在一起)</span>
+│   ├── erp-admin
+│   ├── crm-sales
+│   ├── hr-manager     <span class="dim">← 哪个应用的？</span>
+│   └── ...
+├── <span class="warn">权限</span> <span class="dim">(所有应用的权限混在一起)</span>
+│   ├── erp-read
+│   ├── crm-write       <span class="dim">← 绑了什么模型？</span>
+│   └── ...
+├── <span class="warn">模型</span> <span class="dim">(独立列表，不知道谁在用)</span>
+├── <span class="warn">适配器</span> <span class="dim">(独立列表)</span>
+└── <span class="warn">执行器</span> <span class="dim">(独立列表)</span>
+      </div>
+    </div>
+    <div class="comparison-card after">
+      <div class="tag">Proposed — 以业务系统为中心</div>
+      <h3>每个应用一个完整视图</h3>
+      <div class="tree">
+<span class="dim">授权</span>
+├── <span class="hl">概览</span> <span class="dim">(所有应用卡片，一目了然)</span>
+│
+├── <span class="grn">ERP 系统</span>
+│   ├── 概况  <span class="dim">(模型 + 适配器 + 统计)</span>
+│   ├── 角色  <span class="dim">(仅该应用的角色)</span>
+│   ├── 权限  <span class="dim">(仅该应用的权限)</span>
+│   ├── 测试  <span class="dim">(Enforce Playground)</span>
+│   └── 集成  <span class="dim">(SDK 代码示例)</span>
+│
+├── <span class="grn">CRM 系统</span>
+│   └── <span class="dim">(同上)</span>
+│
+└── <span class="cyn">+ 绑定新应用</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════ INFORMATION ARCHITECTURE ═══════ -->
+  <div class="annotation">
+    <h2>Information Architecture</h2>
+    <p><strong>第一层：授权概览页</strong> — 以卡片形式展示所有已绑定权限管理的应用，每张卡片显示角色数、权限数、模型、状态。管理员一眼看到全局。</p>
+    <p><strong>第二层：应用授权详情页</strong> — 点击任意应用卡片进入该应用的完整授权管理视图。Tab 页签切换：概况、角色、权限、测试、集成指南。所有数据都自动按该应用过滤。</p>
+    <p><strong>模型/适配器/执行器</strong>不再作为独立的顶级菜单，而是下沉到每个应用的「概况」Tab 中作为配置项。高级用户仍可通过「全局设置」入口访问完整列表。</p>
+  </div>
+
+  <!-- ═══════ USER FLOW ═══════ -->
+  <div class="section-divider"><span>Core User Flow</span></div>
+
+  <div class="flow-diagram">
+    <div class="flow-node">
+      <div class="flow-node-title">创建应用</div>
+      <div class="flow-node-sub">绑定业务系统</div>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-node highlight">
+      <div class="flow-node-title">配置授权</div>
+      <div class="flow-node-sub">模型 + 适配器</div>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-node">
+      <div class="flow-node-title">创建角色</div>
+      <div class="flow-node-sub">分配用户</div>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-node">
+      <div class="flow-node-title">配置权限</div>
+      <div class="flow-node-sub">资源 + 操作</div>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-node">
+      <div class="flow-node-title">测试验证</div>
+      <div class="flow-node-sub">Enforce Playground</div>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-node">
+      <div class="flow-node-title">集成 SDK</div>
+      <div class="flow-node-sub">复制代码接入</div>
+    </div>
+  </div>
+
+  <!-- ═══════ MOCKUP 1: OVERVIEW ═══════ -->
+  <div class="section-divider"><span>Screen 1 — Authorization Overview</span></div>
+
+  <div class="annotation">
+    <h2>授权概览页</h2>
+    <p>替代原来的 5 个扁平列表入口。管理员看到的是<strong>「哪些业务系统接入了权限管理」</strong>，而不是「系统里有多少条角色记录」。每张卡片就是一个业务系统的权限管理入口。</p>
+  </div>
+
+  <div class="mockup-frame">
+    <div class="mockup-titlebar">
+      <div class="mockup-dot"></div><div class="mockup-dot"></div><div class="mockup-dot"></div>
+      <div class="mockup-url">auth.company.com/authorization</div>
+    </div>
+    <div class="mockup-body">
+      <!-- Sidebar -->
+      <div class="mock-sidebar">
+        <div class="logo">Jet<span>Auth</span></div>
+        <div class="sidebar-section">身份认证</div>
+        <div class="sidebar-item">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          用户
+        </div>
+        <div class="sidebar-item">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          组织
+        </div>
+        <div class="sidebar-section">应用</div>
+        <div class="sidebar-item">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+          应用管理
+        </div>
+        <div class="sidebar-item">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          身份提供商
+        </div>
+        <div class="sidebar-section">授权</div>
+        <div class="sidebar-item active">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg>
+          授权管理
+          <span class="badge">4</span>
+        </div>
+        <div class="sidebar-item">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v6m0 6v6m11-7h-6m-6 0H1"/></svg>
+          全局配置
+          <span class="badge" style="font-size:9px">高级</span>
+        </div>
+      </div>
+
+      <!-- Main -->
+      <div class="mock-main">
+        <div class="auth-overview-header">
+          <div>
+            <h1>授权管理</h1>
+            <p>管理各业务系统的角色、权限、访问控制策略</p>
+          </div>
+          <div class="flex-center gap-2">
+            <button class="btn-sm btn-ghost">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v6m0 6v6m11-7h-6m-6 0H1"/></svg>
+              全局模型/适配器
+            </button>
+          </div>
+        </div>
+
+        <div class="app-grid">
+          <!-- ERP -->
+          <div class="app-card" onclick="showDetail()">
+            <div class="app-card-status status-active"><div class="status-dot"></div> Active</div>
+            <div class="app-card-top">
+              <div class="app-icon" style="background:linear-gradient(135deg,#6366f1,#8b5cf6)">E</div>
+              <div>
+                <h3>ERP 管理系统</h3>
+                <div class="app-org">acme-corp / erp-system</div>
+              </div>
+            </div>
+            <div class="app-stats">
+              <div class="app-stat">
+                <div class="app-stat-value">5</div>
+                <div class="app-stat-label">角色</div>
+              </div>
+              <div class="app-stat">
+                <div class="app-stat-value">12</div>
+                <div class="app-stat-label">权限</div>
+              </div>
+              <div class="app-stat">
+                <div class="app-stat-value">48</div>
+                <div class="app-stat-label">用户</div>
+              </div>
+              <div class="app-stat">
+                <div class="app-stat-value">23</div>
+                <div class="app-stat-label">资源</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- CRM -->
+          <div class="app-card">
+            <div class="app-card-status status-active"><div class="status-dot"></div> Active</div>
+            <div class="app-card-top">
+              <div class="app-icon" style="background:linear-gradient(135deg,#06b6d4,#0891b2)">C</div>
+              <div>
+                <h3>CRM 客户管理</h3>
+                <div class="app-org">acme-corp / crm-system</div>
+              </div>
+            </div>
+            <div class="app-stats">
+              <div class="app-stat">
+                <div class="app-stat-value">3</div>
+                <div class="app-stat-label">角色</div>
+              </div>
+              <div class="app-stat">
+                <div class="app-stat-value">8</div>
+                <div class="app-stat-label">权限</div>
+              </div>
+              <div class="app-stat">
+                <div class="app-stat-value">32</div>
+                <div class="app-stat-label">用户</div>
+              </div>
+              <div class="app-stat">
+                <div class="app-stat-value">15</div>
+                <div class="app-stat-label">资源</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- HR -->
+          <div class="app-card">
+            <div class="app-card-status status-active"><div class="status-dot"></div> Active</div>
+            <div class="app-card-top">
+              <div class="app-icon" style="background:linear-gradient(135deg,#f59e0b,#d97706)">H</div>
+              <div>
+                <h3>HR 人事系统</h3>
+                <div class="app-org">acme-corp / hr-system</div>
+              </div>
+            </div>
+            <div class="app-stats">
+              <div class="app-stat">
+                <div class="app-stat-value">4</div>
+                <div class="app-stat-label">角色</div>
+              </div>
+              <div class="app-stat">
+                <div class="app-stat-value">6</div>
+                <div class="app-stat-label">权限</div>
+              </div>
+              <div class="app-stat">
+                <div class="app-stat-value">120</div>
+                <div class="app-stat-label">用户</div>
+              </div>
+              <div class="app-stat">
+                <div class="app-stat-value">9</div>
+                <div class="app-stat-label">资源</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- OA -->
+          <div class="app-card">
+            <div class="app-card-status status-inactive"><div class="status-dot"></div> 未配置</div>
+            <div class="app-card-top">
+              <div class="app-icon" style="background:linear-gradient(135deg,#64748b,#475569)">O</div>
+              <div>
+                <h3>OA 办公平台</h3>
+                <div class="app-org">acme-corp / oa-platform</div>
+              </div>
+            </div>
+            <div class="app-stats">
+              <div class="app-stat">
+                <div class="app-stat-value">0</div>
+                <div class="app-stat-label">角色</div>
+              </div>
+              <div class="app-stat">
+                <div class="app-stat-value">0</div>
+                <div class="app-stat-label">权限</div>
+              </div>
+              <div class="app-stat">
+                <div class="app-stat-value">0</div>
+                <div class="app-stat-label">用户</div>
+              </div>
+              <div class="app-stat">
+                <div class="app-stat-value">0</div>
+                <div class="app-stat-label">资源</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Add -->
+          <div class="app-card app-card-add">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M12 8v8m-4-4h8"/></svg>
+            <span>绑定新应用</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════ MOCKUP 2: APP DETAIL ═══════ -->
+  <div class="section-divider"><span>Screen 2 — App Authorization Detail</span></div>
+
+  <div class="annotation">
+    <h2>应用授权详情页</h2>
+    <p>点击 ERP 卡片后进入。所有配置都<strong>自动限定在该应用范围内</strong>——创建角色自动绑定此应用，权限的 Resources 自动填充此应用名，SDK 集成代码自动填入该应用的 ClientId/Secret。</p>
+    <p>Tab 设计：<strong>概况</strong>（模型+适配器+统计）→ <strong>角色</strong>（该应用的角色列表）→ <strong>权限</strong>（该应用的权限规则）→ <strong>测试</strong>（Enforce Playground）→ <strong>集成</strong>（SDK 代码）</p>
+  </div>
+
+  <div class="mockup-frame" id="detail-mockup">
+    <div class="mockup-titlebar">
+      <div class="mockup-dot"></div><div class="mockup-dot"></div><div class="mockup-dot"></div>
+      <div class="mockup-url">auth.company.com/authorization/acme-corp/erp-system</div>
+    </div>
+    <div class="mockup-body">
+      <!-- Sidebar (same, but different active state) -->
+      <div class="mock-sidebar">
+        <div class="logo">Jet<span>Auth</span></div>
+        <div class="sidebar-section">身份认证</div>
+        <div class="sidebar-item">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          用户
+        </div>
+        <div class="sidebar-item">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          组织
+        </div>
+        <div class="sidebar-section">应用</div>
+        <div class="sidebar-item">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+          应用管理
+        </div>
+        <div class="sidebar-section">授权</div>
+        <div class="sidebar-item active">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg>
+          授权管理
+        </div>
+      </div>
+
+      <!-- Main Detail -->
+      <div class="mock-main">
+        <div class="detail-header">
+          <div class="detail-back">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5m7-7l-7 7 7 7"/></svg>
+          </div>
+          <div class="app-icon-sm" style="background:linear-gradient(135deg,#6366f1,#8b5cf6)">E</div>
+          <div>
+            <h1>ERP 管理系统</h1>
+            <div style="font-size:12px;color:var(--text-3);font-family:'JetBrains Mono',monospace;margin-top:2px">acme-corp / erp-system</div>
+          </div>
+        </div>
+
+        <div class="detail-tabs">
+          <div class="detail-tab active" onclick="switchTab(this, 'overview')">概况</div>
+          <div class="detail-tab" onclick="switchTab(this, 'roles')">角色 <span class="tab-count">5</span></div>
+          <div class="detail-tab" onclick="switchTab(this, 'permissions')">权限 <span class="tab-count">12</span></div>
+          <div class="detail-tab" onclick="switchTab(this, 'test')">测试</div>
+          <div class="detail-tab" onclick="switchTab(this, 'integration')">集成指南</div>
+        </div>
+
+        <!-- TAB: Overview -->
+        <div id="tab-overview">
+          <div class="summary-row">
+            <div class="summary-card">
+              <div class="summary-card-label">角色</div>
+              <div class="summary-card-value">5</div>
+              <div class="summary-card-sub">3 个活跃角色</div>
+            </div>
+            <div class="summary-card">
+              <div class="summary-card-label">权限规则</div>
+              <div class="summary-card-value">12</div>
+              <div class="summary-card-sub">10 Allow · 2 Deny</div>
+            </div>
+            <div class="summary-card">
+              <div class="summary-card-label">覆盖用户</div>
+              <div class="summary-card-value">48</div>
+              <div class="summary-card-sub">占组织 40%</div>
+            </div>
+            <div class="summary-card">
+              <div class="summary-card-label">受保护资源</div>
+              <div class="summary-card-value">23</div>
+              <div class="summary-card-sub">18 API · 5 页面</div>
+            </div>
+          </div>
+
+          <div class="config-grid">
+            <div class="config-card">
+              <h4>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+                Casbin 模型
+              </h4>
+              <div class="config-field">
+                <span class="config-field-label">当前模型</span>
+                <span class="config-field-value" style="color:var(--accent)">acme-corp/rbac-model</span>
+              </div>
+              <div class="config-field">
+                <span class="config-field-label">类型</span>
+                <span class="config-field-value">RBAC with domains</span>
+              </div>
+              <div class="config-field">
+                <span class="config-field-label">角色定义</span>
+                <span class="config-field-value">g = _, _, _</span>
+              </div>
+              <div class="config-field">
+                <span class="config-field-label">Matcher</span>
+                <span class="config-field-value" style="font-size:11px">g(r.sub, p.sub, r.dom) && r.obj == p.obj && r.act == p.act</span>
+              </div>
+            </div>
+            <div class="config-card">
+              <h4>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
+                适配器 &amp; 执行器
+              </h4>
+              <div class="config-field">
+                <span class="config-field-label">适配器</span>
+                <span class="config-field-value" style="color:var(--cyan)">acme-corp/mysql-adapter</span>
+              </div>
+              <div class="config-field">
+                <span class="config-field-label">数据库类型</span>
+                <span class="config-field-value">MySQL</span>
+              </div>
+              <div class="config-field">
+                <span class="config-field-label">策略表</span>
+                <span class="config-field-value">casbin_rule</span>
+              </div>
+              <div class="config-field">
+                <span class="config-field-label">执行器</span>
+                <span class="config-field-value" style="color:var(--green)">acme-corp/erp-enforcer</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- TAB: Roles -->
+        <div id="tab-roles" class="hidden">
+          <div class="data-section">
+            <div class="data-section-header">
+              <h3>角色列表</h3>
+              <button class="btn-sm btn-primary">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14m-7-7h14"/></svg>
+                新建角色
+              </button>
+            </div>
+            <table class="mini-table">
+              <thead>
+                <tr>
+                  <th>角色名</th>
+                  <th>用户数</th>
+                  <th>子角色</th>
+                  <th>关联权限</th>
+                  <th>状态</th>
+                  <th>操作</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><span class="mono" style="color:var(--accent);font-weight:600">erp-admin</span></td>
+                  <td>3</td>
+                  <td><span class="mono" style="font-size:11px">erp-editor, erp-viewer</span></td>
+                  <td><span class="pill pill-accent">4 条规则</span></td>
+                  <td><span class="pill pill-green">启用</span></td>
+                  <td style="color:var(--text-3)">编辑 · 删除</td>
+                </tr>
+                <tr>
+                  <td><span class="mono" style="color:var(--accent);font-weight:600">erp-editor</span></td>
+                  <td>15</td>
+                  <td><span class="mono" style="font-size:11px">erp-viewer</span></td>
+                  <td><span class="pill pill-accent">3 条规则</span></td>
+                  <td><span class="pill pill-green">启用</span></td>
+                  <td style="color:var(--text-3)">编辑 · 删除</td>
+                </tr>
+                <tr>
+                  <td><span class="mono" style="color:var(--accent);font-weight:600">erp-viewer</span></td>
+                  <td>30</td>
+                  <td>—</td>
+                  <td><span class="pill pill-accent">2 条规则</span></td>
+                  <td><span class="pill pill-green">启用</span></td>
+                  <td style="color:var(--text-3)">编辑 · 删除</td>
+                </tr>
+                <tr>
+                  <td><span class="mono" style="color:var(--accent);font-weight:600">erp-finance</span></td>
+                  <td>8</td>
+                  <td>—</td>
+                  <td><span class="pill pill-accent">5 条规则</span></td>
+                  <td><span class="pill pill-green">启用</span></td>
+                  <td style="color:var(--text-3)">编辑 · 删除</td>
+                </tr>
+                <tr>
+                  <td><span class="mono" style="font-weight:600;color:var(--text-2)">erp-temp</span></td>
+                  <td>0</td>
+                  <td>—</td>
+                  <td><span class="pill pill-amber">0 条规则</span></td>
+                  <td><span class="pill pill-amber">禁用</span></td>
+                  <td style="color:var(--text-3)">编辑 · 删除</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- TAB: Permissions -->
+        <div id="tab-permissions" class="hidden">
+          <div class="data-section">
+            <div class="data-section-header">
+              <h3>权限规则</h3>
+              <div class="flex-center gap-2">
+                <button class="btn-sm btn-ghost">批量导入</button>
+                <button class="btn-sm btn-primary">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14m-7-7h14"/></svg>
+                  新建权限
+                </button>
+              </div>
+            </div>
+            <table class="mini-table">
+              <thead>
+                <tr>
+                  <th>权限名</th>
+                  <th>主体</th>
+                  <th>资源</th>
+                  <th>操作</th>
+                  <th>效果</th>
+                  <th>状态</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><span class="mono" style="font-weight:600;color:var(--text-0)">order-full-access</span></td>
+                  <td><span class="pill pill-accent">erp-admin</span></td>
+                  <td><span class="mono" style="font-size:11px">/orders/*</span></td>
+                  <td><span class="pill pill-cyan">ALL</span></td>
+                  <td><span class="pill pill-green">Allow</span></td>
+                  <td><span class="pill pill-green">Approved</span></td>
+                </tr>
+                <tr>
+                  <td><span class="mono" style="font-weight:600;color:var(--text-0)">order-read</span></td>
+                  <td><span class="pill pill-accent">erp-viewer</span></td>
+                  <td><span class="mono" style="font-size:11px">/orders/*</span></td>
+                  <td><span class="pill pill-cyan">GET</span></td>
+                  <td><span class="pill pill-green">Allow</span></td>
+                  <td><span class="pill pill-green">Approved</span></td>
+                </tr>
+                <tr>
+                  <td><span class="mono" style="font-weight:600;color:var(--text-0)">inventory-manage</span></td>
+                  <td><span class="pill pill-accent">erp-editor</span></td>
+                  <td><span class="mono" style="font-size:11px">/inventory/*</span></td>
+                  <td><span class="pill pill-cyan">GET POST PUT</span></td>
+                  <td><span class="pill pill-green">Allow</span></td>
+                  <td><span class="pill pill-green">Approved</span></td>
+                </tr>
+                <tr>
+                  <td><span class="mono" style="font-weight:600;color:var(--text-0)">finance-read</span></td>
+                  <td><span class="pill pill-accent">erp-finance</span></td>
+                  <td><span class="mono" style="font-size:11px">/finance/reports</span></td>
+                  <td><span class="pill pill-cyan">GET</span></td>
+                  <td><span class="pill pill-green">Allow</span></td>
+                  <td><span class="pill pill-green">Approved</span></td>
+                </tr>
+                <tr>
+                  <td><span class="mono" style="font-weight:600;color:var(--text-0)">deny-delete-order</span></td>
+                  <td><span class="pill pill-accent">erp-viewer</span></td>
+                  <td><span class="mono" style="font-size:11px">/orders/*</span></td>
+                  <td><span class="pill pill-cyan">DELETE</span></td>
+                  <td><span class="pill pill-red">Deny</span></td>
+                  <td><span class="pill pill-green">Approved</span></td>
+                </tr>
+                <tr>
+                  <td><span class="mono" style="font-weight:600;color:var(--text-2)">salary-access</span></td>
+                  <td><span class="pill pill-accent">erp-finance</span></td>
+                  <td><span class="mono" style="font-size:11px">/hr/salary</span></td>
+                  <td><span class="pill pill-cyan">GET</span></td>
+                  <td><span class="pill pill-green">Allow</span></td>
+                  <td><span class="pill pill-amber">Pending</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- TAB: Test -->
+        <div id="tab-test" class="hidden">
+          <div class="playground">
+            <h4>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+              Enforce 测试
+            </h4>
+            <p style="font-size:12px;color:var(--text-2);margin-bottom:16px">输入请求参数，实时测试当前应用的权限配置是否符合预期</p>
+            <div class="playground-form">
+              <div class="playground-field">
+                <label>Subject (用户)</label>
+                <input placeholder="acme-corp/alice" value="acme-corp/alice">
+              </div>
+              <div class="playground-field">
+                <label>Object (资源)</label>
+                <input placeholder="/orders/list" value="/orders/list">
+              </div>
+              <div class="playground-field">
+                <label>Action (操作)</label>
+                <input placeholder="GET" value="GET">
+              </div>
+              <button class="btn-test" onclick="toggleResult()">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="vertical-align:middle;margin-right:4px"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                Enforce
+              </button>
+            </div>
+            <div class="playground-result result-allow" id="test-result">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg>
+              <strong>ALLOW</strong> — 命中规则: order-read (erp-viewer → /orders/* → GET)
+            </div>
+          </div>
+
+          <div class="playground">
+            <h4 style="font-size:13px;color:var(--text-2)">历史测试记录</h4>
+            <table class="mini-table">
+              <thead>
+                <tr><th>时间</th><th>用户</th><th>资源</th><th>操作</th><th>结果</th><th>命中规则</th></tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td class="mono" style="font-size:11px;color:var(--text-3)">14:23:05</td>
+                  <td class="mono" style="font-size:11px">acme-corp/alice</td>
+                  <td class="mono" style="font-size:11px">/orders/list</td>
+                  <td>GET</td>
+                  <td><span class="pill pill-green">Allow</span></td>
+                  <td class="mono" style="font-size:11px;color:var(--text-2)">order-read</td>
+                </tr>
+                <tr>
+                  <td class="mono" style="font-size:11px;color:var(--text-3)">14:22:48</td>
+                  <td class="mono" style="font-size:11px">acme-corp/bob</td>
+                  <td class="mono" style="font-size:11px">/orders/123</td>
+                  <td>DELETE</td>
+                  <td><span class="pill pill-red">Deny</span></td>
+                  <td class="mono" style="font-size:11px;color:var(--text-2)">deny-delete-order</td>
+                </tr>
+                <tr>
+                  <td class="mono" style="font-size:11px;color:var(--text-3)">14:21:12</td>
+                  <td class="mono" style="font-size:11px">acme-corp/charlie</td>
+                  <td class="mono" style="font-size:11px">/finance/reports</td>
+                  <td>GET</td>
+                  <td><span class="pill pill-red">Deny</span></td>
+                  <td class="mono" style="font-size:11px;color:var(--text-3)">— (无匹配)</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- TAB: Integration -->
+        <div id="tab-integration" class="hidden">
+          <div class="annotation" style="margin:0 0 20px;padding:20px 24px">
+            <h2 style="font-size:13px;margin-bottom:8px">快速集成</h2>
+            <p style="font-size:12px">以下代码已自动填入该应用的 <strong>ClientId</strong>、<strong>ClientSecret</strong> 和 <strong>Endpoint</strong>，复制到业务系统即可使用。</p>
+          </div>
+
+          <div class="sdk-section">
+            <div class="sdk-tabs">
+              <div class="sdk-tab active">Go</div>
+              <div class="sdk-tab">Python</div>
+              <div class="sdk-tab">Java</div>
+              <div class="sdk-tab">Node.js</div>
+            </div>
+            <div class="code-block"><span class="keyword">import</span> casdoorsdk <span class="string">"github.com/casdoor/casdoor-go-sdk"</span>
+
+<span class="comment">// 初始化 — 已自动填入 ERP 系统的凭证</span>
+<span class="keyword">func</span> <span class="func">init</span>() {
+    casdoorsdk.<span class="func">InitConfig</span>(
+        <span class="string">"https://auth.company.com"</span>,        <span class="comment">// JetAuth Endpoint</span>
+        <span class="string">"a1b2c3d4e5f6"</span>,                   <span class="comment">// ERP ClientId</span>
+        <span class="string">"secret_xxxxxxxxxxxxxxxx"</span>,         <span class="comment">// ERP ClientSecret</span>
+        <span class="string">""</span>,                                 <span class="comment">// Certificate (optional)</span>
+        <span class="string">"acme-corp"</span>,                       <span class="comment">// Organization</span>
+        <span class="string">"erp-system"</span>,                      <span class="comment">// Application</span>
+    )
+}
+
+<span class="comment">// 在 API 中间件中检查权限</span>
+<span class="keyword">func</span> <span class="func">AuthMiddleware</span>(next http.Handler) http.Handler {
+    <span class="keyword">return</span> http.<span class="func">HandlerFunc</span>(<span class="keyword">func</span>(w http.ResponseWriter, r *http.Request) {
+        userId := <span class="func">getUserFromToken</span>(r)  <span class="comment">// 从 JWT 中提取</span>
+
+        allowed, err := casdoorsdk.<span class="func">Enforce</span>(
+            <span class="string">"acme-corp/erp-read"</span>,   <span class="comment">// permissionId</span>
+            <span class="string">""</span>, <span class="string">""</span>, <span class="string">""</span>, <span class="string">""</span>,          <span class="comment">// modelId, resourceId, enforcerId, owner</span>
+            casdoorsdk.CasbinRequest{
+                userId,              <span class="comment">// sub: "acme-corp/alice"</span>
+                r.URL.Path,          <span class="comment">// obj: "/orders/list"</span>
+                r.Method,            <span class="comment">// act: "GET"</span>
+            },
+        )
+
+        <span class="keyword">if</span> err != <span class="keyword">nil</span> || !allowed {
+            http.<span class="func">Error</span>(w, <span class="string">"Forbidden"</span>, 403)
+            <span class="keyword">return</span>
+        }
+        next.<span class="func">ServeHTTP</span>(w, r)
+    })
+}</div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════ KEY DESIGN DECISIONS ═══════ -->
+  <div class="section-divider"><span>Key Design Decisions</span></div>
+
+  <div class="annotation">
+    <h2>设计决策</h2>
+    <p><strong>1. 侧边栏简化</strong> — 「授权」下只保留一个入口「授权管理」，替代原来 5 个独立菜单。模型/适配器/执行器降级为「全局配置」的子页面，只有高级用户需要。</p>
+    <p><strong>2. 应用卡片作为入口</strong> — 每张卡片就是一个业务系统的「权限管理控制台」，显示关键指标（角色数、权限数、用户数、资源数），让管理员一眼看到全局健康度。</p>
+    <p><strong>3. Tab 内自动过滤</strong> — 进入某个应用后，角色列表、权限列表都自动按该应用过滤。新建角色/权限时自动绑定当前应用，减少操作步骤和出错概率。</p>
+    <p><strong>4. 测试 Playground</strong> — 配置完权限后，最大的痛点是「不知道配对了没有」。内嵌的 Enforce 测试让管理员即时验证，无需切换到 Postman 或写脚本。</p>
+    <p><strong>5. 集成指南自动生成</strong> — SDK 代码自动填入当前应用的凭证，复制即可用。消除了「配置完权限但不知道业务系统怎么调用」的断层。</p>
+  </div>
+
+  <div class="annotation">
+    <h2>Implementation Notes</h2>
+    <p><strong>后端改动最小化</strong> — 所有 API 接口不变。前端通过已有的过滤参数（owner、resourceType、model 等）实现按应用聚合显示。Enforce Playground 直接调用 <code>/api/enforce</code>。</p>
+    <p><strong>向后兼容</strong> — 「全局配置」入口保留完整的模型/适配器/执行器/角色/权限列表，高级用户和已有工作流不受影响。新 UI 是一个更高层次的聚合视图。</p>
+    <p><strong>数据关联</strong> — Permission 已有 Model 字段，Role 通过 Permission 间接绑定 Application（Permission.Resources 包含应用名）。前端聚合逻辑：查询该应用名下所有 Permission → 提取引用的 Role → 展示。</p>
+  </div>
+
+  <div style="height:80px"></div>
+</div>
+
+<div class="page-indicator">
+  <div class="page-dot active" onclick="scrollToMockup(0)">概览页</div>
+  <div class="page-dot" onclick="scrollToMockup(1)">详情页</div>
+</div>
+
+<script>
+  // Tab switching
+  function switchTab(el, tabId) {
+    document.querySelectorAll('.detail-tab').forEach(t => t.classList.remove('active'));
+    el.classList.add('active');
+    ['overview','roles','permissions','test','integration'].forEach(id => {
+      document.getElementById('tab-' + id).classList.add('hidden');
+    });
+    document.getElementById('tab-' + tabId).classList.remove('hidden');
+  }
+
+  // Test result toggle
+  let resultState = true;
+  function toggleResult() {
+    const el = document.getElementById('test-result');
+    resultState = !resultState;
+    if (resultState) {
+      el.className = 'playground-result result-allow';
+      el.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg><strong>ALLOW</strong> — 命中规则: order-read (erp-viewer → /orders/* → GET)';
+    } else {
+      el.className = 'playground-result result-deny';
+      el.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg><strong>DENY</strong> — 无匹配的 Allow 规则';
+    }
+  }
+
+  // Scroll to mockup
+  function scrollToMockup(i) {
+    const frames = document.querySelectorAll('.mockup-frame');
+    frames[i].scrollIntoView({ behavior: 'smooth', block: 'start' });
+    document.querySelectorAll('.page-dot').forEach((d,j) => {
+      d.classList.toggle('active', j === i);
+    });
+  }
+</script>
+
+</body>
+</html>
