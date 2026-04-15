@@ -1,18 +1,21 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Save, ArrowLeft, Trash2, Copy, Download, LogOut} from "lucide-react";
+import { ArrowLeft, Trash2, Copy, Download, LogOut, RefreshCw } from "lucide-react";
 import { FormField, FormSection, inputClass, monoInputClass } from "../components/FormSection";
 import { useTranslation } from "../i18n";
 import { useModal } from "../components/Modal";
 import { useEntityEdit } from "../hooks/useEntityEdit";
 import * as CertBackend from "../backend/CertBackend";
+import * as OrganizationBackend from "../backend/OrganizationBackend";
 import type { Cert } from "../backend/CertBackend";
 import { friendlyError } from "../utils/errorHelper";
 import SimpleSelect from "../components/SimpleSelect";
+import SingleSearchSelect from "../components/SingleSearchSelect";
 import SaveButton from "../components/SaveButton";
 import UnsavedBanner from "../components/UnsavedBanner";
 import { useUnsavedWarning } from "../hooks/useUnsavedWarning";
+import { getStoredAccount, isGlobalAdmin } from "../utils/auth";
 
 const SCOPE_OPTIONS = [{ id: "JWT", name: "JWT" }];
 const TYPE_OPTIONS = [
@@ -59,8 +62,25 @@ export default function CertEditPage() {
   const [cert, setCert] = useState<Cert | null>(null);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [generating, setGenerating] = useState(false);
   useEffect(() => { if (saved) { const t = setTimeout(() => setSaved(false), 1500); return () => clearTimeout(t); } }, [saved]);
   const [originalJson, setOriginalJson] = useState("");
+
+  const account = getStoredAccount();
+  const isAdmin = isGlobalAdmin(account);
+  const [orgOptions, setOrgOptions] = useState<{ value: string; label: string }[]>([]);
+
+  useEffect(() => {
+    if (!isAdmin) return;
+    OrganizationBackend.getOrganizationNames("admin").then((res) => {
+      if (res.status === "ok" && res.data) {
+        setOrgOptions([
+          { value: "admin", label: t("common.adminShared" as any) },
+          ...res.data.map((o) => ({ value: o.name, label: o.displayName || o.name })),
+        ]);
+      }
+    });
+  }, [isAdmin]);
 
   const { entity, loading, invalidate: _invalidate, invalidateList } = useEntityEdit<Cert>({
     queryKey: "cert",
@@ -140,6 +160,7 @@ export default function CertEditPage() {
       setSaving(false);
     }
   };
+
   const handleSaveAndExit = async () => {
     setSaving(true);
     try {
@@ -182,8 +203,34 @@ export default function CertEditPage() {
     });
   };
 
+  const handleGenerate = () => {
+    if (isSSL) return;
+    modal.showConfirm(t("certs.generateConfirm" as any), async () => {
+      setGenerating(true);
+      try {
+        const updated = { ...cert, certificate: "", privateKey: "" };
+        const res = await CertBackend.updateCert(owner!, name!, updated);
+        if (res.status === "ok") {
+          const fetchRes = await CertBackend.getCert(owner!, name!);
+          if (fetchRes.status === "ok" && fetchRes.data) {
+            setCert(fetchRes.data);
+            setOriginalJson(JSON.stringify(fetchRes.data));
+            modal.toast(t("certs.generateSuccess" as any));
+          }
+        } else {
+          modal.toast(friendlyError(res.msg, t) || t("common.saveFailed" as any), "error");
+        }
+      } catch (e) {
+        console.error(e);
+      } finally {
+        setGenerating(false);
+      }
+    });
+  };
+
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
+    modal.toast(t("common.copySuccess" as any));
   };
 
   const downloadFile = (content: string, filename: string) => {
@@ -201,8 +248,21 @@ export default function CertEditPage() {
   const showBitSize = !isECDSA && !isSSL;
   const algorithmOptions = isSSL ? SSL_ALGORITHMS : NON_SSL_ALGORITHMS;
 
+  const saveButtons = (
+    <div className="flex items-center gap-2">
+      <button onClick={handleDelete} className="flex items-center gap-1.5 rounded-lg border border-danger/30 px-3 py-2 text-[13px] font-medium text-danger hover:bg-danger/10 transition-colors">
+        <Trash2 size={14} /> {t("common.delete")}
+      </button>
+      <SaveButton onClick={handleSave} saving={saving} saved={saved} label={t("common.save")} />
+      <button onClick={handleSaveAndExit} disabled={saving} className="flex items-center gap-1.5 rounded-lg bg-accent px-4 py-2 text-[13px] font-semibold text-white hover:bg-accent-hover disabled:opacity-50 transition-colors">
+        {saving ? <div className="h-3.5 w-3.5 rounded-full border-2 border-white/30 border-t-white animate-spin" /> : <LogOut size={14} />}
+        {t("common.saveAndExit" as any)}
+      </button>
+    </div>
+  );
+
   return (
-    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-6 ">
+    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -214,16 +274,7 @@ export default function CertEditPage() {
             <p className="text-[13px] text-text-muted font-mono mt-0.5">{owner}/{name}</p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          <button onClick={handleDelete} className="flex items-center gap-1.5 rounded-lg border border-danger/30 px-3 py-2 text-[13px] font-medium text-danger hover:bg-danger/10 transition-colors">
-            <Trash2 size={14} /> {t("common.delete")}
-          </button>
-                    <SaveButton onClick={handleSave} saving={saving} saved={saved} label={t("common.save")} />
-          <button onClick={handleSaveAndExit} disabled={saving} className="flex items-center gap-1.5 rounded-lg bg-accent px-4 py-2 text-[13px] font-semibold text-white hover:bg-accent-hover disabled:opacity-50 transition-colors">
-            {saving ? <div className="h-3.5 w-3.5 rounded-full border-2 border-white/30 border-t-white animate-spin" /> : <LogOut size={14} />}
-            {t("common.saveAndExit" as any)}
-          </button>
-        </div>
+        {saveButtons}
       </div>
 
       {showBanner && <UnsavedBanner isAddMode={isAddMode} />}
@@ -231,7 +282,16 @@ export default function CertEditPage() {
       {/* Basic Info */}
       <FormSection title={t("certs.section.basic" as any)}>
         <FormField label={t("field.owner")}>
-          <input value={cert.owner} disabled className={inputClass} />
+          {isAdmin ? (
+            <SingleSearchSelect
+              value={cert.owner}
+              options={orgOptions}
+              onChange={(v) => set("owner", v)}
+              placeholder={t("common.search" as any)}
+            />
+          ) : (
+            <input value={cert.owner} disabled className={inputClass} />
+          )}
         </FormField>
         <FormField label={t("field.name")} required>
           <input value={cert.name} onChange={(e) => set("name", e.target.value)} className={monoInputClass} />
@@ -243,22 +303,22 @@ export default function CertEditPage() {
 
       {/* Type & Algorithm */}
       <FormSection title={t("certs.section.algorithm" as any)}>
-        <FormField label={t("certs.field.scope" as any)}>
+        <FormField label={t("certs.field.scope" as any)} tooltip={t("certs.tooltip.scope" as any)}>
           <SimpleSelect value={cert.scope} options={SCOPE_OPTIONS.map((o) => ({ value: o.id, label: o.name }))} onChange={(v) => set("scope", v)} />
         </FormField>
-        <FormField label={t("field.type")}>
+        <FormField label={t("field.type")} tooltip={t("certs.tooltip.type" as any)}>
           <SimpleSelect value={cert.type} options={TYPE_OPTIONS.map((o) => ({ value: o.id, label: o.name }))} onChange={(v) => handleTypeChange(v)} />
         </FormField>
-        <FormField label={t("certs.field.cryptoAlgorithm" as any)}>
+        <FormField label={t("certs.field.cryptoAlgorithm" as any)} tooltip={t("certs.tooltip.cryptoAlgorithm" as any)}>
           <SimpleSelect value={cert.cryptoAlgorithm} options={algorithmOptions.map((o) => ({ value: o.id, label: o.name }))} onChange={(v) => handleAlgorithmChange(v)} />
         </FormField>
         {showBitSize && (
-          <FormField label={t("certs.field.bitSize" as any)}>
+          <FormField label={t("certs.field.bitSize" as any)} tooltip={t("certs.tooltip.bitSize" as any)}>
             <SimpleSelect value={String(cert.bitSize)} options={BIT_SIZE_OPTIONS.map((o) => ({ value: String(o.id), label: o.name }))} onChange={(v) => { set("bitSize", Number(v)); set("certificate", ""); set("privateKey", ""); }} />
           </FormField>
         )}
         {!isSSL && (
-          <FormField label={t("certs.field.expireInYears" as any)}>
+          <FormField label={t("certs.field.expireInYears" as any)} tooltip={t("certs.tooltip.expireInYears" as any)}>
             <input type="number" value={cert.expireInYears} onChange={(e) => set("expireInYears", Number(e.target.value))} className={monoInputClass} />
           </FormField>
         )}
@@ -291,57 +351,53 @@ export default function CertEditPage() {
         </FormSection>
       )}
 
-      {/* Certificate & Private Key */}
-      <FormSection title={t("certs.section.keys" as any)}>
-        <FormField label={t("certs.field.certificate" as any)} span="full">
-          <div className="flex gap-2 mb-2">
-            <button
-              onClick={() => copyToClipboard(cert.certificate)}
-              disabled={!cert.certificate}
-              className="flex items-center gap-1 rounded-lg border border-border px-2.5 py-1.5 text-[12px] font-medium text-text-secondary hover:bg-surface-2 transition-colors disabled:opacity-30"
-            >
-              <Copy size={12} /> {t("certs.copyCert" as any)}
-            </button>
-            <button
-              onClick={() => downloadFile(cert.certificate, "token_jwt_key.pem")}
-              disabled={!cert.certificate}
-              className="flex items-center gap-1 rounded-lg border border-border px-2.5 py-1.5 text-[12px] font-medium text-text-secondary hover:bg-surface-2 transition-colors disabled:opacity-30"
-            >
-              <Download size={12} /> {t("certs.downloadCert" as any)}
-            </button>
+      {/* Certificate & Private Key — side-by-side on desktop */}
+      <FormSection title={t("certs.section.keys" as any)} action={
+        !isSSL ? (
+          <button
+            onClick={handleGenerate}
+            disabled={generating}
+            className="flex items-center gap-1.5 rounded-lg border border-accent px-3 py-1.5 text-[12px] font-semibold text-accent hover:bg-accent/10 disabled:opacity-50 transition-colors"
+          >
+            {generating ? <div className="h-3 w-3 rounded-full border-2 border-accent/30 border-t-accent animate-spin" /> : <RefreshCw size={13} />}
+            {t("certs.generate" as any)}
+          </button>
+        ) : undefined
+      }>
+        <div className="col-span-2 grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Certificate */}
+          <div>
+            <label className="block text-[12px] font-medium text-text-secondary mb-1.5">{t("certs.field.certificate" as any)}</label>
+            <div className="flex gap-2 mb-2">
+              <button onClick={() => copyToClipboard(cert.certificate)} disabled={!cert.certificate} className="flex items-center gap-1 rounded-lg border border-border px-2.5 py-1.5 text-[12px] font-medium text-text-secondary hover:bg-surface-2 transition-colors disabled:opacity-30">
+                <Copy size={12} /> {t("certs.copyCert" as any)}
+              </button>
+              <button onClick={() => downloadFile(cert.certificate, "token_jwt_key.pem")} disabled={!cert.certificate} className="flex items-center gap-1 rounded-lg border border-border px-2.5 py-1.5 text-[12px] font-medium text-text-secondary hover:bg-surface-2 transition-colors disabled:opacity-30">
+                <Download size={12} /> {t("certs.downloadCert" as any)}
+              </button>
+            </div>
+            <textarea value={cert.certificate} onChange={(e) => set("certificate", e.target.value)} rows={30} className={`${monoInputClass} text-[11px]`} />
           </div>
-          <textarea
-            value={cert.certificate}
-            onChange={(e) => set("certificate", e.target.value)}
-            rows={12}
-            className={`${monoInputClass} text-[11px]`}
-          />
-        </FormField>
-        <FormField label={t("certs.field.privateKey" as any)} span="full">
-          <div className="flex gap-2 mb-2">
-            <button
-              onClick={() => copyToClipboard(cert.privateKey)}
-              disabled={!cert.privateKey}
-              className="flex items-center gap-1 rounded-lg border border-border px-2.5 py-1.5 text-[12px] font-medium text-text-secondary hover:bg-surface-2 transition-colors disabled:opacity-30"
-            >
-              <Copy size={12} /> {t("certs.copyKey" as any)}
-            </button>
-            <button
-              onClick={() => downloadFile(cert.privateKey, "token_jwt_key.key")}
-              disabled={!cert.privateKey}
-              className="flex items-center gap-1 rounded-lg border border-border px-2.5 py-1.5 text-[12px] font-medium text-text-secondary hover:bg-surface-2 transition-colors disabled:opacity-30"
-            >
-              <Download size={12} /> {t("certs.downloadKey" as any)}
-            </button>
+          {/* Private Key */}
+          <div>
+            <label className="block text-[12px] font-medium text-text-secondary mb-1.5">{t("certs.field.privateKey" as any)}</label>
+            <div className="flex gap-2 mb-2">
+              <button onClick={() => copyToClipboard(cert.privateKey)} disabled={!cert.privateKey} className="flex items-center gap-1 rounded-lg border border-border px-2.5 py-1.5 text-[12px] font-medium text-text-secondary hover:bg-surface-2 transition-colors disabled:opacity-30">
+                <Copy size={12} /> {t("certs.copyKey" as any)}
+              </button>
+              <button onClick={() => downloadFile(cert.privateKey, "token_jwt_key.key")} disabled={!cert.privateKey} className="flex items-center gap-1 rounded-lg border border-border px-2.5 py-1.5 text-[12px] font-medium text-text-secondary hover:bg-surface-2 transition-colors disabled:opacity-30">
+                <Download size={12} /> {t("certs.downloadKey" as any)}
+              </button>
+            </div>
+            <textarea value={cert.privateKey} onChange={(e) => set("privateKey", e.target.value)} rows={30} className={`${monoInputClass} text-[11px]`} />
           </div>
-          <textarea
-            value={cert.privateKey}
-            onChange={(e) => set("privateKey", e.target.value)}
-            rows={12}
-            className={`${monoInputClass} text-[11px]`}
-          />
-        </FormField>
+        </div>
       </FormSection>
+
+      {/* Bottom save buttons */}
+      <div className="flex items-center justify-end pt-2 pb-8">
+        {saveButtons}
+      </div>
     </motion.div>
   );
 }
