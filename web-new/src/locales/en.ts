@@ -1018,6 +1018,8 @@ const en = {
   "providers.label.clientSecret2": "Client Secret 2",
   "providers.label.merchantAccount": "Merchant Account",
   "providers.payment.rootCert": "Root Certificate",
+  "providers.sms.mockNotice": "Mock SMS simulates sending without delivering any real messages. No credentials required.\n\nUsage:\n1. Save this provider\n2. Add it to your application's provider list\n3. Trigger SMS verification — codes are generated and stored in the verification_record table but not actually sent\n4. Query the database to retrieve the code for testing",
+  "providers.payment.dummyNotice": "Dummy provider simulates payments without calling any real gateway. Orders are marked as successful immediately. No charges apply. Use it to test the purchase flow before going live.",
   "providers.state.enabled": "Enabled",
   "providers.state.disabled": "Disabled",
   "providers.help.testReceiver": "Test receiver email address",

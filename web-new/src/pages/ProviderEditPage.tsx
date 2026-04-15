@@ -45,7 +45,7 @@ const TYPE_BY_CATEGORY: Record<string, string[]> = {
     "Custom HTTP SMS",
   ],
   Storage: [
-    "Aliyun OSS", "AWS S3", "Azure Blob", "Casdoor", "CUCloud OSS",
+    "Aliyun OSS", "AWS S3", "Azure Blob", "CUCloud OSS",
     "Google Cloud Storage", "Local File System", "MinIO",
     "Qiniu Cloud Kodo", "Synology", "Tencent Cloud COS",
   ],
@@ -219,6 +219,7 @@ const PROVIDER_URLS: Record<string, string> = {
   "reCAPTCHA v2": "https://www.google.com/recaptcha/admin", "reCAPTCHA v3": "https://www.google.com/recaptcha/admin",
   hCaptcha: "https://dashboard.hcaptcha.com", "Cloudflare Turnstile": "https://dash.cloudflare.com",
   "Aliyun Captcha": "https://www.alibabacloud.com/product/captcha", GEETEST: "https://www.geetest.com",
+  "Azure ACS": "https://azure.microsoft.com/en-us/products/communication-services",
   // Email
   SendGrid: "https://app.sendgrid.com", Mailtrap: "https://mailtrap.io", Resend: "https://resend.com",
   // SMS
@@ -226,6 +227,7 @@ const PROVIDER_URLS: Record<string, string> = {
   "Twilio SMS": "https://www.twilio.com/console", "Amazon SNS": "https://console.aws.amazon.com/sns",
   "Huawei Cloud SMS": "https://www.huaweicloud.com/product/msgsms.html",
   "Baidu Cloud SMS": "https://cloud.baidu.com/product/sms.html",
+  "Infobip SMS": "https://portal.infobip.com",
   "Volc Engine SMS": "https://console.volcengine.com/sms",
   // Storage
   "AWS S3": "https://s3.console.aws.amazon.com", MinIO: "https://min.io",
@@ -236,9 +238,11 @@ const PROVIDER_URLS: Record<string, string> = {
   Keycloak: "https://www.keycloak.org", "Aliyun IDaaS": "https://www.alibabacloud.com/product/idaas",
   // Payment
   "WeChat Pay": "https://pay.weixin.qq.com", Stripe: "https://dashboard.stripe.com/apikeys",
+  Balance: "https://www.getbalance.com/",
   AirWallex: "https://www.airwallex.com", Polar: "https://polar.sh", Paddle: "https://www.paddle.com",
-  FastSpring: "https://fastspring.com", "Lemon Squeezy": "https://www.lemonsqueezy.com", Adyen: "https://www.adyen.com",
+  GC: "https://ww3.gcpay.com/", FastSpring: "https://fastspring.com", "Lemon Squeezy": "https://www.lemonsqueezy.com", Adyen: "https://www.adyen.com",
   // Notification
+  Bark: "https://bark.day.app/#/?id=bark",
   "Microsoft Teams": "https://dev.teams.microsoft.com", Pushover: "https://pushover.net",
   "Google Chat": "https://chat.google.com", Reddit: "https://www.reddit.com/prefs/apps",
   Matrix: "https://matrix.org", Viber: "https://www.viber.com",
@@ -246,6 +250,8 @@ const PROVIDER_URLS: Record<string, string> = {
   Web3Onboard: "https://onboard.blocknative.com",
   // ID Verification
   Jumio: "https://www.jumio.com",
+  "Alibaba Cloud": "https://www.alibabacloud.com",
+  "Alibaba Cloud Facebody": "https://www.alibabacloud.com/product/China-facebody",
 };
 
 // ── Provider logo URL (Simple Icons CDN — SVG, theme-aware) ──
@@ -351,8 +357,8 @@ const LOCAL_ICONS: Record<string, string> = {
   "SAML:Custom": "local:key",
   // Payment
   "Payment:Dummy": "local:creditCard",
-  "Payment:Balance": "local:wallet",
-  "Payment:GC": "local:creditCard",
+  "Payment:Balance": "brand:balance.png",
+  "Payment:GC": "brand:gcpay.png",
   "Payment:AirWallex": "brand:airwallex.png",
   "Payment:Polar": "brand:polar.png",
   "Payment:Paddle": "brand:paddle.png",
@@ -363,7 +369,7 @@ const LOCAL_ICONS: Record<string, string> = {
   // Notification
   "Notification:Microsoft Teams": "brand:microsoft-teams-icon.svg",
   "Notification:Pushover": "brand:pushover.svg",
-  "Notification:Bark": "local:bell",
+  "Notification:Bark": "brand:bark.png",
   "Notification:Pushbullet": "brand:pushbullet_1.svg",
   "Notification:Webpush": "brand:webpush.svg",
   "Notification:Rocket Chat": "brand:rocket-chat.svg",
@@ -913,6 +919,11 @@ export default function ProviderEditPage() {
 
   const renderSmsFields = () => (
     <FormSection title={t("providers.section.smsConfig" as any)}>
+      {type === "Mock SMS" && (
+        <div className="col-span-2 rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-[12px] text-amber-800 whitespace-pre-line leading-relaxed">
+          {t("providers.sms.mockNotice" as any)}
+        </div>
+      )}
       {type === "Custom HTTP SMS" ? (
         <>
           <FormField label={t("providers.field.endpoint")} span="full">
@@ -1078,7 +1089,13 @@ export default function ProviderEditPage() {
 
   const renderPaymentFields = () => (
     <FormSection title={t("providers.section.paymentConfig" as any)}>
-      {/* Cert — Alipay, WeChat Pay, Casdoor */}
+      {/* Dummy — info notice */}
+      {type === "Dummy" && (
+        <div className="col-span-2 rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-[12px] text-amber-800 whitespace-pre-line leading-relaxed">
+          {t("providers.payment.dummyNotice" as any)}
+        </div>
+      )}
+      {/* Cert — Alipay, WeChat Pay */}
       {["Alipay", "WeChat Pay"].includes(type) && (
         <FormField label={t("providers.field.cert" as any)}>
           <input value={String(prov.cert ?? "")} onChange={(e) => set("cert", e.target.value)} className={monoInputClass} />
@@ -1314,29 +1331,26 @@ export default function ProviderEditPage() {
           />
         </FormField>
         <FormField label={t("field.type")}>
-          <div className="flex items-center gap-2">
-            <div className="flex-1">
-              <ProviderTypeSelect
-                category={category}
-                value={type}
-                options={TYPE_BY_CATEGORY[category] ?? []}
-                onChange={handleTypeChange}
-                placeholder={t("common.search" as any)}
-                isDark={theme === "dark"}
-              />
-            </div>
-            {PROVIDER_URLS[type] && (
-              <a
-                href={PROVIDER_URLS[type]}
-                target="_blank"
-                rel="noreferrer"
-                className="flex items-center gap-1 rounded-lg border border-border px-2.5 py-2 text-[12px] text-text-muted hover:text-accent hover:border-accent/30 hover:bg-accent/5 transition-colors whitespace-nowrap"
-              >
-                <ExternalLink size={13} />
-                {t("providers.officialSite" as any)}
-              </a>
-            )}
-          </div>
+          <ProviderTypeSelect
+            category={category}
+            value={type}
+            options={TYPE_BY_CATEGORY[category] ?? []}
+            onChange={handleTypeChange}
+            placeholder={t("common.search" as any)}
+            isDark={theme === "dark"}
+          />
+          {PROVIDER_URLS[type] && (
+            <a
+              href={PROVIDER_URLS[type]}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-1 mt-1.5 text-[11px] text-text-muted hover:text-accent transition-colors"
+            >
+              <ExternalLink size={11} />
+              <span>{t("providers.officialSite" as any)}</span>
+              <span className="opacity-50 font-mono truncate max-w-[200px]">{PROVIDER_URLS[type].replace(/^https?:\/\//, "").replace(/\/$/, "")}</span>
+            </a>
+          )}
         </FormField>
         {showSubType && (
           <FormField label={t("providers.field.subType" as any)}>

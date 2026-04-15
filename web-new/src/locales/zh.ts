@@ -1099,6 +1099,8 @@ const zh: Record<string, string> = {
   "providers.label.clientSecret2": "客户端密钥 2",
   "providers.label.merchantAccount": "商户账号",
   "providers.payment.rootCert": "根证书",
+  "providers.sms.mockNotice": "模拟短信不会发送任何真实消息，无需填写凭据。\n\n使用方式：\n1. 保存此提供商\n2. 在应用的提供商列表中添加\n3. 触发短信验证 — 验证码会生成并存入 verification_record 表，但不实际发送\n4. 从数据库查询验证码完成测试",
+  "providers.payment.dummyNotice": "虚拟支付模拟付款流程，不调用任何真实支付网关。订单会立即标记为成功，不产生任何费用。适用于正式上线前测试购买流程。",
   "providers.state.enabled": "启用",
   "providers.state.disabled": "禁用",
   "providers.help.testReceiver": "测试接收邮箱地址",
