@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, Plus, Play, Copy, Check, X, Users as UsersIcon, RefreshCw } from "lucide-react";
+import SimpleSelect from "../components/SimpleSelect";
 import { useTranslation } from "../i18n";
 import { useModal } from "../components/Modal";
 import * as ApplicationBackend from "../backend/ApplicationBackend";
@@ -176,7 +177,12 @@ export default function AppAuthorizationPage() {
             linkedModel={linkedModel}
             linkedAdapter={linkedAdapter}
             linkedEnforcer={linkedEnforcer}
+            models={models}
+            adapters={adapters}
+            enforcers={enforcers}
+            onRefresh={fetchData}
             t={t}
+            modal={modal}
           />
         )}
         {activeTab === "roles" && (
@@ -228,12 +234,16 @@ export default function AppAuthorizationPage() {
 }
 
 // ═══════ OVERVIEW TAB ═══════
-function OverviewTab({ permissions, roles, userCount, resourceCount, allowCount, denyCount, linkedModel, linkedAdapter, linkedEnforcer, t }: {
+function OverviewTab({ permissions, roles, userCount, resourceCount, allowCount, denyCount, linkedModel, linkedAdapter, linkedEnforcer, models, adapters, enforcers, onRefresh, t, modal }: {
   permissions: Permission[]; roles: Role[]; userCount: number; resourceCount: number;
   allowCount: number; denyCount: number;
   linkedModel: Model | null; linkedAdapter: Adapter | null; linkedEnforcer: Enforcer | null;
-  t: (key: any) => string;
+  models: Model[]; adapters: Adapter[]; enforcers: Enforcer[];
+  onRefresh: () => void;
+  t: (key: any) => string; modal: any;
 }) {
+  const [saving, setSaving] = useState(false);
+
   const stats = [
     { label: t("authz.metrics.roles"), value: roles.length, sub: `${roles.filter((r) => r.isEnabled).length} ${t("common.enabled" as any)}` },
     { label: t("authz.metrics.permissions"), value: permissions.length, sub: `${allowCount} ${t("authz.overview.allowRules")} · ${denyCount} ${t("authz.overview.denyRules")}` },
@@ -255,6 +265,46 @@ function OverviewTab({ permissions, roles, userCount, resourceCount, allowCount,
     if (matcherMatch) matcher = matcherMatch[1].trim();
   }
 
+  // Current values across permissions
+  const BUILTIN = "__builtin__";
+  const currentModelId = linkedModel ? `${linkedModel.owner}/${linkedModel.name}` : BUILTIN;
+  const currentAdapterId = linkedAdapter ? `${linkedAdapter.owner}/${linkedAdapter.name}` : BUILTIN;
+
+  // Batch update all permissions' model or adapter
+  const batchUpdateField = async (field: "model" | "adapter", newValue: string) => {
+    if (permissions.length === 0) return;
+    setSaving(true);
+    try {
+      const results = await Promise.all(
+        permissions.map((p) => {
+          const updated = { ...p, [field]: newValue };
+          return PermissionBackend.updatePermission(p.owner, p.name, updated as Permission);
+        })
+      );
+      const failed = results.filter((r) => r.status !== "ok");
+      if (failed.length > 0) {
+        modal.toast(`${failed.length} ${t("common.saveFailed" as any)}`, "error");
+      } else {
+        modal.toast(t("common.saveSuccess" as any));
+        onRefresh();
+      }
+    } catch {
+      modal.toast(t("common.saveFailed" as any), "error");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // Dropdown options
+  const modelOptions = [
+    { value: BUILTIN, label: t("authz.overview.defaultModel") },
+    ...models.map((m) => ({ value: `${m.owner}/${m.name}`, label: `${m.owner}/${m.name}` })),
+  ];
+  const adapterOptions = [
+    { value: BUILTIN, label: t("authz.overview.builtinAdapter" as any) },
+    ...adapters.map((a) => ({ value: `${a.owner}/${a.name}`, label: `${a.owner}/${a.name}` })),
+  ];
+
   return (
     <div className="space-y-5">
       {/* Stat cards */}
@@ -273,7 +323,17 @@ function OverviewTab({ permissions, roles, userCount, resourceCount, allowCount,
         <div className="rounded-xl border border-border bg-surface-1 p-5">
           <h4 className="text-[13px] font-semibold text-text-primary mb-3">{t("authz.overview.model")}</h4>
           <div className="space-y-2.5">
-            <ConfigRow label={t("authz.overview.currentModel")} value={linkedModel ? `${linkedModel.owner}/${linkedModel.name}` : t("authz.overview.defaultModel")} accent={!!linkedModel} />
+            <div className="flex items-center justify-between py-1.5 border-b border-border-subtle">
+              <span className="text-[12px] text-text-muted shrink-0 mr-3">{t("authz.overview.currentModel")}</span>
+              <div className="w-[55%] min-w-[200px]">
+                <SimpleSelect
+                  value={currentModelId}
+                  options={modelOptions}
+                  onChange={(v) => batchUpdateField("model", v === BUILTIN ? "" : v)}
+                  disabled={saving || permissions.length === 0}
+                />
+              </div>
+            </div>
             {modelType && <ConfigRow label={t("authz.overview.modelType")} value={modelType} />}
             {roleDef && <ConfigRow label={t("authz.overview.roleDef")} value={roleDef} mono />}
             {matcher && <ConfigRow label={t("authz.overview.matcher")} value={matcher} mono small />}
@@ -282,11 +342,20 @@ function OverviewTab({ permissions, roles, userCount, resourceCount, allowCount,
         <div className="rounded-xl border border-border bg-surface-1 p-5">
           <h4 className="text-[13px] font-semibold text-text-primary mb-3">{t("authz.overview.adapterEnforcer")}</h4>
           <div className="space-y-2.5">
-            <ConfigRow label={t("authz.overview.adapter")} value={linkedAdapter ? `${linkedAdapter.owner}/${linkedAdapter.name}` : t("authz.overview.noModel")} accent={!!linkedAdapter} />
+            <div className="flex items-center justify-between py-1.5 border-b border-border-subtle">
+              <span className="text-[12px] text-text-muted shrink-0 mr-3">{t("authz.overview.adapter")}</span>
+              <div className="w-[55%] min-w-[200px]">
+                <SimpleSelect
+                  value={currentAdapterId}
+                  options={adapterOptions}
+                  onChange={(v) => batchUpdateField("adapter", v === BUILTIN ? "" : v)}
+                  disabled={saving || permissions.length === 0}
+                />
+              </div>
+            </div>
             {linkedAdapter && <ConfigRow label={t("authz.overview.dbType")} value={linkedAdapter.databaseType || linkedAdapter.type || "—"} />}
             {linkedAdapter && <ConfigRow label={t("authz.overview.policyTable")} value={linkedAdapter.table || "—"} mono />}
             <ConfigRow label={t("authz.overview.enforcer")} value={linkedEnforcer ? `${linkedEnforcer.owner}/${linkedEnforcer.name}` : t("authz.overview.noModel")} accent={!!linkedEnforcer} />
-            <ConfigRow label={t("authz.overview.cache")} value={t("authz.overview.cacheDisabled")} warn />
           </div>
         </div>
       </div>
@@ -449,6 +518,7 @@ function PermissionsTab({ permissions, onRefresh, appOwner, appName, t, modal, n
             <tr className="bg-surface-2 border-b border-border">
               <th className="text-left px-4 py-2.5 text-[10px] font-bold uppercase tracking-wider text-text-muted">{t("authz.perms.col.name")}</th>
               <th className="text-left px-4 py-2.5 text-[10px] font-bold uppercase tracking-wider text-text-muted">{t("authz.perms.col.subject")}</th>
+              <th className="text-left px-4 py-2.5 text-[10px] font-bold uppercase tracking-wider text-text-muted">{t("permissions.field.resourceType" as any)}</th>
               <th className="text-left px-4 py-2.5 text-[10px] font-bold uppercase tracking-wider text-text-muted">{t("authz.perms.col.resources")}</th>
               <th className="text-left px-4 py-2.5 text-[10px] font-bold uppercase tracking-wider text-text-muted">{t("authz.perms.col.actions")}</th>
               <th className="text-left px-4 py-2.5 text-[10px] font-bold uppercase tracking-wider text-text-muted">{t("authz.perms.col.effect")}</th>
@@ -480,6 +550,9 @@ function PermissionsTab({ permissions, onRefresh, appOwner, appName, t, modal, n
                       <span className="inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold bg-amber-500/10 text-amber-400">*</span>
                     )}
                   </div>
+                </td>
+                <td className="px-4 py-3">
+                  <span className="inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold bg-surface-3 text-text-secondary">{perm.resourceType || "—"}</span>
                 </td>
                 <td className="px-4 py-3">
                   <span className="font-mono text-[11px] text-text-secondary">{perm.resources?.join(", ") || "—"}</span>
@@ -520,7 +593,7 @@ function PermissionsTab({ permissions, onRefresh, appOwner, appName, t, modal, n
               </tr>
             ))}
             {permissions.length === 0 && (
-              <tr><td colSpan={7} className="px-4 py-8 text-center text-text-muted text-[13px]">{t("common.noData")}</td></tr>
+              <tr><td colSpan={8} className="px-4 py-8 text-center text-text-muted text-[13px]">{t("common.noData")}</td></tr>
             )}
           </tbody>
         </table>
@@ -581,16 +654,14 @@ function TestTab({ appOwner, appName, permissions, t }: {
         {/* Permission selector */}
         <div className="mb-4">
           <label className="block text-[10px] font-bold uppercase tracking-wider text-text-muted mb-1.5">{t("authz.test.selectPermission")}</label>
-          <select
-            value={selectedPermId}
-            onChange={(e) => setSelectedPermId(e.target.value)}
-            className="w-full rounded-lg border border-border bg-surface-2 px-3 py-2 text-[12px] font-mono text-text-primary outline-none focus:border-accent"
-          >
-            <option value="">{t("authz.test.allPermissions")}</option>
-            {permissions.map((p) => (
-              <option key={`${p.owner}/${p.name}`} value={`${p.owner}/${p.name}`}>{p.name} ({p.effect})</option>
-            ))}
-          </select>
+          <SimpleSelect
+            value={selectedPermId || "__all__"}
+            options={[
+              { value: "__all__", label: t("authz.test.allPermissions") },
+              ...permissions.map((p) => ({ value: `${p.owner}/${p.name}`, label: `${p.name} (${p.effect})` })),
+            ]}
+            onChange={(v) => setSelectedPermId(v === "__all__" ? "" : v)}
+          />
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-[1fr_1fr_1fr_auto] gap-3 items-end">
