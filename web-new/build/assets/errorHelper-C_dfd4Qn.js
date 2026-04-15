@@ -1,0 +1,1 @@
+import{i as e}from"./index-C0sTfwH-.js";export{e as friendlyError};

@@ -587,7 +587,7 @@ export default function ProviderEditPage() {
   const [captchaImg, setCaptchaImg] = useState("");
   const [captchaId, setCaptchaId] = useState("");
   const [captchaInput, setCaptchaInput] = useState("");
-  const [showNotifGuide, setShowNotifGuide] = useState(false);
+  const [showGuide, setShowGuide] = useState(false);
 
   const invalidateList = () => queryClient.invalidateQueries({ queryKey: ["providers"] });
 
@@ -615,6 +615,7 @@ export default function ProviderEditPage() {
   };
 
   const handleCategoryChange = (newCat: string) => {
+    setShowGuide(false);
     const newType = DEFAULT_TYPE_FOR_CATEGORY[newCat] ?? "";
     const updates: Record<string, unknown> = { category: newCat, type: newType };
 
@@ -639,6 +640,7 @@ export default function ProviderEditPage() {
   };
 
   const handleTypeChange = (newType: string) => {
+    setShowGuide(false);
     const updates: Record<string, unknown> = { type: newType };
 
     // Type-specific defaults
@@ -781,6 +783,74 @@ export default function ProviderEditPage() {
     );
   };
 
+  // ── Provider configuration guides (all categories) ──
+  const gk = (key: string) => t(`providers.guide.${key}` as any);
+  type GuideEntry = { title: string; steps: string[]; links?: { label: string; url: string }[] };
+  const PROVIDER_GUIDE: Record<string, GuideEntry> = {
+    // Captcha
+    "reCAPTCHA v2": { title: gk("recaptcha.title"), steps: [gk("recaptcha.step1"), gk("recaptcha.step2"), gk("recaptcha.step3")], links: [{ label: "Google reCAPTCHA", url: "https://www.google.com/recaptcha/admin" }] },
+    "reCAPTCHA v3": { title: gk("recaptcha.title"), steps: [gk("recaptcha.step1"), gk("recaptcha.step2"), gk("recaptcha.step3")], links: [{ label: "Google reCAPTCHA", url: "https://www.google.com/recaptcha/admin" }] },
+    hCaptcha: { title: gk("hcaptcha.title"), steps: [gk("hcaptcha.step1"), gk("hcaptcha.step2")], links: [{ label: "hCaptcha Dashboard", url: "https://dashboard.hcaptcha.com" }] },
+    "Cloudflare Turnstile": { title: gk("turnstile.title"), steps: [gk("turnstile.step1"), gk("turnstile.step2")], links: [{ label: "Cloudflare Dashboard", url: "https://dash.cloudflare.com" }] },
+    "Aliyun Captcha": { title: gk("aliyunCaptcha.title"), steps: [gk("aliyunCaptcha.step1"), gk("aliyunCaptcha.step2"), gk("aliyunCaptcha.step3")], links: [{ label: "Alibaba Cloud", url: "https://www.alibabacloud.com/product/captcha" }] },
+    GEETEST: { title: gk("geetest.title"), steps: [gk("geetest.step1"), gk("geetest.step2")], links: [{ label: "GEETEST", url: "https://www.geetest.com" }] },
+    // Payment
+    Stripe: { title: gk("stripe.title"), steps: [gk("stripe.step1"), gk("stripe.step2")], links: [{ label: "Stripe Dashboard", url: "https://dashboard.stripe.com/apikeys" }] },
+    PayPal: { title: gk("paypal.title"), steps: [gk("paypal.step1"), gk("paypal.step2")], links: [{ label: "PayPal Developer", url: "https://developer.paypal.com/developer/applications" }] },
+    Alipay: { title: gk("alipay.title"), steps: [gk("alipay.step1"), gk("alipay.step2"), gk("alipay.step3")], links: [{ label: "Alipay Open Platform", url: "https://open.alipay.com" }] },
+    "WeChat Pay": { title: gk("wechatpay.title"), steps: [gk("wechatpay.step1"), gk("wechatpay.step2"), gk("wechatpay.step3")], links: [{ label: "WeChat Pay", url: "https://pay.weixin.qq.com" }] },
+    // SAML
+    "SAML:Keycloak": { title: gk("samlKeycloak.title"), steps: [gk("samlKeycloak.step1"), gk("samlKeycloak.step2"), gk("samlKeycloak.step3")], links: [{ label: "Keycloak", url: "https://www.keycloak.org" }] },
+    "SAML:Aliyun IDaaS": { title: gk("samlAliyun.title"), steps: [gk("samlAliyun.step1"), gk("samlAliyun.step2")], links: [{ label: "Alibaba Cloud IDaaS", url: "https://www.alibabacloud.com/product/idaas" }] },
+    // Storage
+    "AWS S3": { title: gk("s3.title"), steps: [gk("s3.step1"), gk("s3.step2"), gk("s3.step3")], links: [{ label: "AWS S3 Console", url: "https://s3.console.aws.amazon.com" }] },
+    MinIO: { title: gk("minio.title"), steps: [gk("minio.step1"), gk("minio.step2")], links: [{ label: "MinIO", url: "https://min.io" }] },
+    "Local File System": { title: gk("localfs.title"), steps: [gk("localfs.step1"), gk("localfs.step2")] },
+    // Email
+    "Email:SendGrid": { title: gk("sendgrid.title"), steps: [gk("sendgrid.step1"), gk("sendgrid.step2"), gk("sendgrid.step3")], links: [{ label: "SendGrid", url: "https://app.sendgrid.com" }] },
+    "Email:Resend": { title: gk("resend.title"), steps: [gk("resend.step1"), gk("resend.step2")], links: [{ label: "Resend", url: "https://resend.com" }] },
+    "Email:Azure ACS": { title: gk("emailAzureAcs.title"), steps: [gk("emailAzureAcs.step1"), gk("emailAzureAcs.step2"), gk("emailAzureAcs.step3")], links: [{ label: "Azure Communication Services", url: "https://azure.microsoft.com/en-us/products/communication-services" }] },
+    // SMS
+    "Twilio SMS": { title: gk("twilio.title"), steps: [gk("twilio.step1"), gk("twilio.step2"), gk("twilio.step3")], links: [{ label: "Twilio Console", url: "https://www.twilio.com/console" }] },
+    "Aliyun SMS": { title: gk("aliyunSms.title"), steps: [gk("aliyunSms.step1"), gk("aliyunSms.step2"), gk("aliyunSms.step3")], links: [{ label: "Aliyun SMS Console", url: "https://dysms.console.aliyun.com" }] },
+    "Tencent Cloud SMS": { title: gk("tencentSms.title"), steps: [gk("tencentSms.step1"), gk("tencentSms.step2"), gk("tencentSms.step3")], links: [{ label: "Tencent Cloud SMS", url: "https://console.cloud.tencent.com/smsv2" }] },
+    "Amazon SNS": { title: gk("amazonSns.title"), steps: [gk("amazonSns.step1"), gk("amazonSns.step2")], links: [{ label: "AWS SNS Console", url: "https://console.aws.amazon.com/sns" }] },
+  };
+
+  // Resolve guide by "category:type" first, then by type name
+  const getGuide = (): GuideEntry | null => PROVIDER_GUIDE[`${category}:${type}`] ?? PROVIDER_GUIDE[type] ?? null;
+
+  const renderGuide = () => {
+    const guide = getGuide();
+    if (!guide) return null;
+    return (
+      <div className="col-span-full">
+        <button onClick={() => setShowGuide(!showGuide)} className="inline-flex items-center gap-1.5 text-[12px] text-accent hover:text-accent-hover transition-colors">
+          <HelpCircle size={13} />
+          <span>{t("providers.notif.guideToggle" as any)}</span>
+          <ChevronRight size={12} className={`transition-transform duration-200 ${showGuide ? "rotate-90" : ""}`} />
+        </button>
+        {showGuide && (
+          <div className="mt-2 rounded-lg border border-accent/20 bg-accent/5 px-4 py-3">
+            <h4 className="text-[13px] font-semibold text-text-primary mb-2">{guide.title}</h4>
+            <ol className="space-y-1.5 text-[12px] text-text-secondary list-decimal list-inside">
+              {guide.steps.map((step, i) => <li key={i} className="leading-relaxed">{step}</li>)}
+            </ol>
+            {guide.links && guide.links.length > 0 && (
+              <div className="mt-2.5 flex flex-wrap gap-3">
+                {guide.links.map((link, i) => (
+                  <a key={i} href={link.url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-[11px] text-accent hover:text-accent-hover transition-colors">
+                    <ExternalLink size={10} />{link.label}
+                  </a>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  };
+
   const renderOAuthFields = () => (
     <>
       {isCustomOAuth && (
@@ -870,6 +940,7 @@ export default function ProviderEditPage() {
       {type === "Custom HTTP Email" ? (
         <>
           <FormSection title={t("providers.section.emailConfig" as any)}>
+            {renderGuide()}
             <FormField label={t("providers.field.endpoint")} span="full">
               <input value={String(prov.endpoint ?? "")} onChange={(e) => set("endpoint", e.target.value)} className={inputClass} placeholder="https://example.com/send-email" />
             </FormField>
@@ -903,6 +974,7 @@ export default function ProviderEditPage() {
         </>
       ) : (
         <FormSection title={t("providers.section.emailConfig" as any)}>
+          {renderGuide()}
           {/* Host: SMTP + Azure ACS + SendGrid (not Resend) */}
           {type !== "Resend" && (
             <FormField label={type === "Azure ACS" ? t("providers.field.endpoint") : t("providers.field.host")}>
@@ -1010,6 +1082,7 @@ export default function ProviderEditPage() {
 
   const renderSmsFields = () => (
     <FormSection title={t("providers.section.smsConfig" as any)}>
+      {renderGuide()}
       {type === "Mock SMS" && (
         <div className="col-span-2 rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-[12px] text-amber-800 whitespace-pre-line leading-relaxed">
           {t("providers.sms.mockNotice" as any)}
@@ -1062,6 +1135,7 @@ export default function ProviderEditPage() {
 
   const renderStorageFields = () => (
     <FormSection title={t("providers.section.storageConfig" as any)}>
+      {renderGuide()}
       <FormField label={t("providers.field.endpoint")}>
         <input value={String(prov.endpoint ?? "")} onChange={(e) => set("endpoint", e.target.value)} className={inputClass} placeholder={t("help.placeholder.s3Endpoint" as any)} />
       </FormField>
@@ -1121,6 +1195,7 @@ export default function ProviderEditPage() {
   const renderSamlFields = () => (
     <>
       <FormSection title={t("providers.section.samlConfig" as any)}>
+        {renderGuide()}
         <FormField label={t("providers.field.enableSignAuthnRequest" as any)}>
           <Switch checked={!!prov.enableSignAuthnRequest} onChange={(v) => set("enableSignAuthnRequest", v)} />
         </FormField>
@@ -1185,6 +1260,7 @@ export default function ProviderEditPage() {
 
   const renderPaymentFields = () => (
     <FormSection title={t("providers.section.paymentConfig" as any)}>
+      {renderGuide()}
       {/* Dummy — info notice */}
       {type === "Dummy" && (
         <div className="col-span-2 rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-[12px] text-amber-800 whitespace-pre-line leading-relaxed">
@@ -1262,6 +1338,7 @@ export default function ProviderEditPage() {
 
     return (
       <FormSection>
+        {renderGuide()}
         <FormField label={t("providers.captcha.preview" as any)} help={t("providers.captcha.previewHelp" as any)} span="full">
           <div className="space-y-3">
             <button
@@ -1347,98 +1424,29 @@ export default function ProviderEditPage() {
     }
   };
 
-  // Notification setup guide content per type
-  const g = (key: string) => t(`providers.notif.guide.${key}` as any);
-  const NOTIF_GUIDE: Record<string, { title: string; steps: string[]; links?: { label: string; url: string }[] }> = {
-    Telegram: {
-      title: g("telegram.title"),
-      steps: [g("telegram.step1"), g("telegram.step2"), g("telegram.step3"), g("telegram.step4")],
-      links: [{ label: "BotFather", url: "https://t.me/BotFather" }, { label: "@userinfobot", url: "https://t.me/userinfobot" }],
-    },
-    Discord: {
-      title: g("discord.title"),
-      steps: [g("discord.step1"), g("discord.step2"), g("discord.step3"), g("discord.step4"), g("discord.step5")],
-      links: [{ label: "Developer Portal", url: "https://discord.com/developers/applications" }],
-    },
-    "Google Chat": {
-      title: g("googleChat.title"),
-      steps: [g("googleChat.step1"), g("googleChat.step2"), g("googleChat.step3"), g("googleChat.step4")],
-      links: [{ label: "Google Cloud Console", url: "https://console.cloud.google.com" }],
-    },
-    DingTalk: {
-      title: g("dingtalk.title"),
-      steps: [g("dingtalk.step1"), g("dingtalk.step2"), g("dingtalk.step3")],
-      links: [{ label: "DingTalk Open Platform", url: "https://open-dev.dingtalk.com" }],
-    },
-    Lark: {
-      title: g("lark.title"),
-      steps: [g("lark.step1"), g("lark.step2")],
-    },
-    "Microsoft Teams": {
-      title: g("teams.title"),
-      steps: [g("teams.step1"), g("teams.step2")],
-    },
-    Bark: {
-      title: g("bark.title"),
-      steps: [g("bark.step1"), g("bark.step2"), g("bark.step3")],
-      links: [{ label: "Bark App", url: "https://bark.day.app" }],
-    },
-    Pushover: {
-      title: g("pushover.title"),
-      steps: [g("pushover.step1"), g("pushover.step2"), g("pushover.step3")],
-      links: [{ label: "Pushover", url: "https://pushover.net" }],
-    },
-    Pushbullet: {
-      title: g("pushbullet.title"),
-      steps: [g("pushbullet.step1"), g("pushbullet.step2"), g("pushbullet.step3")],
-      links: [{ label: "Pushbullet Settings", url: "https://www.pushbullet.com/#settings/account" }],
-    },
-    Slack: {
-      title: g("slack.title"),
-      steps: [g("slack.step1"), g("slack.step2"), g("slack.step3"), g("slack.step4")],
-      links: [{ label: "Slack API", url: "https://api.slack.com/apps" }],
-    },
-    Webpush: {
-      title: g("webpush.title"),
-      steps: [g("webpush.step1"), g("webpush.step2"), g("webpush.step3")],
-    },
-    Line: {
-      title: g("line.title"),
-      steps: [g("line.step1"), g("line.step2"), g("line.step3"), g("line.step4")],
-      links: [{ label: "LINE Developers", url: "https://developers.line.biz/console" }],
-    },
-    Matrix: {
-      title: g("matrix.title"),
-      steps: [g("matrix.step1"), g("matrix.step2"), g("matrix.step3"), g("matrix.step4")],
-    },
-    Twitter: {
-      title: g("twitter.title"),
-      steps: [g("twitter.step1"), g("twitter.step2"), g("twitter.step3")],
-      links: [{ label: "Twitter Developer Portal", url: "https://developer.twitter.com/en/portal" }],
-    },
-    Reddit: {
-      title: g("reddit.title"),
-      steps: [g("reddit.step1"), g("reddit.step2"), g("reddit.step3")],
-      links: [{ label: "Reddit Apps", url: "https://www.reddit.com/prefs/apps" }],
-    },
-    "Rocket Chat": {
-      title: g("rocketchat.title"),
-      steps: [g("rocketchat.step1"), g("rocketchat.step2"), g("rocketchat.step3")],
-    },
-    Viber: {
-      title: g("viber.title"),
-      steps: [g("viber.step1"), g("viber.step2"), g("viber.step3")],
-      links: [{ label: "Viber Admin Panel", url: "https://partners.viber.com" }],
-    },
-    WeCom: {
-      title: g("wecom.title"),
-      steps: [g("wecom.step1"), g("wecom.step2")],
-    },
-    "Custom HTTP": {
-      title: g("customhttp.title"),
-      steps: [g("customhttp.step1"), g("customhttp.step2"), g("customhttp.step3")],
-    },
-  };
+  // Notification guides — merged into PROVIDER_GUIDE with "Notification:" prefix for disambiguation
+  const ng = (key: string) => t(`providers.notif.guide.${key}` as any);
+  Object.assign(PROVIDER_GUIDE, {
+    "Notification:Telegram": { title: ng("telegram.title"), steps: [ng("telegram.step1"), ng("telegram.step2"), ng("telegram.step3"), ng("telegram.step4")], links: [{ label: "BotFather", url: "https://t.me/BotFather" }, { label: "@userinfobot", url: "https://t.me/userinfobot" }] },
+    "Notification:Discord": { title: ng("discord.title"), steps: [ng("discord.step1"), ng("discord.step2"), ng("discord.step3"), ng("discord.step4"), ng("discord.step5")], links: [{ label: "Developer Portal", url: "https://discord.com/developers/applications" }] },
+    "Notification:Google Chat": { title: ng("googleChat.title"), steps: [ng("googleChat.step1"), ng("googleChat.step2"), ng("googleChat.step3"), ng("googleChat.step4")], links: [{ label: "Google Cloud Console", url: "https://console.cloud.google.com" }] },
+    "Notification:DingTalk": { title: ng("dingtalk.title"), steps: [ng("dingtalk.step1"), ng("dingtalk.step2"), ng("dingtalk.step3")], links: [{ label: "DingTalk Open Platform", url: "https://open-dev.dingtalk.com" }] },
+    "Notification:Lark": { title: ng("lark.title"), steps: [ng("lark.step1"), ng("lark.step2")] },
+    "Notification:Microsoft Teams": { title: ng("teams.title"), steps: [ng("teams.step1"), ng("teams.step2")] },
+    "Notification:Bark": { title: ng("bark.title"), steps: [ng("bark.step1"), ng("bark.step2"), ng("bark.step3")], links: [{ label: "Bark App", url: "https://bark.day.app" }] },
+    "Notification:Pushover": { title: ng("pushover.title"), steps: [ng("pushover.step1"), ng("pushover.step2"), ng("pushover.step3")], links: [{ label: "Pushover", url: "https://pushover.net" }] },
+    "Notification:Pushbullet": { title: ng("pushbullet.title"), steps: [ng("pushbullet.step1"), ng("pushbullet.step2"), ng("pushbullet.step3")], links: [{ label: "Pushbullet Settings", url: "https://www.pushbullet.com/#settings/account" }] },
+    "Notification:Slack": { title: ng("slack.title"), steps: [ng("slack.step1"), ng("slack.step2"), ng("slack.step3"), ng("slack.step4")], links: [{ label: "Slack API", url: "https://api.slack.com/apps" }] },
+    "Notification:Webpush": { title: ng("webpush.title"), steps: [ng("webpush.step1"), ng("webpush.step2"), ng("webpush.step3")] },
+    "Notification:Line": { title: ng("line.title"), steps: [ng("line.step1"), ng("line.step2"), ng("line.step3"), ng("line.step4")], links: [{ label: "LINE Developers", url: "https://developers.line.biz/console" }] },
+    "Notification:Matrix": { title: ng("matrix.title"), steps: [ng("matrix.step1"), ng("matrix.step2"), ng("matrix.step3"), ng("matrix.step4")] },
+    "Notification:Twitter": { title: ng("twitter.title"), steps: [ng("twitter.step1"), ng("twitter.step2"), ng("twitter.step3")], links: [{ label: "Twitter Developer Portal", url: "https://developer.twitter.com/en/portal" }] },
+    "Notification:Reddit": { title: ng("reddit.title"), steps: [ng("reddit.step1"), ng("reddit.step2"), ng("reddit.step3")], links: [{ label: "Reddit Apps", url: "https://www.reddit.com/prefs/apps" }] },
+    "Notification:Rocket Chat": { title: ng("rocketchat.title"), steps: [ng("rocketchat.step1"), ng("rocketchat.step2"), ng("rocketchat.step3")] },
+    "Notification:Viber": { title: ng("viber.title"), steps: [ng("viber.step1"), ng("viber.step2"), ng("viber.step3")], links: [{ label: "Viber Admin Panel", url: "https://partners.viber.com" }] },
+    "Notification:WeCom": { title: ng("wecom.title"), steps: [ng("wecom.step1"), ng("wecom.step2")] },
+    "Notification:Custom HTTP": { title: ng("customhttp.title"), steps: [ng("customhttp.step1"), ng("customhttp.step2"), ng("customhttp.step3")] },
+  } as Record<string, GuideEntry>);
 
   const renderNotificationFields = () => {
     const receiverLabel = getNotificationReceiverLabel();
@@ -1446,41 +1454,10 @@ export default function ProviderEditPage() {
     const showParameter = ["Custom HTTP", "CUCloud"].includes(type);
     const showMetadata = ["Google Chat", "CUCloud"].includes(type);
     const showRegionId = type === "CUCloud";
-    const guide = NOTIF_GUIDE[type];
 
     return (
       <FormSection title={t("providers.section.notificationConfig" as any)}>
-        {guide && (
-          <div className="col-span-full">
-            <button
-              onClick={() => setShowNotifGuide(!showNotifGuide)}
-              className="inline-flex items-center gap-1.5 text-[12px] text-accent hover:text-accent-hover transition-colors"
-            >
-              <HelpCircle size={13} />
-              <span>{t("providers.notif.guideToggle" as any)}</span>
-              <ChevronRight size={12} className={`transition-transform duration-200 ${showNotifGuide ? "rotate-90" : ""}`} />
-            </button>
-            {showNotifGuide && (
-              <div className="mt-2 rounded-lg border border-accent/20 bg-accent/5 px-4 py-3">
-                <h4 className="text-[13px] font-semibold text-text-primary mb-2">{guide.title}</h4>
-                <ol className="space-y-1.5 text-[12px] text-text-secondary list-decimal list-inside">
-                  {guide.steps.map((step, i) => (
-                    <li key={i} className="leading-relaxed">{step}</li>
-                  ))}
-                </ol>
-                {guide.links && guide.links.length > 0 && (
-                  <div className="mt-2.5 flex flex-wrap gap-3">
-                    {guide.links.map((link, i) => (
-                      <a key={i} href={link.url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-[11px] text-accent hover:text-accent-hover transition-colors">
-                        <ExternalLink size={10} />{link.label}
-                      </a>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        )}
+        {renderGuide()}
         {showRegionId && (
           <FormField label={t("providers.notif.regionId" as any)}>
             <input value={String(prov.regionId ?? "")} onChange={(e) => set("regionId", e.target.value)} className={inputClass} />
