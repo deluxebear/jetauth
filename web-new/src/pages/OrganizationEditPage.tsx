@@ -4,7 +4,7 @@ import { useParams, useNavigate, useLocation, Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Save, Trash2, Settings, Shield, Menu, Palette, Wallet, Wrench, LogOut, Plus, ChevronUp, ChevronDown, RefreshCw, Pencil, X } from "lucide-react";
 import StickyEditHeader from "../components/StickyEditHeader";
-import Tabs from "../components/Tabs";
+import Tabs, { TabBar } from "../components/Tabs";
 import { FormField, FormSection, Switch, inputClass, monoInputClass } from "../components/FormSection";
 import { useTranslation } from "../i18n";
 import { useModal } from "../components/Modal";
@@ -125,6 +125,7 @@ export default function OrganizationEditPage() {
   const [saved, setSaved] = useState(false);
   useEffect(() => { if (saved) { const t = setTimeout(() => setSaved(false), 1500); return () => clearTimeout(t); } }, [saved]);
   const [originalJson, setOriginalJson] = useState("");
+  const [activeTab, setActiveTab] = useState("general");
 
   const invalidateList = () => queryClient.invalidateQueries({ queryKey: ["organizations"] });
 
@@ -288,6 +289,21 @@ export default function OrganizationEditPage() {
         title={`${isAddMode ? t("common.add") : t("common.edit")} ${t("orgs.title" as any)}`}
         subtitle={`${owner}/${name}`}
         onBack={handleBack}
+        tabs={
+          <TabBar
+            tabs={[
+              { key: "general", label: t("orgs.tab.general" as any), icon: <Settings size={14} /> },
+              { key: "security", label: t("orgs.tab.security" as any), icon: <Shield size={14} /> },
+              { key: "menu", label: t("orgs.tab.menu" as any), icon: <Menu size={14} /> },
+              { key: "theme", label: t("orgs.tab.theme" as any), icon: <Palette size={14} /> },
+              { key: "finance", label: t("orgs.tab.finance" as any), icon: <Wallet size={14} /> },
+              { key: "advanced", label: t("orgs.tab.advanced" as any), icon: <Wrench size={14} /> },
+              ...(isGA ? [{ key: "permissions", label: t("orgs.tab.permissions" as any), icon: <Shield size={14} /> }] : []),
+            ]}
+            active={activeTab}
+            onChange={setActiveTab}
+          />
+        }
       >
           {canDelete && (
             <button onClick={handleDelete} className="flex items-center gap-1.5 rounded-lg border border-danger/30 px-3 py-2 text-[13px] font-medium text-danger hover:bg-danger/10 transition-colors">
@@ -306,7 +322,7 @@ export default function OrganizationEditPage() {
       {showBanner && <UnsavedBanner isAddMode={isAddMode} />}
 
       {/* ══ Tabbed Form ══ */}
-      <Tabs tabs={[
+      <Tabs activeTab={activeTab} onTabChange={setActiveTab} hideTabBar tabs={[
         {
           key: "general",
           label: t("orgs.tab.general" as any),
