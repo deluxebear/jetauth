@@ -9,12 +9,15 @@ import { useEntityList } from "../hooks/useEntityList";
 import { useOrganization } from "../OrganizationContext";
 import * as KeyBackend from "../backend/KeyBackend";
 import type { Key } from "../backend/KeyBackend";
+import { getStoredAccount, isGlobalAdmin } from "../utils/auth";
 
 export default function KeyListPage() {
   const navigate = useNavigate();
   const { t } = useTranslation();
   const modal = useModal();
   const { getNewEntityOwner } = useOrganization();
+  const account = getStoredAccount();
+  const isAdmin = isGlobalAdmin(account);
 
   const list = useEntityList<Key>({
     queryKey: "keys",
@@ -76,7 +79,7 @@ export default function KeyListPage() {
       render: (_, r) => <span className="text-[12px] text-text-muted font-mono">{r.createdTime ? new Date(r.createdTime).toLocaleString() : "—"}</span>,
     },
     { key: "displayName", title: t("col.displayName" as any), sortable: true, filterable: true },
-    { key: "type", title: t("col.type" as any), sortable: true, width: "120px" },
+    { key: "type", title: t("col.type" as any), sortable: true, filterable: true, width: "120px" },
     {
       key: "accessKey",
       title: t("keys.field.accessKey" as any),
@@ -105,16 +108,19 @@ export default function KeyListPage() {
       fixed: "right" as const,
       title: t("common.action" as any),
       width: "120px",
-      render: (_, r) => (
-        <div className="flex items-center gap-1">
-          <Link to={`/keys/${r.owner}/${r.name}`} className="rounded p-1.5 text-text-muted hover:text-warning hover:bg-warning/10 transition-colors" title={t("common.edit")} onClick={(e) => e.stopPropagation()}>
-            <Pencil size={14} />
-          </Link>
-          <button onClick={(e) => handleDelete(r, e)} className="rounded p-1.5 text-text-muted hover:text-danger hover:bg-danger/10 transition-colors" title={t("common.delete")}>
-            <Trash2 size={14} />
-          </button>
-        </div>
-      ),
+      render: (_, r) => {
+        const canOp = isAdmin || r.owner === account?.owner;
+        return (
+          <div className="flex items-center gap-1">
+            <Link to={`/keys/${r.owner}/${r.name}`} className={`rounded p-1.5 transition-colors ${canOp ? "text-text-muted hover:text-warning hover:bg-warning/10" : "text-text-muted opacity-30 pointer-events-none"}`} title={t("common.edit")} onClick={(e) => e.stopPropagation()}>
+              <Pencil size={14} />
+            </Link>
+            <button onClick={(e) => handleDelete(r, e)} disabled={!canOp} className="rounded p-1.5 text-text-muted hover:text-danger hover:bg-danger/10 transition-colors disabled:opacity-30 disabled:cursor-not-allowed" title={t("common.delete")}>
+              <Trash2 size={14} />
+            </button>
+          </div>
+        );
+      },
     },
   ];
 
