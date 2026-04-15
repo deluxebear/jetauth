@@ -2,7 +2,8 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Save, ArrowLeft, Trash2, LogOut, ExternalLink, Copy, ChevronDown, ChevronRight, ShieldCheck, Bell, HardDrive, CreditCard, Wallet, MessageSquare, Smartphone, Key, Globe, Link, Settings, HelpCircle } from "lucide-react";
+import { Save, Trash2, LogOut, ExternalLink, Copy, ChevronDown, ChevronRight, ShieldCheck, Bell, HardDrive, CreditCard, Wallet, MessageSquare, Smartphone, Key, Globe, Link, Settings, HelpCircle } from "lucide-react";
+import StickyEditHeader from "../components/StickyEditHeader";
 import { FormField, FormSection, Switch, inputClass, monoInputClass } from "../components/FormSection";
 import SimpleSelect from "../components/SimpleSelect";
 import SingleSearchSelect from "../components/SingleSearchSelect";
@@ -1616,32 +1617,22 @@ export default function ProviderEditPage() {
 
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-5">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <button onClick={handleBack} className="rounded-lg p-1.5 text-text-muted hover:bg-surface-2 transition-colors">
-            <ArrowLeft size={18} />
+      <StickyEditHeader
+        title={`${isAddMode ? t("common.add") : t("common.edit")} ${t("providers.title")}`}
+        subtitle={isNew ? undefined : `${owner}/${name}`}
+        onBack={handleBack}
+      >
+        {!isNew && (
+          <button onClick={handleDelete} className="flex items-center gap-1.5 rounded-lg border border-danger/30 px-3 py-2 text-[13px] font-medium text-danger hover:bg-danger/10 transition-colors">
+            <Trash2 size={14} /> {t("common.delete")}
           </button>
-          <div>
-            <h1 className="text-xl font-bold tracking-tight">
-              {isAddMode ? t("common.add") : t("common.edit")} {t("providers.title")}
-            </h1>
-            {!isNew && <p className="text-[13px] text-text-muted font-mono mt-0.5">{owner}/{name}</p>}
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          {!isNew && (
-            <button onClick={handleDelete} className="flex items-center gap-1.5 rounded-lg border border-danger/30 px-3 py-2 text-[13px] font-medium text-danger hover:bg-danger/10 transition-colors">
-              <Trash2 size={14} /> {t("common.delete")}
-            </button>
-          )}
-          <SaveButton onClick={handleSave} saving={saving} saved={saved} label={t("common.save")} />
-          <button onClick={handleSaveAndExit} disabled={saving} className="flex items-center gap-1.5 rounded-lg bg-accent px-4 py-2 text-[13px] font-semibold text-white hover:bg-accent-hover disabled:opacity-50 transition-colors">
-            {saving ? <div className="h-3.5 w-3.5 rounded-full border-2 border-white/30 border-t-white animate-spin" /> : <LogOut size={14} />}
-            {t("common.saveAndExit" as any)}
-          </button>
-        </div>
-      </div>
+        )}
+        <SaveButton onClick={handleSave} saving={saving} saved={saved} label={t("common.save")} />
+        <button onClick={handleSaveAndExit} disabled={saving} className="flex items-center gap-1.5 rounded-lg bg-accent px-4 py-2 text-[13px] font-semibold text-white hover:bg-accent-hover disabled:opacity-50 transition-colors">
+          {saving ? <div className="h-3.5 w-3.5 rounded-full border-2 border-white/30 border-t-white animate-spin" /> : <LogOut size={14} />}
+          {t("common.saveAndExit" as any)}
+        </button>
+      </StickyEditHeader>
 
       {showBanner && <UnsavedBanner isAddMode={isAddMode} />}
 
