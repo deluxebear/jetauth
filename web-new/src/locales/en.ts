@@ -1920,7 +1920,7 @@ const en = {
   "roles.tooltip.users": "Users directly assigned to this role",
   "roles.tooltip.groups": "User groups whose members automatically inherit this role",
   "roles.tooltip.roles": "Sub-roles included in this role (role inheritance — permissions flow upward)",
-  "roles.tooltip.domains": "Casbin RBAC domain/tenant identifier for multi-tenant permission isolation. Leave empty to skip domain separation",
+  "roles.tooltip.domains": "Domain tags associated with this role (free-form input). Note: actual domain-based policy isolation is configured in Permissions, not here",
   "roles.tooltip.isEnabled": "Disabled roles are ignored during permission checks",
 
   // Rules

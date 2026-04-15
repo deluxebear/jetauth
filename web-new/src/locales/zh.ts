@@ -2001,7 +2001,7 @@ const zh: Record<string, string> = {
   "roles.tooltip.users": "直接分配到此角色的用户",
   "roles.tooltip.groups": "成员自动继承此角色的用户组",
   "roles.tooltip.roles": "包含在此角色中的子角色（角色继承 — 权限向上传递）",
-  "roles.tooltip.domains": "Casbin RBAC 的域/租户标识，用于多租户权限隔离。留空表示不区分域",
+  "roles.tooltip.domains": "角色关联的域标签（自由输入）。注意：实际的域隔离策略在权限配置中生效，此处仅用于标注分类",
   "roles.tooltip.isEnabled": "禁用的角色在权限检查时会被忽略",
 
   // Rules
