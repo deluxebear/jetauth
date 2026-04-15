@@ -1217,6 +1217,18 @@ export default function ApplicationEditPage() {
         title={`${isNew ? t("common.add") : t("common.edit")} ${t("apps.title")}`}
         subtitle={!isNew ? `${orgName}/${name}` : undefined}
         onBack={handleBack}
+        tabs={
+          <div className="flex border-b border-border -mb-px">
+            {tabs.map((tab) => (
+              <button key={tab.key} onClick={() => setActiveTab(tab.key)}
+                className={`px-4 py-2.5 text-[13px] font-medium border-b-2 transition-colors ${
+                  activeTab === tab.key ? "border-accent text-accent" : "border-transparent text-text-muted hover:text-text-secondary"
+                }`}>
+                {tab.label}
+              </button>
+            ))}
+          </div>
+        }
       >
           {!isNew && app.name !== "app-built-in" && (
             <button onClick={handleDelete} className="flex items-center gap-1.5 rounded-lg border border-danger/30 px-3 py-2 text-[13px] font-medium text-danger hover:bg-danger/10 transition-colors">
@@ -1231,23 +1243,6 @@ export default function ApplicationEditPage() {
       </StickyEditHeader>
 
       {showBanner && <UnsavedBanner isAddMode={isAddMode} />}
-
-      {/* Tab Bar */}
-      <div className="flex border-b border-border">
-        {tabs.map((tab) => (
-          <button
-            key={tab.key}
-            onClick={() => setActiveTab(tab.key)}
-            className={`px-4 py-2.5 text-[13px] font-medium border-b-2 transition-colors ${
-              activeTab === tab.key
-                ? "border-accent text-accent"
-                : "border-transparent text-text-muted hover:text-text-secondary"
-            }`}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </div>
 
       {/* Tab Content */}
       <div>{tabContent[activeTab]}</div>
