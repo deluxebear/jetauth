@@ -837,6 +837,12 @@ export default function ProviderEditPage() {
     PayPal: { title: gk("paypal.title"), steps: [gk("paypal.step1"), gk("paypal.step2")], links: [{ label: "PayPal Developer", url: "https://developer.paypal.com/developer/applications" }] },
     Alipay: { title: gk("alipay.title"), steps: [gk("alipay.step1"), gk("alipay.step2"), gk("alipay.step3")], links: [{ label: "Alipay Open Platform", url: "https://open.alipay.com" }] },
     "WeChat Pay": { title: gk("wechatpay.title"), steps: [gk("wechatpay.step1"), gk("wechatpay.step2"), gk("wechatpay.step3")], links: [{ label: "WeChat Pay", url: "https://pay.weixin.qq.com" }] },
+    AirWallex: { title: gk("airwallex.title"), steps: [gk("airwallex.step1"), gk("airwallex.step2")], links: [{ label: "AirWallex", url: "https://www.airwallex.com" }] },
+    Polar: { title: gk("polar.title"), steps: [gk("polar.step1"), gk("polar.step2")], links: [{ label: "Polar", url: "https://polar.sh" }] },
+    Paddle: { title: gk("paddle.title"), steps: [gk("paddle.step1"), gk("paddle.step2")], links: [{ label: "Paddle", url: "https://www.paddle.com" }] },
+    FastSpring: { title: gk("fastspring.title"), steps: [gk("fastspring.step1"), gk("fastspring.step2")], links: [{ label: "FastSpring", url: "https://fastspring.com" }] },
+    "Lemon Squeezy": { title: gk("lemonsqueezy.title"), steps: [gk("lemonsqueezy.step1"), gk("lemonsqueezy.step2")], links: [{ label: "Lemon Squeezy", url: "https://www.lemonsqueezy.com" }] },
+    Adyen: { title: gk("adyen.title"), steps: [gk("adyen.step1"), gk("adyen.step2"), gk("adyen.step3")], links: [{ label: "Adyen", url: "https://www.adyen.com" }] },
     // SAML
     "SAML:Keycloak": { title: gk("samlKeycloak.title"), steps: [gk("samlKeycloak.step1"), gk("samlKeycloak.step2"), gk("samlKeycloak.step3")], links: [{ label: "Keycloak", url: "https://www.keycloak.org" }] },
     "SAML:Aliyun IDaaS": { title: gk("samlAliyun.title"), steps: [gk("samlAliyun.step1"), gk("samlAliyun.step2")], links: [{ label: "Alibaba Cloud IDaaS", url: "https://www.alibabacloud.com/product/idaas" }] },
