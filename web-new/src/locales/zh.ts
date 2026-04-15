@@ -1952,6 +1952,8 @@ const zh: Record<string, string> = {
   "permissions.field.state": "状态",
   "permissions.field.resourcesCustomPlaceholder": "输入资源路径并选择...",
   "permissions.tooltip.model": "定义策略结构的 Casbin 模型（如 ACL、RBAC），决定权限的评估方式",
+  "permissions.field.adapter": "适配器",
+  "permissions.tooltip.adapter": "指定策略规则存储在哪张数据库表中。留空则使用默认表（permission_rule）。不同模型应使用不同适配器以避免结构冲突",
   "permissions.tooltip.users": "直接授予此权限的用户。选择 * 表示所有用户",
   "permissions.tooltip.groups": "成员被授予此权限的分组。选择 * 表示所有分组",
   "permissions.tooltip.roles": "被授予此权限的角色。选择 * 表示所有角色",

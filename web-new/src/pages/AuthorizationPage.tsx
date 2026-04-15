@@ -5,14 +5,17 @@ import { Plus, Settings, RefreshCw, X, Loader2 } from "lucide-react";
 import { useTranslation } from "../i18n";
 import { useModal } from "../components/Modal";
 import { useOrganization } from "../OrganizationContext";
+import SimpleSelect from "../components/SimpleSelect";
 import * as ApplicationBackend from "../backend/ApplicationBackend";
 import * as PermissionBackend from "../backend/PermissionBackend";
 import * as RoleBackend from "../backend/RoleBackend";
+import * as ModelBackend from "../backend/ModelBackend";
 import * as AdapterBackend from "../backend/AdapterBackend";
 import * as EnforcerBackend from "../backend/EnforcerBackend";
 import type { Application } from "../backend/ApplicationBackend";
 import type { Permission } from "../backend/PermissionBackend";
 import type { Role } from "../backend/RoleBackend";
+import type { Model } from "../backend/ModelBackend";
 
 interface AppAuthStats {
   app: Application;
@@ -215,6 +218,8 @@ function QuickCreateWizard({ open, onClose, onCreated }: {
 
   const [appName, setAppName] = useState("");
   const [displayName, setDisplayName] = useState("");
+  const [selectedModel, setSelectedModel] = useState("__default__");
+  const [models, setModels] = useState<Model[]>([]);
   const [creating, setCreating] = useState(false);
   const [step, setStep] = useState(0);
   const [progress, setProgress] = useState<{ label: string; done: boolean; error?: string }[]>([]);
@@ -225,9 +230,42 @@ function QuickCreateWizard({ open, onClose, onCreated }: {
     if (!open) return;
     setAppName("");
     setDisplayName("");
+    setSelectedModel("__default__");
     setStep(0);
     setProgress([]);
-  }, [open]);
+    // Load models from both org and built-in
+    Promise.all([
+      ModelBackend.getModels({ owner: orgName === "built-in" ? "admin" : orgName }).catch(() => ({ status: "ok" as const, data: [] as Model[] })),
+      ModelBackend.getModels({ owner: "admin" }).catch(() => ({ status: "ok" as const, data: [] as Model[] })),
+    ]).then(([orgRes, adminRes]) => {
+      const orgModels = orgRes.status === "ok" && orgRes.data ? orgRes.data : [];
+      const adminModels = adminRes.status === "ok" && adminRes.data ? adminRes.data : [];
+      // Merge and deduplicate
+      const seen = new Set<string>();
+      const all: Model[] = [];
+      [...orgModels, ...adminModels].forEach((m) => {
+        const id = `${(m as any).owner}/${m.name}`;
+        if (!seen.has(id)) { seen.add(id); all.push(m); }
+      });
+      setModels(all);
+    });
+  }, [open, orgName]);
+
+  // Filter out incompatible models (6 fields where 6th != permissionId)
+  const compatibleModels = models.filter((m) => {
+    if (!m.modelText) return true;
+    const match = m.modelText.match(/\[policy_definition\]\s*\n\s*p\s*=\s*(.+)/);
+    if (!match) return true;
+    const fields = match[1].split(",").map((f) => f.trim());
+    if (fields.length === 6 && fields[5] !== "permissionId") return false;
+    if (fields.length > 6) return false;
+    return true;
+  });
+
+  const modelOptions = [
+    { value: "__default__", label: t("authz.overview.defaultModel" as any) },
+    ...compatibleModels.map((m) => ({ value: `${(m as any).owner}/${m.name}`, label: `${(m as any).owner}/${m.name}` })),
+  ];
 
   const handleCreate = async () => {
     if (!appName.trim()) return;
@@ -320,7 +358,8 @@ function QuickCreateWizard({ open, onClose, onCreated }: {
       perm.roles = [`${orgName}/${appName}-admin`];
       perm.actions = ["Read", "Write", "Admin"];
       perm.effect = "Allow";
-      perm.model = "";
+      perm.model = selectedModel === "__default__" ? "" : selectedModel;
+      perm.adapter = adapterId;
       perm.state = "Approved";
       const permRes = await PermissionBackend.addPermission(perm);
       if (permRes.status !== "ok") {
@@ -337,7 +376,7 @@ function QuickCreateWizard({ open, onClose, onCreated }: {
       const enforcer = EnforcerBackend.newEnforcer(orgName);
       enforcer.name = `${appName}-enforcer`;
       enforcer.displayName = `${displayName || appName} Enforcer`;
-      enforcer.model = "";
+      enforcer.model = selectedModel === "__default__" ? "" : selectedModel;
       enforcer.adapter = adapterId;
       const enforcerRes = await EnforcerBackend.addEnforcer(enforcer);
       if (enforcerRes.status !== "ok") {
@@ -420,6 +459,19 @@ function QuickCreateWizard({ open, onClose, onCreated }: {
                     placeholder={t("authz.wizard.displayNamePlaceholder" as any)}
                     className="w-full rounded-lg border border-border bg-surface-2 px-3 py-2.5 text-[13px] text-text-primary outline-none focus:border-accent placeholder:text-text-muted"
                   />
+                </div>
+
+                {/* Model */}
+                <div>
+                  <label className="block text-[12px] font-semibold text-text-primary mb-1.5">
+                    {t("authz.overview.model" as any)}
+                  </label>
+                  <SimpleSelect
+                    value={selectedModel}
+                    options={modelOptions}
+                    onChange={setSelectedModel}
+                  />
+                  <p className="text-[11px] text-text-muted mt-1">{t("authz.wizard.modelHint" as any)}</p>
                 </div>
 
                 {/* What will be created */}

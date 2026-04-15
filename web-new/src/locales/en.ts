@@ -1871,6 +1871,8 @@ const en = {
   "permissions.field.state": "State",
   "permissions.field.resourcesCustomPlaceholder": "Type a resource path and select...",
   "permissions.tooltip.model": "Casbin model that defines the policy structure (e.g. ACL, RBAC). Determines how permissions are evaluated",
+  "permissions.field.adapter": "Adapter",
+  "permissions.tooltip.adapter": "Specifies which database table stores the policy rules. Empty = default table (permission_rule). Each model should use a separate adapter to avoid structural conflicts",
   "permissions.tooltip.users": "Users who are directly granted this permission. Select * for all users",
   "permissions.tooltip.groups": "Groups whose members are granted this permission. Select * for all groups",
   "permissions.tooltip.roles": "Roles that are granted this permission. Select * for all roles",

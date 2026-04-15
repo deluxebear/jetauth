@@ -16,6 +16,7 @@ import * as UserBackend from "../backend/UserBackend";
 import * as GroupBackend from "../backend/GroupBackend";
 import * as RoleBackend from "../backend/RoleBackend";
 import * as ModelBackend from "../backend/ModelBackend";
+import * as AdapterBackend from "../backend/AdapterBackend";
 import * as ApplicationBackend from "../backend/ApplicationBackend";
 import type { Permission } from "../backend/PermissionBackend";
 import { friendlyError } from "../utils/errorHelper";
@@ -60,6 +61,7 @@ export default function PermissionEditPage() {
   // Dropdown options
   const [orgOptions, setOrgOptions] = useState<{ value: string; label: string }[]>([]);
   const [modelOptions, setModelOptions] = useState<{ value: string; label: string }[]>([]);
+  const [adapterOptions, setAdapterOptions] = useState<{ value: string; label: string }[]>([]);
   const [userOptions, setUserOptions] = useState<{ value: string; label: string }[]>([]);
   const [groupOptions, setGroupOptions] = useState<{ value: string; label: string }[]>([]);
   const [roleOptions, setRoleOptions] = useState<{ value: string; label: string }[]>([]);
@@ -78,12 +80,17 @@ export default function PermissionEditPage() {
     });
   }, [isAdmin]);
 
-  // Load models
+  // Load models and adapters
   useEffect(() => {
     if (!permission?.owner) return;
     ModelBackend.getModels({ owner: permission.owner }).then((res) => {
       if (res.status === "ok" && res.data) {
         setModelOptions(res.data.map((m) => ({ value: `${(m as any).owner}/${m.name}`, label: `${(m as any).owner}/${m.name}` })));
+      }
+    });
+    AdapterBackend.getAdapters({ owner: permission.owner }).then((res) => {
+      if (res.status === "ok" && res.data) {
+        setAdapterOptions(res.data.map((a) => ({ value: `${(a as any).owner}/${a.name}`, label: `${(a as any).owner}/${a.name}` })));
       }
     });
   }, [permission?.owner]);
@@ -260,6 +267,9 @@ export default function PermissionEditPage() {
         </FormField>
         <FormField label={t("col.model" as any)} tooltip={t("permissions.tooltip.model" as any)}>
           <SingleSearchSelect value={permission.model} options={modelOptions} onChange={(v) => set("model", v)} placeholder={t("common.search" as any)} />
+        </FormField>
+        <FormField label={t("permissions.field.adapter" as any)} tooltip={t("permissions.tooltip.adapter" as any)}>
+          <SingleSearchSelect value={permission.adapter} options={adapterOptions} onChange={(v) => set("adapter", v)} placeholder={t("common.search" as any)} />
         </FormField>
       </FormSection>
 

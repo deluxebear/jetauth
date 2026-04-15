@@ -74,7 +74,7 @@ func getPermissionEnforcer(p *Permission, permissionIDs ...string) (*casbin.Enfo
 func (p *Permission) setEnforcerAdapter(enforcer *casbin.Enforcer) error {
 	tableName := "permission_rule"
 	if len(p.Adapter) != 0 {
-		adapterObj, err := getAdapter(p.Owner, p.Adapter)
+		adapterObj, err := GetAdapter(p.Adapter)
 		if err != nil {
 			return err
 		}
