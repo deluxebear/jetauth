@@ -128,3 +128,106 @@ m = g(r.sub, p.sub) && r.obj == p.obj && r.act == p.act
 - 默认模型 TODO 注释：`object/permission_enforcer.go:106`
 - 原版前端模型检查：`web/src/PermissionEditPage.js` 中 `getModel()` 调用
 - 新前端权限编辑页：`web-new/src/pages/PermissionEditPage.tsx`
+
+---
+
+## Casbin Enforcer 性能优化 (Permission Enforcer Caching)
+
+**当前状态：无缓存，每次请求重建 Enforcer，大规模场景下数据库将成为瓶颈**
+
+### 问题描述
+
+`getPermissionEnforcer()` (`permission_enforcer.go:30`) 在**每次权限检查时**都从零创建 Casbin Enforcer 实例：创建对象 → 查数据库取 Model → 查数据库取策略 → 递归查数据库展开角色继承 → 判断完丢弃。没有任何内存缓存、Redis 缓存或 Watcher 机制。
+
+### 单次请求开销
+
+| 步骤 | 操作 | 数据库查询 |
+|------|------|-----------|
+| `casbin.NewEnforcer()` | 创建实例 | 无 |
+| `GetModel(p.Model)` | 查模型 | 1 次 |
+| `LoadFilteredPolicy(filter)` | 按 permissionId 过滤加载策略 | 1 次 |
+| `getRolesInRole()` | 递归展开角色继承 | N 次（取决于角色嵌套深度） |
+| 总计（单条 Permission） | | **3-5 次 DB 查询** |
+
+`CheckApiPermission()` 遍历该组织下**所有** Permission，假设匹配 5 条 → 单次 API 请求产生 **15-25 次数据库查询**。
+
+### 规模估算（10 万用户 / 100 应用 / 每应用 200 API）
+
+**RBAC 模式下的策略规模：**
+
+```
+角色:   100 应用 × 5 角色/应用 = 500 角色
+g 策略: 10 万用户-角色映射 = 10 万条
+p 策略: 100 应用 × 200 API × 3 权限级别 = 6 万条
+总计:   ~16 万条策略
+```
+
+**内存占用（如果缓存到内存）：**
+
+| 场景 | 策略条数 | 内存占用 |
+|------|---------|---------|
+| 标准 RBAC | ~16 万条 | ~60-80 MB |
+| 角色较多（每应用 20 角色） | ~50 万条 | ~200 MB |
+| 极端细粒度 | ~500 万条 | ~2 GB |
+
+**性能对比：**
+
+| 指标 | 当前（无缓存） | 加缓存后 |
+|------|-------------|---------|
+| 单次判断延迟 | 5-20ms（多次 DB 查询） | 0.01-0.1ms（纯内存匹配） |
+| 数据库压力 | 每请求 15-25 次查询 | 仅策略变更时查询 |
+| 内存占用 | ~0（不缓存） | 60-80 MB（RBAC 模式） |
+| 万级并发 | 数据库先挂 | 轻松承载（纯内存计算） |
+
+### 当前 Redis 使用现状
+
+项目中 Redis 仅用于 **Session 存储**（`conf/app.conf:redisEndpoint`、`main.go:43`），与 Casbin 权限缓存无关。Casbin 提供的 Redis Watcher / Redis Adapter 等缓存机制均未使用。
+
+### 改进方案
+
+#### 方案一：Enforcer 内存缓存（最小改动）
+
+```go
+var enforcerCache sync.Map  // key: permissionId → value: *casbin.Enforcer
+
+func getPermissionEnforcer(p *Permission) (*casbin.Enforcer, error) {
+    if cached, ok := enforcerCache.Load(p.GetId()); ok {
+        return cached.(*casbin.Enforcer), nil
+    }
+    enforcer := ...  // 原有创建逻辑
+    enforcerCache.Store(p.GetId(), enforcer)
+    return enforcer, nil
+}
+```
+
+需要在以下时机清除缓存：
+- Permission 更新/删除时 → 清该 Permission 的缓存
+- Role 更新时 → 清引用该 Role 的所有 Permission 缓存
+- Model/Adapter 更新时 → 清引用它们的所有 Permission 缓存
+
+#### 方案二：Redis Watcher（多实例部署）
+
+```go
+import rediswatcher "github.com/casbin/redis-watcher/v2"
+
+watcher, _ := rediswatcher.NewWatcher("redis:6379")
+enforcer.SetWatcher(watcher)
+// 策略变更时自动通知其他节点刷新内存
+```
+
+适用于 JetAuth 多实例部署（负载均衡），确保一个实例改了策略，其他实例也能及时刷新。
+
+#### 方案三：外部系统用 SDK 本地判断
+
+外部系统高频调用场景下，不走 `/api/enforce` API，而是直接引入 Casbin SDK 连接同一数据库，启动时加载策略到内存，本地判断。需要注意：
+- `g` 策略（角色继承）不在策略表中，是运行时从 Role 表动态生成的，外部系统需自行处理
+- 策略同步可通过 Watcher 或定时 reload 实现
+
+### 相关代码位置
+
+- Enforcer 创建（无缓存）：`object/permission_enforcer.go:30-71`
+- 策略按 permissionId 过滤加载：`object/permission_enforcer.go:49-60`
+- 角色继承动态构建（不持久化）：`object/permission_enforcer.go:265-298`
+- API 权限检查（遍历所有 Permission）：`object/check.go:476-579`
+- 应用登录权限检查：`object/check.go:581-680`
+- Redis 仅用于 Session：`main.go:39-44`、`conf/app.conf:10`
