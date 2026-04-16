@@ -150,11 +150,15 @@ func validateBizPermission(perm *BizPermission) error {
 }
 
 // validateBizRoleDelete checks if a role can be safely deleted.
+// Blocks deletion only when OTHER entities reference this role (strong constraints).
+// The role's own sub-roles are cleaned up automatically by cleanupRoleBeforeDelete.
 func validateBizRoleDelete(role *BizRole) error {
 	allRoles, err := GetBizRoles(role.Owner, role.AppName)
 	if err != nil {
 		return err
 	}
+
+	// Block: other roles inherit this role
 	for _, r := range allRoles {
 		if r.Name == role.Name {
 			continue
@@ -166,6 +170,7 @@ func validateBizRoleDelete(role *BizRole) error {
 		}
 	}
 
+	// Block: permissions reference this role
 	allPerms, err := GetBizPermissions(role.Owner, role.AppName)
 	if err != nil {
 		return err

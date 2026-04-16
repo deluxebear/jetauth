@@ -414,9 +414,17 @@ function RolesTab({ roles, onRefresh, appOwner, appName, t, modal, navigate }: {
 
   const handleDeleteRole = (role: BizRole, e: React.MouseEvent) => {
     e.stopPropagation();
+    const warnings: string[] = [];
     const userCount = role.users?.length ?? 0;
-    const msg = userCount > 0
-      ? `${t("common.confirmDelete")} [${role.name}]\n\n${t("authz.role.deleteHasUsers" as any).replace("{count}", String(userCount))}`
+    const subRoleCount = role.roles?.length ?? 0;
+    if (userCount > 0) {
+      warnings.push((t("authz.role.deleteHasUsers" as any) as string).replace("{count}", String(userCount)));
+    }
+    if (subRoleCount > 0) {
+      warnings.push((t("authz.role.deleteHasSubRoles" as any) as string).replace("{count}", String(subRoleCount)).replace("{roles}", role.roles.join(", ")));
+    }
+    const msg = warnings.length > 0
+      ? `${t("common.confirmDelete")} [${role.name}]\n\n${warnings.join("\n\n")}`
       : `${t("common.confirmDelete")} [${role.name}]`;
     modal.showConfirm(msg, async () => {
       const res = await BizBackend.deleteBizRole(role);

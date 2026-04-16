@@ -2414,6 +2414,7 @@ const en = {
   "authz.role.noUsers": "No users assigned",
   "authz.role.noSubRoles": "No sub-roles configured",
   "authz.role.deleteHasUsers": "This role has {count} user(s). After deletion, they will lose all permissions associated with this role.",
+  "authz.role.deleteHasSubRoles": "This role inherits {count} sub-role(s) [{roles}]. After deletion, these inheritance relationships will be removed.",
   "authz.role.section.summary": "Role Summary",
   "authz.role.section.permPreview": "Permission Preview",
   "authz.role.summary.users": "{count} user(s)",

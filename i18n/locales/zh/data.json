@@ -265,7 +265,9 @@
     "Role \"%s\" does not exist in app %s/%s": "角色「%s」在应用 %s/%s 中不存在",
     "Effect must be \"%s\" or \"%s\", got \"%s\"": "效果必须是「%s」或「%s」，当前值为「%s」",
     "State must be \"%s\", \"%s\", or \"%s\", got \"%s\"": "状态必须是「%s」、「%s」或「%s」，当前值为「%s」",
+    "Cannot delete role \"%s\": it has sub-roles [%s]. Remove inheritance first": "无法删除角色「%s」：该角色包含子角色 [%s]，请先移除继承关系",
     "Cannot delete role \"%s\": it is inherited by role \"%s\"": "无法删除角色「%s」：角色「%s」正在继承该角色",
-    "Cannot delete role \"%s\": it is referenced by permission \"%s\"": "无法删除角色「%s」：权限「%s」正在引用该角色"
+    "Cannot delete role \"%s\": it is referenced by permission \"%s\"": "无法删除角色「%s」：权限「%s」正在引用该角色",
+    "Role \"%s\" not found": "角色「%s」不存在"
   }
 }

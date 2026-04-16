@@ -2486,6 +2486,7 @@ const zh: Record<string, string> = {
   "authz.role.noUsers": "暂无分配用户",
   "authz.role.noSubRoles": "暂无子角色",
   "authz.role.deleteHasUsers": "该角色下有 {count} 个用户，删除后他们将失去该角色关联的所有权限。",
+  "authz.role.deleteHasSubRoles": "该角色继承了 {count} 个子角色 [{roles}]，删除后这些继承关系将被解除。",
   "authz.role.section.summary": "角色摘要",
   "authz.role.section.permPreview": "权限预览",
   "authz.role.summary.users": "{count} 个用户",
