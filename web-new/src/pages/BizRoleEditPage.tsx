@@ -14,6 +14,7 @@ import { useModal } from "../components/Modal";
 import * as BizBackend from "../backend/BizBackend";
 import * as UserBackend from "../backend/UserBackend";
 import type { BizRole, BizPermission } from "../backend/BizBackend";
+import { getInitial, getAvatarColor } from "../utils/avatar";
 import { friendlyError } from "../utils/errorHelper";
 
 export default function BizRoleEditPage() {
@@ -287,16 +288,6 @@ export default function BizRoleEditPage() {
   };
 
   const getUserInfo = (userId: string) => orgUsers.find((u) => u.value === userId);
-  const getInitial = (s: string) => {
-    const n = s.includes("/") ? s.split("/")[1] : s;
-    return n.charAt(0).toUpperCase();
-  };
-  const AVATAR_COLORS = [
-    "from-indigo-500 to-purple-500", "from-cyan-500 to-teal-500",
-    "from-amber-500 to-orange-500", "from-rose-500 to-pink-500",
-    "from-emerald-500 to-green-500", "from-blue-500 to-sky-500",
-  ];
-  const getAvatarColor = (s: string) => AVATAR_COLORS[Math.abs([...s].reduce((h, c) => (h << 5) - h + c.charCodeAt(0), 0)) % AVATAR_COLORS.length];
 
   const filteredUsersForAdd = orgUsers.filter(
     (u) => !role.users.includes(u.value) && (userSearch === "" || u.label.toLowerCase().includes(userSearch.toLowerCase()) || u.displayName.toLowerCase().includes(userSearch.toLowerCase()))

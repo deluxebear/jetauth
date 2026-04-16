@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, Plus, Play, Copy, Check, X, Users as UsersIcon, RefreshCw, RotateCcw, Pencil, Trash2, LayoutDashboard, Crown, ShieldCheck, FlaskConical, Code, UserPlus, Shield } from "lucide-react";
@@ -8,6 +8,7 @@ import { useModal } from "../components/Modal";
 import * as BizBackend from "../backend/BizBackend";
 import * as UserBackend from "../backend/UserBackend";
 import type { BizAppConfig, BizRole, BizPermission, PoliciesExport } from "../backend/BizBackend";
+import { getInitial, getAvatarColor } from "../utils/avatar";
 
 type TabKey = "overview" | "roles" | "permissions" | "test" | "integration";
 
@@ -415,11 +416,12 @@ function RolesTab({ roles, onRefresh, appOwner, appName, t, modal, navigate }: {
   const [orgUsers, setOrgUsers] = useState<{ value: string; displayName: string; email: string }[]>([]);
   const [panelSearch, setPanelSearch] = useState("");
   const [panelLoading, setPanelLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
-  // Load org users lazily when a user panel opens
+  // Load org users when a user-related panel opens (refetch each time to stay fresh)
+  const needsUsers = panel?.type === "addUser" || panel?.type === "viewUsers";
   useEffect(() => {
-    if (!panel || panel.type === "addRole") return;
-    if (orgUsers.length > 0) return;
+    if (!needsUsers) return;
     UserBackend.getUsers({ owner: appOwner }).then((res) => {
       if (res.status === "ok" && res.data) {
         setOrgUsers(res.data.map((u: any) => ({
@@ -429,7 +431,23 @@ function RolesTab({ roles, onRefresh, appOwner, appName, t, modal, navigate }: {
         })));
       }
     });
-  }, [panel, appOwner, orgUsers.length]);
+  }, [needsUsers, appOwner]);
+
+  // Escape key — document-level listener for all panel types
+  useEffect(() => {
+    if (!panel) return;
+    const handler = (e: KeyboardEvent) => { if (e.key === "Escape") setPanel(null); };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, [panel]);
+
+  // Lock body scroll when panel is open
+  useEffect(() => {
+    if (panel) {
+      document.body.style.overflow = "hidden";
+      return () => { document.body.style.overflow = ""; };
+    }
+  }, [panel]);
 
   const handleAddRole = () => {
     navigate(`/authorization/${appOwner}/${appName}/roles/new`, { state: { mode: "add" } });
@@ -458,7 +476,7 @@ function RolesTab({ roles, onRefresh, appOwner, appName, t, modal, navigate }: {
 
   // Quick action: add user or sub-role to a role, then save
   const handleQuickUpdate = async (role: BizRole, field: "users" | "roles", value: string) => {
-    if (!value) return;
+    if (!value || panelLoading || refreshing) return;
     const arr = [...(role[field] || [])];
     if (arr.includes(value)) return;
     arr.push(value);
@@ -468,28 +486,29 @@ function RolesTab({ roles, onRefresh, appOwner, appName, t, modal, navigate }: {
     setPanelLoading(false);
     if (res.status === "ok") {
       modal.toast(t("authz.roles.panel.addSuccess" as any), "success");
+      setRefreshing(true);
       onRefresh();
+      setRefreshing(false);
     } else {
       modal.toast(res.msg || t("common.saveFailed" as any), "error");
     }
   };
 
   const handleQuickRemoveUser = async (role: BizRole, userId: string) => {
+    if (panelLoading || refreshing) return;
     const updated = { ...role, users: role.users.filter((u) => u !== userId) };
     setPanelLoading(true);
     const res = await BizBackend.updateBizRole(appOwner, appName, role.name, updated);
     setPanelLoading(false);
     if (res.status === "ok") {
       modal.toast(t("authz.roles.panel.removeSuccess" as any), "success");
+      setRefreshing(true);
       onRefresh();
+      setRefreshing(false);
     } else {
       modal.toast(res.msg || t("common.saveFailed" as any), "error");
     }
   };
-
-  const getInitial = (s: string) => (s.includes("/") ? s.split("/")[1] : s).charAt(0).toUpperCase();
-  const AVATAR_COLORS = ["from-indigo-500 to-purple-500", "from-cyan-500 to-teal-500", "from-amber-500 to-orange-500", "from-rose-500 to-pink-500", "from-emerald-500 to-green-500", "from-blue-500 to-sky-500"];
-  const getAvatarColor = (s: string) => AVATAR_COLORS[Math.abs([...s].reduce((h, c) => (h << 5) - h + c.charCodeAt(0), 0)) % AVATAR_COLORS.length];
 
   const columns: Column<BizRole>[] = [
     {
@@ -544,13 +563,15 @@ function RolesTab({ roles, onRefresh, appOwner, appName, t, modal, navigate }: {
   // Get the latest role data (roles list refreshes after onRefresh)
   const panelRole = panel ? roles.find((r) => r.name === panel.role.name) ?? panel.role : null;
 
-  // Filter helpers for panels
-  const filteredUsersForAdd = panel?.type === "addUser" && panelRole
-    ? orgUsers.filter((u) => !(panelRole.users || []).includes(u.value) && (panelSearch === "" || u.value.toLowerCase().includes(panelSearch.toLowerCase()) || u.displayName.toLowerCase().includes(panelSearch.toLowerCase())))
-    : [];
-  const filteredRolesForAdd = panel?.type === "addRole" && panelRole
-    ? roles.filter((r) => r.name !== panelRole.name && !(panelRole.roles || []).includes(r.name) && (panelSearch === "" || r.name.toLowerCase().includes(panelSearch.toLowerCase()) || (r.displayName || "").toLowerCase().includes(panelSearch.toLowerCase())))
-    : [];
+  // Filter helpers for panels (memoized to avoid recomputation on every render)
+  const filteredUsersForAdd = useMemo(() => {
+    if (panel?.type !== "addUser" || !panelRole) return [];
+    return orgUsers.filter((u) => !(panelRole.users || []).includes(u.value) && (panelSearch === "" || u.value.toLowerCase().includes(panelSearch.toLowerCase()) || u.displayName.toLowerCase().includes(panelSearch.toLowerCase())));
+  }, [panel?.type, panelRole, orgUsers, panelSearch]);
+  const filteredRolesForAdd = useMemo(() => {
+    if (panel?.type !== "addRole" || !panelRole) return [];
+    return roles.filter((r) => r.name !== panelRole.name && !(panelRole.roles || []).includes(r.name) && (panelSearch === "" || r.name.toLowerCase().includes(panelSearch.toLowerCase()) || (r.displayName || "").toLowerCase().includes(panelSearch.toLowerCase())));
+  }, [panel?.type, panelRole, roles, panelSearch]);
 
   return (
     <div className="space-y-4">
@@ -575,7 +596,6 @@ function RolesTab({ roles, onRefresh, appOwner, appName, t, modal, navigate }: {
               initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }}
               transition={{ type: "spring", damping: 25, stiffness: 300 }}
               className="fixed top-0 right-0 bottom-0 z-[91] w-[380px] max-w-[90vw] bg-surface-1 border-l border-border shadow-xl flex flex-col"
-              onKeyDown={(e) => { if (e.key === "Escape") setPanel(null); }}
             >
               {/* Header */}
               <div className="flex items-center justify-between px-5 py-4 border-b border-border">

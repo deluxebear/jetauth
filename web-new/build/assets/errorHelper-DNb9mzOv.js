@@ -1,0 +1,1 @@
+import{h as e}from"./index-SIc76ySp.js";export{e as friendlyError};

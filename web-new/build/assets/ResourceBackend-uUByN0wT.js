@@ -1,0 +1,1 @@
+import{v as e}from"./index-SIc76ySp.js";export{e as uploadResource};

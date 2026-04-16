@@ -1,1 +1,0 @@
-import{s as e}from"./index-DpKncpsd.js";export{e as uploadResource};
