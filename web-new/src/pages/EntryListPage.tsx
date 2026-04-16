@@ -1,34 +1,21 @@
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Plus, RefreshCw, Trash2, Pencil } from "lucide-react";
+import { RefreshCw, Trash2, Pencil } from "lucide-react";
 import DataTable, { type Column } from "../components/DataTable";
 import { useTranslation } from "../i18n";
 import { useModal } from "../components/Modal";
 import { useEntityList } from "../hooks/useEntityList";
-import { useOrganization } from "../OrganizationContext";
 import * as EntryBackend from "../backend/EntryBackend";
 import type { Entry } from "../backend/EntryBackend";
 
 export default function EntryListPage() {
-  const navigate = useNavigate();
   const { t } = useTranslation();
   const modal = useModal();
-  const { getNewEntityOwner } = useOrganization();
 
   const list = useEntityList<Entry>({
     queryKey: "entries",
     fetchFn: EntryBackend.getEntries,
   });
-
-  const handleAdd = async () => {
-    const entry = EntryBackend.newEntry(getNewEntityOwner());
-    const res = await EntryBackend.addEntry(entry);
-    if (res.status === "ok") {
-      navigate(`/entries/${entry.owner}/${entry.name}`, { state: { mode: "add" } });
-    } else {
-      modal.toast(res.msg || t("common.addFailed" as any), "error");
-    }
-  };
 
   const handleDelete = (record: Entry, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -97,7 +84,6 @@ export default function EntryListPage() {
         </div>
         <div className="flex items-center gap-2">
           <motion.button whileHover={{ rotate: 180 }} transition={{ duration: 0.3 }} onClick={list.refetch} className="rounded-lg border border-border p-2 text-text-muted hover:bg-surface-2 transition-colors" title={t("common.refresh")}><RefreshCw size={15} /></motion.button>
-          <button onClick={handleAdd} className="flex items-center gap-1.5 rounded-lg bg-accent px-3 py-2 text-[13px] font-semibold text-white hover:bg-accent-hover transition-colors"><Plus size={15} /> {t("entries.add" as any)}</button>
         </div>
       </div>
       <DataTable columns={columns} data={list.items} rowKey="name" loading={list.loading} page={list.page} pageSize={list.pageSize} total={list.total} onPageChange={list.setPage} onSort={list.handleSort} onFilter={list.handleFilter} emptyText={t("common.noData")} />

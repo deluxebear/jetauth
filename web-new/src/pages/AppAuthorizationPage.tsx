@@ -1,11 +1,12 @@
 import { useEffect, useState, useCallback } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, Plus, Play, Copy, Check, X, Users as UsersIcon, RefreshCw, RotateCcw, Pencil, Trash2, LayoutDashboard, Crown, ShieldCheck, FlaskConical, Code } from "lucide-react";
+import { ArrowLeft, Plus, Play, Copy, Check, X, Users as UsersIcon, RefreshCw, RotateCcw, Pencil, Trash2, LayoutDashboard, Crown, ShieldCheck, FlaskConical, Code, UserPlus, Shield } from "lucide-react";
 import DataTable, { type Column } from "../components/DataTable";
 import { useTranslation } from "../i18n";
 import { useModal } from "../components/Modal";
 import * as BizBackend from "../backend/BizBackend";
+import * as UserBackend from "../backend/UserBackend";
 import type { BizAppConfig, BizRole, BizPermission, PoliciesExport } from "../backend/BizBackend";
 
 type TabKey = "overview" | "roles" | "permissions" | "test" | "integration";
@@ -403,11 +404,33 @@ function OverviewTab({ config, roles, permissions, userCount, allowCount, denyCo
 }
 
 // ═══════ ROLES TAB ═══════
+type SlidePanel = { type: "viewUsers" | "addUser" | "addRole"; role: BizRole } | null;
+
 function RolesTab({ roles, onRefresh, appOwner, appName, t, modal, navigate }: {
   roles: BizRole[]; onRefresh: () => void;
   appOwner: string; appName: string;
   t: (key: any) => string; modal: any; navigate: any;
 }) {
+  const [panel, setPanel] = useState<SlidePanel>(null);
+  const [orgUsers, setOrgUsers] = useState<{ value: string; displayName: string; email: string }[]>([]);
+  const [panelSearch, setPanelSearch] = useState("");
+  const [panelLoading, setPanelLoading] = useState(false);
+
+  // Load org users lazily when a user panel opens
+  useEffect(() => {
+    if (!panel || panel.type === "addRole") return;
+    if (orgUsers.length > 0) return;
+    UserBackend.getUsers({ owner: appOwner }).then((res) => {
+      if (res.status === "ok" && res.data) {
+        setOrgUsers(res.data.map((u: any) => ({
+          value: `${u.owner}/${u.name}`,
+          displayName: u.displayName || u.name,
+          email: u.email || "",
+        })));
+      }
+    });
+  }, [panel, appOwner, orgUsers.length]);
+
   const handleAddRole = () => {
     navigate(`/authorization/${appOwner}/${appName}/roles/new`, { state: { mode: "add" } });
   };
@@ -433,23 +456,65 @@ function RolesTab({ roles, onRefresh, appOwner, appName, t, modal, navigate }: {
     });
   };
 
+  // Quick action: add user or sub-role to a role, then save
+  const handleQuickUpdate = async (role: BizRole, field: "users" | "roles", value: string) => {
+    if (!value) return;
+    const arr = [...(role[field] || [])];
+    if (arr.includes(value)) return;
+    arr.push(value);
+    const updated = { ...role, [field]: arr };
+    setPanelLoading(true);
+    const res = await BizBackend.updateBizRole(appOwner, appName, role.name, updated);
+    setPanelLoading(false);
+    if (res.status === "ok") {
+      modal.toast(t("authz.roles.panel.addSuccess" as any), "success");
+      onRefresh();
+    } else {
+      modal.toast(res.msg || t("common.saveFailed" as any), "error");
+    }
+  };
+
+  const handleQuickRemoveUser = async (role: BizRole, userId: string) => {
+    const updated = { ...role, users: role.users.filter((u) => u !== userId) };
+    setPanelLoading(true);
+    const res = await BizBackend.updateBizRole(appOwner, appName, role.name, updated);
+    setPanelLoading(false);
+    if (res.status === "ok") {
+      modal.toast(t("authz.roles.panel.removeSuccess" as any), "success");
+      onRefresh();
+    } else {
+      modal.toast(res.msg || t("common.saveFailed" as any), "error");
+    }
+  };
+
+  const getInitial = (s: string) => (s.includes("/") ? s.split("/")[1] : s).charAt(0).toUpperCase();
+  const AVATAR_COLORS = ["from-indigo-500 to-purple-500", "from-cyan-500 to-teal-500", "from-amber-500 to-orange-500", "from-rose-500 to-pink-500", "from-emerald-500 to-green-500", "from-blue-500 to-sky-500"];
+  const getAvatarColor = (s: string) => AVATAR_COLORS[Math.abs([...s].reduce((h, c) => (h << 5) - h + c.charCodeAt(0), 0)) % AVATAR_COLORS.length];
+
   const columns: Column<BizRole>[] = [
     {
-      key: "name", title: t("authz.roles.col.name"), sortable: true, fixed: "left" as const, width: "200px",
+      key: "name", title: t("authz.roles.col.name"), sortable: true, filterable: true, fixed: "left" as const, width: "200px",
       render: (_, r) => <Link to={`/authorization/${appOwner}/${appName}/roles/${encodeURIComponent(r.name)}`} className="font-mono font-medium text-accent hover:underline" onClick={(e) => e.stopPropagation()}>{r.name}</Link>,
     },
     {
-      key: "displayName", title: t("authz.roles.col.displayName" as any), sortable: true, width: "200px",
+      key: "displayName", title: t("authz.roles.col.displayName" as any), sortable: true, filterable: true, width: "200px",
       render: (_, r) => <span className="text-[12px] text-text-secondary">{r.displayName || "\u2014"}</span>,
     },
     {
       key: "users", title: t("authz.roles.col.users"), sortable: true, width: "100px",
-      render: (_, r) => (
-        <span className={`inline-flex items-center gap-1 font-mono font-semibold rounded px-2 py-0.5 ${(r.users?.length ?? 0) > 0 ? "text-blue-400" : "text-text-muted"}`}>
-          <UsersIcon size={12} className="opacity-60" />
-          {r.users?.length ?? 0}
-        </span>
-      ),
+      render: (_, r) => {
+        const count = r.users?.length ?? 0;
+        return (
+          <button
+            onClick={(e) => { e.stopPropagation(); setPanel({ type: "viewUsers", role: r }); setPanelSearch(""); }}
+            className={`inline-flex items-center gap-1 font-mono font-semibold rounded px-2 py-0.5 transition-colors ${count > 0 ? "text-blue-400 hover:bg-blue-500/10" : "text-text-muted hover:bg-surface-2"}`}
+            title={t("authz.roles.viewUsers" as any)}
+          >
+            <UsersIcon size={12} className="opacity-60" />
+            {count}
+          </button>
+        );
+      },
     },
     {
       key: "roles", title: t("authz.roles.col.subRoles"), width: "180px",
@@ -464,15 +529,28 @@ function RolesTab({ roles, onRefresh, appOwner, appName, t, modal, navigate }: {
       ),
     },
     {
-      key: "__actions", title: t("common.action" as any), fixed: "right" as const, width: "100px",
+      key: "__actions", title: t("common.action" as any), fixed: "right" as const, width: "160px",
       render: (_, r) => (
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-0.5">
+          <button onClick={(e) => { e.stopPropagation(); setPanel({ type: "addUser", role: r }); setPanelSearch(""); }} className="rounded p-1.5 text-text-muted hover:text-blue-500 hover:bg-blue-500/10 transition-colors" title={t("authz.roles.quickAddUser" as any)}><UserPlus size={14} /></button>
+          <button onClick={(e) => { e.stopPropagation(); setPanel({ type: "addRole", role: r }); setPanelSearch(""); }} className="rounded p-1.5 text-text-muted hover:text-emerald-500 hover:bg-emerald-500/10 transition-colors" title={t("authz.roles.quickAddRole" as any)}><Shield size={14} /></button>
           <Link to={`/authorization/${appOwner}/${appName}/roles/${encodeURIComponent(r.name)}`} className="rounded p-1.5 text-text-muted hover:text-warning hover:bg-warning/10 transition-colors" title={t("common.edit")} onClick={(e) => e.stopPropagation()}><Pencil size={14} /></Link>
           <button onClick={(e) => handleDeleteRole(r, e)} className="rounded p-1.5 text-text-muted hover:text-danger hover:bg-danger/10 transition-colors" title={t("common.delete")}><Trash2 size={14} /></button>
         </div>
       ),
     },
   ];
+
+  // Get the latest role data (roles list refreshes after onRefresh)
+  const panelRole = panel ? roles.find((r) => r.name === panel.role.name) ?? panel.role : null;
+
+  // Filter helpers for panels
+  const filteredUsersForAdd = panel?.type === "addUser" && panelRole
+    ? orgUsers.filter((u) => !(panelRole.users || []).includes(u.value) && (panelSearch === "" || u.value.toLowerCase().includes(panelSearch.toLowerCase()) || u.displayName.toLowerCase().includes(panelSearch.toLowerCase())))
+    : [];
+  const filteredRolesForAdd = panel?.type === "addRole" && panelRole
+    ? roles.filter((r) => r.name !== panelRole.name && !(panelRole.roles || []).includes(r.name) && (panelSearch === "" || r.name.toLowerCase().includes(panelSearch.toLowerCase()) || (r.displayName || "").toLowerCase().includes(panelSearch.toLowerCase())))
+    : [];
 
   return (
     <div className="space-y-4">
@@ -483,6 +561,153 @@ function RolesTab({ roles, onRefresh, appOwner, appName, t, modal, navigate }: {
         </button>
       </div>
       <DataTable columns={columns} data={roles} rowKey={(r) => r.name} emptyText={t("common.noData")} />
+
+      {/* ── Slide-out panel ── */}
+      <AnimatePresence>
+        {panel && panelRole && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              className="fixed inset-0 z-[90] bg-black/30 backdrop-blur-[2px]"
+              onClick={() => setPanel(null)}
+            />
+            <motion.div
+              initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }}
+              transition={{ type: "spring", damping: 25, stiffness: 300 }}
+              className="fixed top-0 right-0 bottom-0 z-[91] w-[380px] max-w-[90vw] bg-surface-1 border-l border-border shadow-xl flex flex-col"
+              onKeyDown={(e) => { if (e.key === "Escape") setPanel(null); }}
+            >
+              {/* Header */}
+              <div className="flex items-center justify-between px-5 py-4 border-b border-border">
+                <div>
+                  <h3 className="text-[15px] font-semibold">
+                    {panel.type === "viewUsers" && t("authz.roles.panel.viewUsers" as any)}
+                    {panel.type === "addUser" && t("authz.roles.panel.addUser" as any)}
+                    {panel.type === "addRole" && t("authz.roles.panel.addRole" as any)}
+                  </h3>
+                  <p className="text-[12px] text-text-muted font-mono mt-0.5">{panelRole.name}{panelRole.displayName ? ` · ${panelRole.displayName}` : ""}</p>
+                </div>
+                <button onClick={() => setPanel(null)} className="rounded-lg p-1.5 text-text-muted hover:bg-surface-2 transition-colors"><X size={16} /></button>
+              </div>
+
+              {/* Search (for addUser / addRole) */}
+              {panel.type !== "viewUsers" && (
+                <div className="px-5 py-3 border-b border-border-subtle">
+                  <input
+                    className="w-full rounded-lg border border-border bg-surface-2 px-3 py-2 text-[13px] text-text-primary placeholder:text-text-muted focus:border-accent focus:ring-1 focus:ring-accent/30 outline-none transition-all"
+                    placeholder={t("common.search")}
+                    value={panelSearch}
+                    onChange={(e) => setPanelSearch(e.target.value)}
+                    autoFocus
+                  />
+                </div>
+              )}
+
+              {/* Content */}
+              <div className="flex-1 overflow-y-auto">
+                {/* View Users */}
+                {panel.type === "viewUsers" && (
+                  (panelRole.users?.length ?? 0) === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-16 text-text-muted">
+                      <UsersIcon size={32} className="mb-2 opacity-30" />
+                      <p className="text-[13px]">{t("authz.roles.panel.noUsersYet" as any)}</p>
+                    </div>
+                  ) : (
+                    <div className="divide-y divide-border-subtle">
+                      {panelRole.users.map((userId) => {
+                        const info = orgUsers.find((u) => u.value === userId);
+                        return (
+                          <div key={userId} className="flex items-center gap-3 px-5 py-3">
+                            <div className={`w-8 h-8 rounded-full bg-gradient-to-br ${getAvatarColor(userId)} flex items-center justify-center text-white text-[12px] font-semibold flex-shrink-0`}>
+                              {getInitial(userId)}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="text-[13px] font-medium truncate">{info?.displayName || userId.split("/")[1]}</div>
+                              <div className="text-[11px] text-text-muted font-mono">{userId}</div>
+                            </div>
+                            <button
+                              onClick={() => handleQuickRemoveUser(panelRole, userId)}
+                              disabled={panelLoading}
+                              className="rounded p-1.5 text-text-muted hover:text-danger hover:bg-danger/10 transition-colors"
+                              title={t("authz.roles.panel.removeUser" as any)}
+                            >
+                              <X size={14} />
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )
+                )}
+
+                {/* Add User */}
+                {panel.type === "addUser" && (
+                  <div className="divide-y divide-border-subtle">
+                    {filteredUsersForAdd.map((u) => (
+                      <button
+                        key={u.value}
+                        onClick={() => handleQuickUpdate(panelRole, "users", u.value)}
+                        disabled={panelLoading}
+                        className="w-full flex items-center gap-3 px-5 py-3 hover:bg-surface-2 transition-colors text-left disabled:opacity-50"
+                      >
+                        <div className={`w-8 h-8 rounded-full bg-gradient-to-br ${getAvatarColor(u.value)} flex items-center justify-center text-white text-[12px] font-semibold flex-shrink-0`}>
+                          {getInitial(u.value)}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="text-[13px] font-medium truncate">{u.displayName}</div>
+                          <div className="text-[11px] text-text-muted font-mono">{u.value}</div>
+                        </div>
+                        <Plus size={14} className="text-text-muted" />
+                      </button>
+                    ))}
+                    {filteredUsersForAdd.length === 0 && (
+                      <div className="py-12 text-center text-[13px] text-text-muted">{t("common.noData")}</div>
+                    )}
+                  </div>
+                )}
+
+                {/* Add Sub-Role */}
+                {panel.type === "addRole" && (
+                  <div className="divide-y divide-border-subtle">
+                    {filteredRolesForAdd.map((r) => (
+                      <button
+                        key={r.name}
+                        onClick={() => handleQuickUpdate(panelRole, "roles", r.name)}
+                        disabled={panelLoading}
+                        className="w-full flex items-center gap-3 px-5 py-3 hover:bg-surface-2 transition-colors text-left disabled:opacity-50"
+                      >
+                        <div className="w-8 h-8 rounded-lg bg-surface-2 border border-border flex items-center justify-center text-text-muted flex-shrink-0">
+                          <Shield size={14} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="text-[13px] font-medium truncate font-mono">{r.name}</div>
+                          <div className="text-[11px] text-text-muted">{r.displayName || "\u2014"} · {r.users?.length ?? 0} {t("authz.roles.col.users" as any).toLowerCase()}</div>
+                        </div>
+                        <Plus size={14} className="text-text-muted" />
+                      </button>
+                    ))}
+                    {filteredRolesForAdd.length === 0 && (
+                      <div className="py-12 text-center text-[13px] text-text-muted">{t("common.noData")}</div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Footer hint */}
+              {panel.type === "viewUsers" && (panelRole.users?.length ?? 0) > 0 && (
+                <div className="px-5 py-3 border-t border-border-subtle text-center">
+                  <button
+                    onClick={() => setPanel({ type: "addUser", role: panelRole })}
+                    className="inline-flex items-center gap-1.5 text-[12px] font-medium text-accent hover:text-accent-hover transition-colors"
+                  >
+                    <Plus size={14} /> {t("authz.roles.quickAddUser" as any)}
+                  </button>
+                </div>
+              )}
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
