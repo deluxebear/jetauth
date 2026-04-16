@@ -154,7 +154,11 @@ export default function BizRoleEditPage() {
   };
 
   const handleDelete = () => {
-    modal.showConfirm(t("common.confirmDelete"), async () => {
+    const userCount = role.users?.length ?? 0;
+    const msg = userCount > 0
+      ? `${t("common.confirmDelete")}\n\n${t("authz.role.deleteHasUsers" as any).replace("{count}", String(userCount))}`
+      : t("common.confirmDelete");
+    modal.showConfirm(msg, async () => {
       const res = await BizBackend.deleteBizRole(role);
       if (res.status === "ok") {
         navigate(backPath);

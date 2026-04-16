@@ -2452,6 +2452,7 @@ const zh: Record<string, string> = {
   "authz.role.selectRole": "选择子角色",
   "authz.role.noUsers": "暂无分配用户",
   "authz.role.noSubRoles": "暂无子角色",
+  "authz.role.deleteHasUsers": "该角色下有 {count} 个用户，删除后他们将失去该角色关联的所有权限。",
 
   // Biz — 权限编辑
   "authz.perm.editTitle": "权限",

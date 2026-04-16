@@ -2380,6 +2380,7 @@ const en = {
   "authz.role.selectRole": "Select a sub-role",
   "authz.role.noUsers": "No users assigned",
   "authz.role.noSubRoles": "No sub-roles configured",
+  "authz.role.deleteHasUsers": "This role has {count} user(s). After deletion, they will lose all permissions associated with this role.",
 
   // Biz — Permission edit
   "authz.perm.editTitle": "Permission",
