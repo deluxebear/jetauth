@@ -153,7 +153,11 @@ func writeInitDataToFile(filePath string) error {
 			continue
 		}
 
-		enforcerPolicies[enforcer.GetId()] = enforcer.GetPolicy()
+		policies, err := enforcer.GetPolicy()
+		if err != nil {
+			continue
+		}
+		enforcerPolicies[enforcer.GetId()] = policies
 	}
 
 	data := &InitData{

@@ -23,7 +23,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.95.0
 	github.com/beego/beego/v2 v2.3.8
 	github.com/beevik/etree v1.1.0
-	github.com/casbin/casbin/v2 v2.77.2
+	github.com/casbin/casbin/v3 v3.10.0
 	github.com/casbin/lego/v4 v4.5.4
 	github.com/casdoor/casdoor-go-sdk v0.50.0
 	github.com/casdoor/go-sms-sender v0.25.0
@@ -31,7 +31,6 @@ require (
 	github.com/casdoor/ldapserver v1.2.0
 	github.com/casdoor/notify2 v1.6.0
 	github.com/casdoor/oss v1.8.0
-	github.com/casdoor/xorm-adapter/v3 v3.1.0
 	github.com/corazawaf/coraza/v3 v3.3.3
 	github.com/dchest/captcha v0.0.0-20200903113550-03f5f0333e1f
 	github.com/elimity-com/scim v0.0.0-20230426070224-941a5eac92f3
@@ -65,7 +64,6 @@ require (
 	github.com/pquerna/otp v1.4.0
 	github.com/prometheus/client_golang v1.19.0
 	github.com/prometheus/client_model v0.6.2
-	github.com/qiangmzsx/string-adapter/v2 v2.1.0
 	github.com/resend/resend-go/v3 v3.1.0
 	github.com/robfig/cron/v3 v3.0.1
 	github.com/russellhaering/gosaml2 v0.9.0
@@ -87,6 +85,7 @@ require (
 	golang.org/x/text v0.33.0
 	golang.org/x/time v0.8.0
 	google.golang.org/api v0.215.0
+	google.golang.org/protobuf v1.36.11
 	layeh.com/radius v0.0.0-20231213012653-1006025d24f8
 	maunium.net/go/mautrix v0.22.1
 	modernc.org/sqlite v1.18.2
@@ -110,7 +109,6 @@ require (
 	github.com/GoogleCloudPlatform/opentelemetry-operations-go/detectors/gcp v1.31.0 // indirect
 	github.com/GoogleCloudPlatform/opentelemetry-operations-go/exporter/metric v0.49.0 // indirect
 	github.com/GoogleCloudPlatform/opentelemetry-operations-go/internal/resourcemapping v0.49.0 // indirect
-	github.com/Knetic/govaluate v3.0.1-0.20171022003610-9aa49832a739+incompatible // indirect
 	github.com/Microsoft/go-winio v0.6.2 // indirect
 	github.com/ProtonMail/go-crypto v1.1.6 // indirect
 	github.com/RocketChat/Rocket.Chat.Go.SDK v0.0.0-20240116134246-a8cbe886bab0 // indirect
@@ -131,9 +129,11 @@ require (
 	github.com/baidubce/bce-sdk-go v0.9.156 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/blinkbean/dingtalk v1.1.3 // indirect
+	github.com/bmatcuk/doublestar/v4 v4.6.1 // indirect
 	github.com/boombuler/barcode v1.0.1 // indirect
 	github.com/bwmarrin/discordgo v0.28.1 // indirect
 	github.com/caarlos0/go-reddit/v3 v3.0.1 // indirect
+	github.com/casbin/govaluate v1.3.0 // indirect
 	github.com/cenkalti/backoff/v4 v4.3.0 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/clbanning/mxj/v2 v2.7.0 // indirect
@@ -300,7 +300,6 @@ require (
 	google.golang.org/genproto/googleapis/api v0.0.0-20251202230838-ff82c1b0f217 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260128011058-8636f8732409 // indirect
 	google.golang.org/grpc v1.79.3 // indirect
-	google.golang.org/protobuf v1.36.11 // indirect
 	gopkg.in/alexcesaro/quotedprintable.v3 v3.0.0-20150716171945-2caba252f4dc // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1 // indirect

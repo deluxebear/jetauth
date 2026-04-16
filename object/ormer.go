@@ -26,7 +26,7 @@ import (
 	"github.com/beego/beego/v2/server/web"
 	"github.com/deluxebear/casdoor/conf"
 	"github.com/deluxebear/casdoor/util"
-	xormadapter "github.com/casdoor/xorm-adapter/v3"
+	xormadapter "github.com/deluxebear/casdoor/adapters/xormadapter"
 	_ "github.com/go-sql-driver/mysql"  // db = mysql
 	_ "github.com/lib/pq"               // db = postgres
 	_ "github.com/microsoft/go-mssqldb" // db = mssql
