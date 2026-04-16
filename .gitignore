@@ -38,7 +38,9 @@ server
 # include helm-chart
 !manifests/casdoor
 jetauth
+jetauth_server
 .gstack/
 .DS_Store
 casdoor.db
+jetauth.db
 cookie.txt
