@@ -14,7 +14,7 @@ import { useModal } from "../components/Modal";
 import * as BizBackend from "../backend/BizBackend";
 import * as UserBackend from "../backend/UserBackend";
 import type { BizRole, BizPermission } from "../backend/BizBackend";
-import { getInitial, getAvatarColor, hasRealAvatar } from "../utils/avatar";
+import UserAvatar from "../components/UserAvatar";
 import { friendlyError } from "../utils/errorHelper";
 
 export default function BizRoleEditPage() {
@@ -400,10 +400,7 @@ export default function BizRoleEditPage() {
                       const info = getUserInfo(userId);
                       return (
                         <div key={userId} className="flex items-center gap-3 py-2.5">
-                          {hasRealAvatar(info?.avatar)
-                            ? <img src={info!.avatar} alt="" className="w-8 h-8 rounded-full object-cover flex-shrink-0" />
-                            : <div className={`w-8 h-8 rounded-full bg-gradient-to-br ${getAvatarColor(userId)} flex items-center justify-center text-white text-[12px] font-semibold flex-shrink-0`}>{getInitial(userId)}</div>
-                          }
+                          <UserAvatar userId={userId} avatar={info?.avatar} size={32} />
                           <div className="flex-1 min-w-0">
                             <div className="text-[13px] font-semibold truncate">{info?.displayName || userId.split("/")[1]}</div>
                             <div className="text-[11px] text-text-muted font-mono">{userId}</div>
@@ -683,10 +680,7 @@ export default function BizRoleEditPage() {
                       <div className={`w-5 h-5 rounded border flex items-center justify-center flex-shrink-0 transition-colors ${isSelected ? "bg-accent border-accent" : "border-border"}`}>
                         {isSelected && <Check size={12} className="text-white" />}
                       </div>
-                      {hasRealAvatar(u.avatar)
-                        ? <img src={u.avatar} alt="" className="w-7 h-7 rounded-full object-cover flex-shrink-0" />
-                        : <div className={`w-7 h-7 rounded-full bg-gradient-to-br ${getAvatarColor(u.value)} flex items-center justify-center text-white text-[10px] font-semibold`}>{getInitial(u.value)}</div>
-                      }
+                      <UserAvatar userId={u.value} avatar={u.avatar} size={28} />
                       <div className="flex-1 min-w-0">
                         <div className="text-[13px] font-medium truncate">{u.displayName}</div>
                         <div className="text-[11px] text-text-muted font-mono">{u.value}</div>

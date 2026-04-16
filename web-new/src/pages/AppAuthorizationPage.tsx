@@ -8,7 +8,8 @@ import { useModal } from "../components/Modal";
 import * as BizBackend from "../backend/BizBackend";
 import * as UserBackend from "../backend/UserBackend";
 import type { BizAppConfig, BizRole, BizPermission, PoliciesExport } from "../backend/BizBackend";
-import { getInitial, getAvatarColor, hasRealAvatar } from "../utils/avatar";
+import { getInitial, getAvatarColor } from "../utils/avatar";
+import UserAvatar from "../components/UserAvatar";
 
 type TabKey = "overview" | "roles" | "permissions" | "test" | "integration";
 
@@ -419,19 +420,6 @@ function OverviewTab({ config, roles, permissions, userCount, allowCount, denyCo
   );
 }
 
-// ── User Avatar (real image or gradient fallback) ──
-function UserAvatar({ userId, avatar, size = 36 }: { userId: string; avatar?: string; size?: number }) {
-  const px = `${size}px`;
-  if (hasRealAvatar(avatar)) {
-    return <img src={avatar} alt="" className="rounded-full object-cover flex-shrink-0 shadow-sm" style={{ width: px, height: px }} />;
-  }
-  return (
-    <div className={`rounded-full bg-gradient-to-br ${getAvatarColor(userId)} flex items-center justify-center text-white font-semibold flex-shrink-0 shadow-sm`} style={{ width: px, height: px, fontSize: `${Math.round(size * 0.33)}px` }}>
-      {getInitial(userId)}
-    </div>
-  );
-}
-
 // ═══════ ROLES TAB ═══════
 type SlidePanel = { type: "viewUsers" | "addUser" | "addRole"; role: BizRole } | null;
 
@@ -543,6 +531,13 @@ function RolesTab({ roles, permissions: allPerms, onRefresh, appOwner, appName, 
     }
   };
 
+  // Precompute permission count per role (avoids O(roles*perms) per render)
+  const permCountByRole = useMemo(() => {
+    const map = new Map<string, number>();
+    allPerms.forEach((p) => p.roles?.forEach((r) => map.set(r, (map.get(r) || 0) + 1)));
+    return map;
+  }, [allPerms]);
+
   const columns: Column<BizRole>[] = [
     {
       key: "name", title: t("authz.roles.col.name"), sortable: true, filterable: true, fixed: "left" as const, width: "200px",
@@ -575,7 +570,7 @@ function RolesTab({ roles, permissions: allPerms, onRefresh, appOwner, appName, 
     {
       key: "permCount", title: t("authz.roles.col.permCount" as any), sortable: true, width: "100px",
       render: (_, r) => {
-        const count = allPerms.filter((p) => p.roles?.includes(r.name)).length;
+        const count = permCountByRole.get(r.name) ?? 0;
         return (
           <span className={`inline-flex items-center gap-1 font-mono font-semibold rounded px-2 py-0.5 ${count > 0 ? "text-emerald-400" : "text-text-muted"}`}>
             <ShieldCheck size={12} className="opacity-60" />
@@ -904,11 +899,15 @@ function PermissionsTab({ permissions, onRefresh, appOwner, appName, t, modal, n
 
   const columns: Column<BizPermission>[] = [
     {
-      key: "name", title: t("authz.perms.col.name"), sortable: true, fixed: "left" as const, width: "180px",
+      key: "name", title: t("authz.perms.col.name"), sortable: true, filterable: true, fixed: "left" as const, width: "160px",
       render: (_, p) => <Link to={`/authorization/${appOwner}/${appName}/permissions/${encodeURIComponent(p.name)}`} className="font-mono font-medium text-accent hover:underline" onClick={(e) => e.stopPropagation()}>{p.name}</Link>,
     },
     {
-      key: "subjects", title: t("authz.perms.col.subject"), width: "220px",
+      key: "displayName", title: t("authz.roles.col.displayName" as any), sortable: true, filterable: true, width: "140px",
+      render: (_, p) => <span className="text-[12px] text-text-secondary">{p.displayName || "\u2014"}</span>,
+    },
+    {
+      key: "subjects", title: t("authz.perms.col.subject"), width: "200px",
       render: (_, p) => (
         <div className="flex flex-wrap gap-1">
           {p.roles?.map((r) => <span key={r} className="inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold bg-accent/10 text-accent">{r}</span>)}
@@ -931,6 +930,10 @@ function PermissionsTab({ permissions, onRefresh, appOwner, appName, t, modal, n
     },
     {
       key: "effect", title: t("authz.perms.col.effect"), sortable: true, filterable: true, width: "90px",
+      filterOptions: [
+        { label: t("permissions.effectAllow" as any), value: "Allow" },
+        { label: t("permissions.effectDeny" as any), value: "Deny" },
+      ],
       render: (_, p) => (
         <span className={`inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold ${p.effect === "Allow" ? "bg-success/10 text-success" : "bg-danger/10 text-danger"}`}>
           {p.effect === "Allow" ? t("permissions.effectAllow" as any) : t("permissions.effectDeny" as any)}
@@ -939,6 +942,11 @@ function PermissionsTab({ permissions, onRefresh, appOwner, appName, t, modal, n
     },
     {
       key: "state", title: t("authz.perms.col.approval" as any), sortable: true, filterable: true, width: "100px",
+      filterOptions: [
+        { label: t("authz.perms.state.Approved" as any), value: "Approved" },
+        { label: t("authz.perms.state.Pending" as any), value: "Pending" },
+        { label: t("authz.perms.state.Rejected" as any), value: "Rejected" },
+      ],
       render: (_, p) => {
         const state = p.state || "Approved";
         const styles: Record<string, string> = {
@@ -999,11 +1007,15 @@ function TestTab({ appOwner, appName, config, roles, permissions, t }: {
   const [testing, setTesting] = useState(false);
   const [history, setHistory] = useState<{ time: string; sub: string; obj: string; act: string; dom?: string; allowed: boolean }[]>([]);
 
-  // Detect if model uses domain (r = sub, dom, obj, act)
+  // Detect if model uses domain by checking request_definition field count (4+ = has domain)
   const hasDomain = useMemo(() => {
     if (!config?.modelText) return false;
     for (const line of config.modelText.split("\n")) {
-      if (/^r\s*=/.test(line.trim()) && line.includes("dom")) return true;
+      const match = line.trim().match(/^r\s*=\s*(.+)/);
+      if (match) {
+        const fields = match[1].split(",").map((f) => f.trim());
+        return fields.length >= 4;
+      }
     }
     return false;
   }, [config?.modelText]);

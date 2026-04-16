@@ -1,5 +1,6 @@
 import { LogOut, ChevronDown, Sun, Moon, Globe, UserCircle } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { Link } from "react-router-dom";
 import { useTranslation } from "../i18n";
 import { useTheme } from "../theme";
@@ -9,19 +10,43 @@ interface HeaderProps {
   onLogout: () => void;
 }
 
+/** Dropdown rendered via Portal to escape stacking context issues. */
+function PortalDropdown({ anchorRef, open, dropdownRef, children }: { anchorRef: React.RefObject<HTMLElement | null>; open: boolean; dropdownRef: React.RefObject<HTMLDivElement | null>; children: React.ReactNode }) {
+  const [pos, setPos] = useState({ top: 0, right: 0 });
+
+  useEffect(() => {
+    if (open && anchorRef.current) {
+      const rect = anchorRef.current.getBoundingClientRect();
+      setPos({ top: rect.bottom + 4, right: window.innerWidth - rect.right });
+    }
+  }, [open, anchorRef]);
+
+  if (!open) return null;
+  return createPortal(
+    <div ref={dropdownRef} className="fixed z-[9999]" style={{ top: pos.top, right: pos.right }}>
+      {children}
+    </div>,
+    document.body,
+  );
+}
+
 export default function Header({ user, onLogout }: HeaderProps) {
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [langMenuOpen, setLangMenuOpen] = useState(false);
   const userRef = useRef<HTMLDivElement>(null);
   const langRef = useRef<HTMLDivElement>(null);
+  const userDropRef = useRef<HTMLDivElement>(null);
+  const langDropRef = useRef<HTMLDivElement>(null);
   const { t, locale, setLocale, locales } = useTranslation();
   const { theme, toggle: toggleTheme } = useTheme();
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
-      if (userRef.current && !userRef.current.contains(e.target as Node))
+      const target = e.target as Node;
+      // Check both the trigger button AND the portal dropdown
+      if (userRef.current && !userRef.current.contains(target) && !userDropRef.current?.contains(target))
         setUserMenuOpen(false);
-      if (langRef.current && !langRef.current.contains(e.target as Node))
+      if (langRef.current && !langRef.current.contains(target) && !langDropRef.current?.contains(target))
         setLangMenuOpen(false);
     };
     document.addEventListener("mousedown", handler);
@@ -51,8 +76,8 @@ export default function Header({ user, onLogout }: HeaderProps) {
               {locale}
             </span>
           </button>
-          {langMenuOpen && (
-            <div className="absolute right-0 top-full mt-1 w-36 rounded-lg border border-border bg-surface-2 py-1 shadow-[var(--shadow-elevated)]">
+          <PortalDropdown anchorRef={langRef} open={langMenuOpen} dropdownRef={langDropRef}>
+            <div className="w-36 rounded-lg border border-border bg-surface-2 py-1 shadow-[var(--shadow-elevated)]">
               {locales.map((l) => (
                 <button
                   key={l.value}
@@ -73,7 +98,7 @@ export default function Header({ user, onLogout }: HeaderProps) {
                 </button>
               ))}
             </div>
-          )}
+          </PortalDropdown>
         </div>
 
         {/* User menu */}
@@ -98,8 +123,8 @@ export default function Header({ user, onLogout }: HeaderProps) {
             <ChevronDown size={14} className="text-text-muted" />
           </button>
 
-          {userMenuOpen && (
-            <div className="absolute right-0 top-full mt-1 w-48 rounded-lg border border-border bg-surface-2 py-1 shadow-[var(--shadow-elevated)]">
+          <PortalDropdown anchorRef={userRef} open={userMenuOpen} dropdownRef={userDropRef}>
+            <div className="w-48 rounded-lg border border-border bg-surface-2 py-1 shadow-[var(--shadow-elevated)]">
               <div className="px-3 py-2 border-b border-border-subtle">
                 <div className="text-[13px] font-medium text-text-primary">
                   {user?.displayName ?? user?.name}
@@ -124,7 +149,7 @@ export default function Header({ user, onLogout }: HeaderProps) {
                 {t("common.signOut")}
               </button>
             </div>
-          )}
+          </PortalDropdown>
         </div>
       </div>
     </header>

@@ -1,0 +1,1 @@
+import{s as e}from"./index-DzkvDx8F.js";export{e as getApplication};
