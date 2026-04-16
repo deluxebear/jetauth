@@ -683,3 +683,71 @@ func (c *Client) applyResponse(resp WatchResponse) {
 | 迁移工具 | `POST /api/biz-migrate-from-permission` — 将现有 Permission 数据迁移到 biz 表 |
 | 列表分页 | biz-get-roles / biz-get-permissions 尚未支持分页，角色/权限量大时需加 |
 | 策略变更 Webhook | 策略同步后通过 Webhook 通知业务系统刷新本地缓存 |
+
+---
+
+## ReBAC (Zanzibar) 关系型授权集成
+
+**状态：待开发** | **方案文档：[docs/rebac-integration-plan.md](docs/rebac-integration-plan.md)**
+
+在现有"应用授权"模块中引入 Zanzibar 风格 ReBAC，使用户创建应用时可选择 RBAC（Casbin）或 ReBAC 模型。采用轻量自建图引擎方案（复用现有 DB/缓存，零运维增量）。
+
+### P1: 数据模型（2-3 天）
+
+- [ ] `BizAppConfig` 增加 `ModelType`（"casbin" | "rebac"）和 `SchemaText` 字段
+- [ ] 新建 `BizTuple` 结构体（Owner/AppName/ObjectType/ObjectId/Relation/SubjectType/SubjectId/SubjectRel）
+- [ ] `ormer.go` 注册 `BizTuple` 表，配置复合索引（idx_forward + idx_reverse）
+- [ ] 实现 Schema JSON 解析器（`biz_rebac_schema.go`）：JSON → 内存类型/关系定义结构
+- [ ] BizTuple CRUD 函数（AddTuples / DeleteTuples / ReadTuples）
+
+### P2: 图遍历引擎（3-4 天）
+
+- [ ] 实现 `ReBACCheck(owner, appName, object, relation, subject)` — 核心 Check 算法
+  - 直接关系查找
+  - userset 展开（`team:eng#member`）
+  - also 展开（同对象隐含关系，如 `owner → editor`）
+  - from 展开（关联对象继承，如 `parent.editor`）
+  - 请求级 memo map 去重
+  - maxDepth=15 深度限制
+- [ ] 实现 `ReBACListObjects(owner, appName, objectType, relation, subject)` — 列出可访问对象
+- [ ] 实现 `ReBACListUsers(owner, appName, object, relation)` — 列出有权限的用户
+- [ ] 单元测试覆盖：直接关系、userset、继承链、循环检测、深度限制
+
+### P3: API 层（2 天）
+
+- [ ] `BizEnforce` / `BizBatchEnforce` 按 `config.ModelType` 路由到 Casbin 或 ReBAC 引擎
+- [ ] 新增路由：`biz-write-tuples` / `biz-delete-tuples` / `biz-read-tuples`
+- [ ] 新增路由：`biz-list-objects` / `biz-list-users`
+- [ ] 新增路由：`biz-expand`（展开关系树，调试用）
+- [ ] ReBAC 模式下适配 `biz-get-user-roles` / `biz-get-user-permissions`
+
+### P4: 前端 Schema + Tuple（3-4 天）
+
+- [ ] 创建向导步骤 2 增加模型类型选择（RBAC / ReBAC 卡片）
+- [ ] `AppAuthorizationPage` 按 `modelType` 显示不同 Tab（概览/类型定义/关系数据/测试/集成）
+- [ ] 新建 `BizSchemaEditor.tsx` — 可视化编辑对象类型和关系定义
+- [ ] 新建 `BizTupleManager.tsx` — 元组管理表格（增删查 + 批量导入）
+- [ ] `BizBackend.ts` 增加 tuple API 调用函数
+- [ ] i18n 中英文翻译
+
+### P5: 前端测试 + 集成（1-2 天）
+
+- [ ] 新建 `BizReBACTester.tsx` — Check 测试器（输入主体/对象/关系，显示结果 + 路径）
+- [ ] 集成 Tab 补充 ReBAC 模式的 SDK 代码示例（Go / TypeScript）
+- [ ] 概览 Tab 适配 ReBAC 统计信息（类型数、关系数、元组数）
+
+### P6: 缓存优化（2 天）
+
+- [ ] sync.Map 元组查询结果缓存 + 写入时失效
+- [ ] 可选 Redis 缓存层（复用 `bizPolicyCacheEnabled` 配置）
+- [ ] ListObjects 并发遍历 + context 超时控制
+
+### 相关代码位置
+
+- 方案文档：`docs/rebac-integration-plan.md`
+- BizAppConfig：`object/biz_app_config.go`
+- Enforce 入口：`object/biz_enforcer_cache.go` — `BizEnforce`
+- 现有 API：`controllers/biz_permission_api.go`
+- 路由注册：`routers/router.go:231-254`
+- 前端授权页：`web-new/src/pages/AuthorizationPage.tsx`
+- 前端应用授权页：`web-new/src/pages/AppAuthorizationPage.tsx`

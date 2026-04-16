@@ -1974,6 +1974,35 @@ const en = {
   "servers.section.connection": "Connection",
   "servers.section.tools": "Tools",
   "servers.section.baseUrl": "Base URL",
+  "servers.syncSuccess": "Tools synced successfully",
+  "servers.clearSuccess": "Tools cleared",
+  "servers.field.isAllowed": "Allowed",
+  "servers.tooltip.organization": "The organization that owns this server",
+  "servers.tooltip.url": "The URL of the MCP server",
+  "servers.tooltip.accessToken": "Access token for authentication",
+  "servers.tooltip.application": "The application associated with this server",
+  "servers.tooltip.baseUrl": "Base URL for accessing this MCP server through JetAuth proxy",
+
+  // MCP Store
+  "serverStore.title": "MCP Store",
+  "serverStore.subtitle": "Browse and install online MCP servers",
+  "serverStore.searchPlaceholder": "Search server name...",
+
+  // Scan Server
+  "scanServer.title": "Scan Server",
+  "scanServer.scan": "Start Scan",
+  "scanServer.field.ipRange": "IP Range",
+  "scanServer.field.ports": "Ports",
+  "scanServer.field.paths": "Paths",
+  "scanServer.placeholder.cidr": "Enter CIDR or IP address",
+  "scanServer.placeholder.ports": "Enter port or port range",
+  "scanServer.placeholder.paths": "Enter URL path",
+  "scanServer.result.scannedHosts": "Scanned hosts",
+  "scanServer.result.onlineHosts": "Online hosts",
+  "scanServer.result.foundServers": "Found servers",
+  "scanServer.error.noCidr": "Please select at least one IP range",
+  "scanServer.error.noPort": "Please select at least one port",
+  "scanServer.error.invalidPort": "Invalid port format",
 
   // Sessions (missing keys)
   "sessions.field.sessionId": "Session ID",

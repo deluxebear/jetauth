@@ -55,6 +55,7 @@ import AgentListPage from "./pages/AgentListPage";
 import AgentEditPage from "./pages/AgentEditPage";
 import ServerListPage from "./pages/ServerListPage";
 import ServerEditPage from "./pages/ServerEditPage";
+import ServerStorePage from "./pages/ServerStorePage";
 import EntryListPage from "./pages/EntryListPage";
 import EntryEditPage from "./pages/EntryEditPage";
 import SiteListPage from "./pages/SiteListPage";
@@ -636,6 +637,7 @@ export default function App() {
         <Route path="/authorization/:owner/:appName/permissions/new" element={<BizPermissionEditPage />} />
         <Route path="/authorization/:owner/:appName/permissions/:name" element={<BizPermissionEditPage />} />
         {entityRoutes}
+        <Route path="/server-store" element={<ServerStorePage />} />
         <Route path="/trees/:organizationName/:groupName" element={<GroupTreePage />} />
         <Route path="/trees/:organizationName" element={<GroupTreePage />} />
         <Route path="/ldap/sync/:owner/:id" element={<LdapSyncPage />} />

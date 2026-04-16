@@ -2055,6 +2055,35 @@ const zh: Record<string, string> = {
   "servers.section.connection": "连接",
   "servers.section.tools": "工具",
   "servers.section.baseUrl": "基础地址",
+  "servers.syncSuccess": "工具同步成功",
+  "servers.clearSuccess": "工具已清除",
+  "servers.field.isAllowed": "允许",
+  "servers.tooltip.organization": "服务器所属的组织",
+  "servers.tooltip.url": "MCP 服务器的访问地址",
+  "servers.tooltip.accessToken": "用于认证的访问令牌",
+  "servers.tooltip.application": "服务器关联的应用",
+  "servers.tooltip.baseUrl": "通过 JetAuth 代理访问此 MCP 服务器的基础地址",
+
+  // MCP Store
+  "serverStore.title": "MCP 商店",
+  "serverStore.subtitle": "浏览和安装在线 MCP 服务器",
+  "serverStore.searchPlaceholder": "搜索服务器名称...",
+
+  // Scan Server
+  "scanServer.title": "扫描服务器",
+  "scanServer.scan": "开始扫描",
+  "scanServer.field.ipRange": "IP 范围",
+  "scanServer.field.ports": "端口",
+  "scanServer.field.paths": "路径",
+  "scanServer.placeholder.cidr": "输入 CIDR 或 IP 地址",
+  "scanServer.placeholder.ports": "输入端口或端口范围",
+  "scanServer.placeholder.paths": "输入 URL 路径",
+  "scanServer.result.scannedHosts": "已扫描主机",
+  "scanServer.result.onlineHosts": "在线主机",
+  "scanServer.result.foundServers": "发现服务器",
+  "scanServer.error.noCidr": "请选择至少一个 IP 范围",
+  "scanServer.error.noPort": "请选择至少一个端口",
+  "scanServer.error.invalidPort": "端口格式无效",
 
   // Sessions (missing keys)
   "sessions.field.sessionId": "会话 ID",
