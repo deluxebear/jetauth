@@ -224,8 +224,10 @@ func (site *Site) GetId() string {
 func (site *Site) GetChallengeMap() map[string]string {
 	m := map[string]string{}
 	for _, challenge := range site.Challenges {
-		tokens := strings.Split(challenge, ":")
-		m[tokens[0]] = tokens[1]
+		tokens := strings.SplitN(challenge, ":", 2)
+		if len(tokens) == 2 {
+			m[tokens[0]] = tokens[1]
+		}
 	}
 	return m
 }

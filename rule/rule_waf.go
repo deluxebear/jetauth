@@ -17,21 +17,31 @@ package rule
 import (
 	"fmt"
 	"net/http"
+	"sync"
 
-	"github.com/deluxebear/casdoor/conf"
-	"github.com/deluxebear/casdoor/object"
 	"github.com/corazawaf/coraza/v3"
 	"github.com/corazawaf/coraza/v3/types"
+	"github.com/deluxebear/casdoor/conf"
+	"github.com/deluxebear/casdoor/object"
 	"github.com/hsluoyz/modsecurity-go/seclang/parser"
 )
 
 type WafRule struct{}
 
-func (r *WafRule) checkRule(expressions []*object.Expression, req *http.Request) (*RuleResult, error) {
-	var ruleStr string
-	for _, expression := range expressions {
-		ruleStr += expression.Value
+// Cache WAF engines by rule text to avoid recompiling on every request
+var (
+	wafCacheMu sync.RWMutex
+	wafCache   = map[string]coraza.WAF{}
+)
+
+func getOrCreateWAF(ruleStr string) (coraza.WAF, error) {
+	wafCacheMu.RLock()
+	if waf, ok := wafCache[ruleStr]; ok {
+		wafCacheMu.RUnlock()
+		return waf, nil
 	}
+	wafCacheMu.RUnlock()
+
 	waf, err := coraza.NewWAF(
 		coraza.NewWAFConfig().
 			WithErrorCallback(logError).
@@ -39,9 +49,37 @@ func (r *WafRule) checkRule(expressions []*object.Expression, req *http.Request)
 			WithDirectives(ruleStr),
 	)
 	if err != nil {
-		return nil, fmt.Errorf("create WAF failed")
+		return nil, fmt.Errorf("create WAF failed: %w", err)
 	}
+
+	wafCacheMu.Lock()
+	wafCache[ruleStr] = waf
+	wafCacheMu.Unlock()
+
+	return waf, nil
+}
+
+func (r *WafRule) checkRule(expressions []*object.Expression, req *http.Request) (*RuleResult, error) {
+	var ruleStr string
+	for i, expression := range expressions {
+		if i > 0 {
+			ruleStr += "\n"
+		}
+		ruleStr += expression.Value
+	}
+
+	waf, err := getOrCreateWAF(ruleStr)
+	if err != nil {
+		return nil, err
+	}
+
 	tx := waf.NewTransaction()
+	defer func() {
+		if err := tx.Close(); err != nil {
+			fmt.Printf("[WAF] transaction close error: %v\n", err)
+		}
+	}()
+
 	processRequest(tx, req)
 	matchedRules := tx.MatchedRules()
 	for _, matchedRule := range matchedRules {
@@ -69,7 +107,6 @@ func (r *WafRule) checkRule(expressions []*object.Expression, req *http.Request)
 						Reason: fmt.Sprintf("dropped by WAF rule: %d", rule.ID()),
 					}, nil
 				default:
-					// skip other actions
 					continue
 				}
 			}
@@ -79,10 +116,8 @@ func (r *WafRule) checkRule(expressions []*object.Expression, req *http.Request)
 }
 
 func processRequest(tx types.Transaction, req *http.Request) {
-	// Process URI and method
 	tx.ProcessURI(req.URL.String(), req.Method, req.Proto)
 
-	// Process request headers
 	for key, values := range req.Header {
 		for _, value := range values {
 			tx.AddRequestHeader(key, value)
@@ -90,7 +125,6 @@ func processRequest(tx types.Transaction, req *http.Request) {
 	}
 	tx.ProcessRequestHeaders()
 
-	// Process request body (if any)
 	if req.Body != nil {
 		_, err := tx.ProcessRequestBody()
 		if err != nil {

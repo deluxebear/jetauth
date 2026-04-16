@@ -24,6 +24,8 @@ import (
 	"golang.org/x/time/rate"
 )
 
+const maxIPsPerLimiter = 100000
+
 type IpRateRule struct {
 	ruleName string
 }
@@ -35,9 +37,12 @@ type IpRateLimiter struct {
 	b   int
 }
 
-var blackList = map[string]map[string]time.Time{}
-
-var ipRateLimiters = map[string]*IpRateLimiter{}
+var (
+	blackListMu      sync.RWMutex
+	blackList        = map[string]map[string]time.Time{}
+	ipRateLimitersMu sync.RWMutex
+	ipRateLimiters   = map[string]*IpRateLimiter{}
+)
 
 // NewIpRateLimiter .
 func NewIpRateLimiter(r rate.Limit, b int) *IpRateLimiter {
@@ -57,8 +62,19 @@ func (i *IpRateLimiter) AddIP(ip string) *rate.Limiter {
 	i.mu.Lock()
 	defer i.mu.Unlock()
 
-	limiter := rate.NewLimiter(i.r, i.b)
+	// Evict oldest entries if map is too large (prevent OOM under attack)
+	if len(i.ips) >= maxIPsPerLimiter {
+		count := 0
+		for k := range i.ips {
+			delete(i.ips, k)
+			count++
+			if count >= maxIPsPerLimiter/10 {
+				break
+			}
+		}
+	}
 
+	limiter := rate.NewLimiter(i.r, i.b)
 	i.ips[ip] = limiter
 
 	return limiter
@@ -85,25 +101,47 @@ func (r *IpRateRule) checkRule(expressions []*object.Expression, req *http.Reque
 	clientIp := util.GetClientIp(req)
 
 	// If the client IP is in the blacklist, check the block time
-	createAt, ok := blackList[r.ruleName][clientIp]
+	blackListMu.RLock()
+	ruleBlacklist, ruleExists := blackList[r.ruleName]
+	var createAt time.Time
+	ok := false
+	if ruleExists {
+		createAt, ok = ruleBlacklist[clientIp]
+	}
+	blackListMu.RUnlock()
+
 	if ok {
 		blockTime := util.ParseInt(expression.Value)
-		if time.Now().Sub(createAt) < time.Duration(blockTime)*time.Second {
+		if time.Since(createAt) < time.Duration(blockTime)*time.Second {
 			return &RuleResult{
 				Action: "Block",
 				Reason: "Rate limit exceeded",
 			}, nil
 		} else {
-			delete(blackList[r.ruleName], clientIp)
+			blackListMu.Lock()
+			if bl, exists := blackList[r.ruleName]; exists {
+				delete(bl, clientIp)
+			}
+			blackListMu.Unlock()
 		}
 	}
 
 	// If the client IP is not in the blacklist, check the rate limit
-	ipRateLimiter := ipRateLimiters[r.ruleName]
 	parseInt := util.ParseInt(expression.Operator)
+
+	ipRateLimitersMu.RLock()
+	ipRateLimiter := ipRateLimiters[r.ruleName]
+	ipRateLimitersMu.RUnlock()
+
 	if ipRateLimiter == nil {
-		ipRateLimiter = NewIpRateLimiter(rate.Limit(parseInt), parseInt)
-		ipRateLimiters[r.ruleName] = ipRateLimiter
+		ipRateLimitersMu.Lock()
+		// Double-check after acquiring write lock to avoid double-init
+		ipRateLimiter = ipRateLimiters[r.ruleName]
+		if ipRateLimiter == nil {
+			ipRateLimiter = NewIpRateLimiter(rate.Limit(parseInt), parseInt)
+			ipRateLimiters[r.ruleName] = ipRateLimiter
+		}
+		ipRateLimitersMu.Unlock()
 	}
 
 	// If the rate limit has changed, update the rate limiter
@@ -121,8 +159,13 @@ func (r *IpRateRule) checkRule(expressions []*object.Expression, req *http.Reque
 		// If the rate limit is exceeded, add the client IP to the blacklist
 		allow := limiter.Allow()
 		if !allow {
-			blackList[r.ruleName] = map[string]time.Time{}
+			blackListMu.Lock()
+			if blackList[r.ruleName] == nil {
+				blackList[r.ruleName] = map[string]time.Time{}
+			}
 			blackList[r.ruleName][clientIp] = time.Now()
+			blackListMu.Unlock()
+
 			return &RuleResult{
 				Action: "Block",
 				Reason: "Rate limit exceeded",

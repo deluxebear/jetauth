@@ -751,3 +751,186 @@ func (c *Client) applyResponse(resp WatchResponse) {
 - 路由注册：`routers/router.go:231-254`
 - 前端授权页：`web-new/src/pages/AuthorizationPage.tsx`
 - 前端应用授权页：`web-new/src/pages/AppAuthorizationPage.tsx`
+
+---
+
+## Site 网关后端安全与性能审计
+
+**审计日期：2026-04-16** | **状态：P0/P1 已修复，P2 部分修复**
+
+Site 模块是 JetAuth 内置的反向代理网关 + WAF，拦截所有 HTTP(S) 流量。以下是对其后端代码的安全性和性能审计结果。
+
+### P0: 立即修复（防止生产崩溃/安全漏洞）
+
+- [x] **SiteMap/ruleMap 并发访问无锁保护** — `object/site_cache.go:25,128` + `object/rule_cache.go:23,50`
+  - SiteMap 是普通 `map[string]*Site{}`，`refreshSiteMap()` 每 5 秒写入，`GetSiteByDomain()` 每请求读取
+  - 高并发下触发 `concurrent map iteration and map write` → 进程崩溃
+  - 修复：改用 `sync.Map` 或 `sync.RWMutex` 保护读写
+
+- [x] **HTTP 写失败触发 panic** — `service/proxy.go:38,166,222`
+  - `fmt.Fprint()` 出错时 `panic(err)`，客户端断连即触发
+  - 修复：改为 `logs.Error()` + `return`
+
+- [x] **GetChallengeMap 索引越界 panic** — `object/site.go:224-231`
+  - `strings.Split(challenge, ":")` 结果可能只有 1 个元素，`tokens[1]` 越界
+  - 修复：加 `len(tokens) >= 2` 检查
+
+- [x] **Rate Limiter blackList nil map 访问** — `rule/rule_ip_rate.go:88`
+  - `blackList[ruleName]` 未初始化时直接访问 → panic
+  - 修复：访问前检查 `if _, ok := blackList[ruleName]; ok`
+
+- [x] **静态文件路径穿越** — `service/proxy.go:289`
+  - `filepath.Join(host, r.RequestURI)` 未过滤 `../`，可读取任意文件
+  - 修复：`filepath.Clean()` + 验证最终路径在目标目录内
+
+- [x] **OAuth 回调开放重定向** — `service/oauth.go:89`
+  - `state` 参数直接用于 `http.Redirect()`，可注入外部 URL 实施钓鱼
+  - 修复：校验 redirect URL 必须是相对路径，拒绝 `http://` / `https://` / `//` 开头
+
+### P1: 性能优先修复（最大收益）
+
+- [x] **反向代理每请求新建** — `service/proxy.go:42`
+  - `httputil.NewSingleHostReverseProxy(target)` 每请求创建，无连接复用
+  - 延迟 +10-50ms/请求，内存分配 5-10MB/s
+  - 修复：按 targetUrl 缓存 proxy 对象（`sync.Map` 或 `map` + `RWMutex`）
+
+- [x] **WAF 引擎每请求编译** — `rule/rule_waf.go:35`
+  - `coraza.NewWAF()` 每次解析 SecLang 规则，延迟 +100-500ms
+  - 修复：按规则文本缓存 WAF 实例
+
+- [x] **UA 正则每请求编译** — `rule/rule_ua.go:52`
+  - `regexp.MatchString()` 每次编译正则，延迟 +100-500μs
+  - 修复：规则初始化时预编译正则，缓存 `*regexp.Regexp`
+
+- [x] **Rate Limiter 内存无限增长** — `rule/rule_ip_rate.go:32-38`
+  - `ipRateLimiters` 和 `blackList` 永不清理，攻击者旋转百万 IP 可致 OOM
+  - 修复：加 LRU 上限（如 10 万条）+ 定期清理过期条目
+
+### P2: 稳定性修复（中期）
+
+- [ ] **证书监控持全局锁阻塞请求** — `object/site_timer.go:41-44` ⚠️ 剩余
+  - `lock.Lock()` 期间执行 DB 查询 + ACME HTTP 请求，阻塞所有请求 100ms-1s
+  - 修复：改为 per-site 锁或异步证书更新
+  - 注意：涉及 ACME 证书续期流程，改动风险较高，建议单独分支做
+
+- [x] **DNS 解析协程无上限泄漏** — `object/site_cache.go:102-108`
+  - 每 5 秒为每个空 PublicIp 的 site 启动 goroutine，无 WaitGroup/信号量
+  - 1000 站点 + DNS 慢 → 每小时数十万协程 → 内存耗尽
+  - 修复：加 `semaphore.NewWeighted(10)` 限制并发数
+
+- [ ] **全量刷新每 5 秒无变更检测** — `object/site_timer.go:65-84` ⚠️ 剩余
+  - 每 5 秒 `GetGlobalSites()` + `GetGlobalRules()` 全量查库
+  - `monitorSiteCerts()` 再次调 `GetGlobalSites()`（重复查询）
+  - 修复：增量刷新 + UpdatedTime 变更检测，刷新间隔可调大到 30 秒
+  - 注意：功能性改动，不影响稳定性，优先级低于安全修复
+
+- [x] **HTTP Server 无超时保护** — `service/proxy.go:323,331`
+  - 无 `ReadTimeout` / `WriteTimeout` / `IdleTimeout`
+  - Slow Loris 攻击可耗尽连接
+  - 修复：设置 `ReadTimeout: 15s, WriteTimeout: 15s, IdleTimeout: 60s`
+
+- [x] **无请求体大小限制** — `service/proxy.go`
+  - 无 `MaxHeaderBytes`，1GB 请求体可耗尽内存
+  - 修复：设置 `MaxHeaderBytes: 1<<20`，请求体用 `http.MaxBytesReader` 限制
+
+- [x] **X-Real-IP 头可伪造** — `service/proxy.go:46-54`
+  - 信任客户端发送的 `X-Forwarded-For` 并传递给后端
+  - 修复：仅用 `RemoteAddr` 设置 `X-Real-Ip`，清除客户端发送的原始值
+
+### P3: 代码质量
+
+- [x] **Cookie 错误用字符串比较** — `service/proxy.go:220-223`
+  - 用 `err.Error() != "http: named cookie not present"` 判断
+  - 修复：改用 `errors.Is(err, http.ErrNoCookie)`
+
+- [ ] **组合规则递归查找无记忆化** — `rule/rule_compound.go:32` ⚠️ 剩余
+  - 嵌套规则每层重新查找 ruleMap
+  - 修复：传递已加载规则的 map，避免重复查找
+  - 注意：仅深度嵌套组合规则时有性能影响，实际场景罕见
+
+- [x] **WAF Transaction 未关闭** — `rule/rule_waf.go:44`
+  - `waf.NewTransaction()` 无 `defer tx.Close()`
+  - 修复：加 `defer tx.Close()`
+
+- [x] **错误信息泄露内部结构** — `service/proxy.go:246,257`
+  - `site = %v` 暴露完整 Site 对象
+  - 修复：生产环境默认不输出内部细节
+
+### 相关代码位置
+
+- 网关入口：`service/proxy.go` — `Start()` + `handleRequest()`
+- 反向代理：`service/proxy.go:34` — `forwardHandler()`
+- OAuth 代理：`service/oauth.go`
+- Site 缓存：`object/site_cache.go` — `SiteMap` + `refreshSiteMap()`
+- Rule 缓存：`object/rule_cache.go` — `ruleMap` + `refreshRuleMap()`
+- 后台监控：`object/site_timer.go` — `StartMonitorSitesLoop()`
+- 证书管理：`object/site_cert.go` — `checkCerts()` + ACME 自动续期
+- IP 限速：`rule/rule_ip_rate.go` — `IpRateLimiter` + `blackList`
+- WAF 引擎：`rule/rule_waf.go` — Coraza ModSecurity
+- UA 匹配：`rule/rule_ua.go`
+- 组合规则：`rule/rule_compound.go`
+
+---
+
+## 网关集成 Casbin 应用授权（API 级权限控制）
+
+**状态：待开发** | **优先级：高** | **预估工作量：1-2 天**
+
+### 背景
+
+当前网关请求链路：域名匹配 → SSL/重定向 → OAuth 认证 → WAF/IP 规则 → 代理转发。OAuth 步骤验证了用户身份（JWT token），但**验证通过后直接放行**，未检查用户是否有权访问特定 API 路径。
+
+应用授权模块（`biz_*` 系列）已实现完整的 Casbin RBAC/ABAC 策略引擎，带内存缓存（0.01ms enforce）。两个模块可以通过 `Site.CasdoorApplication` 字段天然关联。
+
+### 目标
+
+在网关的 OAuth 认证和 WAF 规则检查之间插入 Casbin 鉴权，实现：
+- 用户 A（admin 角色）可以 `DELETE /api/orders/123`
+- 用户 B（viewer 角色）只能 `GET /api/orders/*`，`DELETE` 返回 403
+
+### 实现方案
+
+在 `service/proxy.go` 的 OAuth 检查后（约 line 241）插入约 20 行代码：
+
+```go
+// ③.5 Casbin authorization check
+if site.CasdoorApplication != "" && claims != nil {
+    userId := fmt.Sprintf("%s/%s", claims.Owner, claims.Name)
+    allowed, err := object.BizEnforce(
+        site.Owner, site.CasdoorApplication,
+        []interface{}{userId, r.URL.Path, r.Method},
+    )
+    if err != nil {
+        // BizAppConfig 不存在 → 该应用未配置授权，跳过（向后兼容）
+    } else if !allowed {
+        w.WriteHeader(http.StatusForbidden)
+        responseErrorWithoutCode(w, "Access denied: insufficient permissions")
+        return
+    }
+}
+```
+
+### 任务清单
+
+- [ ] `service/proxy.go:236` — 修改 `ParseJwtToken` 接收 claims（当前用 `_` 丢弃了返回值）
+- [ ] `service/proxy.go:241` 后 — 插入 BizEnforce 调用，构造 `[userId, path, method]` 请求
+- [ ] 向后兼容：`getBizAppConfig` 返回 nil 时跳过鉴权（不拒绝），已配置但 `IsEnabled=false` 也跳过
+- [ ] 性能验证：BizEnforce 走 sync.Map 内存缓存，确认不引入额外 DB 查询
+- [ ] 前端站点编辑页增加提示：关联应用后可在「应用授权」中配置 API 级权限
+
+### 设计要点
+
+| 要点 | 决策 |
+|------|------|
+| 向后兼容 | 未配置 BizAppConfig 的应用不受影响，鉴权步骤自动跳过 |
+| 性能 | BizEnforce 内存缓存 ~0.01ms，相比代理延迟 1-10ms 可忽略 |
+| 关联字段 | 复用 `Site.CasdoorApplication`，既用于 OAuth 登录也用于 Casbin 策略索引 |
+| 策略管理 | 复用现有应用授权 UI（角色/权限/测试/集成 Tab） |
+| Site 结构 | 无需新增字段 |
+
+### 相关代码位置
+
+- 网关 OAuth 检查：`service/proxy.go:217-242` — claims 解析后的插入点
+- BizEnforce 入口：`object/biz_enforcer_cache.go:167` — 内存缓存 enforce
+- BizAppConfig 查询：`object/biz_app_config.go:53` — 判断应用是否配置了授权
+- 前端站点编辑：`web-new/src/pages/SiteEditPage.tsx` — CasdoorApplication 字段

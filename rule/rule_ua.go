@@ -19,11 +19,38 @@ import (
 	"net/http"
 	"regexp"
 	"strings"
+	"sync"
 
 	"github.com/deluxebear/casdoor/object"
 )
 
 type UaRule struct{}
+
+// Cache compiled regex patterns to avoid recompiling on every request
+var (
+	regexCacheMu sync.RWMutex
+	regexCache   = map[string]*regexp.Regexp{}
+)
+
+func getCompiledRegex(pattern string) (*regexp.Regexp, error) {
+	regexCacheMu.RLock()
+	if re, ok := regexCache[pattern]; ok {
+		regexCacheMu.RUnlock()
+		return re, nil
+	}
+	regexCacheMu.RUnlock()
+
+	re, err := regexp.Compile(pattern)
+	if err != nil {
+		return nil, err
+	}
+
+	regexCacheMu.Lock()
+	regexCache[pattern] = re
+	regexCacheMu.Unlock()
+
+	return re, nil
+}
 
 func (r *UaRule) checkRule(expressions []*object.Expression, req *http.Request) (*RuleResult, error) {
 	userAgent := req.UserAgent()
@@ -44,16 +71,15 @@ func (r *UaRule) checkRule(expressions []*object.Expression, req *http.Request) 
 				return &RuleResult{Reason: reason}, nil
 			}
 		case "does not equal":
-			if strings.Compare(userAgent, ua) != 0 {
+			if userAgent != ua {
 				return &RuleResult{Reason: reason}, nil
 			}
 		case "match":
-			// regex match
-			isHit, err := regexp.MatchString(ua, userAgent)
+			re, err := getCompiledRegex(ua)
 			if err != nil {
 				return nil, err
 			}
-			if isHit {
+			if re.MatchString(userAgent) {
 				return &RuleResult{Reason: reason}, nil
 			}
 		}

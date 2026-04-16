@@ -16,11 +16,15 @@ package object
 
 import (
 	"fmt"
+	"sync"
 
 	"github.com/deluxebear/casdoor/util"
 )
 
-var ruleMap = map[string]*Rule{}
+var (
+	ruleMapMu sync.RWMutex
+	ruleMap   = map[string]*Rule{}
+)
 
 func InitRuleMap() {
 	err := refreshRuleMap()
@@ -40,12 +44,17 @@ func refreshRuleMap() error {
 		newRuleMap[util.GetId(rule.Owner, rule.Name)] = rule
 	}
 
+	ruleMapMu.Lock()
 	ruleMap = newRuleMap
+	ruleMapMu.Unlock()
 	return nil
 }
 
 func GetRulesByRuleIds(ids []string) ([]*Rule, error) {
-	var res []*Rule
+	ruleMapMu.RLock()
+	defer ruleMapMu.RUnlock()
+
+	res := make([]*Rule, 0, len(ids))
 	for _, id := range ids {
 		rule, ok := ruleMap[id]
 		if !ok {

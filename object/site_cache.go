@@ -17,14 +17,19 @@ package object
 import (
 	"fmt"
 	"strings"
+	"sync"
 
 	"github.com/deluxebear/casdoor/util"
+	"golang.org/x/sync/semaphore"
 )
 
 var (
+	siteMapMu                sync.RWMutex
 	SiteMap                  = map[string]*Site{}
+	certMapMu                sync.RWMutex
 	certMap                  = map[string]*Cert{}
 	healthCheckNeededDomains []string
+	dnsResolveSem            = semaphore.NewWeighted(10) // limit concurrent DNS lookups
 )
 
 func InitSiteMap() {
@@ -84,10 +89,13 @@ func refreshSiteMap() error {
 		return err
 	}
 
-	certMap, err = getCertMap()
+	newCertMap, err := getCertMap()
 	if err != nil {
 		return err
 	}
+	certMapMu.Lock()
+	certMap = newCertMap
+	certMapMu.Unlock()
 
 	for _, site := range sites {
 		if applicationMap != nil {
@@ -99,13 +107,16 @@ func refreshSiteMap() error {
 		}
 
 		if site.Domain != "" && site.PublicIp == "" {
-			go func(site *Site) {
-				site.PublicIp = util.ResolveDomainToIp(site.Domain)
-				_, err2 := UpdateSiteNoRefresh(site.GetId(), site)
-				if err2 != nil {
-					fmt.Printf("UpdateSiteNoRefresh() error: %v\n", err2)
-				}
-			}(site)
+			if dnsResolveSem.TryAcquire(1) {
+				go func(site *Site) {
+					defer dnsResolveSem.Release(1)
+					site.PublicIp = util.ResolveDomainToIp(site.Domain)
+					_, err2 := UpdateSiteNoRefresh(site.GetId(), site)
+					if err2 != nil {
+						fmt.Printf("UpdateSiteNoRefresh() error: %v\n", err2)
+					}
+				}(site)
+			}
 		}
 
 		newSiteMap[strings.ToLower(site.Domain)] = site
@@ -119,15 +130,19 @@ func refreshSiteMap() error {
 		}
 	}
 
+	siteMapMu.Lock()
 	SiteMap = newSiteMap
 	healthCheckNeededDomains = newHealthCheckNeededDomains
+	siteMapMu.Unlock()
 	return nil
 }
 
 func GetSiteByDomain(domain string) *Site {
-	if site, ok := SiteMap[strings.ToLower(domain)]; ok {
+	siteMapMu.RLock()
+	site, ok := SiteMap[strings.ToLower(domain)]
+	siteMapMu.RUnlock()
+	if ok {
 		return site
-	} else {
-		return nil
 	}
+	return nil
 }

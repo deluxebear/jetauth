@@ -182,6 +182,7 @@ export default function AppAuthorizationPage() {
         {activeTab === "roles" && (
           <RolesTab
             roles={roles}
+            permissions={permissions}
             onRefresh={fetchData}
             appOwner={owner!}
             appName={appName!}
@@ -205,6 +206,9 @@ export default function AppAuthorizationPage() {
           <TestTab
             appOwner={owner!}
             appName={appName!}
+            config={config}
+            roles={roles}
+            permissions={permissions}
             t={t}
           />
         )}
@@ -431,8 +435,8 @@ function UserAvatar({ userId, avatar, size = 36 }: { userId: string; avatar?: st
 // ═══════ ROLES TAB ═══════
 type SlidePanel = { type: "viewUsers" | "addUser" | "addRole"; role: BizRole } | null;
 
-function RolesTab({ roles, onRefresh, appOwner, appName, t, modal, navigate }: {
-  roles: BizRole[]; onRefresh: () => void;
+function RolesTab({ roles, permissions: allPerms, onRefresh, appOwner, appName, t, modal, navigate }: {
+  roles: BizRole[]; permissions: BizPermission[]; onRefresh: () => void;
   appOwner: string; appName: string;
   t: (key: any) => string; modal: any; navigate: any;
 }) {
@@ -565,8 +569,20 @@ function RolesTab({ roles, onRefresh, appOwner, appName, t, modal, navigate }: {
       },
     },
     {
-      key: "roles", title: t("authz.roles.col.subRoles"), width: "180px",
+      key: "roles", title: t("authz.roles.col.subRoles"), width: "160px",
       render: (_, r) => <span className="text-text-muted font-mono text-[11px]">{r.roles?.length ? r.roles.join(", ") : "\u2014"}</span>,
+    },
+    {
+      key: "permCount", title: t("authz.roles.col.permCount" as any), sortable: true, width: "100px",
+      render: (_, r) => {
+        const count = allPerms.filter((p) => p.roles?.includes(r.name)).length;
+        return (
+          <span className={`inline-flex items-center gap-1 font-mono font-semibold rounded px-2 py-0.5 ${count > 0 ? "text-emerald-400" : "text-text-muted"}`}>
+            <ShieldCheck size={12} className="opacity-60" />
+            {count}
+          </span>
+        );
+      },
     },
     {
       key: "isEnabled", title: t("authz.roles.col.status" as any), sortable: true, width: "100px",
@@ -914,12 +930,28 @@ function PermissionsTab({ permissions, onRefresh, appOwner, appName, t, modal, n
       ),
     },
     {
-      key: "effect", title: t("authz.perms.col.effect"), sortable: true, width: "90px",
+      key: "effect", title: t("authz.perms.col.effect"), sortable: true, filterable: true, width: "90px",
       render: (_, p) => (
         <span className={`inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold ${p.effect === "Allow" ? "bg-success/10 text-success" : "bg-danger/10 text-danger"}`}>
           {p.effect === "Allow" ? t("permissions.effectAllow" as any) : t("permissions.effectDeny" as any)}
         </span>
       ),
+    },
+    {
+      key: "state", title: t("authz.perms.col.approval" as any), sortable: true, filterable: true, width: "100px",
+      render: (_, p) => {
+        const state = p.state || "Approved";
+        const styles: Record<string, string> = {
+          Approved: "bg-success/10 text-success",
+          Pending: "bg-amber-500/10 text-amber-500",
+          Rejected: "bg-danger/10 text-danger",
+        };
+        return (
+          <span className={`inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold ${styles[state] || "bg-surface-2 text-text-muted"}`}>
+            {t(`authz.perms.state.${state}` as any) || state}
+          </span>
+        );
+      },
     },
     {
       key: "isEnabled", title: t("authz.roles.col.status" as any), sortable: true, width: "90px",
@@ -954,27 +986,59 @@ function PermissionsTab({ permissions, onRefresh, appOwner, appName, t, modal, n
 }
 
 // ═══════ TEST TAB ═══════
-function TestTab({ appOwner, appName, t }: {
+function TestTab({ appOwner, appName, config, roles, permissions, t }: {
   appOwner: string; appName: string;
+  config: BizAppConfig | null; roles: BizRole[]; permissions: BizPermission[];
   t: (key: any) => string;
 }) {
   const [sub, setSub] = useState("");
   const [obj, setObj] = useState("");
   const [act, setAct] = useState("");
+  const [dom, setDom] = useState("");
   const [result, setResult] = useState<{ allowed: boolean; detail: string } | null>(null);
   const [testing, setTesting] = useState(false);
-  const [history, setHistory] = useState<{ time: string; sub: string; obj: string; act: string; allowed: boolean }[]>([]);
+  const [history, setHistory] = useState<{ time: string; sub: string; obj: string; act: string; dom?: string; allowed: boolean }[]>([]);
+
+  // Detect if model uses domain (r = sub, dom, obj, act)
+  const hasDomain = useMemo(() => {
+    if (!config?.modelText) return false;
+    for (const line of config.modelText.split("\n")) {
+      if (/^r\s*=/.test(line.trim()) && line.includes("dom")) return true;
+    }
+    return false;
+  }, [config?.modelText]);
+
+  // Extract suggestions from existing data
+  const suggestions = useMemo(() => {
+    const subjects = new Set<string>();
+    const resources = new Set<string>();
+    const actions = new Set<string>();
+    roles.forEach((r) => { r.users?.forEach((u) => subjects.add(u)); subjects.add(r.name); });
+    permissions.forEach((p) => {
+      p.users?.forEach((u) => subjects.add(u));
+      p.roles?.forEach((r) => subjects.add(r));
+      p.resources?.forEach((r) => resources.add(r));
+      p.actions?.forEach((a) => actions.add(a));
+    });
+    return {
+      subjects: [...subjects].sort(),
+      resources: [...resources].sort(),
+      actions: [...actions].sort(),
+    };
+  }, [roles, permissions]);
 
   const handleTest = async () => {
     if (!sub || !obj || !act) return;
+    if (hasDomain && !dom) return;
     setTesting(true);
     try {
       const appId = `${appOwner}/${appName}`;
-      const res = await BizBackend.bizEnforce(appId, [sub, obj, act]);
+      const request = hasDomain ? [sub, dom, obj, act] : [sub, obj, act];
+      const res = await BizBackend.bizEnforce(appId, request);
       if (res.status === "ok") {
         const allowed = !!res.data;
         setResult({ allowed, detail: "" });
-        setHistory((h) => [{ time: new Date().toLocaleTimeString(), sub, obj, act, allowed }, ...h.slice(0, 19)]);
+        setHistory((h) => [{ time: new Date().toLocaleTimeString(), sub, obj, act, dom: hasDomain ? dom : undefined, allowed }, ...h.slice(0, 19)]);
       } else {
         setResult({ allowed: false, detail: res.msg || "Error" });
       }
@@ -984,6 +1048,9 @@ function TestTab({ appOwner, appName, t }: {
       setTesting(false);
     }
   };
+
+  const inputCls = "w-full rounded-lg border border-border bg-surface-2 px-3 py-2 text-[12px] font-mono text-text-primary outline-none focus:border-accent placeholder:text-text-muted";
+  const labelCls = "block text-[10px] font-bold uppercase tracking-wider text-text-muted mb-1.5";
 
   return (
     <div className="space-y-5">
@@ -995,24 +1062,40 @@ function TestTab({ appOwner, appName, t }: {
         </h4>
         <p className="text-[12px] text-text-muted mb-4">{t("authz.test.subtitle")}</p>
 
-        <div className="grid grid-cols-1 md:grid-cols-[1fr_1fr_1fr_auto] gap-3 items-end">
+        <div className={`grid grid-cols-1 gap-3 items-end ${hasDomain ? "md:grid-cols-[1fr_1fr_1fr_1fr_auto]" : "md:grid-cols-[1fr_1fr_1fr_auto]"}`}>
           <div>
-            <label className="block text-[10px] font-bold uppercase tracking-wider text-text-muted mb-1.5">{t("authz.test.subject")}</label>
+            <label className={labelCls}>{t("authz.test.subject")}</label>
             <input value={sub} onChange={(e) => setSub(e.target.value)} placeholder={`${appOwner}/alice`}
-              className="w-full rounded-lg border border-border bg-surface-2 px-3 py-2 text-[12px] font-mono text-text-primary outline-none focus:border-accent placeholder:text-text-muted" />
+              list="test-subjects" className={inputCls} />
+            <datalist id="test-subjects">
+              {suggestions.subjects.map((s) => <option key={s} value={s} />)}
+            </datalist>
           </div>
+          {hasDomain && (
+            <div>
+              <label className={labelCls}>{t("authz.test.domain" as any)}</label>
+              <input value={dom} onChange={(e) => setDom(e.target.value)} placeholder={t("authz.test.domainPlaceholder" as any)}
+                className={inputCls} />
+            </div>
+          )}
           <div>
-            <label className="block text-[10px] font-bold uppercase tracking-wider text-text-muted mb-1.5">{t("authz.test.object")}</label>
+            <label className={labelCls}>{t("authz.test.object")}</label>
             <input value={obj} onChange={(e) => setObj(e.target.value)} placeholder="/orders/list"
-              className="w-full rounded-lg border border-border bg-surface-2 px-3 py-2 text-[12px] font-mono text-text-primary outline-none focus:border-accent placeholder:text-text-muted" />
+              list="test-resources" className={inputCls} />
+            <datalist id="test-resources">
+              {suggestions.resources.map((r) => <option key={r} value={r} />)}
+            </datalist>
           </div>
           <div>
-            <label className="block text-[10px] font-bold uppercase tracking-wider text-text-muted mb-1.5">{t("authz.test.action")}</label>
+            <label className={labelCls}>{t("authz.test.action")}</label>
             <input value={act} onChange={(e) => setAct(e.target.value)} placeholder="GET"
-              className="w-full rounded-lg border border-border bg-surface-2 px-3 py-2 text-[12px] font-mono text-text-primary outline-none focus:border-accent placeholder:text-text-muted"
+              list="test-actions" className={inputCls}
               onKeyDown={(e) => e.key === "Enter" && handleTest()} />
+            <datalist id="test-actions">
+              {suggestions.actions.map((a) => <option key={a} value={a} />)}
+            </datalist>
           </div>
-          <button onClick={handleTest} disabled={testing || !sub || !obj || !act}
+          <button onClick={handleTest} disabled={testing || !sub || !obj || !act || (hasDomain && !dom)}
             className="flex items-center gap-1.5 rounded-lg bg-accent px-5 py-2 text-[12px] font-semibold text-white hover:bg-accent-hover disabled:opacity-50 transition-colors h-[36px]">
             {testing ? <div className="h-3 w-3 rounded-full border-2 border-white/30 border-t-white animate-spin" /> : <Play size={13} />}
             {t("authz.test.run")}
@@ -1050,6 +1133,7 @@ function TestTab({ appOwner, appName, t }: {
                 <tr className="bg-surface-2 border-b border-border">
                   <th className="text-left px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-text-muted">{t("authz.test.col.time")}</th>
                   <th className="text-left px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-text-muted">{t("authz.test.col.user")}</th>
+                  {hasDomain && <th className="text-left px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-text-muted">{t("authz.test.domain" as any)}</th>}
                   <th className="text-left px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-text-muted">{t("authz.test.col.resource")}</th>
                   <th className="text-left px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-text-muted">{t("authz.test.col.action")}</th>
                   <th className="text-left px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-text-muted">{t("authz.test.col.result")}</th>
@@ -1060,6 +1144,7 @@ function TestTab({ appOwner, appName, t }: {
                   <tr key={i} className="border-b border-border-subtle">
                     <td className="px-4 py-2 font-mono text-text-muted text-[11px]">{h.time}</td>
                     <td className="px-4 py-2 font-mono text-[11px]">{h.sub}</td>
+                    {hasDomain && <td className="px-4 py-2 font-mono text-[11px]">{h.dom || ""}</td>}
                     <td className="px-4 py-2 font-mono text-[11px]">{h.obj}</td>
                     <td className="px-4 py-2 text-[11px]">{h.act}</td>
                     <td className="px-4 py-2">

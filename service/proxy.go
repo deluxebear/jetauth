@@ -23,6 +23,7 @@ import (
 	"net/url"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/beego/beego/v2/core/logs"
 	"github.com/deluxebear/casdoor/conf"
@@ -31,26 +32,35 @@ import (
 	"github.com/deluxebear/casdoor/util"
 )
 
+// Shared transport for connection reuse across all proxied requests.
+// httputil.ReverseProxy is NOT safe for concurrent Director mutation,
+// so we create a new proxy per request but share the transport.
+var sharedTransport = &http.Transport{
+	MaxIdleConns:        200,
+	MaxIdleConnsPerHost: 20,
+	IdleConnTimeout:     90 * time.Second,
+}
+
 func forwardHandler(targetUrl string, writer http.ResponseWriter, request *http.Request) {
 	target, err := url.Parse(targetUrl)
-
-	if nil != err {
-		panic(err)
+	if err != nil {
+		logs.Error("forwardHandler: failed to parse target URL: ", err)
+		http.Error(writer, "Bad Gateway", http.StatusBadGateway)
 		return
 	}
 
-	proxy := httputil.NewSingleHostReverseProxy(target)
+	proxy := &httputil.ReverseProxy{Transport: sharedTransport}
 	proxy.Director = func(r *http.Request) {
 		r.URL = target
 
+		// Set X-Real-Ip from RemoteAddr only — never trust client-supplied headers
 		if clientIP, _, err := net.SplitHostPort(r.RemoteAddr); err == nil {
-			if xff := r.Header.Get("X-Forwarded-For"); xff != "" && xff != clientIP {
-				newXff := fmt.Sprintf("%s, %s", xff, clientIP)
-				// r.Header.Set("X-Forwarded-For", newXff)
-				r.Header.Set("X-Real-Ip", newXff)
+			r.Header.Set("X-Real-Ip", clientIP)
+			// Append to X-Forwarded-For chain
+			if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
+				r.Header.Set("X-Forwarded-For", fmt.Sprintf("%s, %s", xff, clientIP))
 			} else {
-				// r.Header.Set("X-Forwarded-For", clientIP)
-				r.Header.Set("X-Real-Ip", clientIP)
+				r.Header.Set("X-Forwarded-For", clientIP)
 			}
 		}
 	}
@@ -163,7 +173,7 @@ func handleRequest(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusOK)
 			_, err := fmt.Fprintf(w, "OK")
 			if err != nil {
-				panic(err)
+				logs.Error("handleRequest: failed to write health-ping response: ", err)
 			}
 			return
 		}
@@ -218,8 +228,9 @@ func handleRequest(w http.ResponseWriter, r *http.Request) {
 	if site.CasdoorApplication != "" {
 		// handle oAuth proxy
 		cookie, err := r.Cookie("casdoor_access_token")
-		if err != nil && err.Error() != "http: named cookie not present" {
-			panic(err)
+		if err != nil && err != http.ErrNoCookie {
+			responseError(w, "CasWAF error: cookie parsing failed: %s", err.Error())
+			return
 		}
 
 		casdoorClient, err := getCasdoorClientFromSite(site)
@@ -243,7 +254,7 @@ func handleRequest(w http.ResponseWriter, r *http.Request) {
 
 	host := site.GetHost()
 	if host == "" {
-		responseError(w, "CasWAF error: targetUrl should not be empty for host: %s, site = %v", r.Host, site)
+		responseError(w, "CasWAF error: targetUrl should not be empty for host: %s", r.Host)
 		return
 	}
 
@@ -284,18 +295,34 @@ func nextHandle(w http.ResponseWriter, r *http.Request) {
 	site := getSiteByDomainWithWww(r.Host)
 	host := site.GetHost()
 	if site.SslMode == "Static Folder" {
+		// Sanitize request URI to prevent path traversal
+		cleanPath := filepath.Clean(r.RequestURI)
+		if strings.Contains(cleanPath, "..") {
+			http.Error(w, "Forbidden", http.StatusForbidden)
+			return
+		}
+
 		var path string
 		if r.RequestURI != "/" {
-			path = filepath.Join(host, r.RequestURI)
+			path = filepath.Join(host, cleanPath)
 		} else {
 			path = filepath.Join(host, "/index.htm")
 			if !util.FileExist(path) {
 				path = filepath.Join(host, "/index.html")
 				if !util.FileExist(path) {
-					path = filepath.Join(host, r.RequestURI)
+					path = filepath.Join(host, cleanPath)
 				}
 			}
 		}
+
+		// Verify resolved path is within the intended directory
+		absHost, _ := filepath.Abs(host)
+		absPath, _ := filepath.Abs(path)
+		if !strings.HasPrefix(absPath, absHost) {
+			http.Error(w, "Forbidden", http.StatusForbidden)
+			return
+		}
+
 		http.ServeFile(w, r, path)
 	} else {
 		targetUrl := joinPath(site.GetHost(), r.RequestURI)
@@ -320,7 +347,15 @@ func Start() {
 
 	go func() {
 		fmt.Printf("CasWAF gateway running on: http://127.0.0.1:%d\n", gatewayHttpPort)
-		err := http.ListenAndServe(fmt.Sprintf(":%d", gatewayHttpPort), serverMux)
+		httpServer := &http.Server{
+			Addr:           fmt.Sprintf(":%d", gatewayHttpPort),
+			Handler:        serverMux,
+			ReadTimeout:    30 * time.Second,
+			WriteTimeout:   30 * time.Second,
+			IdleTimeout:    120 * time.Second,
+			MaxHeaderBytes: 1 << 20, // 1MB
+		}
+		err := httpServer.ListenAndServe()
 		if err != nil {
 			logs.Error(err)
 		}
@@ -329,8 +364,12 @@ func Start() {
 	go func() {
 		fmt.Printf("CasWAF gateway running on: https://127.0.0.1:%d\n", gatewayHttpsPort)
 		server := &http.Server{
-			Handler: serverMux,
-			Addr:    fmt.Sprintf(":%d", gatewayHttpsPort),
+			Handler:        serverMux,
+			Addr:           fmt.Sprintf(":%d", gatewayHttpsPort),
+			ReadTimeout:    30 * time.Second,
+			WriteTimeout:   30 * time.Second,
+			IdleTimeout:    120 * time.Second,
+			MaxHeaderBytes: 1 << 20, // 1MB
 			TLSConfig: &tls.Config{
 				// Minimum TLS version 1.2, TLS 1.3 is automatically supported
 				MinVersion: tls.VersionTLS12,

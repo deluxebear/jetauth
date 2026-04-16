@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"strings"
 
 	"github.com/casdoor/casdoor-go-sdk/casdoorsdk"
 	"github.com/deluxebear/casdoor/object"
@@ -86,5 +87,10 @@ func handleAuthCallback(w http.ResponseWriter, r *http.Request) {
 	http.SetCookie(w, cookie)
 
 	originalPath := state
+	// Validate redirect target to prevent open redirect attacks
+	if strings.HasPrefix(originalPath, "http://") || strings.HasPrefix(originalPath, "https://") || strings.HasPrefix(originalPath, "//") {
+		responseError(w, "CasWAF error: invalid redirect target")
+		return
+	}
 	http.Redirect(w, r, originalPath, http.StatusFound)
 }
