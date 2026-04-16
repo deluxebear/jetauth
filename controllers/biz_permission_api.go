@@ -10,16 +10,23 @@ package controllers
 
 import (
 	"encoding/json"
+	"fmt"
 
 	"github.com/deluxebear/casdoor/object"
 	"github.com/deluxebear/casdoor/util"
 )
 
-// wrapBizActionResponse wraps a CRUD action result, translating "biz:" prefixed
-// errors via c.T() so the response language matches the user's locale.
+// wrapBizActionResponse wraps a CRUD action result, translating BizError
+// templates via c.T() so the response language matches the user's locale.
 func (c *ApiController) wrapBizActionResponse(affected bool, e ...error) *Response {
 	if len(e) != 0 && e[0] != nil {
-		return &Response{Status: "error", Msg: c.T(e[0].Error())}
+		if bizErr, ok := e[0].(*object.BizError); ok {
+			// Translate the template, then format with args
+			translated := c.T(bizErr.Namespace + ":" + bizErr.Template)
+			msg := fmt.Sprintf(translated, bizErr.Args...)
+			return &Response{Status: "error", Msg: msg}
+		}
+		return &Response{Status: "error", Msg: e[0].Error()}
 	} else if affected {
 		return &Response{Status: "ok", Msg: "", Data: "Affected"}
 	} else {

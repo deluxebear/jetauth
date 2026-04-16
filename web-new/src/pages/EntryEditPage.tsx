@@ -1,18 +1,29 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate, useLocation, Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Trash2, LogOut} from "lucide-react";
+import { Trash2, LogOut, ExternalLink } from "lucide-react";
 import StickyEditHeader from "../components/StickyEditHeader";
 import { FormField, FormSection, inputClass, monoInputClass } from "../components/FormSection";
 import { useTranslation } from "../i18n";
 import { useModal } from "../components/Modal";
 import { useEntityEdit } from "../hooks/useEntityEdit";
 import * as EntryBackend from "../backend/EntryBackend";
+import * as OrganizationBackend from "../backend/OrganizationBackend";
 import type { Entry } from "../backend/EntryBackend";
 import { friendlyError } from "../utils/errorHelper";
+import SingleSearchSelect from "../components/SingleSearchSelect";
 import SaveButton from "../components/SaveButton";
 import UnsavedBanner from "../components/UnsavedBanner";
 import { useUnsavedWarning } from "../hooks/useUnsavedWarning";
+import { getStoredAccount, isGlobalAdmin } from "../utils/auth";
+
+function tryFormatJson(str: string): string {
+  try {
+    return JSON.stringify(JSON.parse(str), null, 2);
+  } catch {
+    return str;
+  }
+}
 
 export default function EntryEditPage() {
   const { owner, name } = useParams<{ owner: string; name: string }>();
@@ -24,8 +35,22 @@ export default function EntryEditPage() {
   const [entry, setEntry] = useState<Entry | null>(null);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
-  useEffect(() => { if (saved) { const t = setTimeout(() => setSaved(false), 1500); return () => clearTimeout(t); } }, [saved]);
+  useEffect(() => { if (saved) { const timer = setTimeout(() => setSaved(false), 1500); return () => clearTimeout(timer); } }, [saved]);
   const [originalJson, setOriginalJson] = useState("");
+
+  // Admin org dropdown
+  const account = getStoredAccount();
+  const isAdmin = isGlobalAdmin(account);
+  const [orgOptions, setOrgOptions] = useState<{ value: string; label: string }[]>([]);
+
+  useEffect(() => {
+    if (!isAdmin) return;
+    OrganizationBackend.getOrganizationNames("admin").then((res) => {
+      if (res.status === "ok" && res.data) {
+        setOrgOptions(res.data.map((o) => ({ value: o.name, label: o.displayName || o.name })));
+      }
+    }).catch(() => {});
+  }, [isAdmin]);
 
   const { entity, loading, invalidate: _invalidate, invalidateList } = useEntityEdit<Entry>({
     queryKey: "entry",
@@ -75,6 +100,7 @@ export default function EntryEditPage() {
       setSaving(false);
     }
   };
+
   const handleSaveAndExit = async () => {
     setSaving(true);
     try {
@@ -117,21 +143,23 @@ export default function EntryEditPage() {
     });
   };
 
+  const formattedMessage = entry.message ? tryFormatJson(entry.message) : "";
+
   return (
-    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-6 ">
+    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
       <StickyEditHeader
         title={`${isAddMode ? t("common.add") : t("common.edit")} ${t("entries.title" as any)}`}
         subtitle={`${owner}/${name}`}
         onBack={handleBack}
       >
-          <button onClick={handleDelete} className="flex items-center gap-1.5 rounded-lg border border-danger/30 px-3 py-2 text-[13px] font-medium text-danger hover:bg-danger/10 transition-colors">
-            <Trash2 size={14} /> {t("common.delete")}
-          </button>
-                    <SaveButton onClick={handleSave} saving={saving} saved={saved} label={t("common.save")} />
-          <button onClick={handleSaveAndExit} disabled={saving} className="flex items-center gap-1.5 rounded-lg bg-accent px-4 py-2 text-[13px] font-semibold text-white hover:bg-accent-hover disabled:opacity-50 transition-colors">
-            {saving ? <div className="h-3.5 w-3.5 rounded-full border-2 border-white/30 border-t-white animate-spin" /> : <LogOut size={14} />}
-            {t("common.saveAndExit" as any)}
-          </button>
+        <button onClick={handleDelete} className="flex items-center gap-1.5 rounded-lg border border-danger/30 px-3 py-2 text-[13px] font-medium text-danger hover:bg-danger/10 transition-colors">
+          <Trash2 size={14} /> {t("common.delete")}
+        </button>
+        <SaveButton onClick={handleSave} saving={saving} saved={saved} label={t("common.save")} />
+        <button onClick={handleSaveAndExit} disabled={saving} className="flex items-center gap-1.5 rounded-lg bg-accent px-4 py-2 text-[13px] font-semibold text-white hover:bg-accent-hover disabled:opacity-50 transition-colors">
+          {saving ? <div className="h-3.5 w-3.5 rounded-full border-2 border-white/30 border-t-white animate-spin" /> : <LogOut size={14} />}
+          {t("common.saveAndExit" as any)}
+        </button>
       </StickyEditHeader>
 
       {showBanner && <UnsavedBanner isAddMode={isAddMode} />}
@@ -139,7 +167,16 @@ export default function EntryEditPage() {
       {/* Basic Info */}
       <FormSection title={t("entries.section.basic" as any)}>
         <FormField label={t("field.owner")}>
-          <input value={entry.owner} disabled className={inputClass} />
+          {isAdmin ? (
+            <SingleSearchSelect
+              value={entry.owner}
+              options={orgOptions}
+              onChange={(v) => set("owner", v)}
+              placeholder={t("common.search" as any)}
+            />
+          ) : (
+            <input value={entry.owner} disabled className={inputClass} />
+          )}
         </FormField>
         <FormField label={t("field.name")} required>
           <input value={entry.name} onChange={(e) => set("name", e.target.value)} className={monoInputClass} />
@@ -160,7 +197,7 @@ export default function EntryEditPage() {
         </FormField>
         <FormField label={t("col.application" as any)}>
           {entry.application ? (
-            <Link to={`/applications/${entry.organization}/${entry.application}`} className="text-accent hover:underline text-[13px]">{entry.application}</Link>
+            <Link to={`/applications/${entry.owner}/${entry.application}`} className="text-accent hover:underline text-[13px]">{entry.application}</Link>
           ) : (
             <span className="text-[13px] text-text-muted">{t("common.none" as any)}</span>
           )}
@@ -173,7 +210,20 @@ export default function EntryEditPage() {
           <input value={entry.type ?? ""} disabled className={inputClass} />
         </FormField>
         <FormField label={t("entries.field.clientIp" as any)}>
-          <input value={entry.clientIp ?? ""} disabled className={monoInputClass} />
+          <div className="flex items-center gap-2">
+            <input value={entry.clientIp ?? ""} disabled className={`${monoInputClass} flex-1`} />
+            {entry.clientIp && (
+              <a
+                href={`https://db-ip.com/${entry.clientIp}`}
+                target="_blank"
+                rel="noreferrer"
+                className="flex items-center gap-1 rounded-lg border border-border px-2.5 py-2 text-[12px] text-text-secondary hover:bg-surface-2 transition-colors shrink-0"
+                title={t("entries.tooltip.lookupIp" as any)}
+              >
+                <ExternalLink size={13} />
+              </a>
+            )}
+          </div>
         </FormField>
         <FormField label={t("entries.field.userAgent" as any)} span="full">
           <input value={entry.userAgent ?? ""} disabled className={inputClass} />
@@ -182,14 +232,11 @@ export default function EntryEditPage() {
 
       {/* Message */}
       <FormSection title={t("entries.field.message" as any)}>
-        <FormField label={t("entries.field.message" as any)} span="full">
-          <textarea
-            value={entry.message ?? ""}
-            onChange={(e) => set("message", e.target.value)}
-            rows={10}
-            className={`${monoInputClass} text-[12px]`}
-          />
-        </FormField>
+        <div className="col-span-full">
+          <pre className="rounded-lg border border-border bg-surface-2 p-4 text-[12px] font-mono text-text-secondary overflow-auto max-h-[500px] whitespace-pre-wrap break-all">
+            {formattedMessage || <span className="text-text-muted">{t("common.none" as any)}</span>}
+          </pre>
+        </div>
       </FormSection>
     </motion.div>
   );

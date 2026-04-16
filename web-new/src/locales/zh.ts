@@ -1909,6 +1909,7 @@ const zh: Record<string, string> = {
   "entries.section.basic": "基本信息",
   "entries.section.details": "详情",
   "entries.section.references": "引用",
+  "entries.tooltip.lookupIp": "查询 IP 地址信息",
 
   // Forms
   "forms.title": "表单管理",

@@ -1828,6 +1828,7 @@ const en = {
   "entries.section.basic": "Basic Information",
   "entries.section.details": "Details",
   "entries.section.references": "References",
+  "entries.tooltip.lookupIp": "Look up IP address information",
 
   // Forms
   "forms.title": "Forms",
