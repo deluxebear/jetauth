@@ -1,31 +1,87 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Save, Trash2, LogOut} from "lucide-react";
+import { Trash2, LogOut, X } from "lucide-react";
 import StickyEditHeader from "../components/StickyEditHeader";
 import { FormField, FormSection, inputClass, monoInputClass, Switch } from "../components/FormSection";
 import { useTranslation } from "../i18n";
 import { useModal } from "../components/Modal";
 import { useEntityEdit } from "../hooks/useEntityEdit";
 import * as SiteBackend from "../backend/SiteBackend";
+import * as OrganizationBackend from "../backend/OrganizationBackend";
+import * as ApplicationBackend from "../backend/ApplicationBackend";
+import * as RuleBackend from "../backend/RuleBackend";
+import * as CertBackend from "../backend/CertBackend";
 import type { Site } from "../backend/SiteBackend";
 import { friendlyError } from "../utils/errorHelper";
 import SimpleSelect from "../components/SimpleSelect";
+import SingleSearchSelect from "../components/SingleSearchSelect";
 import SaveButton from "../components/SaveButton";
 import UnsavedBanner from "../components/UnsavedBanner";
 import { useUnsavedWarning } from "../hooks/useUnsavedWarning";
+import { getStoredAccount, isGlobalAdmin } from "../utils/auth";
 
 const SSL_MODE_OPTIONS = [
-  { id: "HTTP", name: "HTTP" },
-  { id: "HTTPS and HTTP", name: "HTTPS and HTTP" },
-  { id: "HTTPS Only", name: "HTTPS Only" },
-  { id: "Static Folder", name: "Static Folder" },
+  { value: "HTTP", label: "HTTP" },
+  { value: "HTTPS and HTTP", label: "HTTPS and HTTP" },
+  { value: "HTTPS Only", label: "HTTPS Only" },
+  { value: "Static Folder", label: "Static Folder" },
 ];
 
 const STATUS_OPTIONS = [
-  { id: "Active", name: "Active" },
-  { id: "Inactive", name: "Inactive" },
+  { value: "Active", label: "Active" },
+  { value: "Inactive", label: "Inactive" },
 ];
+
+// Reusable tag input for string arrays (otherDomains, hosts, challenges, alertProviders)
+function TagListInput({ values, onChange, placeholder }: {
+  values: string[];
+  onChange: (v: string[]) => void;
+  placeholder?: string;
+}) {
+  const [input, setInput] = useState("");
+
+  const addTag = (tag: string) => {
+    const trimmed = tag.trim();
+    if (trimmed && !values.includes(trimmed)) {
+      onChange([...values, trimmed]);
+    }
+    setInput("");
+  };
+
+  const removeTag = (tag: string) => {
+    onChange(values.filter((v) => v !== tag));
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" && input.trim()) {
+      e.preventDefault();
+      addTag(input);
+    }
+  };
+
+  return (
+    <div className="space-y-1.5">
+      {values.length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          {values.map((v) => (
+            <span key={v} className="flex items-center gap-1 rounded-md bg-accent/10 text-accent px-2 py-0.5 text-[12px] font-medium">
+              {v}
+              <button onClick={() => removeTag(v)} className="hover:text-danger transition-colors"><X size={11} /></button>
+            </span>
+          ))}
+        </div>
+      )}
+      <input
+        value={input}
+        onChange={(e) => setInput(e.target.value)}
+        onKeyDown={handleKeyDown}
+        placeholder={placeholder}
+        className={`${monoInputClass} w-full`}
+      />
+    </div>
+  );
+}
 
 export default function SiteEditPage() {
   const { owner, name } = useParams<{ owner: string; name: string }>();
@@ -37,8 +93,47 @@ export default function SiteEditPage() {
   const [site, setSite] = useState<Site | null>(null);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
-  useEffect(() => { if (saved) { const t = setTimeout(() => setSaved(false), 1500); return () => clearTimeout(t); } }, [saved]);
+  useEffect(() => { if (saved) { const timer = setTimeout(() => setSaved(false), 1500); return () => clearTimeout(timer); } }, [saved]);
   const [originalJson, setOriginalJson] = useState("");
+
+  // Admin org dropdown
+  const account = getStoredAccount();
+  const isAdmin = isGlobalAdmin(account);
+  const [orgOptions, setOrgOptions] = useState<{ value: string; label: string }[]>([]);
+
+  // Dynamic options
+  const [appOptions, setAppOptions] = useState<{ value: string; label: string }[]>([]);
+  const [ruleOptions, setRuleOptions] = useState<{ value: string; label: string }[]>([]);
+  const [certOptions, setCertOptions] = useState<{ value: string; label: string }[]>([]);
+
+  useEffect(() => {
+    if (!isAdmin) return;
+    OrganizationBackend.getOrganizationNames("admin").then((res) => {
+      if (res.status === "ok" && res.data) {
+        setOrgOptions(res.data.map((o) => ({ value: o.name, label: o.displayName || o.name })));
+      }
+    }).catch(() => {});
+  }, [isAdmin]);
+
+  // Load apps, rules, certs in parallel when site.owner changes
+  useEffect(() => {
+    if (!site?.owner) return;
+    Promise.all([
+      ApplicationBackend.getApplicationsByOrganization({ owner: "admin", organization: site.owner }),
+      RuleBackend.getRules({ owner: site.owner }),
+      CertBackend.getCerts({ owner: "admin" }),
+    ]).then(([appRes, ruleRes, certRes]) => {
+      if (appRes.status === "ok" && appRes.data) {
+        setAppOptions(appRes.data.map((a) => ({ value: a.name, label: (a as any).displayName || a.name })));
+      }
+      if (ruleRes.status === "ok" && ruleRes.data) {
+        setRuleOptions(ruleRes.data.map((r: any) => ({ value: `${r.owner}/${r.name}`, label: r.displayName || r.name })));
+      }
+      if (certRes.status === "ok" && certRes.data) {
+        setCertOptions(certRes.data.map((c: any) => ({ value: c.name, label: c.displayName || c.name })));
+      }
+    }).catch(() => {});
+  }, [site?.owner]);
 
   const { entity, loading, invalidate: _invalidate, invalidateList } = useEntityEdit<Site>({
     queryKey: "site",
@@ -66,6 +161,10 @@ export default function SiteEditPage() {
     setSite((prev) => prev ? { ...prev, [key]: val } : prev);
   };
 
+  const handleOwnerChange = (val: string) => {
+    setSite((prev) => prev ? { ...prev, owner: val, casdoorApplication: "" } : prev);
+  };
+
   const handleSave = async () => {
     setSaving(true);
     try {
@@ -88,6 +187,7 @@ export default function SiteEditPage() {
       setSaving(false);
     }
   };
+
   const handleSaveAndExit = async () => {
     setSaving(true);
     try {
@@ -130,24 +230,31 @@ export default function SiteEditPage() {
     });
   };
 
-  const parseTagList = (val: string): string[] =>
-    val.split(",").map((s) => s.trim()).filter(Boolean);
+  // Toggle a rule in the rules array
+  const toggleRule = (ruleId: string) => {
+    const current = site.rules || [];
+    if (current.includes(ruleId)) {
+      set("rules", current.filter((r) => r !== ruleId));
+    } else {
+      set("rules", [...current, ruleId]);
+    }
+  };
 
   return (
-    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-6 ">
+    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
       <StickyEditHeader
         title={`${isAddMode ? t("common.add") : t("common.edit")} ${t("sites.title" as any)}`}
         subtitle={`${owner}/${name}`}
         onBack={handleBack}
       >
-          <button onClick={handleDelete} className="flex items-center gap-1.5 rounded-lg border border-danger/30 px-3 py-2 text-[13px] font-medium text-danger hover:bg-danger/10 transition-colors">
-            <Trash2 size={14} /> {t("common.delete")}
-          </button>
-                    <SaveButton onClick={handleSave} saving={saving} saved={saved} label={t("common.save")} />
-          <button onClick={handleSaveAndExit} disabled={saving} className="flex items-center gap-1.5 rounded-lg bg-accent px-4 py-2 text-[13px] font-semibold text-white hover:bg-accent-hover disabled:opacity-50 transition-colors">
-            {saving ? <div className="h-3.5 w-3.5 rounded-full border-2 border-white/30 border-t-white animate-spin" /> : <LogOut size={14} />}
-            {t("common.saveAndExit" as any)}
-          </button>
+        <button onClick={handleDelete} className="flex items-center gap-1.5 rounded-lg border border-danger/30 px-3 py-2 text-[13px] font-medium text-danger hover:bg-danger/10 transition-colors">
+          <Trash2 size={14} /> {t("common.delete")}
+        </button>
+        <SaveButton onClick={handleSave} saving={saving} saved={saved} label={t("common.save")} />
+        <button onClick={handleSaveAndExit} disabled={saving} className="flex items-center gap-1.5 rounded-lg bg-accent px-4 py-2 text-[13px] font-semibold text-white hover:bg-accent-hover disabled:opacity-50 transition-colors">
+          {saving ? <div className="h-3.5 w-3.5 rounded-full border-2 border-white/30 border-t-white animate-spin" /> : <LogOut size={14} />}
+          {t("common.saveAndExit" as any)}
+        </button>
       </StickyEditHeader>
 
       {showBanner && <UnsavedBanner isAddMode={isAddMode} />}
@@ -155,7 +262,16 @@ export default function SiteEditPage() {
       {/* Basic Info */}
       <FormSection title={t("sites.section.basic" as any)}>
         <FormField label={t("field.owner")}>
-          <input value={site.owner} disabled className={inputClass} />
+          {isAdmin ? (
+            <SingleSearchSelect
+              value={site.owner}
+              options={orgOptions}
+              onChange={(v) => handleOwnerChange(v)}
+              placeholder={t("common.search" as any)}
+            />
+          ) : (
+            <input value={site.owner} disabled className={inputClass} />
+          )}
         </FormField>
         <FormField label={t("field.name")} required>
           <input value={site.name} onChange={(e) => set("name", e.target.value)} className={monoInputClass} />
@@ -171,14 +287,13 @@ export default function SiteEditPage() {
       {/* Domain */}
       <FormSection title={t("sites.section.domain" as any)}>
         <FormField label={t("sites.field.domain" as any)}>
-          <input value={site.domain} onChange={(e) => set("domain", e.target.value)} className={inputClass} />
+          <input value={site.domain} onChange={(e) => set("domain", e.target.value)} className={monoInputClass} />
         </FormField>
         <FormField label={t("sites.field.otherDomains" as any)} span="full">
-          <input
-            value={(site.otherDomains || []).join(", ")}
-            onChange={(e) => set("otherDomains", parseTagList(e.target.value))}
-            className={inputClass}
-            placeholder={t("sites.field.otherDomainsPlaceholder" as any)}
+          <TagListInput
+            values={site.otherDomains || []}
+            onChange={(v) => set("otherDomains", v)}
+            placeholder={t("sites.placeholder.otherDomains" as any)}
           />
         </FormField>
         <FormField label={t("sites.field.needRedirect" as any)}>
@@ -191,13 +306,37 @@ export default function SiteEditPage() {
 
       {/* Rules */}
       <FormSection title={t("sites.field.rules" as any)}>
-        <FormField label={t("sites.field.rules" as any)} span="full">
-          <input
-            value={(site.rules || []).join(", ")}
-            onChange={(e) => set("rules", parseTagList(e.target.value))}
-            className={inputClass}
-          />
-        </FormField>
+        <div className="col-span-full">
+          {ruleOptions.length > 0 ? (
+            <div className="space-y-1.5">
+              {/* Selected rules */}
+              {(site.rules || []).length > 0 && (
+                <div className="flex flex-wrap gap-1.5 mb-2">
+                  {(site.rules || []).map((r) => (
+                    <span key={r} className="flex items-center gap-1 rounded-md bg-accent/10 text-accent px-2 py-0.5 text-[12px] font-medium">
+                      {r}
+                      <button onClick={() => toggleRule(r)} className="hover:text-danger transition-colors"><X size={11} /></button>
+                    </span>
+                  ))}
+                </div>
+              )}
+              {/* Available rules to add */}
+              <div className="flex flex-wrap gap-1.5">
+                {ruleOptions.filter((r) => !(site.rules || []).includes(r.value)).map((r) => (
+                  <button
+                    key={r.value}
+                    onClick={() => toggleRule(r.value)}
+                    className="rounded-md border border-border bg-surface-1 px-2 py-0.5 text-[11px] text-text-muted hover:bg-surface-2 hover:text-text-secondary transition-colors"
+                  >
+                    + {r.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <p className="text-[13px] text-text-muted">{t("common.noData")}</p>
+          )}
+        </div>
       </FormSection>
 
       {/* Alert */}
@@ -207,17 +346,20 @@ export default function SiteEditPage() {
         </FormField>
         {site.enableAlert && (
           <>
-            <FormField label={t("sites.field.alertInterval" as any)}>
-              <input type="number" min={1} value={site.alertInterval} onChange={(e) => set("alertInterval", Number(e.target.value))} className={monoInputClass} />
+            <FormField label={t("sites.field.alertInterval" as any)} tooltip={t("sites.tooltip.alertInterval" as any)}>
+              <div className="flex items-center gap-2">
+                <input type="number" min={1} value={site.alertInterval} onChange={(e) => set("alertInterval", Number(e.target.value))} className={`${monoInputClass} w-32`} />
+                <span className="text-[12px] text-text-muted">{t("sites.field.seconds" as any)}</span>
+              </div>
             </FormField>
-            <FormField label={t("sites.field.alertTryTimes" as any)}>
-              <input type="number" min={1} value={site.alertTryTimes} onChange={(e) => set("alertTryTimes", Number(e.target.value))} className={monoInputClass} />
+            <FormField label={t("sites.field.alertTryTimes" as any)} tooltip={t("sites.tooltip.alertTryTimes" as any)}>
+              <input type="number" min={1} value={site.alertTryTimes} onChange={(e) => set("alertTryTimes", Number(e.target.value))} className={`${monoInputClass} w-32`} />
             </FormField>
             <FormField label={t("sites.field.alertProviders" as any)} span="full">
-              <input
-                value={(site.alertProviders || []).join(", ")}
-                onChange={(e) => set("alertProviders", parseTagList(e.target.value))}
-                className={inputClass}
+              <TagListInput
+                values={site.alertProviders || []}
+                onChange={(v) => set("alertProviders", v)}
+                placeholder={t("sites.placeholder.alertProviders" as any)}
               />
             </FormField>
           </>
@@ -227,10 +369,10 @@ export default function SiteEditPage() {
       {/* Challenges */}
       <FormSection title={t("sites.field.challenges" as any)}>
         <FormField label={t("sites.field.challenges" as any)} span="full">
-          <input
-            value={(site.challenges || []).join(", ")}
-            onChange={(e) => set("challenges", parseTagList(e.target.value))}
-            className={inputClass}
+          <TagListInput
+            values={site.challenges || []}
+            onChange={(v) => set("challenges", v)}
+            placeholder={t("sites.placeholder.challenges" as any)}
           />
         </FormField>
       </FormSection>
@@ -238,16 +380,16 @@ export default function SiteEditPage() {
       {/* Network */}
       <FormSection title={t("sites.section.network" as any)}>
         <FormField label={t("sites.field.host" as any)}>
-          <input value={site.host} onChange={(e) => set("host", e.target.value)} className={monoInputClass} />
+          <input value={site.host} onChange={(e) => set("host", e.target.value)} className={monoInputClass} placeholder="127.0.0.1" />
         </FormField>
         <FormField label={t("sites.field.port" as any)}>
-          <input type="number" min={0} max={65535} value={site.port} onChange={(e) => set("port", Number(e.target.value))} className={monoInputClass} />
+          <input type="number" min={0} max={65535} value={site.port} onChange={(e) => set("port", Number(e.target.value))} className={`${monoInputClass} w-32`} />
         </FormField>
         <FormField label={t("sites.field.hosts" as any)} span="full">
-          <input
-            value={(site.hosts || []).join(", ")}
-            onChange={(e) => set("hosts", parseTagList(e.target.value))}
-            className={inputClass}
+          <TagListInput
+            values={site.hosts || []}
+            onChange={(v) => set("hosts", v)}
+            placeholder={t("sites.placeholder.hosts" as any)}
           />
         </FormField>
         <FormField label={t("sites.field.publicIp" as any)}>
@@ -258,20 +400,30 @@ export default function SiteEditPage() {
       {/* SSL */}
       <FormSection title={t("sites.section.ssl" as any)}>
         <FormField label={t("sites.field.sslMode" as any)}>
-          <SimpleSelect value={site.sslMode} options={SSL_MODE_OPTIONS.map((o) => ({ value: o.id, label: o.name }))} onChange={(v) => set("sslMode", v)} />
+          <SimpleSelect value={site.sslMode} options={SSL_MODE_OPTIONS} onChange={(v) => set("sslMode", v)} />
         </FormField>
         <FormField label={t("sites.field.sslCert" as any)}>
-          <input value={site.sslCert ?? ""} disabled className={inputClass} />
+          <SingleSearchSelect
+            value={site.sslCert ?? ""}
+            options={certOptions}
+            onChange={(v) => set("sslCert", v)}
+            placeholder={t("common.search" as any)}
+          />
         </FormField>
       </FormSection>
 
       {/* Application & Status */}
       <FormSection title={t("sites.section.status" as any)}>
         <FormField label={t("sites.field.casdoorApp" as any)}>
-          <input value={site.casdoorApplication ?? ""} onChange={(e) => set("casdoorApplication", e.target.value)} className={inputClass} />
+          <SingleSearchSelect
+            value={site.casdoorApplication ?? ""}
+            options={appOptions}
+            onChange={(v) => set("casdoorApplication", v)}
+            placeholder={t("common.search" as any)}
+          />
         </FormField>
         <FormField label={t("sites.field.status" as any)}>
-          <SimpleSelect value={site.status ?? "Active"} options={STATUS_OPTIONS.map((o) => ({ value: o.id, label: o.name }))} onChange={(v) => set("status", v)} />
+          <SimpleSelect value={site.status ?? "Active"} options={STATUS_OPTIONS} onChange={(v) => set("status", v)} />
         </FormField>
       </FormSection>
     </motion.div>

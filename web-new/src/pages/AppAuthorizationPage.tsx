@@ -1,14 +1,14 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, Plus, Play, Copy, Check, X, Users as UsersIcon, RefreshCw, RotateCcw, Pencil, Trash2, LayoutDashboard, Crown, ShieldCheck, FlaskConical, Code, UserPlus, Shield } from "lucide-react";
+import { ArrowLeft, Plus, Play, Copy, Check, X, Users as UsersIcon, RefreshCw, RotateCcw, Pencil, Trash2, LayoutDashboard, Crown, ShieldCheck, FlaskConical, Code, UserPlus, Shield, Search, UserCheck, Mail } from "lucide-react";
 import DataTable, { type Column } from "../components/DataTable";
 import { useTranslation } from "../i18n";
 import { useModal } from "../components/Modal";
 import * as BizBackend from "../backend/BizBackend";
 import * as UserBackend from "../backend/UserBackend";
 import type { BizAppConfig, BizRole, BizPermission, PoliciesExport } from "../backend/BizBackend";
-import { getInitial, getAvatarColor } from "../utils/avatar";
+import { getInitial, getAvatarColor, hasRealAvatar } from "../utils/avatar";
 
 type TabKey = "overview" | "roles" | "permissions" | "test" | "integration";
 
@@ -24,6 +24,7 @@ export default function AppAuthorizationPage() {
   const [roles, setRoles] = useState<BizRole[]>([]);
   const [permissions, setPermissions] = useState<BizPermission[]>([]);
   const [syncing, setSyncing] = useState(false);
+  const [appIcon, setAppIcon] = useState("");
 
   const fetchData = useCallback(() => {
     if (!owner || !appName) return;
@@ -34,10 +35,16 @@ export default function AppAuthorizationPage() {
       BizBackend.getBizAppConfig(appId).catch(() => ({ status: "error" as const, msg: "", data: null as any })),
       BizBackend.getBizRoles(owner, appName).catch(() => ({ status: "error" as const, msg: "", data: [] as any })),
       BizBackend.getBizPermissions(owner, appName).catch(() => ({ status: "error" as const, msg: "", data: [] as any })),
-    ]).then(([configRes, rolesRes, permsRes]) => {
+      import("../backend/ApplicationBackend").then((mod) => mod.getApplication("admin", appName)).catch(() => ({ status: "error" as const, data: null as any })),
+    ]).then(([configRes, rolesRes, permsRes, appRes]) => {
       if (configRes.status === "ok" && configRes.data) setConfig(configRes.data);
       setRoles(rolesRes.status === "ok" && rolesRes.data ? rolesRes.data : []);
       setPermissions(permsRes.status === "ok" && permsRes.data ? permsRes.data : []);
+      if (appRes.status === "ok" && appRes.data) {
+        const app = appRes.data as any;
+        const favicon = app.favicon && app.favicon !== "/img/favicon.png" ? app.favicon : (app.logo && app.logo !== "/img/logo.png" ? app.logo : "");
+        setAppIcon(favicon);
+      }
     }).finally(() => setLoading(false));
   }, [owner, appName]);
 
@@ -93,9 +100,13 @@ export default function AppAuthorizationPage() {
             <button onClick={() => navigate("/authorization")} className="rounded-lg p-1.5 text-text-muted hover:text-accent hover:bg-accent/10 transition-colors">
               <ArrowLeft size={18} />
             </button>
-            <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center text-white font-bold text-sm">
-              {(config.displayName || config.appName).charAt(0).toUpperCase()}
-            </div>
+            {appIcon ? (
+              <img src={appIcon} alt="" className="w-9 h-9 rounded-lg object-cover flex-shrink-0" />
+            ) : (
+              <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center text-white font-bold text-sm">
+                {(config.displayName || config.appName).charAt(0).toUpperCase()}
+              </div>
+            )}
             <div>
               <Link to={`/applications/admin/${config.appName}`} className="text-lg font-bold tracking-tight hover:text-accent transition-colors">
                 {config.displayName || config.appName}
@@ -404,6 +415,19 @@ function OverviewTab({ config, roles, permissions, userCount, allowCount, denyCo
   );
 }
 
+// ── User Avatar (real image or gradient fallback) ──
+function UserAvatar({ userId, avatar, size = 36 }: { userId: string; avatar?: string; size?: number }) {
+  const px = `${size}px`;
+  if (hasRealAvatar(avatar)) {
+    return <img src={avatar} alt="" className="rounded-full object-cover flex-shrink-0 shadow-sm" style={{ width: px, height: px }} />;
+  }
+  return (
+    <div className={`rounded-full bg-gradient-to-br ${getAvatarColor(userId)} flex items-center justify-center text-white font-semibold flex-shrink-0 shadow-sm`} style={{ width: px, height: px, fontSize: `${Math.round(size * 0.33)}px` }}>
+      {getInitial(userId)}
+    </div>
+  );
+}
+
 // ═══════ ROLES TAB ═══════
 type SlidePanel = { type: "viewUsers" | "addUser" | "addRole"; role: BizRole } | null;
 
@@ -413,10 +437,11 @@ function RolesTab({ roles, onRefresh, appOwner, appName, t, modal, navigate }: {
   t: (key: any) => string; modal: any; navigate: any;
 }) {
   const [panel, setPanel] = useState<SlidePanel>(null);
-  const [orgUsers, setOrgUsers] = useState<{ value: string; displayName: string; email: string }[]>([]);
+  const [orgUsers, setOrgUsers] = useState<{ value: string; displayName: string; email: string; avatar: string }[]>([]);
   const [panelSearch, setPanelSearch] = useState("");
   const [panelLoading, setPanelLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [recentlyAdded, setRecentlyAdded] = useState<Set<string>>(new Set());
 
   // Load org users when a user-related panel opens (refetch each time to stay fresh)
   const needsUsers = panel?.type === "addUser" || panel?.type === "viewUsers";
@@ -428,6 +453,7 @@ function RolesTab({ roles, onRefresh, appOwner, appName, t, modal, navigate }: {
           value: `${u.owner}/${u.name}`,
           displayName: u.displayName || u.name,
           email: u.email || "",
+          avatar: u.avatar || "",
         })));
       }
     });
@@ -485,6 +511,9 @@ function RolesTab({ roles, onRefresh, appOwner, appName, t, modal, navigate }: {
     const res = await BizBackend.updateBizRole(appOwner, appName, role.name, updated);
     setPanelLoading(false);
     if (res.status === "ok") {
+      // Flash animation: show "added" state briefly
+      setRecentlyAdded((prev) => new Set(prev).add(value));
+      setTimeout(() => setRecentlyAdded((prev) => { const next = new Set(prev); next.delete(value); return next; }), 1500);
       modal.toast(t("authz.roles.panel.addSuccess" as any), "success");
       setRefreshing(true);
       onRefresh();
@@ -595,65 +624,125 @@ function RolesTab({ roles, onRefresh, appOwner, appName, t, modal, navigate }: {
             <motion.div
               initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }}
               transition={{ type: "spring", damping: 25, stiffness: 300 }}
-              className="fixed top-0 right-0 bottom-0 z-[91] w-[380px] max-w-[90vw] bg-surface-1 border-l border-border shadow-xl flex flex-col"
+              className="fixed top-0 right-0 bottom-0 z-[91] w-[400px] max-w-[90vw] bg-surface-1 border-l border-border shadow-xl flex flex-col"
             >
-              {/* Header */}
-              <div className="flex items-center justify-between px-5 py-4 border-b border-border">
-                <div>
-                  <h3 className="text-[15px] font-semibold">
-                    {panel.type === "viewUsers" && t("authz.roles.panel.viewUsers" as any)}
-                    {panel.type === "addUser" && t("authz.roles.panel.addUser" as any)}
-                    {panel.type === "addRole" && t("authz.roles.panel.addRole" as any)}
-                  </h3>
-                  <p className="text-[12px] text-text-muted font-mono mt-0.5">{panelRole.name}{panelRole.displayName ? ` · ${panelRole.displayName}` : ""}</p>
+              {/* ── Header ── */}
+              <div className="px-5 pt-5 pb-4">
+                <div className="flex items-start justify-between mb-3">
+                  <div className="flex items-center gap-3">
+                    <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${panel.type === "addRole" ? "from-emerald-500 to-teal-600" : "from-blue-500 to-indigo-600"} flex items-center justify-center text-white flex-shrink-0`}>
+                      {panel.type === "addRole" ? <Shield size={18} /> : panel.type === "viewUsers" ? <UsersIcon size={18} /> : <UserPlus size={18} />}
+                    </div>
+                    <div>
+                      <h3 className="text-[15px] font-semibold leading-tight">
+                        {panel.type === "viewUsers" && t("authz.roles.panel.viewUsers" as any)}
+                        {panel.type === "addUser" && t("authz.roles.panel.addUser" as any)}
+                        {panel.type === "addRole" && t("authz.roles.panel.addRole" as any)}
+                      </h3>
+                      <p className="text-[12px] text-text-muted mt-0.5 font-mono">{panelRole.name}{panelRole.displayName ? ` · ${panelRole.displayName}` : ""}</p>
+                    </div>
+                  </div>
+                  <button onClick={() => setPanel(null)} className="rounded-lg p-1.5 text-text-muted hover:bg-surface-2 transition-colors -mt-1 -mr-1"><X size={16} /></button>
                 </div>
-                <button onClick={() => setPanel(null)} className="rounded-lg p-1.5 text-text-muted hover:bg-surface-2 transition-colors"><X size={16} /></button>
+
+                {/* Search bar with icon */}
+                {panel.type !== "viewUsers" && (
+                  <div className="relative">
+                    <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none" />
+                    <input
+                      className="w-full rounded-lg border border-border bg-surface-2 pl-9 pr-8 py-2.5 text-[13px] text-text-primary placeholder:text-text-muted focus:border-accent focus:ring-2 focus:ring-accent/20 outline-none transition-all"
+                      placeholder={panel.type === "addUser" ? t("authz.roles.panel.searchUsers" as any) : t("authz.roles.panel.searchRoles" as any)}
+                      value={panelSearch}
+                      onChange={(e) => setPanelSearch(e.target.value)}
+                      autoFocus
+                    />
+                    {panelSearch && (
+                      <button onClick={() => setPanelSearch("")} className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded p-0.5 text-text-muted hover:text-text-secondary transition-colors">
+                        <X size={12} />
+                      </button>
+                    )}
+                  </div>
+                )}
+
+                {/* Counter badge */}
+                {panel.type !== "viewUsers" && (
+                  <div className="flex items-center gap-2 mt-2.5">
+                    <span className="text-[11px] text-text-muted">
+                      {(panel.type === "addUser"
+                        ? (t("authz.roles.panel.available" as any) as string).replace("{count}", String(filteredUsersForAdd.length))
+                        : (t("authz.roles.panel.available" as any) as string).replace("{count}", String(filteredRolesForAdd.length))
+                      )}
+                    </span>
+                    {(panelRole.users?.length ?? 0) > 0 && panel.type === "addUser" && (
+                      <>
+                        <span className="w-px h-3 bg-border" />
+                        <button
+                          onClick={() => { setPanel({ type: "viewUsers", role: panelRole }); setPanelSearch(""); }}
+                          className="text-[11px] text-accent hover:text-accent-hover transition-colors"
+                        >
+                          {(t("authz.roles.panel.assigned" as any) as string).replace("{count}", String(panelRole.users.length))}
+                        </button>
+                      </>
+                    )}
+                  </div>
+                )}
+                {panel.type === "viewUsers" && (
+                  <div className="flex items-center gap-2 mt-2.5">
+                    <span className="text-[11px] text-text-muted">
+                      {(t("authz.roles.panel.assigned" as any) as string).replace("{count}", String(panelRole.users?.length ?? 0))}
+                    </span>
+                  </div>
+                )}
               </div>
 
-              {/* Search (for addUser / addRole) */}
-              {panel.type !== "viewUsers" && (
-                <div className="px-5 py-3 border-b border-border-subtle">
-                  <input
-                    className="w-full rounded-lg border border-border bg-surface-2 px-3 py-2 text-[13px] text-text-primary placeholder:text-text-muted focus:border-accent focus:ring-1 focus:ring-accent/30 outline-none transition-all"
-                    placeholder={t("common.search")}
-                    value={panelSearch}
-                    onChange={(e) => setPanelSearch(e.target.value)}
-                    autoFocus
-                  />
-                </div>
-              )}
+              <div className="h-px bg-border" />
 
-              {/* Content */}
+              {/* ── Content ── */}
               <div className="flex-1 overflow-y-auto">
                 {/* View Users */}
                 {panel.type === "viewUsers" && (
                   (panelRole.users?.length ?? 0) === 0 ? (
-                    <div className="flex flex-col items-center justify-center py-16 text-text-muted">
-                      <UsersIcon size={32} className="mb-2 opacity-30" />
-                      <p className="text-[13px]">{t("authz.roles.panel.noUsersYet" as any)}</p>
+                    <div className="flex flex-col items-center justify-center py-20 px-8">
+                      <div className="w-16 h-16 rounded-2xl bg-surface-2 flex items-center justify-center mb-4">
+                        <UsersIcon size={24} className="text-text-muted/40" />
+                      </div>
+                      <p className="text-[13px] font-medium text-text-secondary mb-1">{t("authz.roles.panel.noUsersYet" as any)}</p>
+                      <p className="text-[11px] text-text-muted">{t("authz.roles.panel.noUsersHint" as any)}</p>
                     </div>
                   ) : (
-                    <div className="divide-y divide-border-subtle">
-                      {panelRole.users.map((userId) => {
+                    <div className="py-1">
+                      {panelRole.users.map((userId, idx) => {
                         const info = orgUsers.find((u) => u.value === userId);
                         return (
-                          <div key={userId} className="flex items-center gap-3 px-5 py-3">
-                            <div className={`w-8 h-8 rounded-full bg-gradient-to-br ${getAvatarColor(userId)} flex items-center justify-center text-white text-[12px] font-semibold flex-shrink-0`}>
-                              {getInitial(userId)}
-                            </div>
+                          <motion.div
+                            key={userId}
+                            initial={{ opacity: 0, x: 8 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ delay: idx * 0.03 }}
+                            className="group flex items-center gap-3 px-5 py-2.5 hover:bg-surface-2/60 transition-colors"
+                          >
+                            <UserAvatar userId={userId} avatar={info?.avatar} />
                             <div className="flex-1 min-w-0">
                               <div className="text-[13px] font-medium truncate">{info?.displayName || userId.split("/")[1]}</div>
-                              <div className="text-[11px] text-text-muted font-mono">{userId}</div>
+                              <div className="flex items-center gap-2 mt-0.5">
+                                <span className="text-[11px] text-text-muted font-mono truncate">{userId}</span>
+                                {info?.email && (
+                                  <>
+                                    <span className="w-px h-3 bg-border-subtle" />
+                                    <span className="text-[10px] text-text-muted truncate flex items-center gap-1"><Mail size={9} />{info.email}</span>
+                                  </>
+                                )}
+                              </div>
                             </div>
                             <button
                               onClick={() => handleQuickRemoveUser(panelRole, userId)}
                               disabled={panelLoading}
-                              className="rounded p-1.5 text-text-muted hover:text-danger hover:bg-danger/10 transition-colors"
+                              className="rounded-lg p-1.5 text-text-muted opacity-0 group-hover:opacity-100 hover:text-danger hover:bg-danger/10 transition-all"
                               title={t("authz.roles.panel.removeUser" as any)}
                             >
                               <X size={14} />
                             </button>
-                          </div>
+                          </motion.div>
                         );
                       })}
                     </div>
@@ -662,65 +751,111 @@ function RolesTab({ roles, onRefresh, appOwner, appName, t, modal, navigate }: {
 
                 {/* Add User */}
                 {panel.type === "addUser" && (
-                  <div className="divide-y divide-border-subtle">
-                    {filteredUsersForAdd.map((u) => (
-                      <button
-                        key={u.value}
-                        onClick={() => handleQuickUpdate(panelRole, "users", u.value)}
-                        disabled={panelLoading}
-                        className="w-full flex items-center gap-3 px-5 py-3 hover:bg-surface-2 transition-colors text-left disabled:opacity-50"
-                      >
-                        <div className={`w-8 h-8 rounded-full bg-gradient-to-br ${getAvatarColor(u.value)} flex items-center justify-center text-white text-[12px] font-semibold flex-shrink-0`}>
-                          {getInitial(u.value)}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="text-[13px] font-medium truncate">{u.displayName}</div>
-                          <div className="text-[11px] text-text-muted font-mono">{u.value}</div>
-                        </div>
-                        <Plus size={14} className="text-text-muted" />
-                      </button>
-                    ))}
-                    {filteredUsersForAdd.length === 0 && (
-                      <div className="py-12 text-center text-[13px] text-text-muted">{t("common.noData")}</div>
-                    )}
-                  </div>
+                  filteredUsersForAdd.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-20 px-8">
+                      <div className="w-16 h-16 rounded-2xl bg-surface-2 flex items-center justify-center mb-4">
+                        <Search size={24} className="text-text-muted/40" />
+                      </div>
+                      <p className="text-[13px] font-medium text-text-secondary">{t("authz.roles.panel.noResults" as any)}</p>
+                    </div>
+                  ) : (
+                    <div className="py-1">
+                      {filteredUsersForAdd.map((u, idx) => {
+                        const justAdded = recentlyAdded.has(u.value);
+                        return (
+                          <motion.button
+                            key={u.value}
+                            initial={{ opacity: 0, y: 4 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: idx * 0.02 }}
+                            onClick={() => handleQuickUpdate(panelRole, "users", u.value)}
+                            disabled={panelLoading || justAdded}
+                            className={`w-full flex items-center gap-3 px-5 py-2.5 text-left transition-all ${justAdded ? "bg-success/5" : "hover:bg-surface-2/60"} disabled:cursor-default`}
+                          >
+                            <UserAvatar userId={u.value} avatar={u.avatar} />
+                            <div className="flex-1 min-w-0">
+                              <div className="text-[13px] font-medium truncate">{u.displayName}</div>
+                              <div className="flex items-center gap-2 mt-0.5">
+                                <span className="text-[11px] text-text-muted font-mono truncate">{u.value}</span>
+                                {u.email && (
+                                  <>
+                                    <span className="w-px h-3 bg-border-subtle" />
+                                    <span className="text-[10px] text-text-muted truncate flex items-center gap-1"><Mail size={9} />{u.email}</span>
+                                  </>
+                                )}
+                              </div>
+                            </div>
+                            {justAdded ? (
+                              <span className="flex items-center gap-1 rounded-full bg-success/10 px-2 py-1 text-[10px] font-semibold text-success">
+                                <UserCheck size={12} /> {t("authz.roles.panel.added" as any)}
+                              </span>
+                            ) : (
+                              <div className="rounded-lg border border-border bg-surface-2 p-1.5 text-text-muted hover:border-accent hover:text-accent hover:bg-accent/5 transition-all">
+                                <Plus size={14} />
+                              </div>
+                            )}
+                          </motion.button>
+                        );
+                      })}
+                    </div>
+                  )
                 )}
 
                 {/* Add Sub-Role */}
                 {panel.type === "addRole" && (
-                  <div className="divide-y divide-border-subtle">
-                    {filteredRolesForAdd.map((r) => (
-                      <button
-                        key={r.name}
-                        onClick={() => handleQuickUpdate(panelRole, "roles", r.name)}
-                        disabled={panelLoading}
-                        className="w-full flex items-center gap-3 px-5 py-3 hover:bg-surface-2 transition-colors text-left disabled:opacity-50"
-                      >
-                        <div className="w-8 h-8 rounded-lg bg-surface-2 border border-border flex items-center justify-center text-text-muted flex-shrink-0">
-                          <Shield size={14} />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="text-[13px] font-medium truncate font-mono">{r.name}</div>
-                          <div className="text-[11px] text-text-muted">{r.displayName || "\u2014"} · {r.users?.length ?? 0} {t("authz.roles.col.users" as any).toLowerCase()}</div>
-                        </div>
-                        <Plus size={14} className="text-text-muted" />
-                      </button>
-                    ))}
-                    {filteredRolesForAdd.length === 0 && (
-                      <div className="py-12 text-center text-[13px] text-text-muted">{t("common.noData")}</div>
-                    )}
-                  </div>
+                  filteredRolesForAdd.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-20 px-8">
+                      <div className="w-16 h-16 rounded-2xl bg-surface-2 flex items-center justify-center mb-4">
+                        <Search size={24} className="text-text-muted/40" />
+                      </div>
+                      <p className="text-[13px] font-medium text-text-secondary">{t("authz.roles.panel.noResults" as any)}</p>
+                    </div>
+                  ) : (
+                    <div className="py-1">
+                      {filteredRolesForAdd.map((r, idx) => {
+                        const justAdded = recentlyAdded.has(r.name);
+                        return (
+                          <motion.button
+                            key={r.name}
+                            initial={{ opacity: 0, y: 4 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: idx * 0.02 }}
+                            onClick={() => handleQuickUpdate(panelRole, "roles", r.name)}
+                            disabled={panelLoading || justAdded}
+                            className={`w-full flex items-center gap-3 px-5 py-2.5 text-left transition-all ${justAdded ? "bg-success/5" : "hover:bg-surface-2/60"} disabled:cursor-default`}
+                          >
+                            <div className="w-9 h-9 rounded-xl bg-surface-2 border border-border flex items-center justify-center text-text-muted flex-shrink-0">
+                              <Shield size={15} />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="text-[13px] font-medium truncate font-mono">{r.name}</div>
+                              <div className="text-[11px] text-text-muted mt-0.5">{r.displayName || "\u2014"} · {r.users?.length ?? 0} {t("authz.roles.col.users" as any).toLowerCase()}</div>
+                            </div>
+                            {justAdded ? (
+                              <span className="flex items-center gap-1 rounded-full bg-success/10 px-2 py-1 text-[10px] font-semibold text-success">
+                                <Check size={12} /> {t("authz.roles.panel.added" as any)}
+                              </span>
+                            ) : (
+                              <div className="rounded-lg border border-border bg-surface-2 p-1.5 text-text-muted hover:border-emerald-500 hover:text-emerald-500 hover:bg-emerald-500/5 transition-all">
+                                <Plus size={14} />
+                              </div>
+                            )}
+                          </motion.button>
+                        );
+                      })}
+                    </div>
+                  )
                 )}
               </div>
 
-              {/* Footer hint */}
-              {panel.type === "viewUsers" && (panelRole.users?.length ?? 0) > 0 && (
-                <div className="px-5 py-3 border-t border-border-subtle text-center">
+              {/* ── Footer ── */}
+              {panel.type === "viewUsers" && (
+                <div className="px-5 py-3 border-t border-border flex items-center justify-center">
                   <button
-                    onClick={() => setPanel({ type: "addUser", role: panelRole })}
-                    className="inline-flex items-center gap-1.5 text-[12px] font-medium text-accent hover:text-accent-hover transition-colors"
+                    onClick={() => { setPanel({ type: "addUser", role: panelRole }); setPanelSearch(""); }}
+                    className="inline-flex items-center gap-1.5 rounded-lg bg-accent/10 px-4 py-2 text-[12px] font-semibold text-accent hover:bg-accent/20 transition-colors"
                   >
-                    <Plus size={14} /> {t("authz.roles.quickAddUser" as any)}
+                    <UserPlus size={14} /> {t("authz.roles.quickAddUser" as any)}
                   </button>
                 </div>
               )}

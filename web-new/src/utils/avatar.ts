@@ -17,3 +17,8 @@ export function getAvatarColor(s: string): string {
     Math.abs([...s].reduce((h, c) => (h << 5) - h + c.charCodeAt(0), 0)) % AVATAR_COLORS.length
   ];
 }
+
+/** Returns true if the avatar URL is a real uploaded image (not the default placeholder). */
+export function hasRealAvatar(avatar?: string): boolean {
+  return !!avatar && avatar !== "/img/avatar.png" && avatar !== "";
+}

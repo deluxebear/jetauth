@@ -1,0 +1,1 @@
+import{s as e}from"./index-DkC_dz__.js";export{e as uploadResource};

@@ -17,6 +17,7 @@ interface BizAppCardData {
   roleCount: number;
   permissionCount: number;
   userCount: number;
+  icon: string; // favicon from Application module
 }
 
 // Color palette for app icons
@@ -53,8 +54,20 @@ export default function AuthorizationPage() {
     setLoading(true);
     const owner = getRequestOwner();
 
-    BizBackend.getBizAppConfigs(owner).then(async (configsRes) => {
+    // Fetch configs + all applications in parallel
+    Promise.all([
+      BizBackend.getBizAppConfigs(owner),
+      ApplicationBackend.getApplications({ owner: "admin" }).catch(() => ({ status: "ok" as const, data: [] as Application[] })),
+    ]).then(async ([configsRes, appsRes]) => {
       const configs = configsRes.status === "ok" && configsRes.data ? configsRes.data : [];
+
+      // Build appName → favicon map from applications
+      const apps = appsRes.status === "ok" && appsRes.data ? appsRes.data : [];
+      const faviconMap = new Map<string, string>();
+      for (const app of apps) {
+        const favicon = app.favicon && app.favicon !== "/img/favicon.png" ? app.favicon : (app.logo && app.logo !== "/img/logo.png" ? app.logo : "");
+        if (favicon) faviconMap.set(app.name, favicon);
+      }
 
       // For each config, fetch roles and permissions to get counts
       const data: BizAppCardData[] = await Promise.all(
@@ -76,6 +89,7 @@ export default function AuthorizationPage() {
             roleCount: roles.length,
             permissionCount: perms.length,
             userCount: userSet.size,
+            icon: faviconMap.get(config.appName) || "",
           };
         })
       );
@@ -155,9 +169,13 @@ function AppCard({ data, index }: { data: BizAppCardData; index: number }) {
     >
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-3">
-          <div className={`w-10 h-10 rounded-lg bg-gradient-to-br ${getGradient(index)} flex items-center justify-center text-white font-bold text-base`}>
-            {getInitial(data.config)}
-          </div>
+          {data.icon ? (
+            <img src={data.icon} alt="" className="w-10 h-10 rounded-lg object-cover flex-shrink-0" />
+          ) : (
+            <div className={`w-10 h-10 rounded-lg bg-gradient-to-br ${getGradient(index)} flex items-center justify-center text-white font-bold text-base`}>
+              {getInitial(data.config)}
+            </div>
+          )}
           <div>
             <h3 className="text-[14px] font-semibold text-text-primary group-hover:text-accent transition-colors">
               {data.config.displayName || data.config.appName}
