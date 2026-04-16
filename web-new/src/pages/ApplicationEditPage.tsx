@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Save, Trash2, Copy, LogOut, Link as LinkIcon, Plus } from "lucide-react";
+import { Save, Trash2, Copy, LogOut, Link as LinkIcon, Plus, Settings, KeyRound, Lock, FileKey2, Puzzle, Palette, ShieldCheck, Network } from "lucide-react";
 import StickyEditHeader from "../components/StickyEditHeader";
 import { FormField, FormSection, Switch, inputClass, monoInputClass } from "../components/FormSection";
 import { useTranslation } from "../i18n";
@@ -298,14 +298,14 @@ export default function ApplicationEditPage() {
   }
 
   const tabs = [
-    { key: "basic", label: t("apps.tab.basic" as any) },
-    { key: "auth", label: t("apps.tab.auth" as any) },
-    { key: "oauth", label: t("apps.tab.oauth" as any) },
-    { key: "saml", label: t("apps.tab.saml" as any) },
-    { key: "providers", label: t("apps.tab.providers" as any) },
-    { key: "ui", label: t("apps.tab.ui" as any) },
-    { key: "security", label: t("apps.tab.security" as any) },
-    { key: "proxy", label: t("apps.tab.proxy" as any) },
+    { key: "basic", label: t("apps.tab.basic" as any), icon: <Settings size={14} /> },
+    { key: "auth", label: t("apps.tab.auth" as any), icon: <KeyRound size={14} /> },
+    { key: "oauth", label: t("apps.tab.oauth" as any), icon: <Lock size={14} /> },
+    { key: "saml", label: t("apps.tab.saml" as any), icon: <FileKey2 size={14} /> },
+    { key: "providers", label: t("apps.tab.providers" as any), icon: <Puzzle size={14} /> },
+    { key: "ui", label: t("apps.tab.ui" as any), icon: <Palette size={14} /> },
+    { key: "security", label: t("apps.tab.security" as any), icon: <ShieldCheck size={14} /> },
+    { key: "proxy", label: t("apps.tab.proxy" as any), icon: <Network size={14} /> },
   ];
 
   // ── Basic Tab ──
@@ -1221,9 +1221,10 @@ export default function ApplicationEditPage() {
           <div className="flex border-b border-border -mb-px">
             {tabs.map((tab) => (
               <button key={tab.key} onClick={() => setActiveTab(tab.key)}
-                className={`px-4 py-2.5 text-[13px] font-medium border-b-2 transition-colors ${
+                className={`flex items-center gap-1.5 px-4 py-2.5 text-[13px] font-medium border-b-2 transition-colors ${
                   activeTab === tab.key ? "border-accent text-accent" : "border-transparent text-text-muted hover:text-text-secondary"
                 }`}>
+                {tab.icon}
                 {tab.label}
               </button>
             ))}

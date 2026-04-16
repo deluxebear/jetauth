@@ -1,0 +1,1 @@
+import{s as e}from"./index-CvkfUM25.js";export{e as getApplication};
