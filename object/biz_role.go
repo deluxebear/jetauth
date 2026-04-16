@@ -60,6 +60,10 @@ func GetBizRole(owner, appName, name string) (*BizRole, error) {
 }
 
 func AddBizRole(role *BizRole) (bool, error) {
+	if err := validateBizRole(role, false); err != nil {
+		return false, err
+	}
+
 	affected, err := ormer.Engine.Insert(role)
 	if err != nil {
 		return false, err
@@ -73,6 +77,10 @@ func AddBizRole(role *BizRole) (bool, error) {
 }
 
 func UpdateBizRole(owner, appName, name string, role *BizRole) (bool, error) {
+	if err := validateBizRole(role, true); err != nil {
+		return false, err
+	}
+
 	affected, err := ormer.Engine.ID(core.PK{owner, appName, name}).AllCols().Update(role)
 	if err != nil {
 		return false, err
@@ -86,6 +94,10 @@ func UpdateBizRole(owner, appName, name string, role *BizRole) (bool, error) {
 }
 
 func DeleteBizRole(role *BizRole) (bool, error) {
+	if err := validateBizRoleDelete(role); err != nil {
+		return false, err
+	}
+
 	affected, err := ormer.Engine.ID(core.PK{role.Owner, role.AppName, role.Name}).Delete(&BizRole{})
 	if err != nil {
 		return false, err

@@ -247,5 +247,25 @@
     "Missing passcode or recovery code": "Missing passcode or recovery code",
     "No recovery codes available": "No recovery codes available",
     "Recovery code not found": "Recovery code not found"
+  },
+  "biz": {
+    "Role owner and appName cannot be empty": "Role owner and appName cannot be empty",
+    "Role name cannot be empty": "Role name cannot be empty",
+    "Role \"%s\" cannot inherit from itself": "Role \"%s\" cannot inherit from itself",
+    "Failed to load roles for validation: %s": "Failed to load roles for validation: %s",
+    "Sub-role \"%s\" does not exist in app %s/%s": "Sub-role \"%s\" does not exist in app %s/%s",
+    "Circular role inheritance detected: %s": "Circular role inheritance detected: %s",
+    "Role inheritance depth exceeds limit (%d), current depth: %d": "Role inheritance depth exceeds limit (%d), current depth: %d",
+    "Role properties must be valid JSON": "Role properties must be valid JSON",
+    "Permission owner and appName cannot be empty": "Permission owner and appName cannot be empty",
+    "Permission name cannot be empty": "Permission name cannot be empty",
+    "Permission must have at least one subject (user or role)": "Permission must have at least one subject (user or role)",
+    "Permission must have at least one resource": "Permission must have at least one resource",
+    "Permission must have at least one action": "Permission must have at least one action",
+    "Role \"%s\" does not exist in app %s/%s": "Role \"%s\" does not exist in app %s/%s",
+    "Effect must be \"%s\" or \"%s\", got \"%s\"": "Effect must be \"%s\" or \"%s\", got \"%s\"",
+    "State must be \"%s\", \"%s\", or \"%s\", got \"%s\"": "State must be \"%s\", \"%s\", or \"%s\", got \"%s\"",
+    "Cannot delete role \"%s\": it is inherited by role \"%s\"": "Cannot delete role \"%s\": it is inherited by role \"%s\"",
+    "Cannot delete role \"%s\": it is referenced by permission \"%s\"": "Cannot delete role \"%s\": it is referenced by permission \"%s\""
   }
 }

@@ -247,5 +247,25 @@
     "Missing passcode or recovery code": "缺少验证码或恢复码",
     "No recovery codes available": "没有可用的恢复码",
     "Recovery code not found": "恢复码不存在"
+  },
+  "biz": {
+    "Role owner and appName cannot be empty": "角色的组织和应用名不能为空",
+    "Role name cannot be empty": "角色名称不能为空",
+    "Role \"%s\" cannot inherit from itself": "角色「%s」不能继承自身",
+    "Failed to load roles for validation: %s": "加载角色列表用于校验失败：%s",
+    "Sub-role \"%s\" does not exist in app %s/%s": "子角色「%s」在应用 %s/%s 中不存在",
+    "Circular role inheritance detected: %s": "检测到循环角色继承：%s",
+    "Role inheritance depth exceeds limit (%d), current depth: %d": "角色继承深度超过限制（%d），当前深度：%d",
+    "Role properties must be valid JSON": "角色属性必须是合法的 JSON 格式",
+    "Permission owner and appName cannot be empty": "权限的组织和应用名不能为空",
+    "Permission name cannot be empty": "权限名称不能为空",
+    "Permission must have at least one subject (user or role)": "权限必须至少包含一个授权主体（用户或角色）",
+    "Permission must have at least one resource": "权限必须至少包含一个资源",
+    "Permission must have at least one action": "权限必须至少包含一个操作",
+    "Role \"%s\" does not exist in app %s/%s": "角色「%s」在应用 %s/%s 中不存在",
+    "Effect must be \"%s\" or \"%s\", got \"%s\"": "效果必须是「%s」或「%s」，当前值为「%s」",
+    "State must be \"%s\", \"%s\", or \"%s\", got \"%s\"": "状态必须是「%s」、「%s」或「%s」，当前值为「%s」",
+    "Cannot delete role \"%s\": it is inherited by role \"%s\"": "无法删除角色「%s」：角色「%s」正在继承该角色",
+    "Cannot delete role \"%s\": it is referenced by permission \"%s\"": "无法删除角色「%s」：权限「%s」正在引用该角色"
   }
 }

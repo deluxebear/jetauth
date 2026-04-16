@@ -66,6 +66,10 @@ func GetBizPermission(owner, appName, name string) (*BizPermission, error) {
 }
 
 func AddBizPermission(perm *BizPermission) (bool, error) {
+	if err := validateBizPermission(perm); err != nil {
+		return false, err
+	}
+
 	affected, err := ormer.Engine.Insert(perm)
 	if err != nil {
 		return false, err
@@ -79,6 +83,10 @@ func AddBizPermission(perm *BizPermission) (bool, error) {
 }
 
 func UpdateBizPermission(owner, appName, name string, perm *BizPermission) (bool, error) {
+	if err := validateBizPermission(perm); err != nil {
+		return false, err
+	}
+
 	affected, err := ormer.Engine.ID(core.PK{owner, appName, name}).AllCols().Update(perm)
 	if err != nil {
 		return false, err

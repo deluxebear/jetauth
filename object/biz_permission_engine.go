@@ -93,7 +93,7 @@ func SyncAppPolicies(owner, appName string) (*SyncStats, error) {
 	// 5. Generate p policies from permissions (Cartesian product) — batch
 	var policies [][]string
 	for _, perm := range permissions {
-		if !perm.IsEnabled || perm.State != "Approved" {
+		if !perm.IsEnabled || perm.State != StateApproved {
 			continue
 		}
 
@@ -106,7 +106,7 @@ func SyncAppPolicies(owner, appName string) (*SyncStats, error) {
 				for _, act := range perm.Actions {
 					if hasEft {
 						eft := "allow"
-						if perm.Effect == "Deny" {
+						if perm.Effect == EffectDeny {
 							eft = "deny"
 						}
 						policies = append(policies, []string{sub, res, act, eft})
