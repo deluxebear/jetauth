@@ -415,21 +415,36 @@ func getEnforcers(userId string) ([]*casbin.Enforcer, error) {
 	return enforcers, nil
 }
 
+// getPolicyFieldValuesByColumn extracts values from a fixed policy column across all "p*"
+// ptypes, matching Casbin v2's positional behavior. Casbin v3's GetAllObjects/GetAllActions
+// key off literal field names ("obj"/"act"), which regresses models whose fields are renamed
+// (e.g. `p = sub, resource, action`). Reading by column index preserves the v2 contract.
+func getPolicyFieldValuesByColumn(enforcers []*casbin.Enforcer, col int) ([]string, error) {
+	res := []string{}
+	for _, enforcer := range enforcers {
+		seen := map[string]bool{}
+		for ptype := range enforcer.GetModel()["p"] {
+			policies, err := enforcer.GetNamedPolicy(ptype)
+			if err != nil {
+				return nil, err
+			}
+			for _, p := range policies {
+				if len(p) > col && !seen[p[col]] {
+					seen[p[col]] = true
+					res = append(res, p[col])
+				}
+			}
+		}
+	}
+	return res, nil
+}
+
 func GetAllObjects(userId string) ([]string, error) {
 	enforcers, err := getEnforcers(userId)
 	if err != nil {
 		return nil, err
 	}
-
-	res := []string{}
-	for _, enforcer := range enforcers {
-		items, err := enforcer.GetAllObjects()
-		if err != nil {
-			return nil, err
-		}
-		res = append(res, items...)
-	}
-	return res, nil
+	return getPolicyFieldValuesByColumn(enforcers, 1)
 }
 
 func GetAllActions(userId string) ([]string, error) {
@@ -437,16 +452,7 @@ func GetAllActions(userId string) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	res := []string{}
-	for _, enforcer := range enforcers {
-		items, err := enforcer.GetAllActions()
-		if err != nil {
-			return nil, err
-		}
-		res = append(res, items...)
-	}
-	return res, nil
+	return getPolicyFieldValuesByColumn(enforcers, 2)
 }
 
 func GetAllRoles(userId string) ([]string, error) {

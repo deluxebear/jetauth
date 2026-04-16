@@ -155,7 +155,7 @@ func writeInitDataToFile(filePath string) error {
 
 		policies, err := enforcer.GetPolicy()
 		if err != nil {
-			continue
+			return err
 		}
 		enforcerPolicies[enforcer.GetId()] = policies
 	}
