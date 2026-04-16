@@ -1,11 +1,12 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ArrowLeft, RefreshCw, Search, X, ExternalLink, Plus, Globe } from "lucide-react";
+import { ArrowLeft, Search, X, ExternalLink, Plus, Globe } from "lucide-react";
 import { useTranslation } from "../i18n";
 import { useModal } from "../components/Modal";
 import { useOrganization } from "../OrganizationContext";
 import * as ServerBackend from "../backend/ServerBackend";
+import mcpRegistry from "../data/mcp-registry.json";
 
 interface NormalizedServer {
   id: string;
@@ -53,31 +54,10 @@ export default function ServerStorePage() {
   const modal = useModal();
   const { getNewEntityOwner } = useOrganization();
 
-  const [servers, setServers] = useState<NormalizedServer[]>([]);
-  const [loading, setLoading] = useState(true);
+  const servers = useMemo(() => normalizeServers(mcpRegistry), []);
   const [nameFilter, setNameFilter] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<string[]>([]);
   const [creatingId, setCreatingId] = useState("");
-
-  const fetchServers = () => {
-    setLoading(true);
-    setNameFilter("");
-    setCategoryFilter([]);
-    ServerBackend.getOnlineServers()
-      .then((res) => {
-        if (res.status === "ok") {
-          setServers(normalizeServers(res.data));
-        } else {
-          modal.toast(res.msg || t("common.loadFailed" as any), "error");
-        }
-      })
-      .catch(() => {
-        modal.toast(t("common.loadFailed" as any), "error");
-      })
-      .finally(() => setLoading(false));
-  };
-
-  useEffect(() => { fetchServers(); }, []);
 
   const categories = useMemo(() => {
     const all = servers.flatMap((s) => s.categoriesRaw);
@@ -136,9 +116,6 @@ export default function ServerStorePage() {
             <p className="text-[13px] text-text-muted mt-0.5">{t("serverStore.subtitle" as any)}</p>
           </div>
         </div>
-        <motion.button whileHover={{ rotate: 180 }} transition={{ duration: 0.3 }} onClick={fetchServers} className="rounded-lg border border-border p-2 text-text-muted hover:bg-surface-2 transition-colors" title={t("common.refresh")}>
-          <RefreshCw size={15} />
-        </motion.button>
       </div>
 
       {/* Filters */}
@@ -175,11 +152,7 @@ export default function ServerStorePage() {
       </div>
 
       {/* Content */}
-      {loading ? (
-        <div className="flex items-center justify-center py-24">
-          <div className="h-8 w-8 rounded-full border-2 border-accent/30 border-t-accent animate-spin" />
-        </div>
-      ) : filtered.length === 0 ? (
+      {filtered.length === 0 ? (
         <div className="text-center py-16 text-text-muted text-[13px]">{t("common.noData")}</div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">

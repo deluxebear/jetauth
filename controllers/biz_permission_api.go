@@ -15,6 +15,18 @@ import (
 	"github.com/deluxebear/casdoor/util"
 )
 
+// wrapBizActionResponse wraps a CRUD action result, translating "biz:" prefixed
+// errors via c.T() so the response language matches the user's locale.
+func (c *ApiController) wrapBizActionResponse(affected bool, e ...error) *Response {
+	if len(e) != 0 && e[0] != nil {
+		return &Response{Status: "error", Msg: c.T(e[0].Error())}
+	} else if affected {
+		return &Response{Status: "ok", Msg: "", Data: "Affected"}
+	} else {
+		return &Response{Status: "ok", Msg: "", Data: "Unaffected"}
+	}
+}
+
 // BizAppConfigListResponse represents the response for biz app config list APIs
 type BizAppConfigListResponse struct {
 	Status string                `json:"status" example:"ok"`
@@ -162,7 +174,7 @@ func (c *ApiController) AddBizAppConfig() {
 		return
 	}
 
-	c.Data["json"] = wrapActionResponse(object.AddBizAppConfig(&config))
+	c.Data["json"] = c.wrapBizActionResponse(object.AddBizAppConfig(&config))
 	c.ServeJSON()
 }
 
@@ -184,7 +196,7 @@ func (c *ApiController) UpdateBizAppConfig() {
 		return
 	}
 
-	c.Data["json"] = wrapActionResponse(object.UpdateBizAppConfig(id, &config))
+	c.Data["json"] = c.wrapBizActionResponse(object.UpdateBizAppConfig(id, &config))
 	c.ServeJSON()
 }
 
@@ -203,7 +215,7 @@ func (c *ApiController) DeleteBizAppConfig() {
 		return
 	}
 
-	c.Data["json"] = wrapActionResponse(object.DeleteBizAppConfig(&config))
+	c.Data["json"] = c.wrapBizActionResponse(object.DeleteBizAppConfig(&config))
 	c.ServeJSON()
 }
 
@@ -266,7 +278,7 @@ func (c *ApiController) AddBizRole() {
 		return
 	}
 
-	c.Data["json"] = wrapActionResponse(object.AddBizRole(&role))
+	c.Data["json"] = c.wrapBizActionResponse(object.AddBizRole(&role))
 	c.ServeJSON()
 }
 
@@ -292,7 +304,7 @@ func (c *ApiController) UpdateBizRole() {
 		return
 	}
 
-	c.Data["json"] = wrapActionResponse(object.UpdateBizRole(owner, appName, name, &role))
+	c.Data["json"] = c.wrapBizActionResponse(object.UpdateBizRole(owner, appName, name, &role))
 	c.ServeJSON()
 }
 
@@ -311,7 +323,7 @@ func (c *ApiController) DeleteBizRole() {
 		return
 	}
 
-	c.Data["json"] = wrapActionResponse(object.DeleteBizRole(&role))
+	c.Data["json"] = c.wrapBizActionResponse(object.DeleteBizRole(&role))
 	c.ServeJSON()
 }
 
@@ -374,7 +386,7 @@ func (c *ApiController) AddBizPermission() {
 		return
 	}
 
-	c.Data["json"] = wrapActionResponse(object.AddBizPermission(&perm))
+	c.Data["json"] = c.wrapBizActionResponse(object.AddBizPermission(&perm))
 	c.ServeJSON()
 }
 
@@ -400,7 +412,7 @@ func (c *ApiController) UpdateBizPermission() {
 		return
 	}
 
-	c.Data["json"] = wrapActionResponse(object.UpdateBizPermission(owner, appName, name, &perm))
+	c.Data["json"] = c.wrapBizActionResponse(object.UpdateBizPermission(owner, appName, name, &perm))
 	c.ServeJSON()
 }
 
@@ -419,7 +431,7 @@ func (c *ApiController) DeleteBizPermission() {
 		return
 	}
 
-	c.Data["json"] = wrapActionResponse(object.DeleteBizPermission(&perm))
+	c.Data["json"] = c.wrapBizActionResponse(object.DeleteBizPermission(&perm))
 	c.ServeJSON()
 }
 
