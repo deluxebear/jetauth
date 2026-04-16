@@ -1676,6 +1676,14 @@ const zh: Record<string, string> = {
   "sessions.title": "会话管理",
   "sessions.subtitle": "查看活跃会话",
   "sessions.col.sessionId": "会话 ID",
+  "sessions.field.application": "应用",
+  "sessions.field.createdTime": "创建时间",
+  "sessions.field.owner": "组织",
+  "sessions.field.name": "用户",
+  "sessions.sessionCount": "{count} 个会话",
+  "sessions.noSessions": "无活跃会话",
+  "sessions.showAll": "展开全部",
+  "sessions.collapse": "收起",
 
   // Invitations
   "invitations.title": "邀请码管理",

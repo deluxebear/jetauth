@@ -1595,6 +1595,14 @@ const en = {
   "sessions.title": "Sessions",
   "sessions.subtitle": "View active sessions",
   "sessions.col.sessionId": "Session ID",
+  "sessions.field.application": "Application",
+  "sessions.field.createdTime": "Created Time",
+  "sessions.field.owner": "Organization",
+  "sessions.field.name": "User",
+  "sessions.sessionCount": "{count} session(s)",
+  "sessions.noSessions": "No active sessions",
+  "sessions.showAll": "Show all",
+  "sessions.collapse": "Collapse",
 
   // Invitations
   "invitations.title": "Invitations",
