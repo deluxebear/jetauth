@@ -71,6 +71,10 @@ func SyncAppPolicies(owner, appName string) (*SyncStats, error) {
 		return nil, err
 	}
 
+	if err := validateBizPermissionModel(e); err != nil {
+		return nil, err
+	}
+
 	// 2. Clear all existing policies
 	e.ClearPolicy()
 
@@ -130,7 +134,7 @@ func SyncAppPolicies(owner, appName string) (*SyncStats, error) {
 		Policies:         policies,
 		GroupingPolicies: groupingPolicies,
 		PolicyTable:      config.PolicyTable,
-		UpdatedTime:      config.UpdatedTime,
+		UpdatedTime:      bumpBizAppConfigUpdatedTime(owner, appName),
 	})
 
 	return &SyncStats{

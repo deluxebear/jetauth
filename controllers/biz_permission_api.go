@@ -311,6 +311,14 @@ func (c *ApiController) UpdateBizRole() {
 		return
 	}
 
+	// Authz is granted against body owner/appName; query params drive the DB
+	// WHERE clause. Without this match, an attacker in tenant A can pass authz
+	// with body.owner=A while query.owner points at tenant B's row.
+	if role.Owner != owner || role.AppName != appName {
+		c.ResponseError("body owner/appName must match query parameters")
+		return
+	}
+
 	c.Data["json"] = c.wrapBizActionResponse(object.UpdateBizRole(owner, appName, name, &role))
 	c.ServeJSON()
 }
@@ -416,6 +424,14 @@ func (c *ApiController) UpdateBizPermission() {
 	err := json.Unmarshal(c.Ctx.Input.RequestBody, &perm)
 	if err != nil {
 		c.ResponseError(err.Error())
+		return
+	}
+
+	// Authz is granted against body owner/appName; query params drive the DB
+	// WHERE clause. Without this match, an attacker in tenant A can pass authz
+	// with body.owner=A while query.owner points at tenant B's row.
+	if perm.Owner != owner || perm.AppName != appName {
+		c.ResponseError("body owner/appName must match query parameters")
 		return
 	}
 
