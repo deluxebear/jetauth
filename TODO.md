@@ -231,3 +231,105 @@ enforcer.SetWatcher(watcher)
 - API 权限检查（遍历所有 Permission）：`object/check.go:476-579`
 - 应用登录权限检查：`object/check.go:581-680`
 - Redis 仅用于 Session：`main.go:39-44`、`conf/app.conf:10`
+
+---
+
+## 角色自定义属性 (Role Custom Properties)
+
+**当前状态：Role 结构体无扩展属性字段，无法存储业务元数据**
+
+### 问题描述
+
+Role 结构体只有固定字段（Users、Groups、Roles、Domains、IsEnabled），没有 `properties` / `attributes` / `metadata` 等可扩展字段。业务系统需要在角色上附加额外信息（如数据范围、功能开关等），当前无处存放。
+
+### 典型需求：数据范围权限（Data Scope）
+
+ERP/CRM 等业务系统常见的三级数据范围控制：
+
+| 数据范围 | 含义 | 示例 |
+|---------|------|------|
+| `self` | 只看自己创建的数据 | 销售只看自己的订单 |
+| `department` | 看本部门的数据 | 销售经理看整个销售部订单 |
+| `company` | 看全公司的数据 | 总监看所有订单 |
+
+理想的存储方式：
+
+```go
+type Role struct {
+    // ...现有字段
+    Properties map[string]interface{} `xorm:"mediumtext" json:"properties"`
+}
+```
+
+```json
+{
+  "dataScope": {
+    "orders": "department",
+    "products": "company"
+  }
+}
+```
+
+### 当前替代方案
+
+用 Permission 的资源路径编码数据范围（不改后端）：
+
+```
+p, sales,         /scope/orders, self, allow
+p, sales-manager, /scope/orders, department, allow
+p, director,      /scope/orders, company, allow
+```
+
+业务系统依次检查 `company → department → self`，取匹配的最大范围作为查询过滤条件。可行但不够直观。
+
+### 改进建议
+
+1. **给 Role 加 `properties` JSON 字段** — `xorm:"mediumtext" json:"properties"`
+2. **前端角色编辑页加属性编辑器** — JSON key-value 编辑，或按业务预定义的属性模板
+3. **SDK 提供 `getRoleProperties()` 方法** — 业务系统登录后获取用户角色属性，用于数据范围等业务逻辑
+
+### 相关代码位置
+
+- Role 结构体：`object/role.go`
+- Role CRUD：`object/role.go:100-220`
+- 角色继承解析：`object/permission_enforcer.go:265-298`
+
+---
+
+## Permission 系统的模型兼容性限制 (Policy Definition Field Limit)
+
+**当前状态：Permission 系统硬性限制模型最多 6 字段，第 6 个必须是 permissionId**
+
+### 问题描述
+
+`GetBuiltInModel()` (`permission_enforcer.go:460-513`) 对所有模型强制要求：
+
+- `policy_definition` 字段数不超过 6（`builtInMaxFields = 6`）
+- 如果恰好 6 个字段，第 6 个必须是 `permissionId`
+- 不满足条件直接报错，无法创建或更新权限
+
+这导致 `api-model-built-in`（`p = subOwner, subName, method, urlPath, objOwner, objName`，6 字段，第 6 个是 `objName`）不能用于 Permission 系统。
+
+### 根本原因
+
+Permission 系统依赖 xorm-adapter 的 V5 列（第 6 位）存储 `permissionId`，用于按权限过滤策略（`LoadFilteredPolicy(V5: [permissionId])`）。这是和 Enforcer 路径完全不同的两套代码：
+
+| | Permission 路径 | Enforcer 路径 |
+|---|---|---|
+| 模型处理 | `GetBuiltInModel()` 强制改造 | `model.NewModelFromString()` 原样使用 |
+| 策略存储 | `getPolicies()` 固定 6 字段 | 由 adapter 直接管理 |
+| 限制 | 最多 6 字段、第 6 必须 permissionId | 无限制 |
+
+### 影响范围
+
+- 1~5 字段的模型：自动补齐到 6 字段 → **正常工作**
+- 6 字段且第 6 个是 permissionId → **正常工作**
+- 6 字段且第 6 个不是 permissionId → **报错**
+- 7+ 字段 → **报错**
+
+### 相关代码位置
+
+- 字段限制常量：`object/permission.go:52`（`builtInMaxFields = 6`）
+- 模型改造逻辑：`object/permission_enforcer.go:460-513`
+- 策略生成（固定 6 字段）：`object/permission_enforcer.go:124-146`
+- 策略过滤（V5 列）：`object/permission_enforcer.go:49-58`
