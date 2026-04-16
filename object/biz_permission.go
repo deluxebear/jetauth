@@ -9,8 +9,7 @@
 package object
 
 import (
-	"fmt"
-
+	"github.com/deluxebear/casdoor/util"
 	"github.com/xorm-io/core"
 )
 
@@ -35,7 +34,7 @@ type BizPermission struct {
 }
 
 func (p *BizPermission) GetId() string {
-	return fmt.Sprintf("%s/%s/%s", p.Owner, p.AppName, p.Name)
+	return util.GetSessionId(p.Owner, p.Name, p.AppName)
 }
 
 func GetBizPermissions(owner, appName string) ([]*BizPermission, error) {
@@ -48,7 +47,7 @@ func GetBizPermissions(owner, appName string) ([]*BizPermission, error) {
 }
 
 func getBizPermission(owner, appName, name string) (*BizPermission, error) {
-	if owner == "" || appName == "" || name == "" {
+	if util.IsStringsEmpty(owner, appName, name) {
 		return nil, nil
 	}
 	perm := BizPermission{Owner: owner, AppName: appName, Name: name}
@@ -73,24 +72,20 @@ func AddBizPermission(perm *BizPermission) (bool, error) {
 	}
 
 	if affected != 0 {
-		_ = SyncAppPolicies(perm.Owner, perm.AppName)
+		syncBizPolicies(perm.Owner, perm.AppName)
 	}
 
 	return affected != 0, nil
 }
 
 func UpdateBizPermission(owner, appName, name string, perm *BizPermission) (bool, error) {
-	if p, _ := getBizPermission(owner, appName, name); p == nil {
-		return false, nil
-	}
-
 	affected, err := ormer.Engine.ID(core.PK{owner, appName, name}).AllCols().Update(perm)
 	if err != nil {
 		return false, err
 	}
 
 	if affected != 0 {
-		_ = SyncAppPolicies(perm.Owner, perm.AppName)
+		syncBizPolicies(perm.Owner, perm.AppName)
 	}
 
 	return affected != 0, nil
@@ -103,7 +98,7 @@ func DeleteBizPermission(perm *BizPermission) (bool, error) {
 	}
 
 	if affected != 0 {
-		_ = SyncAppPolicies(perm.Owner, perm.AppName)
+		syncBizPolicies(perm.Owner, perm.AppName)
 	}
 
 	return affected != 0, nil

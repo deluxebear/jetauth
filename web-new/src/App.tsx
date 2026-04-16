@@ -38,6 +38,8 @@ import KeyEditPage from "./pages/KeyEditPage";
 // Authorization
 import AuthorizationPage from "./pages/AuthorizationPage";
 import AppAuthorizationPage from "./pages/AppAuthorizationPage";
+import BizRoleEditPage from "./pages/BizRoleEditPage";
+import BizPermissionEditPage from "./pages/BizPermissionEditPage";
 import RoleListPage from "./pages/RoleListPage";
 import RoleEditPage from "./pages/RoleEditPage";
 import PermissionListPage from "./pages/PermissionListPage";
@@ -629,6 +631,10 @@ export default function App() {
         <Route path="/" element={<Dashboard />} />
         <Route path="/authorization" element={<AuthorizationPage />} />
         <Route path="/authorization/:owner/:appName" element={<AppAuthorizationPage />} />
+        <Route path="/authorization/:owner/:appName/roles/new" element={<BizRoleEditPage />} />
+        <Route path="/authorization/:owner/:appName/roles/:name" element={<BizRoleEditPage />} />
+        <Route path="/authorization/:owner/:appName/permissions/new" element={<BizPermissionEditPage />} />
+        <Route path="/authorization/:owner/:appName/permissions/:name" element={<BizPermissionEditPage />} />
         {entityRoutes}
         <Route path="/trees/:organizationName/:groupName" element={<GroupTreePage />} />
         <Route path="/trees/:organizationName" element={<GroupTreePage />} />

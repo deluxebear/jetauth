@@ -1,24 +1,12 @@
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, Plus, Play, Copy, Check, X, Users as UsersIcon, RefreshCw } from "lucide-react";
-import SimpleSelect from "../components/SimpleSelect";
+import { ArrowLeft, Plus, Play, Copy, Check, X, Users as UsersIcon, RefreshCw, RotateCcw, Pencil, Trash2, LayoutDashboard, Crown, ShieldCheck, FlaskConical, Code } from "lucide-react";
+import DataTable, { type Column } from "../components/DataTable";
 import { useTranslation } from "../i18n";
 import { useModal } from "../components/Modal";
-import * as ApplicationBackend from "../backend/ApplicationBackend";
-import * as PermissionBackend from "../backend/PermissionBackend";
-import * as RoleBackend from "../backend/RoleBackend";
-import * as ModelBackend from "../backend/ModelBackend";
-import * as AdapterBackend from "../backend/AdapterBackend";
-import * as EnforcerBackend from "../backend/EnforcerBackend";
-import * as UserBackend from "../backend/UserBackend";
-import type { Application } from "../backend/ApplicationBackend";
-import type { Permission } from "../backend/PermissionBackend";
-import type { Role } from "../backend/RoleBackend";
-import type { Model } from "../backend/ModelBackend";
-import type { Adapter } from "../backend/AdapterBackend";
-import type { Enforcer } from "../backend/EnforcerBackend";
-import RoleUserDrawer from "../components/RoleUserDrawer";
+import * as BizBackend from "../backend/BizBackend";
+import type { BizAppConfig, BizRole, BizPermission, PoliciesExport } from "../backend/BizBackend";
 
 type TabKey = "overview" | "roles" | "permissions" | "test" | "integration";
 
@@ -30,55 +18,48 @@ export default function AppAuthorizationPage() {
 
   const [activeTab, setActiveTab] = useState<TabKey>("overview");
   const [loading, setLoading] = useState(true);
-  const [app, setApp] = useState<Application | null>(null);
-  const [permissions, setPermissions] = useState<Permission[]>([]);
-  const [roles, setRoles] = useState<Role[]>([]);
-  const [allOrgRoles, setAllOrgRoles] = useState<Role[]>([]);
-  const [models, setModels] = useState<Model[]>([]);
-  const [adapters, setAdapters] = useState<Adapter[]>([]);
-  const [enforcers, setEnforcers] = useState<Enforcer[]>([]);
-
-  // Drawer
-  const [drawerRole, setDrawerRole] = useState<Role | null>(null);
+  const [config, setConfig] = useState<BizAppConfig | null>(null);
+  const [roles, setRoles] = useState<BizRole[]>([]);
+  const [permissions, setPermissions] = useState<BizPermission[]>([]);
+  const [syncing, setSyncing] = useState(false);
 
   const fetchData = useCallback(() => {
     if (!owner || !appName) return;
     setLoading(true);
+    const appId = `${owner}/${appName}`;
 
-    // Application owner is always "admin" in the API
     Promise.all([
-      ApplicationBackend.getApplication("admin", appName).catch(() => ({ status: "error" as const, msg: "", data: null as any })),
-      PermissionBackend.getPermissions({ owner }).catch(() => ({ status: "error" as const, msg: "", data: [] as any })),
-      RoleBackend.getRoles({ owner }).catch(() => ({ status: "error" as const, msg: "", data: [] as any })),
-      ModelBackend.getModels({ owner }).catch(() => ({ status: "error" as const, msg: "", data: [] as any })),
-      AdapterBackend.getAdapters({ owner }).catch(() => ({ status: "error" as const, msg: "", data: [] as any })),
-      EnforcerBackend.getEnforcers({ owner }).catch(() => ({ status: "error" as const, msg: "", data: [] as any })),
-    ]).then(([appRes, permsRes, rolesRes, modelsRes, adaptersRes, enforcersRes]) => {
-      if (appRes.status === "ok" && appRes.data) setApp(appRes.data);
-      const allPerms = permsRes.status === "ok" && permsRes.data ? permsRes.data : [];
-      const allRoles = rolesRes.status === "ok" && rolesRes.data ? rolesRes.data : [];
-      setAllOrgRoles(allRoles);
-
-      // Filter permissions referencing this app
-      const appPerms = allPerms.filter((p) =>
-        p.resources?.some((r) => r === appName || r === "*")
-      );
-      setPermissions(appPerms);
-
-      // Roles referenced in app permissions + all org roles
-      const roleIds = new Set<string>();
-      appPerms.forEach((p) => p.roles?.forEach((r) => roleIds.add(r)));
-      setRoles(allRoles.filter((r) => roleIds.has(`${r.owner}/${r.name}`) || allPerms.some((p) => p.roles?.includes(`${r.owner}/${r.name}`))));
-
-      setModels(modelsRes.status === "ok" && modelsRes.data ? modelsRes.data : []);
-      setAdapters(adaptersRes.status === "ok" && adaptersRes.data ? adaptersRes.data : []);
-      setEnforcers(enforcersRes.status === "ok" && enforcersRes.data ? enforcersRes.data : []);
+      BizBackend.getBizAppConfig(appId).catch(() => ({ status: "error" as const, msg: "", data: null as any })),
+      BizBackend.getBizRoles(owner, appName).catch(() => ({ status: "error" as const, msg: "", data: [] as any })),
+      BizBackend.getBizPermissions(owner, appName).catch(() => ({ status: "error" as const, msg: "", data: [] as any })),
+    ]).then(([configRes, rolesRes, permsRes]) => {
+      if (configRes.status === "ok" && configRes.data) setConfig(configRes.data);
+      setRoles(rolesRes.status === "ok" && rolesRes.data ? rolesRes.data : []);
+      setPermissions(permsRes.status === "ok" && permsRes.data ? permsRes.data : []);
     }).finally(() => setLoading(false));
   }, [owner, appName]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
-  if (loading || !app) {
+  const handleSyncPolicies = async () => {
+    if (!owner || !appName) return;
+    setSyncing(true);
+    try {
+      const res = await BizBackend.bizSyncPolicies(`${owner}/${appName}`);
+      if (res.status === "ok" && res.data) {
+        modal.toast(`${t("authz.overview.syncSuccess" as any)} — ${res.data.policyCount} policies, ${res.data.roleCount} roles`, "success");
+        fetchData();
+      } else {
+        modal.toast(res.msg || t("common.error"), "error");
+      }
+    } catch (e: any) {
+      modal.toast(e?.message || t("common.error"), "error");
+    } finally {
+      setSyncing(false);
+    }
+  };
+
+  if (loading || !config) {
     return (
       <div className="flex items-center justify-center py-24">
         <div className="h-8 w-8 rounded-full border-2 border-accent/30 border-t-accent animate-spin" />
@@ -90,27 +71,15 @@ export default function AppAuthorizationPage() {
   const userSet = new Set<string>();
   roles.forEach((r) => r.users?.forEach((u) => userSet.add(u)));
   permissions.forEach((p) => p.users?.forEach((u) => userSet.add(u)));
-  const resSet = new Set<string>();
-  permissions.forEach((p) => p.resources?.forEach((r) => { if (r !== "*") resSet.add(r); }));
   const allowCount = permissions.filter((p) => p.effect === "Allow").length;
   const denyCount = permissions.filter((p) => p.effect === "Deny").length;
 
-  // Find model/adapter/enforcer linked to this app's permissions
-  const modelIds = [...new Set(permissions.map((p) => p.model).filter(Boolean))];
-  const adapterIds = [...new Set(permissions.map((p) => p.adapter).filter(Boolean))];
-  const linkedModel = modelIds.length > 0 ? models.find((m) => modelIds.includes(`${m.owner}/${m.name}`)) : null;
-  const linkedAdapter = adapterIds.length > 0 ? adapters.find((a) => adapterIds.includes(`${a.owner}/${a.name}`)) : null;
-  const linkedEnforcer = enforcers.find((e) =>
-    (linkedModel && e.model === `${linkedModel.owner}/${linkedModel.name}`) ||
-    (linkedAdapter && e.adapter === `${linkedAdapter.owner}/${linkedAdapter.name}`)
-  );
-
-  const tabs: { key: TabKey; label: string; count?: number }[] = [
-    { key: "overview", label: t("authz.tab.overview" as any) },
-    { key: "roles", label: t("authz.tab.roles" as any), count: allOrgRoles.length },
-    { key: "permissions", label: t("authz.tab.permissions" as any), count: permissions.length },
-    { key: "test", label: t("authz.tab.test" as any) },
-    { key: "integration", label: t("authz.tab.integration" as any) },
+  const tabs: { key: TabKey; label: string; count?: number; icon: React.ReactNode }[] = [
+    { key: "overview", label: t("authz.tab.overview" as any), icon: <LayoutDashboard size={14} /> },
+    { key: "roles", label: t("authz.tab.roles" as any), count: roles.length, icon: <Crown size={14} /> },
+    { key: "permissions", label: t("authz.tab.permissions" as any), count: permissions.length, icon: <ShieldCheck size={14} /> },
+    { key: "test", label: t("authz.tab.test" as any), icon: <FlaskConical size={14} /> },
+    { key: "integration", label: t("authz.tab.integration" as any), icon: <Code size={14} /> },
   ];
 
   return (
@@ -123,22 +92,39 @@ export default function AppAuthorizationPage() {
               <ArrowLeft size={18} />
             </button>
             <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center text-white font-bold text-sm">
-              {(app.displayName || app.name).charAt(0).toUpperCase()}
+              {(config.displayName || config.appName).charAt(0).toUpperCase()}
             </div>
             <div>
-              <h1 className="text-lg font-bold tracking-tight">{app.displayName || app.name}</h1>
-              <p className="text-[11px] text-text-muted font-mono">{app.organization || app.owner} / {app.name}</p>
+              <Link to={`/applications/admin/${config.appName}`} className="text-lg font-bold tracking-tight hover:text-accent transition-colors">
+                {config.displayName || config.appName}
+              </Link>
+              <p className="text-[11px] text-text-muted font-mono">{config.owner} / {config.appName}</p>
             </div>
           </div>
-          <motion.button
-            whileHover={{ rotate: 180 }}
-            transition={{ duration: 0.3 }}
-            onClick={fetchData}
-            className="rounded-lg border border-border p-2 text-text-muted hover:bg-surface-2 transition-colors"
-            title={t("common.refresh")}
-          >
-            <RefreshCw size={15} />
-          </motion.button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleSyncPolicies}
+              disabled={syncing}
+              className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-[12px] font-medium text-text-secondary hover:bg-surface-2 disabled:opacity-50 transition-colors"
+              title={t("authz.overview.syncDescription" as any)}
+            >
+              {syncing ? (
+                <div className="h-3.5 w-3.5 rounded-full border-2 border-accent/30 border-t-accent animate-spin" />
+              ) : (
+                <RotateCcw size={14} />
+              )}
+              {t("authz.overview.syncPolicies" as any)}
+            </button>
+            <motion.button
+              whileHover={{ rotate: 180 }}
+              transition={{ duration: 0.3 }}
+              onClick={fetchData}
+              className="rounded-lg border border-border p-2 text-text-muted hover:bg-surface-2 transition-colors"
+              title={t("common.refresh")}
+            >
+              <RefreshCw size={15} />
+            </motion.button>
+          </div>
         </div>
         {/* Tab Bar */}
         <div className="flex -mb-px">
@@ -146,12 +132,13 @@ export default function AppAuthorizationPage() {
             <button
               key={tab.key}
               onClick={() => setActiveTab(tab.key)}
-              className={`px-4 py-2.5 text-[13px] font-medium border-b-2 transition-colors ${
+              className={`flex items-center gap-1.5 px-4 py-2.5 text-[13px] font-medium border-b-2 transition-colors ${
                 activeTab === tab.key
                   ? "border-accent text-accent"
                   : "border-transparent text-text-muted hover:text-text-secondary"
               }`}
             >
+              {tab.icon}
               {tab.label}
               {tab.count !== undefined && (
                 <span className={`ml-1.5 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-semibold ${
@@ -168,18 +155,12 @@ export default function AppAuthorizationPage() {
       <div className="pt-6">
         {activeTab === "overview" && (
           <OverviewTab
+            config={config}
+            roles={roles}
             permissions={permissions}
-            roles={allOrgRoles}
             userCount={userSet.size}
-            resourceCount={resSet.size}
             allowCount={allowCount}
             denyCount={denyCount}
-            linkedModel={linkedModel}
-            linkedAdapter={linkedAdapter}
-            linkedEnforcer={linkedEnforcer}
-            models={models}
-            adapters={adapters}
-            enforcers={enforcers}
             onRefresh={fetchData}
             t={t}
             modal={modal}
@@ -188,9 +169,6 @@ export default function AppAuthorizationPage() {
         {activeTab === "roles" && (
           <RolesTab
             roles={roles}
-            allOrgRoles={allOrgRoles}
-            permissions={permissions}
-            onOpenDrawer={setDrawerRole}
             onRefresh={fetchData}
             appOwner={owner!}
             appName={appName!}
@@ -214,49 +192,38 @@ export default function AppAuthorizationPage() {
           <TestTab
             appOwner={owner!}
             appName={appName!}
-            permissions={permissions}
             t={t}
           />
         )}
         {activeTab === "integration" && (
-          <IntegrationTab app={app} t={t} modal={modal} />
+          <IntegrationTab
+            config={config}
+            t={t}
+            modal={modal}
+          />
         )}
       </div>
-
-      {/* Role User Drawer */}
-      <RoleUserDrawer
-        role={drawerRole}
-        onClose={() => setDrawerRole(null)}
-        onUpdate={() => { fetchData(); }}
-      />
     </div>
   );
 }
 
 // ═══════ OVERVIEW TAB ═══════
-function OverviewTab({ permissions, roles, userCount, resourceCount, allowCount, denyCount, linkedModel, linkedAdapter, linkedEnforcer, models, adapters, enforcers, onRefresh, t, modal }: {
-  permissions: Permission[]; roles: Role[]; userCount: number; resourceCount: number;
-  allowCount: number; denyCount: number;
-  linkedModel: Model | null; linkedAdapter: Adapter | null; linkedEnforcer: Enforcer | null;
-  models: Model[]; adapters: Adapter[]; enforcers: Enforcer[];
+function OverviewTab({ config, roles, permissions, userCount, allowCount, denyCount, onRefresh, t, modal }: {
+  config: BizAppConfig; roles: BizRole[]; permissions: BizPermission[];
+  userCount: number; allowCount: number; denyCount: number;
   onRefresh: () => void;
   t: (key: any) => string; modal: any;
 }) {
-  const [saving, setSaving] = useState(false);
-
-  const stats = [
-    { label: t("authz.metrics.roles"), value: roles.length, sub: `${roles.filter((r) => r.isEnabled).length} ${t("common.enabled" as any)}` },
-    { label: t("authz.metrics.permissions"), value: permissions.length, sub: `${allowCount} ${t("authz.overview.allowRules")} · ${denyCount} ${t("authz.overview.denyRules")}` },
-    { label: t("authz.metrics.users"), value: userCount },
-    { label: t("authz.metrics.resources"), value: resourceCount },
-  ];
+  const [editingModel, setEditingModel] = useState(false);
+  const [modelDraft, setModelDraft] = useState(config.modelText);
+  const [savingConfig, setSavingConfig] = useState(false);
 
   // Parse model text
   let modelType = "";
   let roleDef = "";
   let matcher = "";
-  if (linkedModel?.modelText) {
-    const text = linkedModel.modelText;
+  if (config.modelText) {
+    const text = config.modelText;
     if (text.includes("g = _, _, _")) { modelType = "RBAC with domains"; roleDef = "g = _, _, _"; }
     else if (text.includes("g = _, _")) { modelType = "RBAC"; roleDef = "g = _, _"; }
     else if (text.includes("role_definition")) { modelType = "RBAC (custom)"; }
@@ -265,142 +232,235 @@ function OverviewTab({ permissions, roles, userCount, resourceCount, allowCount,
     if (matcherMatch) matcher = matcherMatch[1].trim();
   }
 
-  // Current values across permissions
-  const BUILTIN = "__builtin__";
-  const currentModelId = linkedModel ? `${linkedModel.owner}/${linkedModel.name}` : BUILTIN;
-  const currentAdapterId = linkedAdapter ? `${linkedAdapter.owner}/${linkedAdapter.name}` : BUILTIN;
-
-  // Batch update all permissions' model or adapter
-  const batchUpdateField = async (field: "model" | "adapter", newValue: string) => {
-    if (permissions.length === 0) return;
-    setSaving(true);
+  const doSaveModel = async () => {
+    setSavingConfig(true);
     try {
-      const results = await Promise.all(
-        permissions.map((p) => {
-          const updated = { ...p, [field]: newValue };
-          return PermissionBackend.updatePermission(p.owner, p.name, updated as Permission);
-        })
-      );
-      const failed = results.filter((r) => r.status !== "ok");
-      if (failed.length > 0) {
-        modal.toast(`${failed.length} ${t("common.saveFailed" as any)}`, "error");
-      } else {
-        modal.toast(t("common.saveSuccess" as any));
+      const updated = { ...config, modelText: modelDraft };
+      const res = await BizBackend.updateBizAppConfig(`${config.owner}/${config.appName}`, updated);
+      if (res.status === "ok") {
+        modal.toast(t("common.saveSuccess" as any), "success");
+        setEditingModel(false);
         onRefresh();
+      } else {
+        modal.toast(res.msg || t("common.saveFailed" as any), "error");
       }
-    } catch {
-      modal.toast(t("common.saveFailed" as any), "error");
     } finally {
-      setSaving(false);
+      setSavingConfig(false);
     }
   };
 
-  // Dropdown options
-  const modelOptions = [
-    { value: BUILTIN, label: t("authz.overview.defaultModel") },
-    ...models.map((m) => ({ value: `${m.owner}/${m.name}`, label: `${m.owner}/${m.name}` })),
-  ];
-  const adapterOptions = [
-    { value: BUILTIN, label: t("authz.overview.builtinAdapter" as any) },
-    ...adapters.map((a) => ({ value: `${a.owner}/${a.name}`, label: `${a.owner}/${a.name}` })),
-  ];
+  const handleSaveModel = () => {
+    // Detect policy_definition field changes
+    const oldFields = BizBackend.parsePolicyFields(config.modelText);
+    const newFields = BizBackend.parsePolicyFields(modelDraft);
+    const oldKey = oldFields.join(", ");
+    const newKey = newFields.join(", ");
+
+    if (oldKey !== newKey) {
+      // Fields changed — high risk, show detailed warning
+      const warnings = [
+        t("authz.overview.modelWarning.title" as any),
+        "",
+        `${t("authz.overview.modelWarning.fieldChange" as any)}`,
+        `  ${t("authz.overview.modelWarning.before" as any)} p = ${oldKey}`,
+        `  ${t("authz.overview.modelWarning.after" as any)} p = ${newKey}`,
+        "",
+        t("authz.overview.modelWarning.consequences" as any),
+        `  • ${t("authz.overview.modelWarning.policiesRebuilt" as any)}`,
+        `  • ${t("authz.overview.modelWarning.fieldMismatch" as any)}`,
+        `  • ${t("authz.overview.modelWarning.enforceFail" as any)}`,
+        "",
+        t("authz.overview.modelWarning.recommendation" as any),
+      ].join("\n");
+      modal.showConfirm(warnings, doSaveModel);
+    } else {
+      // Same fields (e.g. only matcher changed) — low risk, still confirm
+      modal.showConfirm(t("authz.overview.modelWarning.syncConfirm" as any), doSaveModel);
+    }
+  };
+
+  const handleToggleEnabled = async () => {
+    const updated = { ...config, isEnabled: !config.isEnabled };
+    const res = await BizBackend.updateBizAppConfig(`${config.owner}/${config.appName}`, updated);
+    if (res.status === "ok") {
+      onRefresh();
+    } else {
+      modal.toast(res.msg || t("common.saveFailed" as any), "error");
+    }
+  };
 
   return (
     <div className="space-y-5">
       {/* Stat cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        {stats.map((s) => (
-          <div key={s.label} className="rounded-xl border border-border bg-surface-1 p-4">
-            <div className="text-[10px] font-bold uppercase tracking-wider text-text-muted mb-1.5">{s.label}</div>
-            <div className="text-[28px] font-bold text-text-primary font-mono tracking-tight">{s.value}</div>
-            {s.sub && <div className="text-[11px] text-text-muted mt-0.5">{s.sub}</div>}
-          </div>
-        ))}
-      </div>
-
-      {/* Model + Adapter */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <div className="rounded-xl border border-border bg-surface-1 p-5">
-          <h4 className="text-[13px] font-semibold text-text-primary mb-3">{t("authz.overview.model")}</h4>
-          <div className="space-y-2.5">
-            <div className="flex items-center justify-between py-1.5 border-b border-border-subtle">
-              <span className="text-[12px] text-text-muted shrink-0 mr-3">{t("authz.overview.currentModel")}</span>
-              <div className="w-[55%] min-w-[200px]">
-                <SimpleSelect
-                  value={currentModelId}
-                  options={modelOptions}
-                  onChange={(v) => batchUpdateField("model", v === BUILTIN ? "" : v)}
-                  disabled={saving || permissions.length === 0}
-                />
-              </div>
-            </div>
-            {modelType && <ConfigRow label={t("authz.overview.modelType")} value={modelType} />}
-            {roleDef && <ConfigRow label={t("authz.overview.roleDef")} value={roleDef} mono />}
-            {matcher && <ConfigRow label={t("authz.overview.matcher")} value={matcher} mono small />}
-          </div>
+      <div className="grid grid-cols-3 gap-3">
+        <div className="rounded-xl border border-border bg-surface-1 p-4">
+          <div className="text-[10px] font-bold uppercase tracking-wider text-text-muted mb-1.5">{t("authz.metrics.roles")}</div>
+          <div className="text-[28px] font-bold text-text-primary font-mono tracking-tight">{roles.length}</div>
+          <div className="text-[11px] text-text-muted mt-0.5">{roles.filter((r) => r.isEnabled).length} {t("common.enabled" as any)}</div>
         </div>
-        <div className="rounded-xl border border-border bg-surface-1 p-5">
-          <h4 className="text-[13px] font-semibold text-text-primary mb-3">{t("authz.overview.adapterEnforcer")}</h4>
-          <div className="space-y-2.5">
-            <div className="flex items-center justify-between py-1.5 border-b border-border-subtle">
-              <span className="text-[12px] text-text-muted shrink-0 mr-3">{t("authz.overview.adapter")}</span>
-              <div className="w-[55%] min-w-[200px]">
-                <SimpleSelect
-                  value={currentAdapterId}
-                  options={adapterOptions}
-                  onChange={(v) => batchUpdateField("adapter", v === BUILTIN ? "" : v)}
-                  disabled={saving || permissions.length === 0}
-                />
-              </div>
-            </div>
-            {linkedAdapter && <ConfigRow label={t("authz.overview.dbType")} value={linkedAdapter.databaseType || linkedAdapter.type || "—"} />}
-            {linkedAdapter && <ConfigRow label={t("authz.overview.policyTable")} value={linkedAdapter.table || "—"} mono />}
-            <ConfigRow label={t("authz.overview.enforcer")} value={linkedEnforcer ? `${linkedEnforcer.owner}/${linkedEnforcer.name}` : t("authz.overview.noModel")} accent={!!linkedEnforcer} />
-          </div>
+        <div className="rounded-xl border border-border bg-surface-1 p-4">
+          <div className="text-[10px] font-bold uppercase tracking-wider text-text-muted mb-1.5">{t("authz.metrics.permissions")}</div>
+          <div className="text-[28px] font-bold text-text-primary font-mono tracking-tight">{permissions.length}</div>
+          <div className="text-[11px] text-text-muted mt-0.5">{allowCount} {t("authz.overview.allowRules")} · {denyCount} {t("authz.overview.denyRules")}</div>
+        </div>
+        <div className="rounded-xl border border-border bg-surface-1 p-4">
+          <div className="text-[10px] font-bold uppercase tracking-wider text-text-muted mb-1.5">{t("authz.metrics.users")}</div>
+          <div className="text-[28px] font-bold text-text-primary font-mono tracking-tight">{userCount}</div>
         </div>
       </div>
-    </div>
-  );
-}
 
-function ConfigRow({ label, value, accent, mono, small, warn }: {
-  label: string; value: string; accent?: boolean; mono?: boolean; small?: boolean; warn?: boolean;
-}) {
-  return (
-    <div className="flex items-center justify-between py-1.5 border-b border-border-subtle last:border-b-0">
-      <span className="text-[12px] text-text-muted">{label}</span>
-      <span className={`text-[12px] font-medium font-mono ${accent ? "text-accent" : warn ? "text-warning" : "text-text-primary"} ${small ? "text-[11px]" : ""} ${!mono ? "font-sans" : ""} max-w-[60%] text-right truncate`}>
-        {value}
-      </span>
+      {/* Config Section */}
+      <div className="rounded-xl border border-border bg-surface-1">
+        <div className="px-5 py-3 border-b border-border-subtle flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <h4 className="text-[14px] font-semibold">{t("authz.overview.configuration" as any)}</h4>
+            <span className="inline-block rounded-full px-2.5 py-0.5 text-[10px] font-semibold bg-accent/10 text-accent">{modelType || "—"}</span>
+          </div>
+          <div className="flex items-center gap-3">
+            <span className="text-[12px] text-text-muted">{t("authz.overview.status" as any)}</span>
+            <button
+              onClick={handleToggleEnabled}
+              className={`relative w-11 h-6 rounded-full transition-colors ${config.isEnabled ? "bg-accent" : "bg-surface-4"}`}
+            >
+              <span className={`absolute top-[2px] left-[2px] w-5 h-5 bg-white rounded-full shadow transition-transform ${config.isEnabled ? "translate-x-5" : ""}`} />
+            </button>
+          </div>
+        </div>
+
+        <div className="p-5 space-y-4">
+          {/* Policy Table */}
+          <div className="flex items-center gap-4">
+            <span className="text-[12px] text-text-muted w-20 flex-shrink-0">{t("authz.overview.policyTable" as any)}</span>
+            <span className="text-[13px] font-mono font-medium text-text-primary">{config.policyTable || "—"}</span>
+          </div>
+
+          {/* Model info row */}
+          {(roleDef || matcher) && (
+            <div className="flex flex-wrap gap-x-8 gap-y-2">
+              {roleDef && (
+                <div className="flex items-center gap-4">
+                  <span className="text-[12px] text-text-muted w-20 flex-shrink-0">{t("authz.overview.roleDef")}</span>
+                  <span className="text-[12px] font-mono text-text-primary">{roleDef}</span>
+                </div>
+              )}
+              {matcher && (
+                <div className="flex items-center gap-4 min-w-0">
+                  <span className="text-[12px] text-text-muted flex-shrink-0">Matcher</span>
+                  <span className="text-[11px] font-mono text-text-secondary truncate">{matcher}</span>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Model Text */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[12px] font-semibold text-text-secondary">{t("authz.overview.model")}</span>
+              {!editingModel ? (
+                <button
+                  onClick={() => { setModelDraft(config.modelText); setEditingModel(true); }}
+                  className="flex items-center gap-1 rounded-lg border border-border px-2.5 py-1 text-[12px] font-medium text-text-secondary hover:bg-surface-2 transition-colors"
+                >
+                  <Pencil size={12} /> {t("common.edit")}
+                </button>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setEditingModel(false)}
+                    className="rounded-lg border border-border px-2.5 py-1 text-[12px] font-medium text-text-secondary hover:bg-surface-2 transition-colors"
+                  >
+                    {t("common.cancel")}
+                  </button>
+                  <button
+                    onClick={handleSaveModel}
+                    disabled={savingConfig || modelDraft === config.modelText}
+                    className="flex items-center gap-1 rounded-lg bg-accent px-2.5 py-1 text-[12px] font-semibold text-white hover:bg-accent-hover disabled:opacity-40 transition-colors"
+                  >
+                    {savingConfig && <div className="h-3 w-3 rounded-full border-2 border-white/30 border-t-white animate-spin" />}
+                    {t("common.save")}
+                  </button>
+                </div>
+              )}
+            </div>
+            {editingModel ? (
+              <textarea
+                value={modelDraft}
+                onChange={(e) => setModelDraft(e.target.value)}
+                rows={14}
+                spellCheck={false}
+                className="w-full rounded-lg border border-accent bg-surface-2 px-4 py-3 text-[12px] font-mono leading-relaxed text-text-primary outline-none resize-y focus:ring-1 focus:ring-accent/30"
+              />
+            ) : (
+              <pre className="rounded-lg border border-border bg-surface-2 px-4 py-3 text-[12px] font-mono leading-relaxed text-text-secondary overflow-x-auto max-h-[320px] overflow-y-auto whitespace-pre-wrap">
+                {config.modelText || "—"}
+              </pre>
+            )}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
 
 // ═══════ ROLES TAB ═══════
-function RolesTab({ roles, allOrgRoles, permissions, onOpenDrawer, onRefresh, appOwner, appName, t, modal, navigate }: {
-  roles: Role[]; allOrgRoles: Role[]; permissions: Permission[];
-  onOpenDrawer: (role: Role) => void; onRefresh: () => void;
+function RolesTab({ roles, onRefresh, appOwner, appName, t, modal, navigate }: {
+  roles: BizRole[]; onRefresh: () => void;
   appOwner: string; appName: string;
   t: (key: any) => string; modal: any; navigate: any;
 }) {
-  // Count permissions per role
-  const permCountByRole = (role: Role) => {
-    const roleId = `${role.owner}/${role.name}`;
-    return permissions.filter((p) => p.roles?.includes(roleId)).length;
+  const handleAddRole = () => {
+    navigate(`/authorization/${appOwner}/${appName}/roles/new`, { state: { mode: "add" } });
   };
 
-  const handleAddRole = async () => {
-    const role = RoleBackend.newRole(appOwner);
-    const res = await RoleBackend.addRole(role);
-    if (res.status === "ok") {
-      navigate(`/roles/${role.owner}/${role.name}`, { state: { mode: "add" } });
-    } else {
-      modal.toast(res.msg || t("common.addFailed"), "error");
-    }
+  const handleDeleteRole = (role: BizRole, e: React.MouseEvent) => {
+    e.stopPropagation();
+    modal.showConfirm(`${t("common.confirmDelete")} [${role.name}]`, async () => {
+      const res = await BizBackend.deleteBizRole(role);
+      if (res.status === "ok") onRefresh();
+      else modal.toast(res.msg || t("common.deleteFailed" as any), "error");
+    });
   };
 
-  // Show all org roles, not just app-filtered ones
-  const displayRoles = allOrgRoles.length > 0 ? allOrgRoles : roles;
+  const columns: Column<BizRole>[] = [
+    {
+      key: "name", title: t("authz.roles.col.name"), sortable: true, fixed: "left" as const, width: "200px",
+      render: (_, r) => <Link to={`/authorization/${appOwner}/${appName}/roles/${encodeURIComponent(r.name)}`} className="font-mono font-medium text-accent hover:underline" onClick={(e) => e.stopPropagation()}>{r.name}</Link>,
+    },
+    {
+      key: "displayName", title: t("authz.roles.col.displayName" as any), sortable: true, width: "200px",
+      render: (_, r) => <span className="text-[12px] text-text-secondary">{r.displayName || "\u2014"}</span>,
+    },
+    {
+      key: "users", title: t("authz.roles.col.users"), sortable: true, width: "100px",
+      render: (_, r) => (
+        <span className={`inline-flex items-center gap-1 font-mono font-semibold rounded px-2 py-0.5 ${(r.users?.length ?? 0) > 0 ? "text-blue-400" : "text-text-muted"}`}>
+          <UsersIcon size={12} className="opacity-60" />
+          {r.users?.length ?? 0}
+        </span>
+      ),
+    },
+    {
+      key: "roles", title: t("authz.roles.col.subRoles"), width: "180px",
+      render: (_, r) => <span className="text-text-muted font-mono text-[11px]">{r.roles?.length ? r.roles.join(", ") : "\u2014"}</span>,
+    },
+    {
+      key: "isEnabled", title: t("authz.roles.col.status" as any), sortable: true, width: "100px",
+      render: (_, r) => (
+        <span className={`inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold ${r.isEnabled ? "bg-success/10 text-success" : "bg-warning/10 text-warning"}`}>
+          {r.isEnabled ? t("common.enabled" as any) : t("common.disabled" as any)}
+        </span>
+      ),
+    },
+    {
+      key: "__actions", title: t("common.action" as any), fixed: "right" as const, width: "100px",
+      render: (_, r) => (
+        <div className="flex items-center gap-1">
+          <Link to={`/authorization/${appOwner}/${appName}/roles/${encodeURIComponent(r.name)}`} className="rounded p-1.5 text-text-muted hover:text-warning hover:bg-warning/10 transition-colors" title={t("common.edit")} onClick={(e) => e.stopPropagation()}><Pencil size={14} /></Link>
+          <button onClick={(e) => handleDeleteRole(r, e)} className="rounded p-1.5 text-text-muted hover:text-danger hover:bg-danger/10 transition-colors" title={t("common.delete")}><Trash2 size={14} /></button>
+        </div>
+      ),
+    },
+  ];
 
   return (
     <div className="space-y-4">
@@ -410,232 +470,124 @@ function RolesTab({ roles, allOrgRoles, permissions, onOpenDrawer, onRefresh, ap
           <Plus size={14} /> {t("authz.roles.add")}
         </button>
       </div>
-
-      <div className="rounded-xl border border-border overflow-hidden">
-        <table className="w-full text-[12px]">
-          <thead>
-            <tr className="bg-surface-2 border-b border-border">
-              <th className="text-left px-4 py-2.5 text-[10px] font-bold uppercase tracking-wider text-text-muted">{t("authz.roles.col.name")}</th>
-              <th className="text-left px-4 py-2.5 text-[10px] font-bold uppercase tracking-wider text-text-muted">{t("authz.roles.col.users")}</th>
-              <th className="text-left px-4 py-2.5 text-[10px] font-bold uppercase tracking-wider text-text-muted">{t("authz.roles.col.subRoles")}</th>
-              <th className="text-left px-4 py-2.5 text-[10px] font-bold uppercase tracking-wider text-text-muted">{t("authz.roles.col.permissions")}</th>
-              <th className="text-left px-4 py-2.5 text-[10px] font-bold uppercase tracking-wider text-text-muted">{t("authz.roles.col.status")}</th>
-              <th className="text-left px-4 py-2.5 text-[10px] font-bold uppercase tracking-wider text-text-muted">{t("common.action" as any)}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {displayRoles.map((role) => {
-              const pc = permCountByRole(role);
-              const userCount = role.users?.length ?? 0;
-              return (
-                <tr key={`${role.owner}/${role.name}`} className="border-b border-border-subtle hover:bg-accent/[0.02] transition-colors">
-                  <td className="px-4 py-3">
-                    <Link to={`/roles/${role.owner}/${encodeURIComponent(role.name)}`} className="font-mono font-semibold text-accent hover:underline">
-                      {role.name}
-                    </Link>
-                  </td>
-                  <td className="px-4 py-3">
-                    <button
-                      onClick={() => onOpenDrawer(role)}
-                      className={`inline-flex items-center gap-1 font-mono font-semibold rounded px-2 py-0.5 transition-colors ${
-                        userCount > 0
-                          ? "text-blue-400 hover:bg-blue-400/10 cursor-pointer"
-                          : "text-text-muted cursor-default"
-                      }`}
-                    >
-                      <UsersIcon size={12} className="opacity-60" />
-                      {userCount}
-                    </button>
-                  </td>
-                  <td className="px-4 py-3">
-                    <span className="text-text-muted font-mono text-[11px]">
-                      {role.roles?.length ? role.roles.map((r) => r.split("/").pop()).join(", ") : "—"}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3">
-                    <span className={`inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold ${
-                      pc > 0 ? "bg-accent/10 text-accent" : "bg-warning/10 text-warning"
-                    }`}>
-                      {pc} {t("authz.roles.rules")}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3">
-                    <span className={`inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold ${
-                      role.isEnabled ? "bg-success/10 text-success" : "bg-warning/10 text-warning"
-                    }`}>
-                      {role.isEnabled ? t("common.enabled" as any) : t("common.disabled" as any)}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3">
-                    <Link to={`/roles/${role.owner}/${encodeURIComponent(role.name)}`} className="text-[11px] text-text-muted hover:text-accent transition-colors">
-                      {t("common.edit")}
-                    </Link>
-                  </td>
-                </tr>
-              );
-            })}
-            {displayRoles.length === 0 && (
-              <tr><td colSpan={6} className="px-4 py-8 text-center text-text-muted text-[13px]">{t("common.noData")}</td></tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+      <DataTable columns={columns} data={roles} rowKey={(r) => r.name} emptyText={t("common.noData")} />
     </div>
   );
 }
 
 // ═══════ PERMISSIONS TAB ═══════
 function PermissionsTab({ permissions, onRefresh, appOwner, appName, t, modal, navigate }: {
-  permissions: Permission[]; onRefresh: () => void;
+  permissions: BizPermission[]; onRefresh: () => void;
   appOwner: string; appName: string;
   t: (key: any) => string; modal: any; navigate: any;
 }) {
-  const handleAddPermission = async () => {
-    const perm = PermissionBackend.newPermission(appOwner);
-    perm.resources = [appName];
-    const res = await PermissionBackend.addPermission(perm);
-    if (res.status === "ok") {
-      navigate(`/permissions/${perm.owner}/${perm.name}`, { state: { mode: "add" } });
-    } else {
-      modal.toast(res.msg || t("common.addFailed"), "error");
-    }
+  const handleAddPermission = () => {
+    navigate(`/authorization/${appOwner}/${appName}/permissions/new`, { state: { mode: "add" } });
   };
+
+  const handleDeletePermission = (perm: BizPermission, e: React.MouseEvent) => {
+    e.stopPropagation();
+    modal.showConfirm(`${t("common.confirmDelete")} [${perm.name}]`, async () => {
+      const res = await BizBackend.deleteBizPermission(perm);
+      if (res.status === "ok") onRefresh();
+      else modal.toast(res.msg || t("common.deleteFailed" as any), "error");
+    });
+  };
+
+  const columns: Column<BizPermission>[] = [
+    {
+      key: "name", title: t("authz.perms.col.name"), sortable: true, fixed: "left" as const, width: "180px",
+      render: (_, p) => <Link to={`/authorization/${appOwner}/${appName}/permissions/${encodeURIComponent(p.name)}`} className="font-mono font-medium text-accent hover:underline" onClick={(e) => e.stopPropagation()}>{p.name}</Link>,
+    },
+    {
+      key: "subjects", title: t("authz.perms.col.subject"), width: "220px",
+      render: (_, p) => (
+        <div className="flex flex-wrap gap-1">
+          {p.roles?.map((r) => <span key={r} className="inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold bg-accent/10 text-accent">{r}</span>)}
+          {p.users?.filter((u) => u !== "*").map((u) => <span key={u} className="inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold bg-blue-500/10 text-blue-400">{u}</span>)}
+          {p.users?.includes("*") && <span className="inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold bg-amber-500/10 text-amber-400">*</span>}
+        </div>
+      ),
+    },
+    {
+      key: "resources", title: t("authz.perms.col.resources"), width: "250px",
+      render: (_, p) => <span className="font-mono text-[11px] text-text-secondary">{p.resources?.join(", ") || "\u2014"}</span>,
+    },
+    {
+      key: "actions", title: t("authz.perms.col.actions"), width: "150px",
+      render: (_, p) => (
+        <div className="flex flex-wrap gap-1">
+          {p.actions?.map((a) => <span key={a} className="inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold bg-cyan-500/10 text-cyan-400">{a}</span>)}
+        </div>
+      ),
+    },
+    {
+      key: "effect", title: t("authz.perms.col.effect"), sortable: true, width: "90px",
+      render: (_, p) => (
+        <span className={`inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold ${p.effect === "Allow" ? "bg-success/10 text-success" : "bg-danger/10 text-danger"}`}>
+          {p.effect === "Allow" ? t("permissions.effectAllow" as any) : t("permissions.effectDeny" as any)}
+        </span>
+      ),
+    },
+    {
+      key: "isEnabled", title: t("authz.roles.col.status" as any), sortable: true, width: "90px",
+      render: (_, p) => (
+        <span className={`inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold ${p.isEnabled ? "bg-success/10 text-success" : "bg-warning/10 text-warning"}`}>
+          {p.isEnabled ? t("common.enabled" as any) : t("common.disabled" as any)}
+        </span>
+      ),
+    },
+    {
+      key: "__actions", title: t("common.action" as any), fixed: "right" as const, width: "100px",
+      render: (_, p) => (
+        <div className="flex items-center gap-1">
+          <Link to={`/authorization/${appOwner}/${appName}/permissions/${encodeURIComponent(p.name)}`} className="rounded p-1.5 text-text-muted hover:text-warning hover:bg-warning/10 transition-colors" title={t("common.edit")} onClick={(e) => e.stopPropagation()}><Pencil size={14} /></Link>
+          <button onClick={(e) => handleDeletePermission(p, e)} className="rounded p-1.5 text-text-muted hover:text-danger hover:bg-danger/10 transition-colors" title={t("common.delete")}><Trash2 size={14} /></button>
+        </div>
+      ),
+    },
+  ];
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h3 className="text-[14px] font-semibold text-text-primary">{t("authz.perms.title")}</h3>
-        <div className="flex gap-2">
-          <button onClick={handleAddPermission} className="flex items-center gap-1.5 rounded-lg bg-accent px-3 py-2 text-[12px] font-semibold text-white hover:bg-accent-hover transition-colors">
-            <Plus size={14} /> {t("authz.perms.add")}
-          </button>
-        </div>
+        <button onClick={handleAddPermission} className="flex items-center gap-1.5 rounded-lg bg-accent px-3 py-2 text-[12px] font-semibold text-white hover:bg-accent-hover transition-colors">
+          <Plus size={14} /> {t("authz.perms.add")}
+        </button>
       </div>
-
-      <div className="rounded-xl border border-border overflow-hidden">
-        <table className="w-full text-[12px]">
-          <thead>
-            <tr className="bg-surface-2 border-b border-border">
-              <th className="text-left px-4 py-2.5 text-[10px] font-bold uppercase tracking-wider text-text-muted">{t("authz.perms.col.name")}</th>
-              <th className="text-left px-4 py-2.5 text-[10px] font-bold uppercase tracking-wider text-text-muted">{t("authz.perms.col.subject")}</th>
-              <th className="text-left px-4 py-2.5 text-[10px] font-bold uppercase tracking-wider text-text-muted">{t("permissions.field.resourceType" as any)}</th>
-              <th className="text-left px-4 py-2.5 text-[10px] font-bold uppercase tracking-wider text-text-muted">{t("authz.perms.col.resources")}</th>
-              <th className="text-left px-4 py-2.5 text-[10px] font-bold uppercase tracking-wider text-text-muted">{t("authz.perms.col.actions")}</th>
-              <th className="text-left px-4 py-2.5 text-[10px] font-bold uppercase tracking-wider text-text-muted">{t("authz.perms.col.effect")}</th>
-              <th className="text-left px-4 py-2.5 text-[10px] font-bold uppercase tracking-wider text-text-muted">{t("authz.perms.col.approval")}</th>
-              <th className="text-left px-4 py-2.5 text-[10px] font-bold uppercase tracking-wider text-text-muted">{t("common.action" as any)}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {permissions.map((perm) => (
-              <tr key={`${perm.owner}/${perm.name}`} className="border-b border-border-subtle hover:bg-accent/[0.02] transition-colors">
-                <td className="px-4 py-3">
-                  <Link to={`/permissions/${perm.owner}/${encodeURIComponent(perm.name)}`} className="font-mono font-semibold text-accent hover:underline">
-                    {perm.name}
-                  </Link>
-                </td>
-                <td className="px-4 py-3">
-                  <div className="flex flex-wrap gap-1">
-                    {perm.roles?.map((r) => (
-                      <span key={r} className="inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold bg-accent/10 text-accent">
-                        {r.split("/").pop()}
-                      </span>
-                    ))}
-                    {perm.users?.filter((u) => u !== "*").map((u) => (
-                      <span key={u} className="inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold bg-blue-500/10 text-blue-400">
-                        {u.split("/").pop()}
-                      </span>
-                    ))}
-                    {perm.users?.includes("*") && (
-                      <span className="inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold bg-amber-500/10 text-amber-400">*</span>
-                    )}
-                  </div>
-                </td>
-                <td className="px-4 py-3">
-                  <span className="inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold bg-surface-3 text-text-secondary">{perm.resourceType || "—"}</span>
-                </td>
-                <td className="px-4 py-3">
-                  <span className="font-mono text-[11px] text-text-secondary">{perm.resources?.join(", ") || "—"}</span>
-                </td>
-                <td className="px-4 py-3">
-                  <div className="flex flex-wrap gap-1">
-                    {perm.actions?.map((a) => (
-                      <span key={a} className="inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold bg-cyan-500/10 text-cyan-400">{a}</span>
-                    ))}
-                  </div>
-                </td>
-                <td className="px-4 py-3">
-                  <span className={`inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold ${
-                    perm.effect === "Allow" ? "bg-success/10 text-success" : "bg-danger/10 text-danger"
-                  }`}>
-                    {perm.effect === "Allow" ? t("permissions.effectAllow" as any) : t("permissions.effectDeny" as any)}
-                  </span>
-                </td>
-                <td className="px-4 py-3">
-                  {perm.state === "Pending" ? (
-                    <span className="inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold bg-warning/10 text-warning">Pending</span>
-                  ) : (
-                    <span className="inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold bg-success/10 text-success">Approved</span>
-                  )}
-                </td>
-                <td className="px-4 py-3">
-                  <div className="flex items-center gap-2">
-                    {perm.state === "Pending" && (
-                      <Link to={`/permissions/${perm.owner}/${encodeURIComponent(perm.name)}`} className="text-[11px] text-success font-semibold hover:underline">
-                        {t("authz.perms.approve")}
-                      </Link>
-                    )}
-                    <Link to={`/permissions/${perm.owner}/${encodeURIComponent(perm.name)}`} className="text-[11px] text-text-muted hover:text-accent transition-colors">
-                      {t("common.edit")}
-                    </Link>
-                  </div>
-                </td>
-              </tr>
-            ))}
-            {permissions.length === 0 && (
-              <tr><td colSpan={8} className="px-4 py-8 text-center text-text-muted text-[13px]">{t("common.noData")}</td></tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+      <DataTable columns={columns} data={permissions} rowKey={(p) => p.name} emptyText={t("common.noData")} />
     </div>
   );
 }
 
 // ═══════ TEST TAB ═══════
-function TestTab({ appOwner, appName, permissions, t }: {
-  appOwner: string; appName: string; permissions: Permission[];
+function TestTab({ appOwner, appName, t }: {
+  appOwner: string; appName: string;
   t: (key: any) => string;
 }) {
   const [sub, setSub] = useState("");
   const [obj, setObj] = useState("");
   const [act, setAct] = useState("");
-  const [selectedPermId, setSelectedPermId] = useState("");
-  const [result, setResult] = useState<{ allowed: boolean; key: string } | null>(null);
+  const [result, setResult] = useState<{ allowed: boolean; detail: string } | null>(null);
   const [testing, setTesting] = useState(false);
-  const [history, setHistory] = useState<{ time: string; sub: string; obj: string; act: string; allowed: boolean; key: string }[]>([]);
+  const [history, setHistory] = useState<{ time: string; sub: string; obj: string; act: string; allowed: boolean }[]>([]);
 
   const handleTest = async () => {
     if (!sub || !obj || !act) return;
     setTesting(true);
     try {
-      const params: any = {};
-      if (selectedPermId) {
-        params.permissionId = selectedPermId;
+      const appId = `${appOwner}/${appName}`;
+      const res = await BizBackend.bizEnforce(appId, [sub, obj, act]);
+      if (res.status === "ok") {
+        const allowed = !!res.data;
+        setResult({ allowed, detail: "" });
+        setHistory((h) => [{ time: new Date().toLocaleTimeString(), sub, obj, act, allowed }, ...h.slice(0, 19)]);
       } else {
-        params.owner = appOwner;
-      }
-      const res = await PermissionBackend.enforce(params, [sub, obj, act]);
-      if (res.status === "ok" && res.data) {
-        const allowed = res.data[0] ?? false;
-        const key = (res as any).data2?.[0] || "";
-        setResult({ allowed, key });
-        setHistory((h) => [{ time: new Date().toLocaleTimeString(), sub, obj, act, allowed, key }, ...h.slice(0, 19)]);
-      } else {
-        setResult({ allowed: false, key: res.msg || "" });
+        setResult({ allowed: false, detail: res.msg || "Error" });
       }
     } catch (e: any) {
-      setResult({ allowed: false, key: e.message || "Error" });
+      setResult({ allowed: false, detail: e.message || "Error" });
     } finally {
       setTesting(false);
     }
@@ -650,19 +602,6 @@ function TestTab({ appOwner, appName, permissions, t }: {
           {t("authz.test.title")}
         </h4>
         <p className="text-[12px] text-text-muted mb-4">{t("authz.test.subtitle")}</p>
-
-        {/* Permission selector */}
-        <div className="mb-4">
-          <label className="block text-[10px] font-bold uppercase tracking-wider text-text-muted mb-1.5">{t("authz.test.selectPermission")}</label>
-          <SimpleSelect
-            value={selectedPermId || "__all__"}
-            options={[
-              { value: "__all__", label: t("authz.test.allPermissions") },
-              ...permissions.map((p) => ({ value: `${p.owner}/${p.name}`, label: `${p.name} (${p.effect})` })),
-            ]}
-            onChange={(v) => setSelectedPermId(v === "__all__" ? "" : v)}
-          />
-        </div>
 
         <div className="grid grid-cols-1 md:grid-cols-[1fr_1fr_1fr_auto] gap-3 items-end">
           <div>
@@ -703,7 +642,7 @@ function TestTab({ appOwner, appName, permissions, t }: {
             >
               {result.allowed ? <Check size={16} /> : <X size={16} />}
               <strong>{result.allowed ? t("authz.test.result.allow") : t("authz.test.result.deny")}</strong>
-              {result.key && <span className="font-normal text-[12px] ml-2 opacity-80">— {result.key}</span>}
+              {result.detail && <span className="font-normal text-[12px] ml-2 opacity-80">— {result.detail}</span>}
             </motion.div>
           )}
         </AnimatePresence>
@@ -735,7 +674,7 @@ function TestTab({ appOwner, appName, permissions, t }: {
                       <span className={`inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold ${
                         h.allowed ? "bg-success/10 text-success" : "bg-danger/10 text-danger"
                       }`}>
-                        {h.allowed ? "Allow" : "Deny"}
+                        {h.allowed ? t("authz.test.result.allow" as any) : t("authz.test.result.deny" as any)}
                       </span>
                     </td>
                   </tr>
@@ -750,12 +689,29 @@ function TestTab({ appOwner, appName, permissions, t }: {
 }
 
 // ═══════ INTEGRATION TAB ═══════
-function IntegrationTab({ app, t, modal }: { app: Application; t: (key: any) => string; modal: any }) {
+function IntegrationTab({ config, t, modal }: { config: BizAppConfig; t: (key: any) => string; modal: any }) {
   const [copied, setCopied] = useState<string | null>(null);
+  const [policies, setPolicies] = useState<PoliciesExport | null>(null);
+  const [loadingPolicies, setLoadingPolicies] = useState(false);
   const endpoint = window.location.origin;
-  const clientId = app.clientId || "<clientId>";
-  const clientSecret = app.clientSecret === "***" ? "<clientSecret>" : (app.clientSecret || "<clientSecret>");
-  const orgName = app.organization || app.owner;
+  const appId = `${config.owner}/${config.appName}`;
+
+  const loadPolicies = async () => {
+    setLoadingPolicies(true);
+    try {
+      const res = await BizBackend.bizGetPolicies(appId);
+      if (res.status === "ok" && res.data) {
+        setPolicies(res.data);
+      }
+    } catch (e: any) {
+      modal.toast(e?.message || t("common.error"), "error");
+    } finally {
+      setLoadingPolicies(false);
+    }
+  };
+
+  // Load policies on mount
+  useEffect(() => { loadPolicies(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const copyCode = (code: string, key: string) => {
     navigator.clipboard.writeText(code);
@@ -764,57 +720,72 @@ function IntegrationTab({ app, t, modal }: { app: Application; t: (key: any) => 
     setTimeout(() => setCopied(null), 2000);
   };
 
-  const goCode = `import casdoorsdk "github.com/casdoor/casdoor-go-sdk"
+  const goCode = `import "net/http"
 
-// Initialize SDK — pre-filled with ${app.displayName || app.name} credentials
-func init() {
-    casdoorsdk.InitConfig(
-        "${endpoint}",              // JetAuth Endpoint
-        "${clientId}",              // ClientId
-        "${clientSecret}",          // ClientSecret
-        "",                         // Certificate (optional)
-        "${orgName}",               // Organization
-        "${app.name}",              // Application
-    )
-}
+// JetAuth Biz Authorization — ${config.displayName || config.appName}
+// Endpoint: ${endpoint}
+// AppId:    ${appId}
 
-// API middleware — check permission on every request
+// API middleware — enforce permission on every request
 func AuthMiddleware(next http.Handler) http.Handler {
     return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
         userId := getUserFromJWT(r)
-        allowed, _ := casdoorsdk.Enforce(
-            "", "", "", "", "${orgName}",
-            casdoorsdk.CasbinRequest{userId, r.URL.Path, r.Method},
-        )
-        if !allowed { http.Error(w, "Forbidden", 403); return }
+
+        // Call biz-enforce: tests against the whole app's policies
+        body, _ := json.Marshal([]string{userId, r.URL.Path, r.Method})
+        req, _ := http.NewRequest("POST",
+            "${endpoint}/api/biz-enforce?appId=${encodeURIComponent(appId)}", bytes.NewReader(body))
+        req.Header.Set("Content-Type", "application/json")
+        req.Header.Set("Authorization", "Bearer "+accessToken)
+
+        resp, err := http.DefaultClient.Do(req)
+        if err != nil { http.Error(w, "Auth error", 500); return }
+        defer resp.Body.Close()
+
+        var result struct { Data bool \`json:"data"\` }
+        json.NewDecoder(resp.Body).Decode(&result)
+        if !result.Data { http.Error(w, "Forbidden", 403); return }
+
         next.ServeHTTP(w, r)
     })
-}`;
-
-  const tsCode = `// After login, batch query current user's permissions
-const resp = await fetch("${endpoint}/api/enforce?owner=${orgName}", {
-  method: "POST",
-  headers: {
-    "Content-Type": "application/json",
-    "Authorization": "Basic " + btoa("${clientId}:${clientSecret}"),
-  },
-  body: JSON.stringify([userId, resource, action]),
-});
-const { data } = await resp.json();
-const allowed = data?.[0] ?? false;
-
-// Frontend permission check (local, no latency)
-function canDo(resource: string, action: string): boolean {
-  return permissions.some(p =>
-    matchResource(p.resource, resource) && p.actions.includes(action)
-  );
 }
 
-// Button-level control
-<Button disabled={!canDo("/orders", "DELETE")}>Delete Order</Button>
+// Export all policies (for local caching / offline evaluation)
+// GET ${endpoint}/api/biz-get-policies?appId=${encodeURIComponent(appId)}`;
 
-// Menu-level control
-{canDo("/finance/reports", "GET") && <MenuItem>Financial Reports</MenuItem>}`;
+  const tsCode = `// JetAuth Biz Authorization — ${config.displayName || config.appName}
+const ENDPOINT = "${endpoint}";
+const APP_ID = "${appId}";
+
+// Enforce a single request against the app's policies
+async function bizEnforce(sub: string, obj: string, act: string): Promise<boolean> {
+  const resp = await fetch(
+    \`\${ENDPOINT}/api/biz-enforce?appId=\${encodeURIComponent(APP_ID)}\`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": \`Bearer \${accessToken}\`,
+      },
+      body: JSON.stringify([sub, obj, act]),
+    }
+  );
+  const { data } = await resp.json();
+  return !!data;
+}
+
+// Export all policies (for local caching / offline evaluation)
+async function bizGetPolicies() {
+  const resp = await fetch(
+    \`\${ENDPOINT}/api/biz-get-policies?appId=\${encodeURIComponent(APP_ID)}\`,
+    { headers: { "Authorization": \`Bearer \${accessToken}\` } }
+  );
+  return resp.json(); // { data: { modelText, policies, groupingPolicies, version } }
+}
+
+// Frontend permission check example
+const allowed = await bizEnforce(userId, "/orders", "DELETE");
+// <Button disabled={!allowed}>Delete Order</Button>`;
 
   return (
     <div className="space-y-6">
@@ -823,7 +794,51 @@ function canDo(resource: string, action: string): boolean {
         <p className="text-[12px] text-text-muted">{t("authz.integration.subtitle")}</p>
       </div>
 
-      {/* Backend */}
+      {/* Live Policies */}
+      {policies && (
+        <div>
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-[13px] font-semibold text-text-primary">{t("authz.integration.livePolicies" as any)}</h3>
+            <button
+              onClick={loadPolicies}
+              disabled={loadingPolicies}
+              className="flex items-center gap-1.5 rounded-lg border border-border px-2.5 py-1.5 text-[11px] font-medium text-text-muted hover:bg-surface-2 transition-colors"
+            >
+              <RefreshCw size={12} className={loadingPolicies ? "animate-spin" : ""} />
+              {t("common.refresh")}
+            </button>
+          </div>
+          <div className="rounded-xl border border-border overflow-hidden">
+            <table className="w-full text-[12px]">
+              <thead>
+                <tr className="bg-surface-2 border-b border-border">
+                  <th className="text-left px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-text-muted">{t("authz.integration.policyType" as any)}</th>
+                  <th className="text-left px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-text-muted">{t("authz.integration.policyRule" as any)}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {policies.policies?.map((p, i) => (
+                  <tr key={`p-${i}`} className="border-b border-border-subtle">
+                    <td className="px-4 py-2"><span className="inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold bg-accent/10 text-accent">p</span></td>
+                    <td className="px-4 py-2 font-mono text-[11px] text-text-secondary">{p.join(", ")}</td>
+                  </tr>
+                ))}
+                {policies.groupingPolicies?.map((g, i) => (
+                  <tr key={`g-${i}`} className="border-b border-border-subtle">
+                    <td className="px-4 py-2"><span className="inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold bg-purple-500/10 text-purple-400">g</span></td>
+                    <td className="px-4 py-2 font-mono text-[11px] text-text-secondary">{g.join(", ")}</td>
+                  </tr>
+                ))}
+                {(!policies.policies?.length && !policies.groupingPolicies?.length) && (
+                  <tr><td colSpan={2} className="px-4 py-6 text-center text-text-muted text-[13px]">{t("common.noData")}</td></tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Backend SDK */}
       <div>
         <h3 className="text-[13px] font-semibold text-text-primary mb-2">{t("authz.integration.backend")}</h3>
         <div className="relative">
@@ -840,7 +855,7 @@ function canDo(resource: string, action: string): boolean {
         </div>
       </div>
 
-      {/* Frontend */}
+      {/* Frontend SDK */}
       <div>
         <h3 className="text-[13px] font-semibold text-text-primary mb-2">{t("authz.integration.frontend")}</h3>
         <div className="relative">

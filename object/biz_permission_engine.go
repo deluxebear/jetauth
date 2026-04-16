@@ -10,44 +10,60 @@ package object
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 
-	"github.com/casbin/casbin/v3"
-	"github.com/casbin/casbin/v3/model"
-	xormadapter "github.com/deluxebear/casdoor/adapters/xormadapter"
-	"github.com/deluxebear/casdoor/conf"
+	"github.com/beego/beego/v2/core/logs"
 )
+
+var validTableNameRe = regexp.MustCompile(`^[a-zA-Z_][a-zA-Z0-9_]{0,63}$`)
+
+// ValidatePolicyTable checks that the table name is safe for use in SQL.
+func ValidatePolicyTable(tableName string) error {
+	if tableName == "" {
+		return nil // empty means use default
+	}
+	if !validTableNameRe.MatchString(tableName) {
+		return fmt.Errorf("invalid policy table name %q: must match [a-zA-Z_][a-zA-Z0-9_]{0,63}", tableName)
+	}
+	return nil
+}
+
+// SyncStats holds the result of a policy sync operation.
+type SyncStats struct {
+	PolicyCount int `json:"policyCount"`
+	RoleCount   int `json:"roleCount"`
+}
+
+// syncBizPolicies is a helper that wraps SyncAppPolicies with error logging.
+// Use this in CRUD operations where the sync is best-effort.
+func syncBizPolicies(owner, appName string) {
+	_, err := SyncAppPolicies(owner, appName)
+	if err != nil {
+		logs.Warning("SyncAppPolicies failed for %s/%s: %v", owner, appName, err)
+	}
+}
 
 // SyncAppPolicies rebuilds all Casbin policies for a business app from its
 // biz_role and biz_permission tables, then writes them to the app's dedicated
 // policy table. This is called whenever roles or permissions change.
-func SyncAppPolicies(owner, appName string) error {
-	config, err := getBizAppConfig(owner, appName)
+func SyncAppPolicies(owner, appName string) (*SyncStats, error) {
+	config, err := getBizAppConfigOrError(owner, appName)
 	if err != nil {
-		return err
-	}
-	if config == nil {
-		return fmt.Errorf("biz app config not found: %s/%s", owner, appName)
+		return nil, err
 	}
 	if config.ModelText == "" {
-		return fmt.Errorf("model text is empty for biz app: %s/%s", owner, appName)
+		return nil, fmt.Errorf("model text is empty for biz app: %s/%s", owner, appName)
+	}
+
+	if err := ValidatePolicyTable(config.PolicyTable); err != nil {
+		return nil, err
 	}
 
 	// 1. Create enforcer with native Casbin model (no GetBuiltInModel magic)
-	m, err := model.NewModelFromString(config.ModelText)
+	e, err := buildBizEnforcer(config)
 	if err != nil {
-		return fmt.Errorf("invalid model text: %w", err)
-	}
-
-	tableNamePrefix := conf.GetConfigString("tableNamePrefix")
-	a, err := xormadapter.NewAdapterByEngineWithTableName(ormer.Engine, config.PolicyTable, tableNamePrefix)
-	if err != nil {
-		return fmt.Errorf("failed to create adapter: %w", err)
-	}
-
-	e, err := casbin.NewEnforcer(m, a)
-	if err != nil {
-		return fmt.Errorf("failed to create enforcer: %w", err)
+		return nil, err
 	}
 
 	// 2. Clear all existing policies
@@ -56,24 +72,26 @@ func SyncAppPolicies(owner, appName string) error {
 	// 3. Load roles and permissions
 	roles, err := GetBizRoles(owner, appName)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	permissions, err := GetBizPermissions(owner, appName)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	// 4. Determine if model has eft field in policy_definition (not policy_effect)
+	// 4. Determine if model has eft field using parsed model tokens
 	hasEft := false
-	for _, line := range strings.Split(config.ModelText, "\n") {
-		trimmed := strings.TrimSpace(line)
-		if strings.HasPrefix(trimmed, "p") && strings.Contains(trimmed, "=") && !strings.HasPrefix(trimmed, "[") {
-			hasEft = strings.Contains(trimmed, "eft")
-			break
+	if pDef, ok := e.GetModel()["p"]["p"]; ok {
+		for _, token := range pDef.Tokens {
+			if token == "p_eft" {
+				hasEft = true
+				break
+			}
 		}
 	}
 
-	// 5. Generate p policies from permissions (Cartesian product)
+	// 5. Generate p policies from permissions (Cartesian product) — batch
+	var policies [][]string
 	for _, perm := range permissions {
 		if !perm.IsEnabled || perm.State != "Approved" {
 			continue
@@ -91,41 +109,65 @@ func SyncAppPolicies(owner, appName string) error {
 						if perm.Effect == "Deny" {
 							eft = "deny"
 						}
-						_, _ = e.AddPolicy(sub, res, act, eft)
+						policies = append(policies, []string{sub, res, act, eft})
 					} else {
-						_, _ = e.AddPolicy(sub, res, act)
+						policies = append(policies, []string{sub, res, act})
 					}
 				}
 			}
 		}
 	}
+	if len(policies) > 0 {
+		if _, err := e.AddPolicies(policies); err != nil {
+			return nil, fmt.Errorf("failed to add policies: %w", err)
+		}
+	}
 
-	// 6. Generate g policies from roles (role inheritance)
+	// 6. Generate g policies from roles (role inheritance) — batch
+	var groupingPolicies [][]string
 	hasRoleDef := strings.Contains(config.ModelText, "[role_definition]")
 	if hasRoleDef {
 		for _, role := range roles {
 			if !role.IsEnabled {
 				continue
 			}
-			// User → Role mapping
 			for _, user := range role.Users {
-				_, _ = e.AddGroupingPolicy(user, role.Name)
+				groupingPolicies = append(groupingPolicies, []string{user, role.Name})
 			}
-			// Sub-role inheritance
 			for _, subRole := range role.Roles {
-				_, _ = e.AddGroupingPolicy(subRole, role.Name)
+				groupingPolicies = append(groupingPolicies, []string{subRole, role.Name})
 			}
 		}
+		if len(groupingPolicies) > 0 {
+			if _, err := e.AddGroupingPolicies(groupingPolicies); err != nil {
+				return nil, fmt.Errorf("failed to add grouping policies: %w", err)
+			}
+		}
+	}
+	if groupingPolicies == nil {
+		groupingPolicies = [][]string{}
 	}
 
 	// 7. Persist to policy table
 	err = e.SavePolicy()
 	if err != nil {
-		return fmt.Errorf("failed to save policies: %w", err)
+		return nil, fmt.Errorf("failed to save policies: %w", err)
 	}
 
-	// 8. Clear cached enforcer so next request picks up new policies
-	ClearBizEnforcerCache(owner, appName)
+	// 8. Store the fully-loaded enforcer in cache (reuse instead of clearing)
+	StoreBizEnforcerCache(owner, appName, e)
 
-	return nil
+	// 9. Write to Redis cache (if enabled) — reuse slices directly, no re-extraction
+	bizPolicyCacheSet(owner, appName, &BizPolicyCacheData{
+		ModelText:        config.ModelText,
+		Policies:         policies,
+		GroupingPolicies: groupingPolicies,
+		PolicyTable:      config.PolicyTable,
+		UpdatedTime:      config.UpdatedTime,
+	})
+
+	return &SyncStats{
+		PolicyCount: len(policies),
+		RoleCount:   len(roles),
+	}, nil
 }

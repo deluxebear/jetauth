@@ -249,6 +249,7 @@ func InitAPI() {
 	web.Router("/api/biz-enforce", &controllers.ApiController{}, "POST:BizEnforce")
 	web.Router("/api/biz-batch-enforce", &controllers.ApiController{}, "POST:BizBatchEnforce")
 	web.Router("/api/biz-get-policies", &controllers.ApiController{}, "GET:BizGetPolicies")
+	web.Router("/api/biz-get-user-roles", &controllers.ApiController{}, "GET:BizGetUserRoles")
 	web.Router("/api/biz-get-user-permissions", &controllers.ApiController{}, "GET:BizGetUserPermissions")
 	web.Router("/api/biz-sync-policies", &controllers.ApiController{}, "POST:BizSyncPolicies")
 

@@ -9,8 +9,7 @@
 package object
 
 import (
-	"fmt"
-
+	"github.com/deluxebear/casdoor/util"
 	"github.com/xorm-io/core"
 )
 
@@ -29,7 +28,7 @@ type BizRole struct {
 }
 
 func (r *BizRole) GetId() string {
-	return fmt.Sprintf("%s/%s/%s", r.Owner, r.AppName, r.Name)
+	return util.GetSessionId(r.Owner, r.Name, r.AppName)
 }
 
 func GetBizRoles(owner, appName string) ([]*BizRole, error) {
@@ -42,7 +41,7 @@ func GetBizRoles(owner, appName string) ([]*BizRole, error) {
 }
 
 func getBizRole(owner, appName, name string) (*BizRole, error) {
-	if owner == "" || appName == "" || name == "" {
+	if util.IsStringsEmpty(owner, appName, name) {
 		return nil, nil
 	}
 	role := BizRole{Owner: owner, AppName: appName, Name: name}
@@ -67,24 +66,20 @@ func AddBizRole(role *BizRole) (bool, error) {
 	}
 
 	if affected != 0 {
-		_ = SyncAppPolicies(role.Owner, role.AppName)
+		syncBizPolicies(role.Owner, role.AppName)
 	}
 
 	return affected != 0, nil
 }
 
 func UpdateBizRole(owner, appName, name string, role *BizRole) (bool, error) {
-	if r, _ := getBizRole(owner, appName, name); r == nil {
-		return false, nil
-	}
-
 	affected, err := ormer.Engine.ID(core.PK{owner, appName, name}).AllCols().Update(role)
 	if err != nil {
 		return false, err
 	}
 
 	if affected != 0 {
-		_ = SyncAppPolicies(role.Owner, role.AppName)
+		syncBizPolicies(role.Owner, role.AppName)
 	}
 
 	return affected != 0, nil
@@ -97,7 +92,7 @@ func DeleteBizRole(role *BizRole) (bool, error) {
 	}
 
 	if affected != 0 {
-		_ = SyncAppPolicies(role.Owner, role.AppName)
+		syncBizPolicies(role.Owner, role.AppName)
 	}
 
 	return affected != 0, nil

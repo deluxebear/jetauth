@@ -9,8 +9,6 @@
 package object
 
 import (
-	"fmt"
-
 	"github.com/deluxebear/casdoor/util"
 	"github.com/xorm-io/core"
 )
@@ -28,7 +26,7 @@ type BizAppConfig struct {
 }
 
 func (c *BizAppConfig) GetId() string {
-	return fmt.Sprintf("%s/%s", c.Owner, c.AppName)
+	return util.GetId(c.Owner, c.AppName)
 }
 
 func GetBizAppConfigCount(owner string) (int64, error) {
@@ -53,7 +51,7 @@ func GetBizAppConfigs(owner string) ([]*BizAppConfig, error) {
 }
 
 func getBizAppConfig(owner, appName string) (*BizAppConfig, error) {
-	if owner == "" || appName == "" {
+	if util.IsStringsEmpty(owner, appName) {
 		return nil, nil
 	}
 	config := BizAppConfig{Owner: owner, AppName: appName}
@@ -76,6 +74,10 @@ func GetBizAppConfig(id string) (*BizAppConfig, error) {
 }
 
 func AddBizAppConfig(config *BizAppConfig) (bool, error) {
+	if err := ValidatePolicyTable(config.PolicyTable); err != nil {
+		return false, err
+	}
+
 	affected, err := ormer.Engine.Insert(config)
 	if err != nil {
 		return false, err
@@ -88,8 +90,9 @@ func UpdateBizAppConfig(id string, config *BizAppConfig) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	if c, _ := getBizAppConfig(owner, name); c == nil {
-		return false, nil
+
+	if err := ValidatePolicyTable(config.PolicyTable); err != nil {
+		return false, err
 	}
 
 	affected, err := ormer.Engine.ID(core.PK{owner, name}).AllCols().Update(config)
@@ -98,8 +101,7 @@ func UpdateBizAppConfig(id string, config *BizAppConfig) (bool, error) {
 	}
 
 	if affected != 0 {
-		// Model or config changed — resync policies
-		_ = SyncAppPolicies(config.Owner, config.AppName)
+		syncBizPolicies(config.Owner, config.AppName)
 	}
 
 	return affected != 0, nil
@@ -112,7 +114,6 @@ func DeleteBizAppConfig(config *BizAppConfig) (bool, error) {
 	}
 
 	if affected != 0 {
-		// Clean up enforcer cache
 		ClearBizEnforcerCache(config.Owner, config.AppName)
 	}
 

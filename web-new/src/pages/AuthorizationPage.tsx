@@ -1,25 +1,21 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, Settings, RefreshCw, X, Loader2 } from "lucide-react";
+import { Plus, RefreshCw, X, Loader2, ChevronRight, ChevronLeft } from "lucide-react";
 import { useTranslation } from "../i18n";
 import { useModal } from "../components/Modal";
 import { useOrganization } from "../OrganizationContext";
+import * as BizBackend from "../backend/BizBackend";
 import * as ApplicationBackend from "../backend/ApplicationBackend";
-import * as PermissionBackend from "../backend/PermissionBackend";
-import * as RoleBackend from "../backend/RoleBackend";
-import * as AdapterBackend from "../backend/AdapterBackend";
-import * as EnforcerBackend from "../backend/EnforcerBackend";
+import type { BizAppConfig } from "../backend/BizBackend";
+import { DEFAULT_RBAC_MODEL } from "../backend/BizBackend";
 import type { Application } from "../backend/ApplicationBackend";
-import type { Permission } from "../backend/PermissionBackend";
-import type { Role } from "../backend/RoleBackend";
 
-interface AppAuthStats {
-  app: Application;
-  roles: Role[];
-  permissions: Permission[];
+interface BizAppCardData {
+  config: BizAppConfig;
+  roleCount: number;
+  permissionCount: number;
   userCount: number;
-  resourceCount: number;
 }
 
 // Color palette for app icons
@@ -38,8 +34,8 @@ function getGradient(index: number) {
   return ICON_GRADIENTS[index % ICON_GRADIENTS.length];
 }
 
-function getInitial(app: Application) {
-  return (app.displayName || app.name).charAt(0).toUpperCase();
+function getInitial(config: BizAppConfig) {
+  return (config.displayName || config.appName).charAt(0).toUpperCase();
 }
 
 export default function AuthorizationPage() {
@@ -48,7 +44,7 @@ export default function AuthorizationPage() {
   const modal = useModal();
   const { getRequestOwner, selectedOrg, isAll } = useOrganization();
   const [loading, setLoading] = useState(true);
-  const [appStats, setAppStats] = useState<AppAuthStats[]>([]);
+  const [cardData, setCardData] = useState<BizAppCardData[]>([]);
   const [refreshKey, setRefreshKey] = useState(0);
   const [showWizard, setShowWizard] = useState(false);
 
@@ -56,37 +52,34 @@ export default function AuthorizationPage() {
     setLoading(true);
     const owner = getRequestOwner();
 
-    const appsPromise = isAll
-      ? ApplicationBackend.getApplications({ owner })
-      : ApplicationBackend.getApplicationsByOrganization({ owner: "admin", organization: selectedOrg });
+    BizBackend.getBizAppConfigs(owner).then(async (configsRes) => {
+      const configs = configsRes.status === "ok" && configsRes.data ? configsRes.data : [];
 
-    Promise.all([
-      appsPromise,
-      RoleBackend.getRoles({ owner }),
-      PermissionBackend.getPermissions({ owner }),
-    ]).then(([appsRes, rolesRes, permsRes]) => {
-      const apps = appsRes.status === "ok" && appsRes.data ? appsRes.data : [];
-      const allRoles = rolesRes.status === "ok" && rolesRes.data ? rolesRes.data : [];
-      const allPerms = permsRes.status === "ok" && permsRes.data ? permsRes.data : [];
+      // For each config, fetch roles and permissions to get counts
+      const data: BizAppCardData[] = await Promise.all(
+        configs.map(async (config) => {
+          const [rolesRes, permsRes] = await Promise.all([
+            BizBackend.getBizRoles(config.owner, config.appName).catch(() => ({ status: "ok" as const, data: [] as BizBackend.BizRole[] })),
+            BizBackend.getBizPermissions(config.owner, config.appName).catch(() => ({ status: "ok" as const, data: [] as BizBackend.BizPermission[] })),
+          ]);
+          const roles = rolesRes.status === "ok" && rolesRes.data ? rolesRes.data : [];
+          const perms = permsRes.status === "ok" && permsRes.data ? permsRes.data : [];
 
-      const stats: AppAuthStats[] = apps.map((app) => {
-        const appPerms = allPerms.filter((p) =>
-          p.resources?.some((r) => r === app.name || r === "*")
-        );
-        const roleIds = new Set<string>();
-        appPerms.forEach((p) => p.roles?.forEach((r) => roleIds.add(r)));
-        const appRoles = allRoles.filter(
-          (r) => r.owner === (app.organization || app.owner) || roleIds.has(`${r.owner}/${r.name}`)
-        );
-        const userSet = new Set<string>();
-        appRoles.forEach((r) => r.users?.forEach((u) => userSet.add(u)));
-        appPerms.forEach((p) => p.users?.forEach((u) => userSet.add(u)));
-        const resSet = new Set<string>();
-        appPerms.forEach((p) => p.resources?.forEach((r) => { if (r !== "*") resSet.add(r); }));
-        return { app, roles: appRoles, permissions: appPerms, userCount: userSet.size, resourceCount: resSet.size };
-      });
+          // Count unique users across roles
+          const userSet = new Set<string>();
+          roles.forEach((r) => r.users?.forEach((u) => userSet.add(u)));
+          perms.forEach((p) => p.users?.forEach((u) => userSet.add(u)));
 
-      setAppStats(stats);
+          return {
+            config,
+            roleCount: roles.length,
+            permissionCount: perms.length,
+            userCount: userSet.size,
+          };
+        })
+      );
+
+      setCardData(data);
     }).finally(() => setLoading(false));
   }, [selectedOrg, isAll, refreshKey]);
 
@@ -116,20 +109,13 @@ export default function AuthorizationPage() {
           >
             <RefreshCw size={15} />
           </motion.button>
-          <Link
-            to="/models"
-            className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-[12px] font-medium text-text-secondary hover:bg-surface-2 transition-colors"
-          >
-            <Settings size={14} />
-            {t("authz.globalConfig" as any)}
-          </Link>
         </div>
       </div>
 
       {/* App Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-        {appStats.map((stat, i) => (
-          <AppCard key={`${stat.app.owner}/${stat.app.name}`} stat={stat} index={i} />
+        {cardData.map((data, i) => (
+          <AppCard key={`${data.config.owner}/${data.config.appName}`} data={data} index={i} />
         ))}
 
         {/* Create app card */}
@@ -151,48 +137,48 @@ export default function AuthorizationPage() {
         open={showWizard}
         onClose={() => setShowWizard(false)}
         onCreated={() => { setShowWizard(false); setRefreshKey((k) => k + 1); }}
+        existingAppNames={cardData.map((c) => c.config.appName)}
       />
     </div>
   );
 }
 
 // ═══════ APP CARD ═══════
-function AppCard({ stat, index }: { stat: AppAuthStats; index: number }) {
+function AppCard({ data, index }: { data: BizAppCardData; index: number }) {
   const { t } = useTranslation();
-  const hasConfig = stat.permissions.length > 0 || stat.roles.length > 0;
 
   return (
     <Link
-      to={`/authorization/${stat.app.organization || stat.app.owner}/${stat.app.name}`}
+      to={`/authorization/${data.config.owner}/${data.config.appName}`}
       className="group block rounded-xl border border-border bg-surface-1 p-5 hover:border-accent hover:shadow-lg hover:shadow-accent/5 transition-all hover:-translate-y-0.5"
     >
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-3">
           <div className={`w-10 h-10 rounded-lg bg-gradient-to-br ${getGradient(index)} flex items-center justify-center text-white font-bold text-base`}>
-            {getInitial(stat.app)}
+            {getInitial(data.config)}
           </div>
           <div>
             <h3 className="text-[14px] font-semibold text-text-primary group-hover:text-accent transition-colors">
-              {stat.app.displayName || stat.app.name}
+              {data.config.displayName || data.config.appName}
             </h3>
             <p className="text-[11px] text-text-muted font-mono">
-              {stat.app.organization || stat.app.owner} / {stat.app.name}
+              {data.config.owner} / {data.config.appName}
             </p>
           </div>
         </div>
         <div className="flex items-center gap-1.5">
-          <div className={`w-1.5 h-1.5 rounded-full ${hasConfig ? "bg-success shadow-[0_0_6px] shadow-success/50" : "bg-text-muted"}`} />
-          <span className={`text-[10px] font-semibold ${hasConfig ? "text-success" : "text-text-muted"}`}>
-            {hasConfig ? t("authz.configured" as any) : t("authz.notConfigured" as any)}
+          <div className={`w-1.5 h-1.5 rounded-full ${data.config.isEnabled ? "bg-success shadow-[0_0_6px] shadow-success/50" : "bg-text-muted"}`} />
+          <span className={`text-[10px] font-semibold ${data.config.isEnabled ? "text-success" : "text-text-muted"}`}>
+            {data.config.isEnabled ? t("authz.configured" as any) : t("authz.notConfigured" as any)}
           </span>
         </div>
       </div>
       <div className="grid grid-cols-4 gap-2 pt-3 border-t border-border-subtle">
         {[
-          { label: t("authz.metrics.roles" as any), value: stat.roles.length },
-          { label: t("authz.metrics.permissions" as any), value: stat.permissions.length },
-          { label: t("authz.metrics.users" as any), value: stat.userCount },
-          { label: t("authz.metrics.resources" as any), value: stat.resourceCount },
+          { label: t("authz.metrics.roles" as any), value: data.roleCount },
+          { label: t("authz.metrics.permissions" as any), value: data.permissionCount },
+          { label: t("authz.metrics.policies" as any) || "Policies", value: "-" },
+          { label: t("authz.metrics.users" as any), value: data.userCount },
         ].map((m) => (
           <div key={m.label} className="text-center">
             <div className="text-[17px] font-bold text-text-primary font-mono">{m.value}</div>
@@ -205,161 +191,111 @@ function AppCard({ stat, index }: { stat: AppAuthStats; index: number }) {
 }
 
 // ═══════ QUICK CREATE WIZARD ═══════
-function QuickCreateWizard({ open, onClose, onCreated }: {
-  open: boolean; onClose: () => void; onCreated: () => void;
+function QuickCreateWizard({ open, onClose, onCreated, existingAppNames }: {
+  open: boolean; onClose: () => void; onCreated: () => void; existingAppNames: string[];
 }) {
   const { t } = useTranslation();
   const modal = useModal();
   const navigate = useNavigate();
+  const { selectedOrg, isAll } = useOrganization();
   const { getNewEntityOwner } = useOrganization();
 
-  const [appName, setAppName] = useState("");
-  const [displayName, setDisplayName] = useState("");
-  const [creating, setCreating] = useState(false);
   const [step, setStep] = useState(0);
-  const [progress, setProgress] = useState<{ label: string; done: boolean; error?: string }[]>([]);
+  const [creating, setCreating] = useState(false);
+
+  // Step 0: Select application
+  const [apps, setApps] = useState<Application[]>([]);
+  const [loadingApps, setLoadingApps] = useState(false);
+  const [selectedApp, setSelectedApp] = useState<Application | null>(null);
+
+  // Step 1: Model text
+  const [modelText, setModelText] = useState(DEFAULT_RBAC_MODEL);
+
+  // Step 2: Policy table name
+  const [policyTable, setPolicyTable] = useState("");
 
   const orgName = getNewEntityOwner();
 
   useEffect(() => {
     if (!open) return;
-    setAppName("");
-    setDisplayName("");
     setStep(0);
-    setProgress([]);
-  }, [open]);
+    setSelectedApp(null);
+    setModelText(DEFAULT_RBAC_MODEL);
+    setPolicyTable("");
+    setCreating(false);
+
+    // Load applications — use org-specific endpoint when a specific org is selected
+    setLoadingApps(true);
+    const appsPromise = isAll
+      ? ApplicationBackend.getApplications({ owner: "admin" })
+      : ApplicationBackend.getApplicationsByOrganization({ owner: "admin", organization: selectedOrg });
+    appsPromise
+      .then((res) => {
+        const appList = res.status === "ok" && res.data ? res.data : [];
+        // Filter out apps that already have biz config
+        const configured = new Set(existingAppNames);
+        setApps(appList.filter((app) => !configured.has(app.name)));
+      })
+      .finally(() => setLoadingApps(false));
+  }, [open, orgName]);
+
+  // Auto-generate policy table name when app is selected
+  useEffect(() => {
+    if (selectedApp) {
+      setPolicyTable(`biz_${selectedApp.name.replace(/-/g, "_")}_policy`);
+    }
+  }, [selectedApp]);
 
   const handleCreate = async () => {
-    if (!appName.trim()) return;
+    if (!selectedApp) return;
     setCreating(true);
-    setStep(1);
-
-    const steps = [
-      { label: t("authz.wizard.creatingApp" as any), done: false },
-      { label: t("authz.wizard.creatingRole" as any), done: false },
-      { label: t("authz.wizard.creatingAdapter" as any), done: false },
-      { label: t("authz.wizard.creatingPermission" as any), done: false },
-      { label: t("authz.wizard.creatingEnforcer" as any), done: false },
-    ];
-    setProgress([...steps]);
-
-    const adapterId = `${orgName}/${appName}-adapter`;
-    const adapterName = `${appName}-adapter`;
 
     try {
-      // Pre-cleanup: delete any leftover entities from previous failed attempts (order matters: permission → role → adapter → enforcer → app)
-      const cleanupPerm = { owner: orgName, name: `${appName}-access` } as any;
-      const cleanupRole = { owner: orgName, name: `${appName}-admin` } as any;
-      const cleanupAdapter = { owner: orgName, name: `${appName}-adapter` } as any;
-      const cleanupEnforcer = { owner: orgName, name: `${appName}-enforcer` } as any;
-      const cleanupApp = { owner: "admin", name: appName.trim() } as any;
-      await Promise.all([
-        PermissionBackend.deletePermission(cleanupPerm).catch(() => {}),
-        EnforcerBackend.deleteEnforcer(cleanupEnforcer).catch(() => {}),
-      ]);
-      await RoleBackend.deleteRole(cleanupRole).catch(() => {});
-      await Promise.all([
-        AdapterBackend.deleteAdapter(cleanupAdapter).catch(() => {}),
-        ApplicationBackend.deleteApplication(cleanupApp).catch(() => {}),
-      ]);
+      const config: BizAppConfig = {
+        owner: orgName,
+        appName: selectedApp.name,
+        createdTime: new Date().toISOString(),
+        updatedTime: new Date().toISOString(),
+        displayName: selectedApp.displayName || selectedApp.name,
+        description: "",
+        modelText,
+        policyTable: policyTable || `biz_${selectedApp.name.replace(/-/g, "_")}_policy`,
+        isEnabled: true,
+      };
 
-      // Step 1: Create Application
-      const app = ApplicationBackend.newApplication(orgName);
-      app.name = appName.trim();
-      app.displayName = displayName.trim() || appName.trim();
-      const appRes = await ApplicationBackend.addApplication(app);
-      if (appRes.status !== "ok") {
-        steps[0].error = appRes.msg || t("common.addFailed" as any);
-        setProgress([...steps]);
+      const res = await BizBackend.addBizAppConfig(config);
+      if (res.status !== "ok") {
+        modal.toast(res.msg || t("common.addFailed" as any), "error");
         setCreating(false);
         return;
       }
-      steps[0].done = true;
-      setProgress([...steps]);
 
-      // Step 2: Create or update admin Role
-      const role = RoleBackend.newRole(orgName);
-      role.name = `${appName}-admin`;
-      role.displayName = `${displayName || appName} Admin`;
-      role.domains = [appName];
-      const roleRes = await RoleBackend.addRole(role);
-      if (roleRes.status !== "ok") {
-        steps[1].error = roleRes.msg || t("common.addFailed" as any);
-        setProgress([...steps]);
-        setCreating(false);
-        return;
-      }
-      steps[1].done = true;
-      setProgress([...steps]);
-
-      // Step 3: Create or update Adapter
-      const adapter = AdapterBackend.newAdapter(orgName);
-      adapter.name = adapterName;
-      adapter.table = `${appName.replace(/-/g, "_")}_policy`;
-      adapter.useSameDb = true;
-      const adapterRes = await AdapterBackend.addAdapter(adapter);
-      if (adapterRes.status !== "ok") {
-        steps[2].error = adapterRes.msg || t("common.addFailed" as any);
-        setProgress([...steps]);
-        setCreating(false);
-        return;
-      }
-      steps[2].done = true;
-      setProgress([...steps]);
-
-      // Step 4: Create or update default Permission
-      // Create permission with empty users/roles/resources/actions first
-      // so addPolicies generates zero policies (avoids model compatibility issues).
-      // Users can fill in details via the edit page afterward.
-      const perm = PermissionBackend.newPermission(orgName);
-      perm.name = `${appName}-access`;
-      perm.displayName = `${displayName || appName} Access`;
-      perm.resourceType = "Application";
-      perm.resources = [appName];
-      perm.users = [];
-      perm.roles = [`${orgName}/${appName}-admin`];
-      perm.actions = ["Read", "Write", "Admin"];
-      perm.effect = "Allow";
-      perm.model = "";
-      perm.state = "Approved";
-      const permRes = await PermissionBackend.addPermission(perm);
-      if (permRes.status !== "ok") {
-        console.error("[wizard] Permission creation failed:", permRes.msg);
-        steps[3].error = permRes.msg || t("common.addFailed" as any);
-        setProgress([...steps]);
-        setCreating(false);
-        return;
-      }
-      steps[3].done = true;
-      setProgress([...steps]);
-
-      // Step 5: Create or update Enforcer
-      const enforcer = EnforcerBackend.newEnforcer(orgName);
-      enforcer.name = `${appName}-enforcer`;
-      enforcer.displayName = `${displayName || appName} Enforcer`;
-      enforcer.model = "";
-      enforcer.adapter = adapterId;
-      const enforcerRes = await EnforcerBackend.addEnforcer(enforcer);
-      if (enforcerRes.status !== "ok") {
-        steps[4].error = enforcerRes.msg || t("common.addFailed" as any);
-        setProgress([...steps]);
-        setCreating(false);
-        return;
-      }
-      steps[4].done = true;
-      setProgress([...steps]);
-
-      // All done — short delay then navigate
-      setTimeout(() => {
-        modal.toast(t("authz.wizard.success" as any));
-        onCreated();
-        navigate(`/authorization/${orgName}/${appName}`);
-      }, 600);
+      modal.toast(t("authz.wizard.bizSuccess" as any));
+      onCreated();
+      navigate(`/authorization/${orgName}/${selectedApp.name}`);
     } catch (e: any) {
       modal.toast(e.message || t("common.saveFailed" as any), "error");
       setCreating(false);
     }
   };
+
+  const canProceed = () => {
+    if (step === 0) return !!selectedApp;
+    if (step === 1) return !!modelText.trim();
+    if (step === 2) return !!policyTable.trim();
+    return false;
+  };
+
+  const handleNext = () => {
+    if (step < 2) setStep(step + 1);
+    else handleCreate();
+  };
+
+  const stepLabels = [
+    t("authz.wizard.selectApp" as any),
+    t("authz.wizard.modelText" as any),
+    t("authz.wizard.policyTableName" as any),
+  ];
 
   return (
     <AnimatePresence>
@@ -376,13 +312,13 @@ function QuickCreateWizard({ open, onClose, onCreated }: {
             initial={{ opacity: 0, scale: 0.95, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
-            className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[520px] max-w-[92vw] bg-surface-1 border border-border rounded-2xl shadow-2xl z-[51] overflow-hidden"
+            className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[560px] max-w-[92vw] bg-surface-1 border border-border rounded-2xl shadow-2xl z-[51] overflow-hidden"
           >
             {/* Header */}
             <div className="flex items-center justify-between px-6 py-4 border-b border-border">
               <div>
-                <h2 className="text-[16px] font-bold text-text-primary">{t("authz.wizard.title" as any)}</h2>
-                <p className="text-[12px] text-text-muted mt-0.5">{t("authz.wizard.subtitle" as any)}</p>
+                <h2 className="text-[16px] font-bold text-text-primary">{t("authz.wizard.bizTitle" as any)}</h2>
+                <p className="text-[12px] text-text-muted mt-0.5">{t("authz.wizard.bizSubtitle" as any)}</p>
               </div>
               {!creating && (
                 <button onClick={onClose} className="rounded-md p-1.5 text-text-muted hover:text-text-primary hover:bg-surface-2 transition-colors">
@@ -391,113 +327,181 @@ function QuickCreateWizard({ open, onClose, onCreated }: {
               )}
             </div>
 
-            {step === 0 ? (
-              /* ═══ Form Step ═══ */
-              <div className="px-6 py-5 space-y-4">
-                {/* App Name */}
-                <div>
-                  <label className="block text-[12px] font-semibold text-text-primary mb-1.5">
-                    {t("authz.wizard.appName" as any)} <span className="text-danger">*</span>
-                  </label>
-                  <input
-                    value={appName}
-                    onChange={(e) => setAppName(e.target.value.replace(/[^a-zA-Z0-9_-]/g, ""))}
-                    placeholder="erp-system"
-                    className="w-full rounded-lg border border-border bg-surface-2 px-3 py-2.5 text-[13px] font-mono text-text-primary outline-none focus:border-accent placeholder:text-text-muted"
-                    autoFocus
-                  />
-                  <p className="text-[11px] text-text-muted mt-1">{t("authz.wizard.appNameHint" as any)}</p>
+            {/* Step indicator */}
+            <div className="px-6 pt-4 pb-2 flex items-center gap-2">
+              {stepLabels.map((label, i) => (
+                <div key={i} className="flex items-center gap-2">
+                  <div className={`flex items-center gap-1.5 ${i <= step ? "text-accent" : "text-text-muted"}`}>
+                    <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[11px] font-bold ${
+                      i < step ? "bg-accent text-white" : i === step ? "border-2 border-accent text-accent" : "border border-border text-text-muted"
+                    }`}>
+                      {i + 1}
+                    </div>
+                    <span className="text-[11px] font-medium">{label}</span>
+                  </div>
+                  {i < stepLabels.length - 1 && (
+                    <div className={`w-6 h-px ${i < step ? "bg-accent" : "bg-border"}`} />
+                  )}
                 </div>
+              ))}
+            </div>
 
-                {/* Display Name */}
-                <div>
+            {/* Step content */}
+            <div className="px-6 py-5 min-h-[240px]">
+              {step === 0 && (
+                /* ═══ Step 0: Select Application ═══ */
+                <div className="space-y-3">
                   <label className="block text-[12px] font-semibold text-text-primary mb-1.5">
-                    {t("field.displayName" as any)}
+                    {t("authz.wizard.selectApp" as any)} <span className="text-danger">*</span>
                   </label>
-                  <input
-                    value={displayName}
-                    onChange={(e) => setDisplayName(e.target.value)}
-                    placeholder={t("authz.wizard.displayNamePlaceholder" as any)}
-                    className="w-full rounded-lg border border-border bg-surface-2 px-3 py-2.5 text-[13px] text-text-primary outline-none focus:border-accent placeholder:text-text-muted"
-                  />
+                  {loadingApps ? (
+                    <div className="flex items-center justify-center py-8">
+                      <Loader2 size={20} className="text-accent animate-spin" />
+                    </div>
+                  ) : apps.length === 0 ? (
+                    <div className="text-center py-8 text-[13px] text-text-muted">
+                      {t("common.noData" as any) || "No applications found"}
+                    </div>
+                  ) : (
+                    <div className="space-y-1.5 max-h-[280px] overflow-y-auto">
+                      {apps.map((app) => (
+                        <button
+                          key={`${app.owner}/${app.name}`}
+                          onClick={() => setSelectedApp(app)}
+                          className={`w-full flex items-center gap-3 rounded-lg border px-3 py-2.5 text-left transition-all ${
+                            selectedApp?.name === app.name
+                              ? "border-accent bg-accent/5"
+                              : "border-border hover:border-accent/50 hover:bg-surface-2"
+                          }`}
+                        >
+                          <div className={`w-8 h-8 rounded-md bg-gradient-to-br ${getGradient(apps.indexOf(app))} flex items-center justify-center text-white font-bold text-sm`}>
+                            {(app.displayName || app.name).charAt(0).toUpperCase()}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="text-[13px] font-medium text-text-primary truncate">
+                              {app.displayName || app.name}
+                            </div>
+                            <div className="text-[11px] text-text-muted font-mono truncate">
+                              {app.organization || app.owner} / {app.name}
+                            </div>
+                          </div>
+                          {selectedApp?.name === app.name && (
+                            <div className="w-4 h-4 rounded-full bg-accent flex items-center justify-center shrink-0">
+                              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className="text-white"><path d="M20 6L9 17l-5-5"/></svg>
+                            </div>
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
+              )}
 
-                {/* What will be created */}
-                <div className="rounded-lg bg-surface-2 border border-border-subtle p-3">
-                  <div className="text-[11px] font-semibold text-text-muted uppercase tracking-wider mb-2">{t("authz.wizard.willCreate" as any)}</div>
-                  <div className="space-y-1.5 text-[12px] text-text-secondary">
-                    <div className="flex items-center gap-2">
-                      <div className="w-1.5 h-1.5 rounded-full bg-accent" />
-                      {t("authz.wizard.willCreateApp" as any)}: <span className="font-mono font-medium text-text-primary">{appName || "..."}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <div className="w-1.5 h-1.5 rounded-full bg-cyan-400" />
-                      {t("authz.wizard.willCreateRole" as any)}: <span className="font-mono font-medium text-text-primary">{appName ? `${appName}-admin` : "...-admin"}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <div className="w-1.5 h-1.5 rounded-full bg-green-400" />
-                      {t("authz.wizard.willCreateAdapter" as any)}: <span className="font-mono font-medium text-text-primary">{appName ? `${appName}-adapter` : "...-adapter"}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <div className="w-1.5 h-1.5 rounded-full bg-amber-400" />
-                      {t("authz.wizard.willCreatePerm" as any)}: <span className="font-mono font-medium text-text-primary">{appName ? `${appName}-access` : "...-access"}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <div className="w-1.5 h-1.5 rounded-full bg-rose-400" />
-                      {t("authz.wizard.willCreateEnforcer" as any)}: <span className="font-mono font-medium text-text-primary">{appName ? `${appName}-enforcer` : "...-enforcer"}</span>
+              {step === 1 && (
+                /* ═══ Step 1: Model Text ═══ */
+                <div className="space-y-3">
+                  <label className="block text-[12px] font-semibold text-text-primary mb-1.5">
+                    {t("authz.wizard.modelText" as any)}
+                  </label>
+                  <textarea
+                    value={modelText}
+                    onChange={(e) => setModelText(e.target.value)}
+                    rows={12}
+                    className="w-full rounded-lg border border-border bg-surface-2 px-3 py-2.5 text-[12px] font-mono text-text-primary outline-none focus:border-accent placeholder:text-text-muted resize-none leading-relaxed"
+                    spellCheck={false}
+                  />
+                  <p className="text-[11px] text-text-muted">
+                    {t("authz.wizard.modelHint" as any)}
+                  </p>
+                </div>
+              )}
+
+              {step === 2 && (
+                /* ═══ Step 2: Policy Table Name ═══ */
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-[12px] font-semibold text-text-primary mb-1.5">
+                      {t("authz.wizard.policyTableName" as any)}
+                    </label>
+                    <input
+                      value={policyTable}
+                      onChange={(e) => setPolicyTable(e.target.value.replace(/[^a-zA-Z0-9_]/g, ""))}
+                      className="w-full rounded-lg border border-border bg-surface-2 px-3 py-2.5 text-[13px] font-mono text-text-primary outline-none focus:border-accent placeholder:text-text-muted"
+                    />
+                    <p className="text-[11px] text-text-muted mt-1">
+                      {t("authz.wizard.policyTableHint" as any)}
+                    </p>
+                  </div>
+
+                  {/* Summary */}
+                  <div className="rounded-lg bg-surface-2 border border-border-subtle p-3">
+                    <div className="text-[11px] font-semibold text-text-muted uppercase tracking-wider mb-2">{t("authz.wizard.willCreate" as any)}</div>
+                    <div className="space-y-1.5 text-[12px] text-text-secondary">
+                      <div className="flex items-center gap-2">
+                        <div className="w-1.5 h-1.5 rounded-full bg-accent" />
+                        <span>{t("general.application" as any) || "Application"}:</span>
+                        <span className="font-mono font-medium text-text-primary">{selectedApp?.displayName || selectedApp?.name || "..."}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="w-1.5 h-1.5 rounded-full bg-cyan-400" />
+                        <span>{t("authz.wizard.modelText" as any) || "Model"}:</span>
+                        <span className="font-mono font-medium text-text-primary text-[11px]">RBAC ({modelText.split("\n").length} lines)</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="w-1.5 h-1.5 rounded-full bg-green-400" />
+                        <span>{t("authz.wizard.policyTableName" as any) || "Policy Table"}:</span>
+                        <span className="font-mono font-medium text-text-primary">{policyTable || "..."}</span>
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            ) : (
-              /* ═══ Progress Step ═══ */
-              <div className="px-6 py-5 space-y-3">
-                {progress.map((p, i) => (
-                  <div key={i} className="flex items-center gap-3">
-                    {p.error ? (
-                      <div className="w-5 h-5 rounded-full bg-danger/15 flex items-center justify-center shrink-0">
-                        <X size={12} className="text-danger" />
-                      </div>
-                    ) : p.done ? (
-                      <div className="w-5 h-5 rounded-full bg-success/15 flex items-center justify-center shrink-0">
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className="text-success"><path d="M20 6L9 17l-5-5"/></svg>
-                      </div>
-                    ) : (
-                      <div className="w-5 h-5 flex items-center justify-center shrink-0">
-                        <Loader2 size={14} className="text-accent animate-spin" />
-                      </div>
-                    )}
-                    <span className={`text-[13px] ${p.done ? "text-text-primary" : p.error ? "text-danger" : "text-text-muted"}`}>
-                      {p.label}
-                    </span>
-                    {p.error && <span className="text-[11px] text-danger ml-auto truncate max-w-[200px]">{p.error}</span>}
-                  </div>
-                ))}
-              </div>
-            )}
+              )}
+            </div>
 
             {/* Footer */}
-            <div className="flex items-center justify-end gap-2 px-6 py-4 border-t border-border bg-surface-0/50">
-              {step === 0 ? (
-                <>
-                  <button onClick={onClose} className="rounded-lg border border-border px-4 py-2 text-[12px] font-medium text-text-secondary hover:bg-surface-2 transition-colors">
-                    {t("common.cancel")}
-                  </button>
+            <div className="flex items-center justify-between px-6 py-4 border-t border-border bg-surface-0/50">
+              <div>
+                {step > 0 && !creating && (
                   <button
-                    onClick={handleCreate}
-                    disabled={!appName.trim()}
-                    className="rounded-lg bg-accent px-5 py-2 text-[12px] font-semibold text-white hover:bg-accent-hover disabled:opacity-40 transition-colors"
+                    onClick={() => setStep(step - 1)}
+                    className="flex items-center gap-1 rounded-lg border border-border px-3 py-2 text-[12px] font-medium text-text-secondary hover:bg-surface-2 transition-colors"
                   >
-                    {t("authz.wizard.create" as any)}
+                    <ChevronLeft size={14} />
+                    {t("common.back" as any)}
                   </button>
-                </>
-              ) : (
-                !creating && progress.some((p) => p.error) && (
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                {!creating && (
                   <button onClick={onClose} className="rounded-lg border border-border px-4 py-2 text-[12px] font-medium text-text-secondary hover:bg-surface-2 transition-colors">
                     {t("common.cancel")}
                   </button>
-                )
-              )}
+                )}
+                {!creating && (
+                  <button
+                    onClick={handleNext}
+                    disabled={!canProceed()}
+                    className="flex items-center gap-1 rounded-lg bg-accent px-5 py-2 text-[12px] font-semibold text-white hover:bg-accent-hover disabled:opacity-40 transition-colors"
+                  >
+                    {step < 2 ? (
+                      <>
+                        {t("common.next" as any)}
+                        <ChevronRight size={14} />
+                      </>
+                    ) : creating ? (
+                      <Loader2 size={14} className="animate-spin" />
+                    ) : (
+                      t("authz.wizard.bizCreate" as any)
+                    )}
+                  </button>
+                )}
+                {creating && (
+                  <div className="flex items-center gap-2 text-[12px] text-text-muted">
+                    <Loader2 size={14} className="animate-spin text-accent" />
+                    {t("common.saving" as any)}
+                  </div>
+                )}
+              </div>
             </div>
           </motion.div>
         </>

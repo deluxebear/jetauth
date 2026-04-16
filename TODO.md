@@ -333,3 +333,353 @@ Permission 系统依赖 xorm-adapter 的 V5 列（第 6 位）存储 `permission
 - 模型改造逻辑：`object/permission_enforcer.go:460-513`
 - 策略生成（固定 6 字段）：`object/permission_enforcer.go:124-146`
 - 策略过滤（V5 列）：`object/permission_enforcer.go:49-58`
+
+---
+
+## 业务权限模块 (Biz Permission) 改进计划
+
+### 一、Redis 缓存 — 多实例部署支持
+
+**当前状态：`sync.Map` 内存缓存，单实例有效，多实例部署时节点间缓存不一致**
+
+#### 问题描述
+
+`bizEnforcerCache sync.Map` 在每个进程内独立维护。当 Node A 调用 `SyncAppPolicies` 更新策略后，Node B 的缓存仍是旧的，直到该缓存条目被手动清除或进程重启。
+
+#### 改进方案（按部署阶段递进）
+
+**阶段 1：Casbin Redis Watcher（推荐首选）**
+
+保持内存 Enforcer（0.01ms enforce），Redis Pub/Sub 仅负责跨节点通知刷新：
+
+```go
+import rediswatcher "github.com/casbin/redis-watcher/v2"
+
+var bizWatcher persist.Watcher
+
+func InitBizWatcher(redisAddr string) error {
+    w, _ := rediswatcher.NewWatcher(redisAddr, rediswatcher.WatcherOptions{
+        Channel: "/jetauth/biz-policy-update",
+    })
+    w.SetUpdateCallback(func(msg string) {
+        // msg 携带 owner/appName，清除对应缓存
+        owner, appName := parseMsg(msg)
+        ClearBizEnforcerCache(owner, appName)
+    })
+    bizWatcher = w
+    return nil
+}
+
+// SyncAppPolicies 末尾新增：
+if bizWatcher != nil {
+    bizWatcher.Update()  // 广播到所有节点
+}
+```
+
+依赖：`github.com/casbin/redis-watcher/v2`
+
+优点：改动极小（SyncAppPolicies 末尾加一行），enforce 性能不变（0.01ms）
+
+**阶段 2：Redis 策略文本缓存（策略量 >1 万条时）**
+
+在内存缓存 miss 时，先查 Redis 缓存的策略文本，避免每次都读 DB 重建：
+
+```
+GetBizEnforcer 查找顺序：
+  1. 本地 sync.Map → 命中 → 0.01ms
+  2. Redis GET "biz:policies:{key}" → 命中 → 反序列化策略 → 建 Enforcer → ~1ms
+  3. DB 回源 → 建 Enforcer → ~5ms → 回写 Redis + 本地缓存
+```
+
+适用场景：单个应用策略量超过 1 万条，DB 重建耗时 >10ms 时才值得加这一层。
+
+**阶段 3：Enforcer TTL + LRU 淘汰**
+
+当前 `sync.Map` 无限增长。应用被删除后缓存条目成为僵尸（虽然 `DeleteBizAppConfig` 会清理，但非正常关闭可能遗留）。
+
+改进：替换 `sync.Map` 为带 TTL 的 LRU 缓存（如 `hashicorp/golang-lru/v2` 或 `patrickmn/go-cache`），设置 10-30 分钟 TTL，自动淘汰不活跃应用的 Enforcer。
+
+**阶段 2 补充：Redis 策略数据缓存**
+
+独立开关控制，Redis 连接复用 `redisEndpoint`：
+
+```conf
+# conf/app.conf
+redisEndpoint = 192.168.1.100:6379    # Redis 连接（已有，用于 Session）
+bizPolicyCacheEnabled = false          # 策略缓存开关（新增，默认关闭）
+```
+
+启用条件矩阵：
+
+| redisEndpoint | bizPolicyCacheEnabled | 行为 |
+|---|---|---|
+| 空 | 任意 | Redis 不可用，纯 DB + 内存 |
+| 有值 | false | Redis 仅 Session（现有行为不变） |
+| 有值 | true | Redis 同时用于 Session + 策略缓存 |
+
+读写流程：
+
+```go
+func GetBizEnforcer(owner, appName string) (*casbin.Enforcer, error) {
+    key := util.GetId(owner, appName)
+
+    // 1. 本地内存缓存
+    if cached, ok := bizEnforcerCache.Load(key); ok {
+        return cached.(*casbin.Enforcer), nil
+    }
+
+    // 2. Redis 策略缓存（仅 bizPolicyCacheEnabled=true 时）
+    if conf.GetConfigBool("bizPolicyCacheEnabled") {
+        if data, err := redis.Get("biz:policies:" + key); err == nil && data != "" {
+            e := buildEnforcerFromCachedPolicies(data)
+            bizEnforcerCache.Store(key, e)
+            return e, nil
+        }
+    }
+
+    // 3. DB 回源
+    e, err := buildFromDB(owner, appName)
+    if err != nil { return nil, err }
+    bizEnforcerCache.Store(key, e)
+
+    // 回写 Redis
+    if conf.GetConfigBool("bizPolicyCacheEnabled") {
+        redis.Set("biz:policies:" + key, serializePolicies(e), 30*time.Minute)
+    }
+    return e, nil
+}
+
+// SyncAppPolicies 末尾：写 DB 后同步更新 Redis
+if conf.GetConfigBool("bizPolicyCacheEnabled") {
+    redis.Set("biz:policies:" + key, serializePolicies(e), 30*time.Minute)
+}
+```
+
+Redis 中存储格式：JSON 序列化的 `{ modelText, policies [][]string, groupingPolicies [][]string, updatedTime }`，和 `biz-get-policies` 接口返回格式一致，SDK 拉策略时也可直接从 Redis 取。
+
+**大数据量优化（策略 > 1 万条时）：**
+
+单 key 体积估算：1 万条策略 ≈ 500 KB，10 万条 ≈ 5 MB。超过 5 MB 时 Redis 大 key 会影响性能。优化方案：
+
+1. **Snappy 压缩**（推荐首选）— 改动最小，压缩率 ~10:1：
+```go
+// 写入
+data, _ := json.Marshal(cacheData)
+compressed := snappy.Encode(nil, data)   // 5MB → ~500KB
+redis.Set(key, compressed, ttl)
+
+// 读取
+compressed, _ := redis.Get(key)
+data, _ := snappy.Decode(nil, compressed)
+json.Unmarshal(data, &cacheData)
+```
+
+2. **拆分 key**（策略 > 10 万条时）— 按 ptype 拆分：
+```
+jetauth:biz:policies:org/app:meta     → { modelText, policyTable, updatedTime }
+jetauth:biz:policies:org/app:p        → [[...], [...]]  // p 策略
+jetauth:biz:policies:org/app:g        → [[...], [...]]  // g 策略
+```
+
+3. **改用 Redis Hash**（需要部分读取时）：
+```
+HSET jetauth:biz:policies:org/app modelText "..." policies "[...]" grouping "[...]"
+HGET jetauth:biz:policies:org/app policies   // 只读策略，不读模型
+```
+
+依赖：`github.com/golang/snappy`（方案 1）。当前策略量级无需优化。
+
+#### 性能对比
+
+| 场景 | 当前 (sync.Map) | + Watcher | + Redis 缓存 |
+|------|----------------|-----------|-------------|
+| 单节点 enforce | 0.01ms | 0.01ms | 0.01ms |
+| 多节点策略同步 | 不一致 | <100ms 全局一致 | <100ms |
+| 缓存 miss 重建 | 5-20ms (DB) | 5-20ms (DB) | ~1ms (Redis) |
+| 节点重启预热 | 冷启动 | 冷启动 | 从 Redis 快速恢复 |
+
+#### 实施建议
+
+| 条件 | 做什么 |
+|------|-------|
+| 单实例部署 | 不需要改动，现有 sync.Map 够用 |
+| 多实例部署 | 加阶段 1（Redis Watcher），约 20 行代码 |
+| 策略量 >1 万条 | 加阶段 2（Redis 策略缓存） |
+| 应用数 >100 | 加阶段 3（LRU + TTL） |
+
+#### 相关代码位置
+
+- Enforcer 内存缓存：`object/biz_enforcer_cache.go:24-26`（bizEnforcerCache + singleflight）
+- 缓存存/取/清：`StoreBizEnforcerCache`、`GetBizEnforcer`、`ClearBizEnforcerCache`
+- 策略同步触发缓存刷新：`object/biz_permission_engine.go` — `SyncAppPolicies` 末尾
+- Redis 配置（已有，用于 Session）：`conf/app.conf:redisEndpoint`
+
+### 二、策略版本管理 + 增量同步 — SDK 集成优化
+
+**当前状态：SDK 每次拉取全量策略，无版本号，无法判断是否需要更新**
+
+#### 目标
+
+业务系统 SDK 本地缓存策略版本号，通过 Watch 长轮询感知变更，仅同步增量变更而非全量拉取。
+
+#### 设计方案
+
+**1. 版本号机制**
+
+`biz_app_config` 新增 `policy_version int64` 字段，每次策略变更自增：
+
+```go
+type BizAppConfig struct {
+    // ...现有字段
+    PolicyVersion int64 `xorm:"default 0" json:"policyVersion"`
+}
+```
+
+**2. 变更日志表 `biz_policy_changelog`**
+
+```sql
+CREATE TABLE biz_policy_changelog (
+    id          BIGINT AUTO_INCREMENT PRIMARY KEY,
+    owner       VARCHAR(100) NOT NULL,
+    app_name    VARCHAR(100) NOT NULL,
+    version     BIGINT NOT NULL,
+    action      VARCHAR(10) NOT NULL,    -- add / remove / full_rebuild
+    ptype       VARCHAR(10) NOT NULL,    -- p / g
+    rule        TEXT NOT NULL,           -- JSON: ["alice", "/orders/*", "GET"]
+    created_at  TIMESTAMP DEFAULT NOW(),
+    INDEX idx_app_version (owner, app_name, version)
+);
+```
+
+**3. 入口处直接记录变更（不做全量 diff）**
+
+在 CRUD 函数中直接记录变更内容，O(1) 复杂度，不受策略总量影响：
+
+```go
+func AddBizPermission(perm *BizPermission) (bool, error) {
+    // ... 插入 DB ...
+
+    // 直接记录本次变更产生的策略（不需要 diff）
+    rules := generateRulesFromPermission(perm)
+    appendChangelog(perm.Owner, perm.AppName, "add", "p", rules)
+
+    syncBizPolicies(perm.Owner, perm.AppName)
+    return affected != 0, nil
+}
+
+func DeleteBizPermission(perm *BizPermission) (bool, error) {
+    // 删除前读出策略
+    rules := generateRulesFromPermission(perm)
+
+    // ... 删除 DB ...
+
+    appendChangelog(perm.Owner, perm.AppName, "remove", "p", rules)
+
+    syncBizPolicies(perm.Owner, perm.AppName)
+    return affected != 0, nil
+}
+
+// 手动 SyncPolicies → 标记全量重建，SDK 收到后拉全量
+func SyncAppPolicies(owner, appName string) (*SyncStats, error) {
+    // ... 现有逻辑 ...
+    appendChangelog(owner, appName, "full_rebuild", "", nil)
+    return stats, nil
+}
+```
+
+**4. Watch API（HTTP Long Polling）**
+
+```
+GET /api/biz-watch-policies?appId=org/erp&version=5
+
+场景 A — 版本已变化，有增量：
+← {
+    "type": "incremental",
+    "fromVersion": 5,
+    "toVersion": 8,
+    "changes": [
+      { "action": "add",    "ptype": "p", "rule": ["bob", "/reports/*", "GET"] },
+      { "action": "remove", "ptype": "p", "rule": ["alice", "/orders/*", "DELETE"] }
+    ]
+  }
+
+场景 B — 首次连接 / 版本过旧 / 遇到 full_rebuild 标记：
+← {
+    "type": "full",
+    "version": 8,
+    "policies": [...全部策略...],
+    "groupingPolicies": [...]
+  }
+
+场景 C — 无变化，超时 60s：
+← HTTP 304 Not Modified
+```
+
+**5. SDK 处理逻辑**
+
+```go
+func (c *Client) applyResponse(resp WatchResponse) {
+    if resp.Type == "full" {
+        c.enforcer = rebuildFromPolicies(resp.Policies)
+    } else {
+        for _, ch := range resp.Changes {
+            switch ch.Action + "/" + ch.Ptype {
+            case "add/p":    c.enforcer.AddPolicy(ch.Rule...)
+            case "remove/p": c.enforcer.RemovePolicy(ch.Rule...)
+            case "add/g":    c.enforcer.AddGroupingPolicy(ch.Rule...)
+            case "remove/g": c.enforcer.RemoveGroupingPolicy(ch.Rule...)
+            }
+        }
+    }
+    c.version = resp.ToVersion
+}
+```
+
+**6. Changelog 清理**
+
+定时清理保留最近 1000 个版本。SDK 版本过旧（已被清理）时自动降级为全量同步。
+
+#### 性能对比
+
+| 场景 | 全量同步 | 增量同步 |
+|------|---------|---------|
+| 2000 条策略，改 1 条 | 传输 2000 条 + 重建 Enforcer | 传输 1 条 + AddPolicy 一次 |
+| SDK 重连（离线 5 分钟） | 传输 2000 条 | 传输 ~10 条 diff |
+| 首次启动 | 传输 2000 条 | 传输 2000 条（相同） |
+| 变更记录成本 | 无 | O(1)（入口处直接写，不做 diff） |
+
+#### 为什么不用全量 diff
+
+全量 diff 方案需要在 SyncAppPolicies 中对比新旧策略集合（O(n)），策略量大时会慢。入口记录方案在 CRUD 函数中直接写 changelog，O(1) 复杂度，不受策略总量影响。唯一的特殊情况（手动 Sync）标记为 `full_rebuild`，SDK 收到后全量拉取。
+
+#### 实施步骤
+
+1. `biz_app_config` 加 `policy_version` 字段 + `biz_policy_changelog` 建表
+2. CRUD 函数中加 `appendChangelog` 调用
+3. 新增 `GET /api/biz-watch-policies` 长轮询端点
+4. 新增 `GET /api/biz-get-policy-version` 轻量版本查询
+5. SDK 实现 `StartWatch` + `applyResponse`
+
+#### 相关代码位置
+
+- CRUD 入口（需加 changelog）：`object/biz_role.go`、`object/biz_permission.go` 的 Add/Update/Delete 函数
+- 策略同步：`object/biz_permission_engine.go` — `SyncAppPolicies`
+- 现有策略导出 API：`controllers/biz_permission_api.go` — `BizGetPolicies`
+- 版本字段所在结构体：`object/biz_app_config.go` — `BizAppConfig`
+
+### 三、前端待完善
+
+| 项目 | 说明 |
+|------|------|
+| 概况 Tab 模型文本可编辑 | 当前只读，需加 CodeMirror 编辑器 + 保存到 `biz_app_config.modelText` |
+| 快速创建向导自动创建默认角色/权限 | 当前只创建 BizAppConfig，应同时创建 admin 角色 + 默认权限 |
+| 用户权限画像 | 后端 `biz-get-user-permissions` 已就绪，需在用户编辑页增加权限概览 Tab |
+| SDK 模板完善 | 集成 Tab 只展示 HTTP 调用片段，需补充完整 Go/TS SDK 模板（含本地缓存） |
+
+### 三、后端待实现
+
+| 项目 | 说明 |
+|------|------|
+| 迁移工具 | `POST /api/biz-migrate-from-permission` — 将现有 Permission 数据迁移到 biz 表 |
+| 列表分页 | biz-get-roles / biz-get-permissions 尚未支持分页，角色/权限量大时需加 |
+| 策略变更 Webhook | 策略同步后通过 Webhook 通知业务系统刷新本地缓存 |
