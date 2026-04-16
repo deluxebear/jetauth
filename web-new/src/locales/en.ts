@@ -1941,6 +1941,9 @@ const en = {
   "records.field.response": "Response",
   "records.field.statusCode": "Status Code",
   "records.field.timestamp": "Timestamp",
+  "records.field.name": "Name",
+  "records.field.owner": "Owner",
+  "records.copied": "Copied to clipboard",
 
   // Roles (missing keys)
   "roles.section.basic": "Basic Information",
@@ -2170,6 +2173,18 @@ const en = {
   "verifications.field.receiver": "Receiver",
   "verifications.field.code": "Code",
   "verifications.field.isUsed": "Is Used",
+  "verifications.field.remoteAddr": "Client IP",
+  "verifications.field.type": "Type",
+  "verifications.field.time": "Expiry Time",
+  "verifications.field.name": "Name",
+  "verifications.field.owner": "Organization",
+  "verifications.field.user": "User",
+  "verifications.field.provider": "Provider",
+  "verifications.field.createdTime": "Created Time",
+  "verifications.state.used": "Used",
+  "verifications.state.unused": "Unused",
+  "verifications.type.email": "Email",
+  "verifications.type.phone": "Phone",
 
   // Webhooks
   "webhooks.title": "Webhooks",

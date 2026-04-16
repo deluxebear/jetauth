@@ -2022,6 +2022,9 @@ const zh: Record<string, string> = {
   "records.field.response": "响应",
   "records.field.statusCode": "状态码",
   "records.field.timestamp": "时间戳",
+  "records.field.name": "名称",
+  "records.field.owner": "所有者",
+  "records.copied": "已复制到剪贴板",
 
   // Roles (missing keys)
   "roles.section.basic": "基本信息",
@@ -2251,6 +2254,18 @@ const zh: Record<string, string> = {
   "verifications.field.receiver": "接收者",
   "verifications.field.code": "验证码",
   "verifications.field.isUsed": "是否已使用",
+  "verifications.field.remoteAddr": "客户端 IP",
+  "verifications.field.type": "类型",
+  "verifications.field.time": "过期时间",
+  "verifications.field.name": "名称",
+  "verifications.field.owner": "组织",
+  "verifications.field.user": "用户",
+  "verifications.field.provider": "提供商",
+  "verifications.field.createdTime": "创建时间",
+  "verifications.state.used": "已使用",
+  "verifications.state.unused": "未使用",
+  "verifications.type.email": "邮箱",
+  "verifications.type.phone": "短信",
 
   // Webhooks
   "webhooks.title": "Webhook 管理",

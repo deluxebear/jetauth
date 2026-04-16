@@ -1,6 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { motion } from "framer-motion";
-import { ChevronLeft, ChevronRight, ArrowUp, ArrowDown, ArrowUpDown, Search, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, ArrowUp, ArrowDown, ArrowUpDown, Search, X, ChevronDown } from "lucide-react";
 import { useTranslation } from "../i18n";
 
 export interface Column<T> {
@@ -8,6 +7,7 @@ export interface Column<T> {
   title: string;
   sortable?: boolean;
   filterable?: boolean;
+  filterOptions?: { label: string; value: string }[]; // dropdown filter instead of text search
   fixed?: "left" | "right"; // sticky column
   render?: (value: unknown, record: T, index: number) => React.ReactNode;
   width?: string;
@@ -151,6 +151,7 @@ export default function DataTable<T extends Record<string, unknown>>({
                         isOpen={activeFilter === col.key}
                         onToggle={() => setActiveFilter(activeFilter === col.key ? null : col.key)}
                         onApply={(value) => handleFilter(col.key, value)}
+                        options={col.filterOptions}
                       />
                     )}
                   </div>
@@ -187,11 +188,8 @@ export default function DataTable<T extends Record<string, unknown>>({
               </tr>
             ) : (
               data.map((record, idx) => (
-                <motion.tr
+                <tr
                   key={getKey(record)}
-                  initial={{ opacity: 0, y: 4 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: idx * 0.02, duration: 0.2 }}
                   className="border-b border-border-subtle transition-colors hover:bg-surface-2/50"
                 >
                   {columns.map((col) => (
@@ -207,7 +205,7 @@ export default function DataTable<T extends Record<string, unknown>>({
                         : (record[col.key] as React.ReactNode) ?? "—"}
                     </td>
                   ))}
-                </motion.tr>
+                </tr>
               ))
             )}
           </tbody>
@@ -256,78 +254,117 @@ export default function DataTable<T extends Record<string, unknown>>({
   );
 }
 
-// Column search/filter popover
+// Column search/filter popover — uses fixed positioning to escape overflow:hidden
 function FilterPopover({
   columnKey: _columnKey,
   isOpen,
   onToggle,
   onApply,
+  options,
 }: {
   columnKey: string;
   isOpen: boolean;
   onToggle: () => void;
   onApply: (value: string) => void;
+  options?: { label: string; value: string }[];
 }) {
   const { t } = useTranslation();
   const [value, setValue] = useState("");
-  const ref = useRef<HTMLDivElement>(null);
+  const btnRef = useRef<HTMLButtonElement>(null);
+  const popRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const [pos, setPos] = useState({ top: 0, left: 0 });
+  // Stabilize onToggle ref to avoid re-registering listener on every parent render
+  const onToggleRef = useRef(onToggle);
+  onToggleRef.current = onToggle;
 
+  // Calculate fixed position from button rect
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && btnRef.current) {
+      const rect = btnRef.current.getBoundingClientRect();
+      setPos({ top: rect.bottom + 4, left: rect.left + rect.width / 2 });
+    }
+    if (isOpen && !options) {
       setTimeout(() => inputRef.current?.focus(), 50);
     }
+  }, [isOpen, options]);
+
+  // Close on outside click
+  useEffect(() => {
+    if (!isOpen) return;
+    const handler = (e: MouseEvent) => {
+      const target = e.target as Node;
+      if (btnRef.current?.contains(target)) return;
+      if (popRef.current && !popRef.current.contains(target)) onToggleRef.current();
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
   }, [isOpen]);
 
-  useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) {
-        onToggle();
-      }
-    };
-    if (isOpen) {
-      document.addEventListener("mousedown", handler);
-      return () => document.removeEventListener("mousedown", handler);
-    }
-  }, [isOpen, onToggle]);
-
   return (
-    <div className="relative" ref={ref}>
+    <>
       <button
+        ref={btnRef}
         onClick={(e) => { e.stopPropagation(); onToggle(); }}
         className="rounded p-0.5 text-text-muted hover:text-accent hover:bg-accent/10 transition-colors"
       >
-        <Search size={11} />
+        {options ? <ChevronDown size={12} /> : <Search size={11} />}
       </button>
       {isOpen && (
-        <div className="absolute left-0 top-full mt-1 z-50 w-52 rounded-lg border border-border bg-surface-2 p-2.5 shadow-[var(--shadow-elevated)]">
-          <div className="flex gap-1.5">
-            <input
-              ref={inputRef}
-              value={value}
-              onChange={(e) => setValue(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") onApply(value);
-                if (e.key === "Escape") onToggle();
-              }}
-              placeholder={t("common.search" as any)}
-              className="flex-1 rounded border border-border bg-surface-1 px-2 py-1 text-[12px] text-text-primary placeholder:text-text-muted outline-none focus:border-accent"
-            />
-            <button
-              onClick={() => onApply(value)}
-              className="rounded-lg bg-accent px-2.5 py-1 text-[11px] font-medium text-white hover:bg-accent-hover transition-colors"
-            >
-              <Search size={12} />
-            </button>
-            <button
-              onClick={() => { setValue(""); onApply(""); }}
-              className="rounded border border-border px-1.5 py-1 text-text-muted hover:bg-surface-3 transition-colors"
-            >
-              <X size={12} />
-            </button>
-          </div>
+        <div
+          ref={popRef}
+          className={`fixed z-10 rounded-lg border border-border bg-surface-2 shadow-[var(--shadow-elevated)] ${options ? "w-24" : "w-52"}`}
+          style={{ top: pos.top, left: pos.left, transform: "translateX(-50%)" }}
+        >
+          {options ? (
+            <div className="py-1">
+              <button
+                onClick={() => { onApply(""); onToggle(); }}
+                className="w-full text-left px-3 py-1.5 text-[12px] text-text-muted hover:bg-surface-3 transition-colors whitespace-nowrap"
+              >
+                {t("common.viewAll" as any)}
+              </button>
+              {options.map((opt) => (
+                <button
+                  key={opt.value}
+                  onClick={() => { onApply(opt.value); onToggle(); }}
+                  className="w-full text-left px-3 py-1.5 text-[12px] text-text-primary hover:bg-surface-3 transition-colors whitespace-nowrap"
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          ) : (
+            <div className="p-2.5">
+              <div className="flex gap-1.5">
+                <input
+                  ref={inputRef}
+                  value={value}
+                  onChange={(e) => setValue(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") onApply(value);
+                    if (e.key === "Escape") onToggle();
+                  }}
+                  placeholder={t("common.search" as any)}
+                  className="flex-1 rounded border border-border bg-surface-1 px-2 py-1 text-[12px] text-text-primary placeholder:text-text-muted outline-none focus:border-accent"
+                />
+                <button
+                  onClick={() => onApply(value)}
+                  className="rounded-lg bg-accent px-2.5 py-1 text-[11px] font-medium text-white hover:bg-accent-hover transition-colors"
+                >
+                  <Search size={12} />
+                </button>
+                <button
+                  onClick={() => { setValue(""); onApply(""); }}
+                  className="rounded border border-border px-1.5 py-1 text-text-muted hover:bg-surface-3 transition-colors"
+                >
+                  <X size={12} />
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
-    </div>
+    </>
   );
 }
