@@ -66,6 +66,10 @@ export function deletePayment(payment: Payment) {
   return request("POST", "/api/delete-payment", payment);
 }
 
+export function notifyPayment(owner: string, name: string) {
+  return request<Payment>("POST", `/api/notify-payment/${owner}/${name}`);
+}
+
 export function invoicePayment(owner: string, name: string) {
   return request(
     "POST",

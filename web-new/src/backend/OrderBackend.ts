@@ -1,5 +1,19 @@
 import { request, paginationQuery } from "./request";
 
+export interface ProductInfo {
+  owner?: string;
+  name: string;
+  displayName?: string;
+  image?: string;
+  detail?: string;
+  price?: number;
+  currency?: string;
+  isRecharge?: boolean;
+  quantity: number;
+  pricingName?: string;
+  planName?: string;
+}
+
 export interface Order {
   owner: string;
   name: string;
@@ -55,6 +69,21 @@ export function cancelOrder(owner: string, name: string) {
   return request(
     "POST",
     `/api/cancel-order?id=${owner}/${encodeURIComponent(name)}`
+  );
+}
+
+export function placeOrder(owner: string, productInfos: ProductInfo[], userName = "") {
+  return request<Order>(
+    "POST",
+    `/api/place-order?owner=${encodeURIComponent(owner)}&userName=${encodeURIComponent(userName)}`,
+    { productInfos }
+  );
+}
+
+export function payOrder(owner: string, name: string, providerName: string, paymentEnv = "") {
+  return request<unknown>(
+    "POST",
+    `/api/pay-order?id=${owner}/${encodeURIComponent(name)}&providerName=${encodeURIComponent(providerName)}&paymentEnv=${paymentEnv}`
   );
 }
 

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Save, Trash2, LogOut} from "lucide-react";
+import { Trash2, LogOut, X } from "lucide-react";
 import StickyEditHeader from "../components/StickyEditHeader";
 import { FormField, FormSection, inputClass, monoInputClass, Switch } from "../components/FormSection";
 import { useTranslation } from "../i18n";
@@ -11,14 +11,10 @@ import * as ProductBackend from "../backend/ProductBackend";
 import type { Product } from "../backend/ProductBackend";
 import { friendlyError } from "../utils/errorHelper";
 import SimpleSelect from "../components/SimpleSelect";
+import CurrencySelect from "../components/CurrencySelect";
 import SaveButton from "../components/SaveButton";
 import UnsavedBanner from "../components/UnsavedBanner";
 import { useUnsavedWarning } from "../hooks/useUnsavedWarning";
-
-const STATE_OPTIONS = [
-  { id: "Published", name: "Published" },
-  { id: "Draft", name: "Draft" },
-];
 
 export default function ProductEditPage() {
   const { owner, name } = useParams<{ owner: string; name: string }>();
@@ -32,6 +28,7 @@ export default function ProductEditPage() {
   const [saved, setSaved] = useState(false);
   useEffect(() => { if (saved) { const t = setTimeout(() => setSaved(false), 1500); return () => clearTimeout(t); } }, [saved]);
   const [originalJson, setOriginalJson] = useState("");
+  const [rechargeInput, setRechargeInput] = useState("");
 
   const { entity, loading, invalidate: _invalidate, invalidateList } = useEntityEdit<Product>({
     queryKey: "product",
@@ -81,6 +78,7 @@ export default function ProductEditPage() {
       setSaving(false);
     }
   };
+
   const handleSaveAndExit = async () => {
     setSaving(true);
     try {
@@ -123,21 +121,40 @@ export default function ProductEditPage() {
     });
   };
 
+  const handleAddRechargeOption = () => {
+    const val = parseFloat(rechargeInput);
+    if (isNaN(val) || val <= 0) return;
+    const options = product.rechargeOptions || [];
+    if (!options.includes(val)) {
+      set("rechargeOptions", [...options, val]);
+    }
+    setRechargeInput("");
+  };
+
+  const handleRemoveRechargeOption = (val: number) => {
+    set("rechargeOptions", (product.rechargeOptions || []).filter((o) => o !== val));
+  };
+
+  const stateOptions = [
+    { value: "Published", label: t("products.state.published" as any) },
+    { value: "Draft", label: t("products.state.draft" as any) },
+  ];
+
   return (
-    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-6 ">
+    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
       <StickyEditHeader
         title={`${isAddMode ? t("common.add") : t("common.edit")} ${t("products.title" as any)}`}
         subtitle={`${owner}/${name}`}
         onBack={handleBack}
       >
-          <button onClick={handleDelete} className="flex items-center gap-1.5 rounded-lg border border-danger/30 px-3 py-2 text-[13px] font-medium text-danger hover:bg-danger/10 transition-colors">
-            <Trash2 size={14} /> {t("common.delete")}
-          </button>
-                    <SaveButton onClick={handleSave} saving={saving} saved={saved} label={t("common.save")} />
-          <button onClick={handleSaveAndExit} disabled={saving} className="flex items-center gap-1.5 rounded-lg bg-accent px-4 py-2 text-[13px] font-semibold text-white hover:bg-accent-hover disabled:opacity-50 transition-colors">
-            {saving ? <div className="h-3.5 w-3.5 rounded-full border-2 border-white/30 border-t-white animate-spin" /> : <LogOut size={14} />}
-            {t("common.saveAndExit" as any)}
-          </button>
+        <button onClick={handleDelete} className="flex items-center gap-1.5 rounded-lg border border-danger/30 px-3 py-2 text-[13px] font-medium text-danger hover:bg-danger/10 transition-colors">
+          <Trash2 size={14} /> {t("common.delete")}
+        </button>
+        <SaveButton onClick={handleSave} saving={saving} saved={saved} label={t("common.save")} />
+        <button onClick={handleSaveAndExit} disabled={saving} className="flex items-center gap-1.5 rounded-lg bg-accent px-4 py-2 text-[13px] font-semibold text-white hover:bg-accent-hover disabled:opacity-50 transition-colors">
+          {saving ? <div className="h-3.5 w-3.5 rounded-full border-2 border-white/30 border-t-white animate-spin" /> : <LogOut size={14} />}
+          {t("common.saveAndExit" as any)}
+        </button>
       </StickyEditHeader>
 
       {showBanner && <UnsavedBanner isAddMode={isAddMode} />}
@@ -181,16 +198,76 @@ export default function ProductEditPage() {
       {/* Pricing */}
       <FormSection title={t("products.section.pricing" as any)}>
         <FormField label={t("products.field.currency" as any)}>
-          <input value={product.currency} onChange={(e) => set("currency", e.target.value)} className={inputClass} />
+          <CurrencySelect
+            value={product.currency || "USD"}
+            onChange={(v) => set("currency", v)}
+          />
         </FormField>
         <FormField label={t("products.field.isRecharge" as any)}>
           <Switch checked={product.isRecharge} onChange={(v) => set("isRecharge", v)} />
         </FormField>
-        {!product.isRecharge && (
+
+        {product.isRecharge ? (
+          <>
+            <FormField label={t("products.field.disableCustomRecharge" as any)}>
+              <Switch
+                checked={product.disableCustomRecharge}
+                onChange={(v) => set("disableCustomRecharge", v)}
+              />
+            </FormField>
+            <FormField label={t("products.field.rechargeOptions" as any)} span="full">
+              <div className="space-y-2">
+                <div className="flex gap-2">
+                  <input
+                    type="number"
+                    value={rechargeInput}
+                    onChange={(e) => setRechargeInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        handleAddRechargeOption();
+                      }
+                    }}
+                    className={monoInputClass}
+                    placeholder={t("products.field.rechargeOptionsPlaceholder" as any)}
+                    min="0"
+                    step="any"
+                  />
+                </div>
+                {(product.rechargeOptions || []).length > 0 && (
+                  <div className="flex flex-wrap gap-1.5">
+                    {(product.rechargeOptions || []).map((opt) => (
+                      <span
+                        key={opt}
+                        className="inline-flex items-center gap-1 rounded-full bg-accent/10 px-2.5 py-1 text-[12px] font-mono font-medium text-accent"
+                      >
+                        {product.currency} {opt}
+                        <button
+                          onClick={() => handleRemoveRechargeOption(opt)}
+                          className="rounded-full p-0.5 hover:bg-danger/20 hover:text-danger transition-colors"
+                        >
+                          <X size={10} />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </FormField>
+          </>
+        ) : (
           <FormField label={t("products.field.price" as any)}>
-            <input type="number" value={product.price} onChange={(e) => set("price", Number(e.target.value))} className={monoInputClass} />
+            <input
+              type="number"
+              value={product.price}
+              onChange={(e) => set("price", Number(e.target.value))}
+              className={monoInputClass}
+              min="0"
+              step="any"
+            />
           </FormField>
         )}
+
         <FormField label={t("products.field.quantity" as any)}>
           <input type="number" value={product.quantity} onChange={(e) => set("quantity", Number(e.target.value))} className={monoInputClass} />
         </FormField>
@@ -202,7 +279,12 @@ export default function ProductEditPage() {
       {/* Providers & URLs */}
       <FormSection title={t("products.section.providers" as any)}>
         <FormField label={t("products.field.providers" as any)} span="full">
-          <input value={(product.providers || []).join(", ")} onChange={(e) => set("providers", e.target.value.split(",").map((s) => s.trim()).filter(Boolean))} className={inputClass} placeholder={t("products.field.providersPlaceholder" as any)} />
+          <input
+            value={(product.providers || []).join(", ")}
+            onChange={(e) => set("providers", e.target.value.split(",").map((s) => s.trim()).filter(Boolean))}
+            className={inputClass}
+            placeholder={t("products.field.providersPlaceholder" as any)}
+          />
         </FormField>
         <FormField label={t("products.field.successUrl" as any)} span="full">
           <input value={product.successUrl} onChange={(e) => set("successUrl", e.target.value)} className={monoInputClass} />
@@ -212,7 +294,11 @@ export default function ProductEditPage() {
       {/* State */}
       <FormSection title={t("products.section.state" as any)}>
         <FormField label={t("col.state" as any)}>
-          <SimpleSelect value={product.state} options={STATE_OPTIONS.map((o) => ({ value: o.id, label: o.name }))} onChange={(v) => set("state", v)} />
+          <SimpleSelect
+            value={product.state}
+            options={stateOptions}
+            onChange={(v) => set("state", v)}
+          />
         </FormField>
       </FormSection>
     </motion.div>

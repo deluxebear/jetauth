@@ -69,8 +69,13 @@ import SessionListPage from "./pages/SessionListPage";
 import RecordListPage from "./pages/RecordListPage";
 import VerificationListPage from "./pages/VerificationListPage";
 // Business
+import ProductStorePage from "./pages/ProductStorePage";
+import ProductBuyPage from "./pages/ProductBuyPage";
 import ProductListPage from "./pages/ProductListPage";
 import ProductEditPage from "./pages/ProductEditPage";
+import CartPage from "./pages/CartPage";
+import OrderPayPage from "./pages/OrderPayPage";
+import PaymentResultPage from "./pages/PaymentResultPage";
 import PlanListPage from "./pages/PlanListPage";
 import PlanEditPage from "./pages/PlanEditPage";
 import PricingListPage from "./pages/PricingListPage";
@@ -638,6 +643,11 @@ export default function App() {
         <Route path="/authorization/:owner/:appName/permissions/:name" element={<BizPermissionEditPage />} />
         {entityRoutes}
         <Route path="/server-store" element={<ServerStorePage />} />
+        <Route path="/product-store" element={<ProductStorePage />} />
+        <Route path="/products/:owner/:name/buy" element={<ProductBuyPage />} />
+        <Route path="/cart" element={<CartPage />} />
+        <Route path="/orders/:owner/:name/pay" element={<OrderPayPage />} />
+        <Route path="/payments/:owner/:name/result" element={<PaymentResultPage />} />
         <Route path="/trees/:organizationName/:groupName" element={<GroupTreePage />} />
         <Route path="/trees/:organizationName" element={<GroupTreePage />} />
         <Route path="/ldap/sync/:owner/:id" element={<LdapSyncPage />} />
