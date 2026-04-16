@@ -227,6 +227,31 @@ func InitAPI() {
 	web.Router("/api/get-all-actions", &controllers.ApiController{}, "GET:GetAllActions")
 	web.Router("/api/get-all-roles", &controllers.ApiController{}, "GET:GetAllRoles")
 
+	// Business Permission APIs
+	web.Router("/api/biz-get-app-configs", &controllers.ApiController{}, "GET:GetBizAppConfigs")
+	web.Router("/api/biz-get-app-config", &controllers.ApiController{}, "GET:GetBizAppConfig")
+	web.Router("/api/biz-add-app-config", &controllers.ApiController{}, "POST:AddBizAppConfig")
+	web.Router("/api/biz-update-app-config", &controllers.ApiController{}, "POST:UpdateBizAppConfig")
+	web.Router("/api/biz-delete-app-config", &controllers.ApiController{}, "POST:DeleteBizAppConfig")
+
+	web.Router("/api/biz-get-roles", &controllers.ApiController{}, "GET:GetBizRoles")
+	web.Router("/api/biz-get-role", &controllers.ApiController{}, "GET:GetBizRole")
+	web.Router("/api/biz-add-role", &controllers.ApiController{}, "POST:AddBizRole")
+	web.Router("/api/biz-update-role", &controllers.ApiController{}, "POST:UpdateBizRole")
+	web.Router("/api/biz-delete-role", &controllers.ApiController{}, "POST:DeleteBizRole")
+
+	web.Router("/api/biz-get-permissions", &controllers.ApiController{}, "GET:GetBizPermissions")
+	web.Router("/api/biz-get-permission", &controllers.ApiController{}, "GET:GetBizPermission")
+	web.Router("/api/biz-add-permission", &controllers.ApiController{}, "POST:AddBizPermission")
+	web.Router("/api/biz-update-permission", &controllers.ApiController{}, "POST:UpdateBizPermission")
+	web.Router("/api/biz-delete-permission", &controllers.ApiController{}, "POST:DeleteBizPermission")
+
+	web.Router("/api/biz-enforce", &controllers.ApiController{}, "POST:BizEnforce")
+	web.Router("/api/biz-batch-enforce", &controllers.ApiController{}, "POST:BizBatchEnforce")
+	web.Router("/api/biz-get-policies", &controllers.ApiController{}, "GET:BizGetPolicies")
+	web.Router("/api/biz-get-user-permissions", &controllers.ApiController{}, "GET:BizGetUserPermissions")
+	web.Router("/api/biz-sync-policies", &controllers.ApiController{}, "POST:BizSyncPolicies")
+
 	web.Router("/api/run-casbin-command", &controllers.ApiController{}, "GET:RunCasbinCommand")
 	web.Router("/api/refresh-engines", &controllers.ApiController{}, "POST:RefreshEngines")
 

@@ -381,6 +381,22 @@ func (a *Ormer) createTable() {
 		panic(err)
 	}
 
+	// Business permission tables
+	err = a.Engine.Sync2(new(BizAppConfig))
+	if err != nil {
+		panic(err)
+	}
+
+	err = a.Engine.Sync2(new(BizRole))
+	if err != nil {
+		panic(err)
+	}
+
+	err = a.Engine.Sync2(new(BizPermission))
+	if err != nil {
+		panic(err)
+	}
+
 	err = a.Engine.Sync2(new(Session))
 	if err != nil {
 		panic(err)
