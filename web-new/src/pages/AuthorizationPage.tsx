@@ -8,7 +8,8 @@ import { useOrganization } from "../OrganizationContext";
 import * as BizBackend from "../backend/BizBackend";
 import * as ApplicationBackend from "../backend/ApplicationBackend";
 import type { BizAppConfig } from "../backend/BizBackend";
-import { DEFAULT_RBAC_MODEL } from "../backend/BizBackend";
+import { DEFAULT_RBAC_MODEL, MODEL_PRESETS } from "../backend/BizBackend";
+import type { ModelPreset } from "../backend/BizBackend";
 import type { Application } from "../backend/ApplicationBackend";
 
 interface BizAppCardData {
@@ -208,8 +209,10 @@ function QuickCreateWizard({ open, onClose, onCreated, existingAppNames }: {
   const [loadingApps, setLoadingApps] = useState(false);
   const [selectedApp, setSelectedApp] = useState<Application | null>(null);
 
-  // Step 1: Model text
+  // Step 1: Model selection
+  const [selectedPreset, setSelectedPreset] = useState<string>("rbac-api");
   const [modelText, setModelText] = useState(DEFAULT_RBAC_MODEL);
+  const [showCustomEditor, setShowCustomEditor] = useState(false);
 
   // Step 2: Policy table name
   const [policyTable, setPolicyTable] = useState("");
@@ -220,7 +223,9 @@ function QuickCreateWizard({ open, onClose, onCreated, existingAppNames }: {
     if (!open) return;
     setStep(0);
     setSelectedApp(null);
+    setSelectedPreset("rbac-api");
     setModelText(DEFAULT_RBAC_MODEL);
+    setShowCustomEditor(false);
     setPolicyTable("");
     setCreating(false);
 
@@ -398,21 +403,68 @@ function QuickCreateWizard({ open, onClose, onCreated, existingAppNames }: {
               )}
 
               {step === 1 && (
-                /* ═══ Step 1: Model Text ═══ */
+                /* ═══ Step 1: Model Selection ═══ */
                 <div className="space-y-3">
-                  <label className="block text-[12px] font-semibold text-text-primary mb-1.5">
-                    {t("authz.wizard.modelText" as any)}
-                  </label>
-                  <textarea
-                    value={modelText}
-                    onChange={(e) => setModelText(e.target.value)}
-                    rows={12}
-                    className="w-full rounded-lg border border-border bg-surface-2 px-3 py-2.5 text-[12px] font-mono text-text-primary outline-none focus:border-accent placeholder:text-text-muted resize-none leading-relaxed"
-                    spellCheck={false}
-                  />
-                  <p className="text-[11px] text-text-muted">
-                    {t("authz.wizard.modelHint" as any)}
-                  </p>
+                  <div className="space-y-2 max-h-[340px] overflow-y-auto pr-1">
+                    {MODEL_PRESETS.map((preset) => (
+                      <button
+                        key={preset.id}
+                        onClick={() => {
+                          setSelectedPreset(preset.id);
+                          if (preset.id === "custom") {
+                            setShowCustomEditor(true);
+                            if (!modelText || MODEL_PRESETS.some((p) => p.id !== "custom" && p.modelText === modelText)) {
+                              setModelText(DEFAULT_RBAC_MODEL);
+                            }
+                          } else {
+                            setShowCustomEditor(false);
+                            setModelText(preset.modelText);
+                          }
+                        }}
+                        className={`w-full text-left rounded-lg border px-4 py-3 transition-all ${
+                          selectedPreset === preset.id
+                            ? "border-accent bg-accent/5 ring-1 ring-accent/20"
+                            : "border-border hover:border-accent/40 hover:bg-surface-2"
+                        }`}
+                      >
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-[13px] font-semibold text-text-primary">{t(preset.labelKey as any)}</span>
+                          <span className={`inline-block rounded-full px-2 py-0.5 text-[9px] font-bold tracking-wide ${
+                            preset.recommended ? "bg-accent/15 text-accent" : "bg-surface-3 text-text-muted"
+                          }`}>
+                            {preset.badge}
+                          </span>
+                          {preset.recommended && (
+                            <span className="inline-block rounded-full px-2 py-0.5 text-[9px] font-bold bg-success/10 text-success">
+                              {t("authz.preset.recommended" as any)}
+                            </span>
+                          )}
+                          {selectedPreset === preset.id && (
+                            <div className="ml-auto w-4 h-4 rounded-full bg-accent flex items-center justify-center flex-shrink-0">
+                              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className="text-white"><path d="M20 6L9 17l-5-5"/></svg>
+                            </div>
+                          )}
+                        </div>
+                        <p className="text-[12px] text-text-secondary leading-relaxed">{t(preset.descKey as any)}</p>
+                        <p className="text-[11px] text-text-muted mt-1">
+                          {t("authz.preset.scenario" as any)}{t(preset.scenarioKey as any)}
+                        </p>
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Custom model editor */}
+                  {showCustomEditor && (
+                    <div className="mt-2">
+                      <textarea
+                        value={modelText}
+                        onChange={(e) => setModelText(e.target.value)}
+                        rows={10}
+                        className="w-full rounded-lg border border-border bg-surface-2 px-3 py-2.5 text-[11px] font-mono text-text-primary outline-none focus:border-accent placeholder:text-text-muted resize-y leading-relaxed"
+                        spellCheck={false}
+                      />
+                    </div>
+                  )}
                 </div>
               )}
 

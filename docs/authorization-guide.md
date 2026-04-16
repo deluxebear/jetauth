@@ -468,75 +468,415 @@ p, erp-editor, /api/products/{id}, DELETE, deny
 └──────────┴───────────┴───────────────────────────┘
 ```
 
-### 第一层：操作权限（Casbin 管）
+### 第一层：操作权限（Casbin enforce）
 
-控制「谁能访问哪个 API」，通过 `/api/biz-enforce` 判断。
+控制「谁能访问哪个 API」。这是最基础的一层，直接用 `biz-enforce` 判断。
 
-```python
-allowed = sdk.biz_enforce("org/my-app", ["org/alice", "/api/orders/123", "GET"])
-if not allowed:
-    return 403
-```
+**JetAuth 管什么**：存储和判断权限规则（谁 + 什么资源 + 什么操作 = 允许/拒绝）
 
-### 第二层：字段权限（Casbin + 应用层）
-
-控制「返回数据中哪些字段可见/可改」。推荐字段分组方案：
+**业务系统做什么**：在 API 中间件中调用 enforce，拒绝无权请求
 
 ```
-字段分组（应用层配置）：
-├── basic:      id, name, status, createTime
-├── financial:  amount, cost, profit, price
-├── sensitive:  idCard, phone, salary
-└── internal:   notes, auditLog, margin
-
-Casbin 策略（控制到组）：
-p, erp-viewer,  /api/orders/{id}#basic,      GET, allow
-p, erp-finance, /api/orders/{id}#financial,  GET, allow
-p, erp-admin,   /api/orders/{id}#*,          .*, allow
+请求流程：
+  用户请求 GET /api/orders/123
+    → 业务系统中间件提取 userId
+    → 调用 JetAuth: biz-enforce("org/erp", ["org/alice", "/api/orders/123", "GET"])
+    → JetAuth 返回 true/false
+    → true → 继续处理请求
+    → false → 返回 403
 ```
 
-应用层根据权限结果过滤返回字段：
+**Go 后端集成示例**：
+
+```go
+func AuthMiddleware(next http.Handler) http.Handler {
+    return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+        userId := getUserFromJWT(r)
+        allowed, err := bizEnforce(userId, r.URL.Path, r.Method)
+        if err != nil || !allowed {
+            http.Error(w, "Forbidden", 403)
+            return
+        }
+        next.ServeHTTP(w, r)
+    })
+}
+```
+
+**JetAuth 中对应的配置**：
+
+在授权管理页面创建权限规则：
+- 授权主体（sub）：选择角色 `erp-viewer` 或用户 `org/alice`
+- 资源（obj）：填写 API 路径，如 `/api/orders/*`
+- 操作（act）：填写 HTTP 方法，如 `GET`
+
+---
+
+### 第二层：字段权限（Casbin + 应用层过滤）
+
+控制「返回数据中哪些字段可见/可编辑」。例如：普通员工看订单只能看基本信息，财务人员能看金额字段，管理员能看全部。
+
+**核心思路**：将字段分组，在资源路径中用 `#` 分隔组名，Casbin 的 `keyMatch5` 天然支持匹配。
+
+**JetAuth 管什么**：存储字段组级别的权限规则
+
+**业务系统做什么**：
+1. 定义字段分组（哪些字段归哪个组）
+2. API 返回数据前，逐组 enforce，过滤掉无权字段
+
+#### 步骤一：业务系统定义字段分组
+
+这一步在**业务系统代码**中完成，不在 JetAuth 中：
 
 ```typescript
-for (const group of ["basic", "financial", "sensitive", "internal"]) {
-    const allowed = await bizEnforce(appId, [user, `${resource}#${group}`, "GET"]);
-    if (allowed) visibleFields.add(...FIELD_GROUPS[group]);
-}
-return pick(data, [...visibleFields]);
+// 应用层定义（与业务相关，JetAuth 不感知）
+const FIELD_GROUPS: Record<string, string[]> = {
+  basic:      ["id", "orderNo", "status", "createTime", "customerName"],
+  financial:  ["amount", "cost", "profit", "discount", "taxRate"],
+  sensitive:  ["idCard", "phone", "bankAccount", "salary"],
+  internal:   ["notes", "auditLog", "profitMargin", "internalRemark"],
+};
 ```
 
-### 第三层：数据范围（应用层管 + BizRole Properties）
+#### 步骤二：在 JetAuth 中配置权限规则
 
-控制「能看到哪些行的数据」（只看自己 / 看部门 / 看全公司）。
+在授权管理 → ERP 系统 → 权限 Tab 中创建规则：
 
-Biz 模块推荐使用 BizRole 的 `properties` 字段存储数据范围：
+| 权限名 | 授权主体 | 资源 | 操作 |
+|--------|---------|------|------|
+| order-basic-read | erp-viewer | `/api/orders/{id}#basic` | `GET` |
+| order-finance-read | erp-finance | `/api/orders/{id}#financial` | `GET` |
+| order-sensitive-read | erp-hr | `/api/orders/{id}#sensitive` | `GET` |
+| order-all-access | erp-admin | `/api/orders/{id}#*` | `.*` |
+
+生成的 Casbin 策略：
+```
+p, erp-viewer,  /api/orders/{id}#basic,      GET
+p, erp-finance, /api/orders/{id}#financial,  GET
+p, erp-hr,      /api/orders/{id}#sensitive,  GET
+p, erp-admin,   /api/orders/{id}#*,          .*
+```
+
+> `#*` 通过 `keyMatch5` 匹配所有分组名。
+
+#### 步骤三：业务系统 API 中过滤字段
+
+```go
+// Go 后端示例
+func GetOrder(w http.ResponseWriter, r *http.Request) {
+    userId := getUserFromJWT(r)
+    orderId := chi.URLParam(r, "id")
+    order := db.FindOrder(orderId)
+
+    // 逐组检查权限，收集可见字段
+    visibleFields := []string{}
+    for group, fields := range FIELD_GROUPS {
+        resource := fmt.Sprintf("/api/orders/%s#%s", orderId, group)
+        allowed, _ := bizEnforce(userId, resource, "GET")
+        if allowed {
+            visibleFields = append(visibleFields, fields...)
+        }
+    }
+
+    // 只返回有权限的字段
+    json.NewEncoder(w).Encode(pickFields(order, visibleFields))
+}
+```
+
+```typescript
+// TypeScript 后端示例
+app.get("/api/orders/:id", async (req, res) => {
+  const userId = req.user.id;
+  const order = await db.orders.findById(req.params.id);
+
+  const visibleFields = new Set<string>();
+  for (const [group, fields] of Object.entries(FIELD_GROUPS)) {
+    const allowed = await bizEnforce(appId, [userId, `/api/orders/${req.params.id}#${group}`, "GET"]);
+    if (allowed) fields.forEach(f => visibleFields.add(f));
+  }
+
+  res.json(pick(order, [...visibleFields]));
+});
+```
+
+#### 步骤四：前端控制字段显示
+
+前端不需要知道分组逻辑，只根据 API 返回的字段来渲染：
+
+```typescript
+// API 返回什么字段就显示什么字段
+const order = await fetch(`/api/orders/${id}`).then(r => r.json());
+
+// 字段不存在 → 自动不渲染
+{order.amount !== undefined && <div>金额: {order.amount}</div>}
+{order.profit !== undefined && <div>利润: {order.profit}</div>}
+```
+
+#### 优化：批量 enforce 减少网络请求
+
+如果字段分组多，逐组 enforce 会产生多次 API 调用。用 `biz-batch-enforce` 一次判断所有分组：
+
+```go
+groups := []string{"basic", "financial", "sensitive", "internal"}
+requests := make([][]interface{}, len(groups))
+for i, g := range groups {
+    requests[i] = []interface{}{userId, fmt.Sprintf("/api/orders/%s#%s", orderId, g), "GET"}
+}
+
+// 一次请求判断所有分组
+results, _ := bizBatchEnforce(appId, requests)
+// results = [true, true, false, false]
+
+for i, allowed := range results {
+    if allowed {
+        visibleFields = append(visibleFields, FIELD_GROUPS[groups[i]]...)
+    }
+}
+```
+
+#### 前端也可以用本地缓存的策略判断
+
+如果已通过 `biz-get-policies` 下载了策略到本地，字段权限判断可以完全在前端完成，不需要额外网络请求：
+
+```typescript
+// 前端本地 enforce（零延迟）
+const canSeeFinancial = await localEnforcer.enforce(userId, `/api/orders/${id}#financial`, "GET");
+const canSeeSensitive = await localEnforcer.enforce(userId, `/api/orders/${id}#sensitive`, "GET");
+```
+
+---
+
+### 第三层：数据范围（BizRole Properties + 应用层查询过滤）
+
+控制「能看到哪些行的数据」。例如：销售只看自己的订单，经理看本部门的订单，总监看全公司的订单。
+
+**核心思路**：数据范围不适合用 Casbin enforce（无法枚举所有数据行），而是存储在角色属性（`BizRole.properties`）中，应用层查询时动态加过滤条件。
+
+**JetAuth 管什么**：存储角色的数据范围配置（通过 BizRole 的 `properties` JSON 字段）
+
+**业务系统做什么**：查询前根据数据范围加 WHERE 条件
+
+#### 步骤一：在 JetAuth 中配置角色属性
+
+在授权管理 → ERP 系统 → 角色 Tab → 编辑角色 → 角色属性（JSON）：
 
 ```json
-// BizRole: sales
-{ "dataScope": "self" }
+// 角色: sales（销售）
+{
+  "dataScope": {
+    "orders": "self",
+    "customers": "self"
+  }
+}
 
-// BizRole: sales-manager
-{ "dataScope": "department" }
+// 角色: sales-manager（销售经理）
+{
+  "dataScope": {
+    "orders": "department",
+    "customers": "department",
+    "reports": "department"
+  }
+}
 
-// BizRole: director
-{ "dataScope": "company" }
+// 角色: director（总监）
+{
+  "dataScope": {
+    "orders": "company",
+    "customers": "company",
+    "reports": "company"
+  }
+}
 ```
+
+数据范围的值由业务系统自定义，常见的：
+
+| 值 | 含义 | SQL 效果 |
+|---|---|---|
+| `self` | 只看自己创建的 | `WHERE created_by = ?` |
+| `department` | 看本部门的 | `WHERE dept_id = ?` |
+| `company` | 看全公司的 | 不加过滤 |
+| `custom` | 自定义范围 | 由业务系统解释 |
+
+#### 步骤二：业务系统获取用户的数据范围
 
 通过 `biz-get-user-permissions` API 获取用户所有角色属性的合集：
 
-```typescript
-const resp = await fetch(`/api/biz-get-user-permissions?appId=org/erp&userId=org/alice`);
-const { data } = await resp.json();
-// data.properties = { dataScope: "department" }
+```
+GET /api/biz-get-user-permissions?appId=org/erp&userId=org/alice
 
-switch (data.properties.dataScope) {
-    case "self":       query.where("created_by = ?", user.id); break;
-    case "department": query.where("dept_id = ?", user.deptId); break;
-    case "company":    /* 不加过滤 */ break;
+响应：
+{
+  "data": {
+    "roles": ["sales-manager"],
+    "allowedResources": ["/api/orders/*", "/api/reports/*"],
+    "allowedActions": ["GET", "POST", "PUT"],
+    "properties": {
+      "dataScope": {
+        "orders": "department",
+        "customers": "department",
+        "reports": "department"
+      }
+    }
+  }
 }
 ```
 
-> **注意**：同一个 API，不同用户看到不同数据范围，前端无感知。
+> 如果用户有多个角色且数据范围冲突，后端自动取**最后一个角色**的值（last-role-wins）。业务系统可自行实现更复杂的合并策略（如取最大范围）。
+
+#### 步骤三：业务系统查询时加过滤条件
+
+```go
+// Go 后端示例
+func ListOrders(w http.ResponseWriter, r *http.Request) {
+    userId := getUserFromJWT(r)
+    user := getUser(userId)
+
+    // 获取用户的数据范围
+    permResp := bizGetUserPermissions(appId, userId)
+    scope := permResp.Properties["dataScope"].(map[string]interface{})
+    orderScope := scope["orders"].(string) // "self" / "department" / "company"
+
+    query := db.Table("orders")
+    switch orderScope {
+    case "self":
+        query = query.Where("created_by = ?", user.ID)
+    case "department":
+        query = query.Where("dept_id = ?", user.DeptID)
+    case "company":
+        // 不加过滤，看全部
+    }
+
+    var orders []Order
+    query.Find(&orders)
+    json.NewEncoder(w).Encode(orders)
+}
+```
+
+```typescript
+// TypeScript 后端示例
+app.get("/api/orders", async (req, res) => {
+  const userId = req.user.id;
+  const user = await db.users.findById(userId);
+
+  // 获取数据范围
+  const resp = await fetch(
+    `${jetauthUrl}/api/biz-get-user-permissions?appId=${appId}&userId=${userId}`,
+    { headers: { "Authorization": `Basic ${btoa(`${clientId}:${clientSecret}`)}` } }
+  );
+  const { data } = await resp.json();
+  const orderScope = data.properties?.dataScope?.orders || "self";
+
+  let query = db.orders.createQueryBuilder("order");
+  switch (orderScope) {
+    case "self":
+      query = query.where("order.createdBy = :uid", { uid: user.id });
+      break;
+    case "department":
+      query = query.where("order.deptId = :dept", { dept: user.deptId });
+      break;
+    case "company":
+      break; // 不加过滤
+  }
+
+  const orders = await query.getMany();
+  res.json(orders);
+});
+```
+
+#### 性能建议：缓存用户的数据范围
+
+数据范围不需要每次请求都调 API，可以在用户登录时获取一次并缓存到 session/JWT 中：
+
+```go
+// 登录成功后，获取并缓存到 JWT claims
+func OnLoginSuccess(userId string) string {
+    permResp := bizGetUserPermissions(appId, userId)
+    claims := jwt.MapClaims{
+        "sub": userId,
+        "scope": permResp.Properties,  // 数据范围存入 JWT
+        "exp": time.Now().Add(2 * time.Hour).Unix(),
+    }
+    token, _ := jwt.NewWithClaims(jwt.SigningMethodHS256, claims).SignedString(secret)
+    return token
+}
+
+// 请求时直接从 JWT 读取，不调 API
+func getDataScope(r *http.Request, resource string) string {
+    claims := getJWTClaims(r)
+    scope := claims["scope"].(map[string]interface{})
+    dataScope := scope["dataScope"].(map[string]interface{})
+    return dataScope[resource].(string)
+}
+```
+
+---
+
+### 三层配合的完整示例
+
+以下展示一个完整的 ERP 订单接口如何同时应用三层权限：
+
+```go
+// GET /api/orders/:id — 获取单个订单详情
+func GetOrder(w http.ResponseWriter, r *http.Request) {
+    userId := getUserFromJWT(r)
+    orderId := chi.URLParam(r, "id")
+
+    // ══ 第一层：操作权限 ══
+    allowed, _ := bizEnforce(userId, fmt.Sprintf("/api/orders/%s", orderId), "GET")
+    if !allowed {
+        http.Error(w, "Forbidden", 403) // 无权访问此 API
+        return
+    }
+
+    // ══ 第三层：数据范围 ══
+    order := db.FindOrder(orderId)
+    scope := getDataScope(r, "orders") // 从 JWT 读取
+    switch scope {
+    case "self":
+        if order.CreatedBy != userId { http.Error(w, "Forbidden", 403); return }
+    case "department":
+        if order.DeptID != getUser(userId).DeptID { http.Error(w, "Forbidden", 403); return }
+    case "company":
+        // 允许
+    }
+
+    // ══ 第二层：字段权限 ══
+    groups := []string{"basic", "financial", "sensitive", "internal"}
+    requests := make([][]interface{}, len(groups))
+    for i, g := range groups {
+        requests[i] = []interface{}{userId, fmt.Sprintf("/api/orders/%s#%s", orderId, g), "GET"}
+    }
+    results, _ := bizBatchEnforce(appId, requests)
+
+    visibleFields := []string{}
+    for i, ok := range results {
+        if ok { visibleFields = append(visibleFields, FIELD_GROUPS[groups[i]]...) }
+    }
+
+    json.NewEncoder(w).Encode(pickFields(order, visibleFields))
+}
+```
+
+```
+alice（销售）请求 GET /api/orders/123：
+  第一层 → enforce("org/alice", "/api/orders/123", "GET") → ✓ 允许
+  第三层 → dataScope = "self" → 订单是 alice 创建的 → ✓ 通过
+  第二层 → basic ✓, financial ✗, sensitive ✗, internal ✗
+  → 返回: { id, orderNo, status, createTime, customerName }
+
+bob（财务）请求 GET /api/orders/123：
+  第一层 → enforce("org/bob", "/api/orders/123", "GET") → ✓ 允许
+  第三层 → dataScope = "company" → ✓ 通过（看全公司）
+  第二层 → basic ✓, financial ✓, sensitive ✗, internal ✗
+  → 返回: { id, orderNo, status, createTime, customerName, amount, cost, profit }
+
+charlie（管理员）请求 GET /api/orders/123：
+  第一层 → enforce("org/charlie", "/api/orders/123", "GET") → ✓ 允许
+  第三层 → dataScope = "company" → ✓ 通过
+  第二层 → #* 匹配所有组 → basic ✓, financial ✓, sensitive ✓, internal ✓
+  → 返回: 全部字段
+```
+
+> **前端完全无感知**：同一个接口、同一个页面，不同用户看到不同数据范围和不同字段，前端代码零修改。
 
 ---
 

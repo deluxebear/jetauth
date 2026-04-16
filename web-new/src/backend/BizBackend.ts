@@ -184,6 +184,110 @@ e = some(where (p.eft == allow))
 [matchers]
 m = g(r.sub, p.sub) && keyMatch5(r.obj, p.obj) && regexMatch(r.act, p.act)`;
 
+/** Preset model templates for the wizard */
+export interface ModelPreset {
+  id: string;
+  labelKey: string;
+  descKey: string;
+  scenarioKey: string;
+  badge: string;
+  modelText: string;
+  recommended?: boolean;
+}
+
+export const MODEL_PRESETS: ModelPreset[] = [
+  {
+    id: "rbac-api",
+    labelKey: "authz.preset.rbacApi.label",
+    descKey: "authz.preset.rbacApi.desc",
+    scenarioKey: "authz.preset.rbacApi.scenario",
+    badge: "RBAC",
+    recommended: true,
+    modelText: `[request_definition]
+r = sub, obj, act
+
+[policy_definition]
+p = sub, obj, act
+
+[role_definition]
+g = _, _
+
+[policy_effect]
+e = some(where (p.eft == allow))
+
+[matchers]
+m = g(r.sub, p.sub) && keyMatch5(r.obj, p.obj) && regexMatch(r.act, p.act)`,
+  },
+  {
+    id: "rbac-deny",
+    labelKey: "authz.preset.rbacDeny.label",
+    descKey: "authz.preset.rbacDeny.desc",
+    scenarioKey: "authz.preset.rbacDeny.scenario",
+    badge: "RBAC + Deny",
+    modelText: `[request_definition]
+r = sub, obj, act
+
+[policy_definition]
+p = sub, obj, act, eft
+
+[role_definition]
+g = _, _
+
+[policy_effect]
+e = some(where (p.eft == allow)) && !some(where (p.eft == deny))
+
+[matchers]
+m = g(r.sub, p.sub) && keyMatch5(r.obj, p.obj) && regexMatch(r.act, p.act)`,
+  },
+  {
+    id: "rbac-domain",
+    labelKey: "authz.preset.rbacDomain.label",
+    descKey: "authz.preset.rbacDomain.desc",
+    scenarioKey: "authz.preset.rbacDomain.scenario",
+    badge: "RBAC + Domain",
+    modelText: `[request_definition]
+r = sub, dom, obj, act
+
+[policy_definition]
+p = sub, dom, obj, act
+
+[role_definition]
+g = _, _, _
+
+[policy_effect]
+e = some(where (p.eft == allow))
+
+[matchers]
+m = g(r.sub, p.sub, r.dom) && r.dom == p.dom && keyMatch5(r.obj, p.obj) && regexMatch(r.act, p.act)`,
+  },
+  {
+    id: "acl",
+    labelKey: "authz.preset.acl.label",
+    descKey: "authz.preset.acl.desc",
+    scenarioKey: "authz.preset.acl.scenario",
+    badge: "ACL",
+    modelText: `[request_definition]
+r = sub, obj, act
+
+[policy_definition]
+p = sub, obj, act
+
+[policy_effect]
+e = some(where (p.eft == allow))
+
+[matchers]
+m = r.sub == p.sub && keyMatch5(r.obj, p.obj) && regexMatch(r.act, p.act)`,
+  },
+  {
+    id: "custom",
+    labelKey: "authz.preset.custom.label",
+    descKey: "authz.preset.custom.desc",
+    scenarioKey: "authz.preset.custom.scenario",
+    badge: "Custom",
+    modelText: "",
+  },
+];
+
 export function newBizAppConfig(owner: string, appName: string): BizAppConfig {
   return {
     owner,
