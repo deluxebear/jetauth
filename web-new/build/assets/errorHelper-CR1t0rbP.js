@@ -1,0 +1,1 @@
+import{i as e}from"./index-DpKncpsd.js";export{e as friendlyError};

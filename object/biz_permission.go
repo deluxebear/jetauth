@@ -9,6 +9,7 @@
 package object
 
 import (
+	"github.com/beego/beego/v2/core/logs"
 	"github.com/deluxebear/casdoor/util"
 	"github.com/xorm-io/core"
 )
@@ -76,7 +77,7 @@ func AddBizPermission(perm *BizPermission) (bool, error) {
 	}
 
 	if affected != 0 {
-		syncBizPolicies(perm.Owner, perm.AppName)
+		SyncAfterPermissionAdd(perm)
 	}
 
 	return affected != 0, nil
@@ -87,26 +88,41 @@ func UpdateBizPermission(owner, appName, name string, perm *BizPermission) (bool
 		return false, err
 	}
 
+	// Read old state before update (needed for incremental diff)
+	oldPerm, err := getBizPermission(owner, appName, name)
+	if err != nil {
+		logs.Warning("failed to read old permission for incremental sync: %v", err)
+	}
+
 	affected, err := ormer.Engine.ID(core.PK{owner, appName, name}).AllCols().Update(perm)
 	if err != nil {
 		return false, err
 	}
 
 	if affected != 0 {
-		syncBizPolicies(perm.Owner, perm.AppName)
+		SyncAfterPermissionUpdate(oldPerm, perm)
 	}
 
 	return affected != 0, nil
 }
 
 func DeleteBizPermission(perm *BizPermission) (bool, error) {
+	// Read full state before delete (needed for incremental diff)
+	fullPerm, err := getBizPermission(perm.Owner, perm.AppName, perm.Name)
+	if err != nil {
+		logs.Warning("failed to read permission for incremental sync: %v", err)
+	}
+	if fullPerm == nil {
+		fullPerm = perm
+	}
+
 	affected, err := ormer.Engine.ID(core.PK{perm.Owner, perm.AppName, perm.Name}).Delete(&BizPermission{})
 	if err != nil {
 		return false, err
 	}
 
 	if affected != 0 {
-		syncBizPolicies(perm.Owner, perm.AppName)
+		SyncAfterPermissionDelete(fullPerm)
 	}
 
 	return affected != 0, nil

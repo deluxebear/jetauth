@@ -1,7 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
-import { motion } from "framer-motion";
-import { Trash2, LogOut, Plus, X, Users, Shield, Info } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+  Trash2, LogOut, Plus, X, Users, Shield, Info, Check,
+  ShieldCheck, ShieldX, AlertTriangle, Eye, Code,
+} from "lucide-react";
 import StickyEditHeader from "../components/StickyEditHeader";
 import { FormField, FormSection, inputClass, monoInputClass, Switch } from "../components/FormSection";
 import SaveButton from "../components/SaveButton";
@@ -10,7 +13,7 @@ import { useTranslation } from "../i18n";
 import { useModal } from "../components/Modal";
 import * as BizBackend from "../backend/BizBackend";
 import * as UserBackend from "../backend/UserBackend";
-import type { BizRole } from "../backend/BizBackend";
+import type { BizRole, BizPermission } from "../backend/BizBackend";
 import { friendlyError } from "../utils/errorHelper";
 
 export default function BizRoleEditPage() {
@@ -32,10 +35,33 @@ export default function BizRoleEditPage() {
   const [orgUsers, setOrgUsers] = useState<{ value: string; label: string; displayName: string; email: string }[]>([]);
   const [showAddUser, setShowAddUser] = useState(false);
   const [userSearch, setUserSearch] = useState("");
+  const [selectedUsers, setSelectedUsers] = useState<Set<string>>(new Set());
 
   // Sibling roles for inheritance
-  const [siblingRoles, setSiblingRoles] = useState<{ value: string; label: string }[]>([]);
+  const [siblingRoles, setSiblingRoles] = useState<{ value: string; label: string; userCount: number; permCount: number }[]>([]);
   const [showAddRole, setShowAddRole] = useState(false);
+
+  // Permission preview
+  const [permissions, setPermissions] = useState<BizPermission[]>([]);
+
+  // Properties editor mode
+  const [propsMode, setPropsMode] = useState<"visual" | "json">("visual");
+  const [propsEntries, setPropsEntries] = useState<{ key: string; value: string }[]>([]);
+
+  // Parse properties string into visual entries
+  const initPropsEntries = (props: string) => {
+    if (!props) { setPropsEntries([]); return; }
+    try {
+      const obj = JSON.parse(props);
+      if (typeof obj === "object" && obj !== null && !Array.isArray(obj)) {
+        setPropsEntries(Object.entries(obj).map(([k, v]) => ({ key: k, value: typeof v === "string" ? v : JSON.stringify(v) })));
+      } else {
+        setPropsMode("json");
+      }
+    } catch {
+      setPropsMode("json");
+    }
+  };
 
   // Load role (or create new)
   useEffect(() => {
@@ -43,12 +69,14 @@ export default function BizRoleEditPage() {
       const r = BizBackend.newBizRole(owner!, appName!);
       setRole(r);
       setOriginalJson(JSON.stringify(r));
+      setPropsEntries([]);
       setLoading(false);
     } else {
       BizBackend.getBizRole(owner!, appName!, name!).then((res) => {
         if (res.status === "ok" && res.data) {
           setRole(res.data);
           setOriginalJson(JSON.stringify(res.data));
+          initPropsEntries(res.data.properties);
         }
       }).finally(() => setLoading(false));
     }
@@ -69,21 +97,37 @@ export default function BizRoleEditPage() {
     });
   }, [owner]);
 
-  // Load sibling roles
+  // Load sibling roles + permissions for preview (parallel to avoid race)
   useEffect(() => {
     if (!owner || !appName) return;
-    BizBackend.getBizRoles(owner!, appName!).then((res) => {
-      if (res.status === "ok" && res.data) {
+    Promise.all([
+      BizBackend.getBizRoles(owner!, appName!),
+      BizBackend.getBizPermissions(owner!, appName!),
+    ]).then(([rolesRes, permsRes]) => {
+      const allPerms = (permsRes.status === "ok" && permsRes.data) ? permsRes.data : [];
+      setPermissions(allPerms);
+      if (rolesRes.status === "ok" && rolesRes.data) {
         setSiblingRoles(
-          res.data
+          rolesRes.data
             .filter((r) => r.name !== name)
-            .map((r) => ({ value: r.name, label: r.displayName || r.name }))
+            .map((r) => ({
+              value: r.name,
+              label: r.displayName || r.name,
+              userCount: r.users?.length ?? 0,
+              permCount: allPerms.filter((p) => p.roles?.includes(r.name)).length,
+            }))
         );
       }
     });
   }, [owner, appName, name]);
 
-  const isDirty = !!role && originalJson !== "" && JSON.stringify(role) !== originalJson;
+  // Permissions related to this role
+  const rolePermissions = useMemo(() => {
+    if (!role) return [];
+    return permissions.filter((p) => p.roles?.includes(role.name));
+  }, [permissions, role?.name]);
+
+  const isDirty = useMemo(() => !!role && originalJson !== "" && JSON.stringify(role) !== originalJson, [role, originalJson]);
   const showBanner = !isAddMode && isDirty;
 
   if (loading || !role) {
@@ -100,22 +144,39 @@ export default function BizRoleEditPage() {
 
   const backPath = `/authorization/${owner}/${appName}`;
 
+  // Clean properties: remove empty-key entries before saving
+  const prepareRoleForSave = (r: BizRole): BizRole => {
+    if (propsMode === "visual") {
+      const cleaned = propsEntries.filter((e) => e.key.trim() !== "");
+      setPropsEntries(cleaned);
+      const obj: Record<string, unknown> = {};
+      for (const e of cleaned) {
+        try { obj[e.key] = JSON.parse(e.value); } catch { obj[e.key] = e.value; }
+      }
+      const props = Object.keys(obj).length > 0 ? JSON.stringify(obj, null, 2) : "";
+      return { ...r, properties: props };
+    }
+    return r;
+  };
+
   const handleSave = async () => {
     setSaving(true);
     try {
+      const toSave = prepareRoleForSave(role);
+      setRole(toSave);
       let res;
       if (isAddMode && isNew) {
-        res = await BizBackend.addBizRole(role);
+        res = await BizBackend.addBizRole(toSave);
       } else {
-        res = await BizBackend.updateBizRole(owner!, appName!, name || role.name, role);
+        res = await BizBackend.updateBizRole(owner!, appName!, name || toSave.name, toSave);
       }
       if (res.status === "ok") {
         modal.toast(t("common.saveSuccess" as any));
         setSaved(true);
-        setOriginalJson(JSON.stringify(role));
+        setOriginalJson(JSON.stringify(toSave));
         setIsAddMode(false);
         if (isNew) {
-          navigate(`${backPath}/roles/${role.name}`, { replace: true });
+          navigate(`${backPath}/roles/${toSave.name}`, { replace: true });
         }
       } else {
         modal.toast(friendlyError(res.msg, t) || t("common.saveFailed" as any), "error");
@@ -130,11 +191,12 @@ export default function BizRoleEditPage() {
   const handleSaveAndExit = async () => {
     setSaving(true);
     try {
+      const toSave = prepareRoleForSave(role);
       let res;
       if (isAddMode && isNew) {
-        res = await BizBackend.addBizRole(role);
+        res = await BizBackend.addBizRole(toSave);
       } else {
-        res = await BizBackend.updateBizRole(owner!, appName!, name || role.name, role);
+        res = await BizBackend.updateBizRole(owner!, appName!, name || toSave.name, toSave);
       }
       if (res.status === "ok") {
         modal.toast(t("common.saveSuccess" as any));
@@ -156,7 +218,7 @@ export default function BizRoleEditPage() {
   const handleDelete = () => {
     const userCount = role.users?.length ?? 0;
     const msg = userCount > 0
-      ? `${t("common.confirmDelete")}\n\n${t("authz.role.deleteHasUsers" as any).replace("{count}", String(userCount))}`
+      ? `${t("common.confirmDelete")}\n\n${(t("authz.role.deleteHasUsers" as any) as string).replace("{count}", String(userCount))}`
       : t("common.confirmDelete");
     modal.showConfirm(msg, async () => {
       const res = await BizBackend.deleteBizRole(role);
@@ -166,6 +228,18 @@ export default function BizRoleEditPage() {
         modal.toast(res.msg || t("common.deleteFailed" as any), "error");
       }
     });
+  };
+
+  // Toggle isEnabled with confirmation when disabling
+  const handleToggleEnabled = (newVal: boolean) => {
+    if (!newVal && role.users.length > 0) {
+      modal.showConfirm(
+        (t("authz.role.disableConfirm" as any) as string).replace("{count}", String(role.users.length)),
+        () => set("isEnabled", false),
+      );
+    } else {
+      set("isEnabled", newVal);
+    }
   };
 
   // User management helpers
@@ -187,10 +261,27 @@ export default function BizRoleEditPage() {
     set("roles", role.roles.filter((r) => r !== roleName));
   };
 
+  // Batch add users
+  const toggleUserSelection = (userId: string) => {
+    setSelectedUsers((prev) => {
+      const next = new Set(prev);
+      if (next.has(userId)) next.delete(userId);
+      else next.add(userId);
+      return next;
+    });
+  };
+  const confirmBatchAdd = () => {
+    const newUsers = [...role.users];
+    selectedUsers.forEach((u) => { if (!newUsers.includes(u)) newUsers.push(u); });
+    set("users", newUsers);
+    setSelectedUsers(new Set());
+    setShowAddUser(false);
+  };
+
   const getUserInfo = (userId: string) => orgUsers.find((u) => u.value === userId);
   const getInitial = (s: string) => {
-    const name = s.includes("/") ? s.split("/")[1] : s;
-    return name.charAt(0).toUpperCase();
+    const n = s.includes("/") ? s.split("/")[1] : s;
+    return n.charAt(0).toUpperCase();
   };
   const AVATAR_COLORS = [
     "from-indigo-500 to-purple-500", "from-cyan-500 to-teal-500",
@@ -202,6 +293,31 @@ export default function BizRoleEditPage() {
   const filteredUsersForAdd = orgUsers.filter(
     (u) => !role.users.includes(u.value) && (userSearch === "" || u.label.toLowerCase().includes(userSearch.toLowerCase()) || u.displayName.toLowerCase().includes(userSearch.toLowerCase()))
   );
+
+  // Properties visual editor helpers — entries are state-driven, synced to role.properties on change
+  const syncPropsToRole = (entries: { key: string; value: string }[]) => {
+    const obj: Record<string, unknown> = {};
+    for (const e of entries) {
+      if (!e.key) continue;
+      try { obj[e.key] = JSON.parse(e.value); } catch { obj[e.key] = e.value; }
+    }
+    set("properties", Object.keys(obj).length > 0 ? JSON.stringify(obj, null, 2) : "");
+  };
+  const addPropsEntry = () => {
+    const next = [...propsEntries, { key: "", value: "" }];
+    setPropsEntries(next);
+    // Don't sync yet — key is empty, will sync when user types
+  };
+  const updatePropsEntry = (idx: number, field: "key" | "value", val: string) => {
+    const next = propsEntries.map((e, i) => i === idx ? { ...e, [field]: val } : e);
+    setPropsEntries(next);
+    syncPropsToRole(next);
+  };
+  const removePropsEntry = (idx: number) => {
+    const next = propsEntries.filter((_, i) => i !== idx);
+    setPropsEntries(next);
+    syncPropsToRole(next);
+  };
 
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
@@ -224,173 +340,420 @@ export default function BizRoleEditPage() {
 
       {showBanner && <UnsavedBanner isAddMode={isAddMode} />}
 
-      <div>
-        {/* Basic Info */}
-        <FormSection title={t("authz.role.section.basic" as any)}>
-          <FormField label={t("field.name" as any)}>
-            <input className={monoInputClass} value={role.name} onChange={(e) => set("name", e.target.value)} />
-          </FormField>
-          <FormField label={t("field.displayName" as any)}>
-            <input className={inputClass} value={role.displayName} onChange={(e) => set("displayName", e.target.value)} />
-          </FormField>
-          <FormField label={t("field.description" as any)} span="full">
-            <textarea className={`${inputClass} min-h-[72px] resize-y`} value={role.description} onChange={(e) => set("description", e.target.value)} />
-          </FormField>
-          <FormField label={t("field.isEnabled" as any)} span="full">
-            <div className="flex items-center justify-between">
-              <p className="text-[12px] text-text-muted">{t("authz.role.enabledHelp" as any)}</p>
-              <Switch checked={role.isEnabled} onChange={(v) => set("isEnabled", v)} />
-            </div>
-          </FormField>
-        </FormSection>
+      {/* Disabled banner */}
+      {!role.isEnabled && !isAddMode && (
+        <div className="flex items-center gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-2.5 text-[13px] text-amber-700 dark:text-amber-400">
+          <AlertTriangle size={16} />
+          {t("authz.role.disabledBanner" as any)}
+        </div>
+      )}
 
-        {/* User Assignment */}
-        <FormSection
-          title={t("authz.role.section.users" as any)}
-          action={
-            <button onClick={() => setShowAddUser(true)} className="flex items-center gap-1 rounded-lg border border-border px-2.5 py-1 text-[12px] font-medium text-text-secondary hover:bg-surface-2 transition-colors">
-              <Plus size={14} /> {t("authz.role.addUsers" as any)}
-            </button>
-          }
-        >
-          <div className="col-span-2">
-            {role.users.length === 0 ? (
-              <div className="py-8 text-center text-[13px] text-text-muted">{t("authz.role.noUsers" as any)}</div>
-            ) : (
-              <div className="divide-y divide-border-subtle">
-                {role.users.map((userId) => {
-                  const info = getUserInfo(userId);
-                  return (
-                    <div key={userId} className="flex items-center gap-3 py-2.5">
-                      <div className={`w-8 h-8 rounded-full bg-gradient-to-br ${getAvatarColor(userId)} flex items-center justify-center text-white text-[12px] font-semibold flex-shrink-0`}>
-                        {getInitial(userId)}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="text-[13px] font-semibold truncate">{info?.displayName || userId.split("/")[1]}</div>
-                        <div className="text-[11px] text-text-muted font-mono">{userId}</div>
-                      </div>
-                      <div className="text-[12px] text-text-secondary hidden sm:block">{info?.email}</div>
-                      <button onClick={() => removeUser(userId)} className="rounded-lg p-1.5 text-text-muted hover:bg-danger/10 hover:text-danger transition-colors">
-                        <X size={14} />
-                      </button>
+      {/* Add mode hint */}
+      {isAddMode && isNew && (
+        <div className="flex items-center gap-2 rounded-lg border border-accent/30 bg-accent/5 px-4 py-2.5 text-[13px] text-accent">
+          <Info size={16} />
+          {t("authz.role.addModeHint" as any)}
+        </div>
+      )}
+
+      <div className="flex gap-6">
+        {/* ── Left: Main content ── */}
+        <div className="flex-1 min-w-0 space-y-0">
+          {/* Basic Info */}
+          <FormSection title={t("authz.role.section.basic" as any)}>
+            <FormField label={t("field.name" as any)}>
+              <input className={monoInputClass} value={role.name} onChange={(e) => set("name", e.target.value)} placeholder={t("authz.role.namePlaceholder" as any)} />
+            </FormField>
+            <FormField label={t("field.displayName" as any)}>
+              <input className={inputClass} value={role.displayName} onChange={(e) => set("displayName", e.target.value)} placeholder={t("authz.role.displayNamePlaceholder" as any)} />
+            </FormField>
+            <FormField label={t("field.description" as any)} span="full">
+              <textarea className={`${inputClass} min-h-[72px] resize-y`} value={role.description} onChange={(e) => set("description", e.target.value)} placeholder={t("authz.role.descPlaceholder" as any)} />
+            </FormField>
+            <FormField label={t("field.isEnabled" as any)} span="full">
+              <div className="flex items-center justify-between">
+                <p className="text-[12px] text-text-muted">{t("authz.role.enabledHelp" as any)}</p>
+                <Switch checked={role.isEnabled} onChange={handleToggleEnabled} />
+              </div>
+            </FormField>
+          </FormSection>
+
+          {/* User Assignment — collapsed in new add mode */}
+          {!(isAddMode && isNew) && (
+            <FormSection
+              title={`${t("authz.role.section.users" as any)} (${role.users.length})`}
+              action={
+                <button onClick={() => { setShowAddUser(true); setSelectedUsers(new Set()); setUserSearch(""); }} className="flex items-center gap-1 rounded-lg border border-border px-2.5 py-1 text-[12px] font-medium text-text-secondary hover:bg-surface-2 transition-colors">
+                  <Plus size={14} /> {t("authz.role.addUsers" as any)}
+                </button>
+              }
+            >
+              <div className="col-span-2">
+                {role.users.length === 0 ? (
+                  <div className="py-8 text-center text-[13px] text-text-muted">
+                    <Users size={24} className="mx-auto mb-2 text-text-muted/50" />
+                    {t("authz.role.noUsers" as any)}
+                  </div>
+                ) : (
+                  <div className="divide-y divide-border-subtle">
+                    {role.users.map((userId) => {
+                      const info = getUserInfo(userId);
+                      return (
+                        <div key={userId} className="flex items-center gap-3 py-2.5">
+                          <div className={`w-8 h-8 rounded-full bg-gradient-to-br ${getAvatarColor(userId)} flex items-center justify-center text-white text-[12px] font-semibold flex-shrink-0`}>
+                            {getInitial(userId)}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="text-[13px] font-semibold truncate">{info?.displayName || userId.split("/")[1]}</div>
+                            <div className="text-[11px] text-text-muted font-mono">{userId}</div>
+                          </div>
+                          <div className="text-[12px] text-text-secondary hidden sm:block">{info?.email}</div>
+                          <button onClick={() => removeUser(userId)} title={t("common.delete")} className="rounded-lg p-1.5 text-text-muted hover:bg-danger/10 hover:text-danger transition-colors">
+                            <X size={14} />
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </FormSection>
+          )}
+
+          {/* Role Inheritance — collapsed in new add mode */}
+          {!(isAddMode && isNew) && (
+            <FormSection
+              title={`${t("authz.role.section.inheritance" as any)} (${role.roles.length})`}
+              action={
+                <button onClick={() => setShowAddRole(true)} className="flex items-center gap-1 rounded-lg border border-border px-2.5 py-1 text-[12px] font-medium text-text-secondary hover:bg-surface-2 transition-colors">
+                  <Plus size={14} /> {t("authz.role.addRole" as any)}
+                </button>
+              }
+            >
+              <div className="col-span-2">
+                {role.roles.length === 0 ? (
+                  <div className="py-6 text-center text-[13px] text-text-muted">
+                    <Shield size={24} className="mx-auto mb-2 text-text-muted/50" />
+                    {t("authz.role.noSubRoles" as any)}
+                  </div>
+                ) : (
+                  <div className="flex flex-wrap gap-2">
+                    {role.roles.map((r) => {
+                      const sr = siblingRoles.find((s) => s.value === r);
+                      return (
+                        <span
+                          key={r}
+                          className="group relative inline-flex items-center gap-1.5 rounded-full bg-surface-2 border border-border px-3 py-1.5 text-[13px] font-medium"
+                        >
+                          <Shield size={14} className="text-text-muted" />
+                          {r}
+                          {sr && (
+                            <span className="text-[11px] text-text-muted ml-0.5">
+                              ({sr.userCount}u, {sr.permCount}p)
+                            </span>
+                          )}
+                          <button onClick={() => removeSubRole(r)} className="text-text-muted hover:text-danger transition-colors">
+                            <X size={12} />
+                          </button>
+                        </span>
+                      );
+                    })}
+                  </div>
+                )}
+                <p className="mt-3 flex items-center gap-1 text-[11px] text-text-muted">
+                  <Info size={14} /> {t("authz.role.inheritHelp" as any)}
+                </p>
+              </div>
+            </FormSection>
+          )}
+
+          {/* Properties — structured editor */}
+          <FormSection
+            title={t("authz.role.section.properties" as any)}
+            action={
+              <div className="flex items-center gap-1 rounded-lg bg-surface-2 p-0.5">
+                <button
+                  onClick={() => {
+                    // Re-parse from role.properties when switching to visual
+                    if (role.properties) {
+                      try {
+                        const obj = JSON.parse(role.properties);
+                        if (typeof obj === "object" && obj !== null && !Array.isArray(obj)) {
+                          setPropsEntries(Object.entries(obj).map(([k, v]) => ({ key: k, value: typeof v === "string" ? v : JSON.stringify(v) })));
+                        }
+                      } catch {
+                        modal.toast(t("authz.role.properties.parseError" as any), "error");
+                        return;
+                      }
+                    } else {
+                      setPropsEntries([]);
+                    }
+                    setPropsMode("visual");
+                  }}
+                  className={`flex items-center gap-1 rounded-md px-2.5 py-1 text-[11px] font-medium transition-colors ${propsMode === "visual" ? "bg-surface-1 text-text-primary shadow-sm" : "text-text-muted hover:text-text-secondary"}`}
+                >
+                  <Eye size={12} /> {t("authz.role.properties.visual" as any)}
+                </button>
+                <button
+                  onClick={() => setPropsMode("json")}
+                  className={`flex items-center gap-1 rounded-md px-2.5 py-1 text-[11px] font-medium transition-colors ${propsMode === "json" ? "bg-surface-1 text-text-primary shadow-sm" : "text-text-muted hover:text-text-secondary"}`}
+                >
+                  <Code size={12} /> {t("authz.role.properties.json" as any)}
+                </button>
+              </div>
+            }
+          >
+            <div className="col-span-2">
+              {propsMode === "visual" ? (
+                <div className="space-y-2">
+                  {propsEntries.length === 0 ? (
+                    <div className="py-4 text-center text-[13px] text-text-muted">
+                      {t("authz.role.properties.empty" as any)}
                     </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        </FormSection>
+                  ) : (
+                    <div className="space-y-2">
+                      <div className="grid grid-cols-[1fr_1fr_32px] gap-2 text-[11px] font-medium text-text-muted uppercase tracking-wider px-1">
+                        <span>{t("authz.role.properties.key" as any)}</span>
+                        <span>{t("authz.role.properties.value" as any)}</span>
+                        <span />
+                      </div>
+                      {propsEntries.map((entry, idx) => (
+                        <div key={idx} className="grid grid-cols-[1fr_1fr_32px] gap-2 items-center">
+                          <input
+                            className={monoInputClass}
+                            value={entry.key}
+                            onChange={(e) => updatePropsEntry(idx, "key", e.target.value)}
+                            placeholder="key"
+                          />
+                          <input
+                            className={monoInputClass}
+                            value={entry.value}
+                            onChange={(e) => updatePropsEntry(idx, "value", e.target.value)}
+                            placeholder="value"
+                          />
+                          <button onClick={() => removePropsEntry(idx)} className="rounded-lg p-1.5 text-text-muted hover:bg-danger/10 hover:text-danger transition-colors">
+                            <X size={14} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  <button onClick={addPropsEntry} className="flex items-center gap-1 text-[12px] font-medium text-accent hover:text-accent-hover transition-colors">
+                    <Plus size={14} /> {t("authz.role.properties.addEntry" as any)}
+                  </button>
+                </div>
+              ) : (
+                <textarea
+                  className={`${monoInputClass} min-h-[120px] resize-y`}
+                  value={role.properties}
+                  onChange={(e) => set("properties", e.target.value)}
+                  placeholder='{"dataScope": {"orders": "department"}}'
+                />
+              )}
+            </div>
+          </FormSection>
+        </div>
 
-        {/* Role Inheritance */}
-        <FormSection
-          title={t("authz.role.section.inheritance" as any)}
-          action={
-            <button onClick={() => setShowAddRole(true)} className="flex items-center gap-1 rounded-lg border border-border px-2.5 py-1 text-[12px] font-medium text-text-secondary hover:bg-surface-2 transition-colors">
-              <Plus size={14} /> {t("authz.role.addRole" as any)}
-            </button>
-          }
-        >
-          <div className="col-span-2">
-            {role.roles.length === 0 ? (
-              <div className="py-6 text-center text-[13px] text-text-muted">{t("authz.role.noSubRoles" as any)}</div>
-            ) : (
-              <div className="flex flex-wrap gap-2">
-                {role.roles.map((r) => (
-                  <span key={r} className="inline-flex items-center gap-1.5 rounded-full bg-surface-2 border border-border px-3 py-1.5 text-[13px] font-medium">
-                    <Shield size={14} className="text-text-muted" />
-                    {r}
-                    <button onClick={() => removeSubRole(r)} className="text-text-muted hover:text-danger transition-colors">
-                      <X size={12} />
-                    </button>
-                  </span>
-                ))}
+        {/* ── Right: Summary + Permission Preview ── */}
+        <div className="hidden lg:block w-[280px] flex-shrink-0 space-y-4">
+          {/* Role Summary Card */}
+          <div className="rounded-xl border border-border bg-surface-1 p-4 space-y-3 sticky top-[80px]">
+            <h4 className="text-[12px] font-semibold text-text-secondary uppercase tracking-wider">
+              {t("authz.role.section.summary" as any)}
+            </h4>
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 text-[13px]">
+                <Users size={14} className="text-text-muted" />
+                <span>{(t("authz.role.summary.users" as any) as string).replace("{count}", String(role.users.length))}</span>
               </div>
-            )}
-            <p className="mt-3 flex items-center gap-1 text-[11px] text-text-muted">
-              <Info size={14} /> {t("authz.role.inheritHelp" as any)}
-            </p>
-          </div>
-        </FormSection>
+              <div className="flex items-center gap-2 text-[13px]">
+                <Shield size={14} className="text-text-muted" />
+                <span>{(t("authz.role.summary.subRoles" as any) as string).replace("{count}", String(role.roles.length))}</span>
+              </div>
+              <div className="flex items-center gap-2 text-[13px]">
+                <ShieldCheck size={14} className="text-text-muted" />
+                <span>
+                  {rolePermissions.length > 0
+                    ? (t("authz.role.summary.permissions" as any) as string).replace("{count}", String(rolePermissions.length))
+                    : t("authz.role.summary.noPermissions" as any)}
+                </span>
+              </div>
+            </div>
 
-        {/* Properties (JSON) */}
-        <FormSection title={t("authz.role.section.properties" as any)}>
-          <FormField label={t("authz.role.propertiesHelp" as any)} span="full">
-            <textarea
-              className={`${monoInputClass} min-h-[120px] resize-y`}
-              value={role.properties}
-              onChange={(e) => set("properties", e.target.value)}
-              placeholder='{"dataScope": {"orders": "department"}}'
-            />
-          </FormField>
-        </FormSection>
+            {/* Status indicator */}
+            <div className="pt-2 border-t border-border-subtle">
+              <div className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium ${role.isEnabled
+                ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                : "bg-amber-500/10 text-amber-600 dark:text-amber-400"
+              }`}>
+                <div className={`w-1.5 h-1.5 rounded-full ${role.isEnabled ? "bg-emerald-500" : "bg-amber-500"}`} />
+                {role.isEnabled ? t("common.enabled") : t("common.disabled")}
+              </div>
+            </div>
+          </div>
+
+          {/* Permission Preview Card */}
+          {!isNew && (
+            <div className="rounded-xl border border-border bg-surface-1 overflow-hidden sticky top-[260px]">
+              <div className="px-4 py-3 border-b border-border-subtle bg-surface-2/30">
+                <h4 className="text-[12px] font-semibold text-text-secondary uppercase tracking-wider">
+                  {t("authz.role.section.permPreview" as any)}
+                </h4>
+              </div>
+              <div className="p-3 max-h-[300px] overflow-y-auto">
+                {rolePermissions.length === 0 ? (
+                  <div className="py-4 text-center text-[12px] text-text-muted">
+                    <ShieldX size={20} className="mx-auto mb-1.5 text-text-muted/50" />
+                    {t("authz.role.permPreview.empty" as any)}
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {rolePermissions.map((perm) => (
+                      <div key={perm.name} className="rounded-lg border border-border-subtle bg-surface-0 p-2.5">
+                        <div className="flex items-center gap-1.5 mb-1.5">
+                          <span className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase ${perm.effect === "Allow"
+                            ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                            : "bg-red-500/10 text-red-600 dark:text-red-400"
+                          }`}>
+                            {perm.effect === "Allow" ? <ShieldCheck size={10} /> : <ShieldX size={10} />}
+                            {perm.effect === "Allow" ? t("authz.role.permPreview.allow" as any) : t("authz.role.permPreview.deny" as any)}
+                          </span>
+                          <span className="text-[12px] font-medium truncate">{perm.displayName || perm.name}</span>
+                        </div>
+                        {perm.resources?.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mb-1">
+                            {perm.resources.map((r, i) => (
+                              <span key={i} className="inline-block rounded bg-surface-2 px-1.5 py-0.5 text-[10px] font-mono text-text-secondary">{r}</span>
+                            ))}
+                          </div>
+                        )}
+                        {perm.actions?.length > 0 && (
+                          <div className="flex flex-wrap gap-1">
+                            {perm.actions.map((a, i) => (
+                              <span key={i} className="inline-block rounded bg-accent/10 px-1.5 py-0.5 text-[10px] font-mono text-accent">{a}</span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <p className="mt-2 text-center text-[10px] text-text-muted">{t("authz.role.permPreview.hint" as any)}</p>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* Add User Modal */}
-      {showAddUser && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center">
-          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setShowAddUser(false)} />
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95, y: 10 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            className="relative z-10 w-full max-w-md rounded-xl border border-border bg-surface-1 shadow-[var(--shadow-elevated)]"
-          >
-            <div className="flex items-center justify-between px-5 py-4 border-b border-border">
-              <h3 className="text-[15px] font-semibold">{t("authz.role.selectUsers" as any)}</h3>
-              <button onClick={() => setShowAddUser(false)} className="rounded-lg p-1.5 text-text-muted hover:bg-surface-2 transition-colors"><X size={16} /></button>
-            </div>
-            <div className="px-5 py-3 border-b border-border-subtle">
-              <input className={inputClass} placeholder={t("common.search")} value={userSearch} onChange={(e) => setUserSearch(e.target.value)} autoFocus />
-            </div>
-            <div className="max-h-[300px] overflow-y-auto divide-y divide-border-subtle">
-              {filteredUsersForAdd.map((u) => (
-                <button key={u.value} onClick={() => addUser(u.value)} className="w-full flex items-center gap-3 px-5 py-2.5 hover:bg-surface-2 transition-colors text-left">
-                  <div className={`w-7 h-7 rounded-full bg-gradient-to-br ${getAvatarColor(u.value)} flex items-center justify-center text-white text-[10px] font-semibold`}>
-                    {getInitial(u.value)}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="text-[13px] font-medium truncate">{u.displayName}</div>
-                    <div className="text-[11px] text-text-muted font-mono">{u.value}</div>
-                  </div>
+      {/* Add User Modal — batch mode */}
+      <AnimatePresence>
+        {showAddUser && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center" onKeyDown={(e) => { if (e.key === "Escape") setShowAddUser(false); }}>
+            <motion.div
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+              onClick={() => setShowAddUser(false)}
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              className="relative z-10 w-full max-w-md rounded-xl border border-border bg-surface-1 shadow-[var(--shadow-elevated)]"
+            >
+              <div className="flex items-center justify-between px-5 py-4 border-b border-border">
+                <h3 className="text-[15px] font-semibold">{t("authz.role.selectUsers" as any)}</h3>
+                <div className="flex items-center gap-2">
+                  {selectedUsers.size > 0 && (
+                    <span className="text-[12px] text-accent font-medium">
+                      {(t("authz.role.selectedCount" as any) as string).replace("{count}", String(selectedUsers.size))}
+                    </span>
+                  )}
+                  <button onClick={() => setShowAddUser(false)} className="rounded-lg p-1.5 text-text-muted hover:bg-surface-2 transition-colors"><X size={16} /></button>
+                </div>
+              </div>
+              <div className="px-5 py-3 border-b border-border-subtle">
+                <input className={inputClass} placeholder={t("common.search")} value={userSearch} onChange={(e) => setUserSearch(e.target.value)} autoFocus />
+              </div>
+              <div className="max-h-[300px] overflow-y-auto divide-y divide-border-subtle">
+                {filteredUsersForAdd.map((u) => {
+                  const isSelected = selectedUsers.has(u.value);
+                  return (
+                    <button key={u.value} onClick={() => toggleUserSelection(u.value)} className={`w-full flex items-center gap-3 px-5 py-2.5 hover:bg-surface-2 transition-colors text-left ${isSelected ? "bg-accent/5" : ""}`}>
+                      <div className={`w-5 h-5 rounded border flex items-center justify-center flex-shrink-0 transition-colors ${isSelected ? "bg-accent border-accent" : "border-border"}`}>
+                        {isSelected && <Check size={12} className="text-white" />}
+                      </div>
+                      <div className={`w-7 h-7 rounded-full bg-gradient-to-br ${getAvatarColor(u.value)} flex items-center justify-center text-white text-[10px] font-semibold`}>
+                        {getInitial(u.value)}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-[13px] font-medium truncate">{u.displayName}</div>
+                        <div className="text-[11px] text-text-muted font-mono">{u.value}</div>
+                      </div>
+                    </button>
+                  );
+                })}
+                {filteredUsersForAdd.length === 0 && (
+                  <div className="py-8 text-center text-[13px] text-text-muted">{t("common.noData")}</div>
+                )}
+              </div>
+              {/* Batch confirm footer */}
+              <div className="flex items-center justify-end gap-2 px-5 py-3 border-t border-border">
+                <button onClick={() => setShowAddUser(false)} className="rounded-lg border border-border px-3 py-1.5 text-[12px] font-medium text-text-secondary hover:bg-surface-2 transition-colors">
+                  {t("common.cancel")}
                 </button>
-              ))}
-              {filteredUsersForAdd.length === 0 && (
-                <div className="py-8 text-center text-[13px] text-text-muted">{t("common.noData")}</div>
-              )}
-            </div>
-          </motion.div>
-        </div>
-      )}
+                <button
+                  onClick={confirmBatchAdd}
+                  disabled={selectedUsers.size === 0}
+                  className="rounded-lg bg-accent px-3 py-1.5 text-[12px] font-semibold text-white hover:bg-accent-hover disabled:opacity-50 transition-colors"
+                >
+                  {t("authz.role.batchAdd" as any)} ({selectedUsers.size})
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       {/* Add SubRole Modal */}
-      {showAddRole && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center">
-          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setShowAddRole(false)} />
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95, y: 10 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            className="relative z-10 w-full max-w-sm rounded-xl border border-border bg-surface-1 shadow-[var(--shadow-elevated)]"
-          >
-            <div className="flex items-center justify-between px-5 py-4 border-b border-border">
-              <h3 className="text-[15px] font-semibold">{t("authz.role.selectRole" as any)}</h3>
-              <button onClick={() => setShowAddRole(false)} className="rounded-lg p-1.5 text-text-muted hover:bg-surface-2 transition-colors"><X size={16} /></button>
-            </div>
-            <div className="max-h-[250px] overflow-y-auto divide-y divide-border-subtle">
-              {siblingRoles.filter((r) => !role.roles.includes(r.value)).map((r) => (
-                <button key={r.value} onClick={() => addSubRole(r.value)} className="w-full flex items-center gap-3 px-5 py-3 hover:bg-surface-2 transition-colors text-left">
-                  <Shield size={16} className="text-text-muted" />
-                  <div>
-                    <div className="text-[13px] font-medium">{r.value}</div>
-                    <div className="text-[11px] text-text-muted">{r.label}</div>
-                  </div>
-                </button>
-              ))}
-              {siblingRoles.filter((r) => !role.roles.includes(r.value)).length === 0 && (
-                <div className="py-8 text-center text-[13px] text-text-muted">{t("common.noData")}</div>
-              )}
-            </div>
-          </motion.div>
-        </div>
-      )}
+      <AnimatePresence>
+        {showAddRole && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center" onKeyDown={(e) => { if (e.key === "Escape") setShowAddRole(false); }}>
+            <motion.div
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+              onClick={() => setShowAddRole(false)}
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              className="relative z-10 w-full max-w-sm rounded-xl border border-border bg-surface-1 shadow-[var(--shadow-elevated)]"
+            >
+              <div className="flex items-center justify-between px-5 py-4 border-b border-border">
+                <h3 className="text-[15px] font-semibold">{t("authz.role.selectRole" as any)}</h3>
+                <button onClick={() => setShowAddRole(false)} className="rounded-lg p-1.5 text-text-muted hover:bg-surface-2 transition-colors"><X size={16} /></button>
+              </div>
+              <div className="max-h-[250px] overflow-y-auto divide-y divide-border-subtle">
+                {siblingRoles.filter((r) => !role.roles.includes(r.value)).map((r) => (
+                  <button key={r.value} onClick={() => addSubRole(r.value)} className="w-full flex items-center gap-3 px-5 py-3 hover:bg-surface-2 transition-colors text-left">
+                    <Shield size={16} className="text-text-muted" />
+                    <div className="flex-1">
+                      <div className="text-[13px] font-medium">{r.value}</div>
+                      <div className="text-[11px] text-text-muted">{r.label}</div>
+                    </div>
+                    <span className="text-[11px] text-text-muted">
+                      {r.userCount}u, {r.permCount}p
+                    </span>
+                  </button>
+                ))}
+                {siblingRoles.filter((r) => !role.roles.includes(r.value)).length === 0 && (
+                  <div className="py-8 text-center text-[13px] text-text-muted">{t("common.noData")}</div>
+                )}
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 }

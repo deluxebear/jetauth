@@ -99,19 +99,10 @@ func GetBizEnforcer(owner, appName string) (*casbin.Enforcer, error) {
 
 		// Try Redis cache — build enforcer from cached policies WITHOUT DB adapter
 		if cacheData := bizPolicyCacheGet(owner, appName); cacheData != nil {
-			m, err := model.NewModelFromString(cacheData.ModelText)
+			e, err := buildEnforcerInMemory(cacheData.ModelText, cacheData.Policies, cacheData.GroupingPolicies)
 			if err == nil {
-				e, err := casbin.NewEnforcer(m)
-				if err == nil {
-					if len(cacheData.Policies) > 0 {
-						_, _ = e.AddPolicies(cacheData.Policies)
-					}
-					if len(cacheData.GroupingPolicies) > 0 {
-						_, _ = e.AddGroupingPolicies(cacheData.GroupingPolicies)
-					}
-					bizEnforcerCache.Store(key, e)
-					return e, nil
-				}
+				bizEnforcerCache.Store(key, e)
+				return e, nil
 			}
 			// Redis data corrupt — fall through to DB
 		}

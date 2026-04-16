@@ -9,6 +9,7 @@
 package object
 
 import (
+	"github.com/beego/beego/v2/core/logs"
 	"github.com/deluxebear/casdoor/util"
 	"github.com/xorm-io/core"
 )
@@ -70,7 +71,7 @@ func AddBizRole(role *BizRole) (bool, error) {
 	}
 
 	if affected != 0 {
-		syncBizPolicies(role.Owner, role.AppName)
+		SyncAfterRoleAdd(role)
 	}
 
 	return affected != 0, nil
@@ -81,13 +82,19 @@ func UpdateBizRole(owner, appName, name string, role *BizRole) (bool, error) {
 		return false, err
 	}
 
+	// Read old state before update (needed for incremental diff)
+	oldRole, err := getBizRole(owner, appName, name)
+	if err != nil {
+		logs.Warning("failed to read old role for incremental sync: %v", err)
+	}
+
 	affected, err := ormer.Engine.ID(core.PK{owner, appName, name}).AllCols().Update(role)
 	if err != nil {
 		return false, err
 	}
 
 	if affected != 0 {
-		syncBizPolicies(role.Owner, role.AppName)
+		SyncAfterRoleUpdate(oldRole, role)
 	}
 
 	return affected != 0, nil
@@ -98,13 +105,22 @@ func DeleteBizRole(role *BizRole) (bool, error) {
 		return false, err
 	}
 
+	// Read full state before delete (needed for incremental diff)
+	fullRole, err := getBizRole(role.Owner, role.AppName, role.Name)
+	if err != nil {
+		logs.Warning("failed to read role for incremental sync: %v", err)
+	}
+	if fullRole == nil {
+		fullRole = role
+	}
+
 	affected, err := ormer.Engine.ID(core.PK{role.Owner, role.AppName, role.Name}).Delete(&BizRole{})
 	if err != nil {
 		return false, err
 	}
 
 	if affected != 0 {
-		syncBizPolicies(role.Owner, role.AppName)
+		SyncAfterRoleDelete(fullRole)
 	}
 
 	return affected != 0, nil

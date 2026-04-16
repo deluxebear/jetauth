@@ -11,12 +11,17 @@ package object
 import (
 	"fmt"
 	"regexp"
-	"strings"
 
 	"github.com/beego/beego/v2/core/logs"
 )
 
 var validTableNameRe = regexp.MustCompile(`^[a-zA-Z_][a-zA-Z0-9_]{0,63}$`)
+
+// Casbin-level policy effect values (lowercase, distinct from domain-level EffectAllow/EffectDeny).
+const (
+	casbinEftAllow = "allow"
+	casbinEftDeny  = "deny"
+)
 
 // ValidatePolicyTable checks that the table name is safe for use in SQL.
 func ValidatePolicyTable(tableName string) error {
@@ -79,43 +84,13 @@ func SyncAppPolicies(owner, appName string) (*SyncStats, error) {
 		return nil, err
 	}
 
-	// 4. Determine if model has eft field using parsed model tokens
-	hasEft := false
-	if pDef, ok := e.GetModel()["p"]["p"]; ok {
-		for _, token := range pDef.Tokens {
-			if token == "p_eft" {
-				hasEft = true
-				break
-			}
-		}
-	}
+	// 4. Determine if model has eft field
+	hasEft := detectHasEft(e)
 
 	// 5. Generate p policies from permissions (Cartesian product) — batch
 	var policies [][]string
 	for _, perm := range permissions {
-		if !perm.IsEnabled || perm.State != StateApproved {
-			continue
-		}
-
-		subjects := make([]string, 0, len(perm.Users)+len(perm.Roles))
-		subjects = append(subjects, perm.Users...)
-		subjects = append(subjects, perm.Roles...)
-
-		for _, sub := range subjects {
-			for _, res := range perm.Resources {
-				for _, act := range perm.Actions {
-					if hasEft {
-						eft := "allow"
-						if perm.Effect == EffectDeny {
-							eft = "deny"
-						}
-						policies = append(policies, []string{sub, res, act, eft})
-					} else {
-						policies = append(policies, []string{sub, res, act})
-					}
-				}
-			}
-		}
+		policies = append(policies, computePermPPolicies(perm, hasEft)...)
 	}
 	if len(policies) > 0 {
 		if _, err := e.AddPolicies(policies); err != nil {
@@ -125,18 +100,10 @@ func SyncAppPolicies(owner, appName string) (*SyncStats, error) {
 
 	// 6. Generate g policies from roles (role inheritance) — batch
 	var groupingPolicies [][]string
-	hasRoleDef := strings.Contains(config.ModelText, "[role_definition]")
+	hasRoleDef := HasRoleDefinition(e.GetModel())
 	if hasRoleDef {
 		for _, role := range roles {
-			if !role.IsEnabled {
-				continue
-			}
-			for _, user := range role.Users {
-				groupingPolicies = append(groupingPolicies, []string{user, role.Name})
-			}
-			for _, subRole := range role.Roles {
-				groupingPolicies = append(groupingPolicies, []string{subRole, role.Name})
-			}
+			groupingPolicies = append(groupingPolicies, computeRoleGPolicies(role)...)
 		}
 		if len(groupingPolicies) > 0 {
 			if _, err := e.AddGroupingPolicies(groupingPolicies); err != nil {
