@@ -12,8 +12,8 @@ export interface Column<T> {
   render?: (value: unknown, record: T, index: number) => React.ReactNode;
   width?: string;
   mono?: boolean;
-  // Column visibility menu knobs — only read when `columnsToggle` is enabled.
-  // hideable=false keeps the column in the visible set regardless of menu
+  // Column visibility menu knobs — consumed by the exported ColumnsMenu
+  // helper. hideable=false keeps the column visible regardless of menu
   // toggles (e.g. primary-identity columns); defaultHidden=true makes the
   // column start hidden until a user opts in.
   hideable?: boolean;
@@ -33,11 +33,14 @@ export interface FilterState {
   value: string;
 }
 
-// Render-prop context passed to `bulkActions` so callers get the currently
-// selected rows + a clear() callback without having to manage selection state
-// themselves.
+// Render-prop context passed to `bulkActions`. `selected` resolves row
+// objects via current `data` + a cross-page cache; `selectedKeys` is the
+// authoritative id list (including rows on pages the user hasn't re-
+// visited recently). Use `selectedKeys` for "N selected" counts and API
+// calls; use `selected` only when you need full row objects in the UI.
 export interface BulkActionContext<T> {
   selected: T[];
+  selectedKeys: string[];
   clear: () => void;
 }
 
@@ -61,10 +64,14 @@ interface DataTableProps<T> {
   onRowClick?: (record: T) => void;
 
   // Bulk selection: adds a leading checkbox column. `bulkActions` renders a
-  // floating bar above the table when at least one row is selected.
+  // floating bar above the table when at least one row is selected. When
+  // `crossPageSelection` is on, selections persist across pagination —
+  // header checkbox "select all" still operates on the current page only,
+  // and the bulk bar shows the cross-page total via `selectedKeys.length`.
   selectable?: boolean;
+  crossPageSelection?: boolean;
   bulkActions?: (ctx: BulkActionContext<T>) => React.ReactNode;
-  onSelectionChange?: (selected: T[]) => void;
+  onSelectionChange?: (selected: T[], selectedKeys: string[]) => void;
 
   // Client-side sort — for lists that fit in memory (few hundred rows). When
   // off, the table preserves its current "callback-only" behavior: sort
@@ -72,25 +79,55 @@ interface DataTableProps<T> {
   clientSort?: boolean;
   defaultSort?: SortState;
 
-  // Persistence: when provided, sort state + hidden-column set survive
+  // Persistence (uncontrolled mode only): sort + hidden-column set survive
   // reloads under `localStorage[persistKey]`. Use a stable per-screen key
-  // like "biz-role-table:{owner}/{app}".
+  // like "biz-role-table:{owner}/{app}". Ignored when `sort` / `hidden` are
+  // provided as controlled props.
   persistKey?: string;
 
-  // Column visibility menu: renders a "Columns" dropdown in the toolbar so
-  // users can hide/show columns. Columns with `hideable: false` are locked.
-  columnsToggle?: boolean;
+  // ── Controlled prefs (optional) ──────────────────────────────────────
+  // When provided, the table defers sort + visibility state to the caller.
+  // Pair with `useTablePrefs()` + `<ColumnsMenu>` to render the columns
+  // dropdown somewhere outside the table (e.g. next to a primary CTA).
+  sort?: SortState;
+  onSortChange?: (sort: SortState) => void;
+  hidden?: Set<string>;
 
-  // Extra toolbar content (buttons, search, etc.) rendered right-aligned in
-  // the toolbar bar. The toolbar only appears when there's something to show
-  // (bulk actions, columns toggle, or this prop).
-  toolbar?: React.ReactNode;
+  // ── Column resize ───────────────────────────────────────────────────
+  // When `resizable` is on, each non-fixed column header grows a drag
+  // handle on its right edge. Drag to resize, double-click to auto-fit.
+  // Pair with `useTablePrefs()` for persisted widths (controlled mode).
+  resizable?: boolean;
+  widths?: Record<string, number>;           // controlled widths (px)
+  onWidthChange?: (key: string, width: number) => void;
+
+  // ── Pagination ──────────────────────────────────────────────────────
+  // Server-side: caller passes `page`/`pageSize`/`total`/`onPageChange`;
+  // DataTable renders what arrives and only handles chrome (UI + arrows +
+  // page-size selector via `onPageSizeChange`).
+  // Client-side: set `clientPagination` + `clientSort`. DataTable manages
+  // page + pageSize state itself; `pageSize`/`onPageSizeChange` are
+  // optional (for callers that want to persist via useTablePrefs).
+  clientPagination?: boolean;
+  defaultPageSize?: number;                  // initial pageSize in client mode (persisted via useTablePrefs / persistKey)
+  pageSizeOptions?: number[];                // selector options; default [10,20,50,100]
+  onPageSizeChange?: (size: number) => void;
 }
 
 interface PersistShape {
   sort?: SortState;
   hidden?: string[];
+  widths?: Record<string, number>;
+  pageSize?: number;
 }
+
+const DEFAULT_PAGE_SIZE_OPTIONS = [10, 20, 50, 100];
+
+// Column resize bounds. Narrow enough to accommodate a single chip; wide
+// enough that a wrapped long title can still fit on one line after user
+// drags aggressively. Keep these constants in sync with the autoFit buffer.
+const MIN_COL_WIDTH = 60;
+const MAX_COL_WIDTH = 800;
 
 function loadPersisted(key?: string): PersistShape | null {
   if (!key) return null;
@@ -103,27 +140,80 @@ function loadPersisted(key?: string): PersistShape | null {
   return null;
 }
 
+// Shared initial-prefs reader used by both DataTable's uncontrolled state
+// and the public useTablePrefs hook. defaultHiddenKeys is consulted first;
+// callers that pass `columns` can derive them from columns[].defaultHidden.
+function readInitialPrefs(
+  persistKey: string | undefined,
+  defaultSort: SortState | undefined,
+  defaultHiddenKeys: string[],
+  defaultPageSize: number,
+): { sort: SortState; hidden: Set<string>; widths: Record<string, number>; pageSize: number } {
+  const p = loadPersisted(persistKey);
+  const sort: SortState = p?.sort ?? defaultSort ?? { field: "", order: "" };
+  const hiddenFromPersist = p?.hidden && Array.isArray(p.hidden) ? p.hidden : null;
+  const hidden = new Set(hiddenFromPersist ?? defaultHiddenKeys);
+  const widths = (p?.widths && typeof p.widths === "object") ? p.widths : {};
+  const pageSize = typeof p?.pageSize === "number" && p.pageSize > 0 ? p.pageSize : defaultPageSize;
+  return { sort, hidden, widths, pageSize };
+}
+
+// Shared persistence writer. Dedups by serialized payload (via the provided
+// ref) so dragging a column 200 pixels doesn't trigger 200 localStorage
+// writes when the logical state is unchanged on any given frame.
+function usePersistedPrefs(
+  persistKey: string | undefined,
+  enabled: boolean,
+  sort: SortState,
+  hidden: Set<string>,
+  widths: Record<string, number>,
+  pageSize: number,
+) {
+  const lastPayloadRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!persistKey || !enabled) return;
+    const payload = JSON.stringify({
+      sort,
+      hidden: Array.from(hidden),
+      widths,
+      pageSize,
+    });
+    if (lastPayloadRef.current === payload) return;
+    lastPayloadRef.current = payload;
+    try { localStorage.setItem(persistKey, payload); } catch { /* quota — non-fatal */ }
+  }, [persistKey, enabled, sort, hidden, widths, pageSize]);
+}
+
 export default function DataTable<T extends Record<string, unknown>>({
   columns,
   data,
   rowKey,
   loading,
-  page = 1,
-  pageSize = 20,
-  total = 0,
+  page: pageControlled,
+  pageSize,
+  total: totalProp,
   onPageChange,
   onSort,
   onFilter,
   emptyText = "No data",
   onRowClick,
   selectable,
+  crossPageSelection,
   bulkActions,
   onSelectionChange,
   clientSort,
   defaultSort,
   persistKey,
-  columnsToggle,
-  toolbar,
+  sort: sortControlled,
+  onSortChange,
+  hidden: hiddenControlled,
+  resizable,
+  widths: widthsControlled,
+  onWidthChange,
+  clientPagination,
+  defaultPageSize,
+  pageSizeOptions = DEFAULT_PAGE_SIZE_OPTIONS,
+  onPageSizeChange,
 }: DataTableProps<T>) {
   const { t } = useTranslation();
 
@@ -132,51 +222,165 @@ export default function DataTable<T extends Record<string, unknown>>({
     [rowKey],
   );
 
-  const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
-  // ── Sort state ───────────────────────────────────────────────────────
-  // Init precedence: persisted → defaultSort → empty. Only runs on mount
-  // (and when persistKey changes, which is rare).
-  const initial = useMemo(() => {
-    const p = loadPersisted(persistKey);
-    const sort: SortState = p?.sort ?? defaultSort ?? { field: "", order: "" };
-    const hiddenFromPersist = p?.hidden && Array.isArray(p.hidden) ? p.hidden : null;
-    const hiddenDefault = columns.filter((c) => c.defaultHidden).map((c) => c.key);
-    const hidden = hiddenFromPersist ?? hiddenDefault;
-    return { sort, hidden: new Set(hidden) };
+  // Init precedence: persisted → defaultSort → empty. Runs on mount only.
+  // columns is excluded from deps — column schema is assumed stable per
+  // table instance; remount with a different persistKey to re-init.
+  const initial = useMemo(
+    () => readInitialPrefs(
+      persistKey,
+      defaultSort,
+      columns.filter((c) => c.defaultHidden).map((c) => c.key),
+      defaultPageSize ?? 20,
+    ),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [persistKey]);
+    [persistKey],
+  );
 
-  const [sort, setSort] = useState<SortState>(initial.sort);
-  const [hidden, setHidden] = useState<Set<string>>(initial.hidden);
+  const [sortInternal, setSortInternal] = useState<SortState>(initial.sort);
+  const [hiddenInternal, setHiddenInternal] = useState<Set<string>>(initial.hidden);
+  const [widthsInternal, setWidthsInternal] = useState<Record<string, number>>(initial.widths);
+  const [pageSizeInternal, setPageSizeInternal] = useState<number>(initial.pageSize);
+  const [pageInternal, setPageInternal] = useState<number>(1);
   const [activeFilter, setActiveFilter] = useState<string | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [colMenuOpen, setColMenuOpen] = useState(false);
-  const colMenuRef = useRef<HTMLDivElement>(null);
+  const tableRef = useRef<HTMLTableElement>(null);
 
-  // Persist sort + hidden on change (no-op if persistKey is unset).
-  useEffect(() => {
-    if (!persistKey) return;
-    try {
-      localStorage.setItem(persistKey, JSON.stringify({ sort, hidden: Array.from(hidden) }));
-    } catch { /* quota — non-fatal */ }
-  }, [persistKey, sort, hidden]);
+  const sort = sortControlled ?? sortInternal;
+  const hidden = hiddenControlled ?? hiddenInternal;
+  const widths = widthsControlled ?? widthsInternal;
+  // pageSize is controlled if `pageSize` prop is a positive number; else we
+  // manage it internally (with persistence if persistKey is set).
+  const pageSizeControlled = typeof pageSize === "number" && pageSize > 0;
+  const effectivePageSize = pageSizeControlled ? pageSize : pageSizeInternal;
+  const setSort = (next: SortState) => {
+    if (!sortControlled) setSortInternal(next);
+    onSortChange?.(next);
+  };
+  const setWidth = (key: string, w: number) => {
+    if (widthsControlled) {
+      onWidthChange?.(key, w);
+    } else {
+      setWidthsInternal((prev) => (prev[key] === w ? prev : { ...prev, [key]: w }));
+    }
+  };
+  const setPageSize = (n: number) => {
+    if (!pageSizeControlled) setPageSizeInternal(n);
+    onPageSizeChange?.(n);
+    // Reset to page 1 — staying on page 7 of a now-2-page list would be
+    // confusing. In server mode the caller owns paging; in client mode
+    // DataTable owns it. Only one setter fires per mode.
+    if (clientPagination) setPageInternal(1);
+    else onPageChange?.(1);
+  };
 
-  // Close columns menu on outside click.
-  useEffect(() => {
-    if (!colMenuOpen) return;
-    const h = (e: MouseEvent) => {
-      if (colMenuRef.current && !colMenuRef.current.contains(e.target as Node)) setColMenuOpen(false);
+  // Internal persistence only runs when nothing is controlled. Partial
+  // control (e.g. only `sort` controlled) is all-or-nothing by design —
+  // when mixing, pass everything through useTablePrefs.
+  usePersistedPrefs(
+    persistKey,
+    !sortControlled && !hiddenControlled && !widthsControlled && !pageSizeControlled,
+    sortInternal,
+    hiddenInternal,
+    widthsInternal,
+    pageSizeInternal,
+  );
+
+  // Resolved column width for a given column (px). Falls back to the
+  // column's static `width` prop, then a 120px default.
+  const getColumnWidth = (col: Column<T>): number => {
+    const persisted = widths[col.key];
+    if (typeof persisted === "number" && persisted > 0) return persisted;
+    return parseInt(col.width || "120", 10);
+  };
+
+  // Active drag cleanup — held in a ref so unmounting mid-drag (e.g. route
+  // change while dragging) can release listeners + body cursor without
+  // leaking.
+  const dragCleanupRef = useRef<(() => void) | null>(null);
+  useEffect(() => () => { dragCleanupRef.current?.(); }, []);
+
+  // Start drag-resize from the resizer handle on a column header. Uses
+  // window-level mousemove/up so release is captured even if the pointer
+  // leaves the handle mid-drag. mousemove is RAF-throttled + deduped on
+  // width equality so dragging 200px across a 10-column table doesn't emit
+  // 200 full re-renders + localStorage writes.
+  const startResize = (col: Column<T>, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const startX = e.clientX;
+    const startW = getColumnWidth(col);
+    document.body.style.cursor = "col-resize";
+    document.body.style.userSelect = "none";
+    let latestW = startW;
+    let rafId: number | null = null;
+    const onMove = (ev: MouseEvent) => {
+      const dx = ev.clientX - startX;
+      const nw = Math.max(MIN_COL_WIDTH, Math.min(MAX_COL_WIDTH, startW + dx));
+      if (nw === latestW) return;
+      latestW = nw;
+      if (rafId !== null) return;
+      rafId = requestAnimationFrame(() => {
+        rafId = null;
+        setWidth(col.key, latestW);
+      });
     };
-    document.addEventListener("mousedown", h);
-    return () => document.removeEventListener("mousedown", h);
-  }, [colMenuOpen]);
+    const cleanup = () => {
+      if (rafId !== null) cancelAnimationFrame(rafId);
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", cleanup);
+      dragCleanupRef.current = null;
+    };
+    dragCleanupRef.current = cleanup;
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", cleanup);
+  };
 
-  // When the data set changes (refetch / pagination), drop stale selection
-  // keys that no longer correspond to a visible row. This keeps "select-all"
-  // indeterminate logic honest.
+  // Double-click the resizer to auto-fit to the widest cell in the column.
+  // Works by temporarily removing the width constraint on the <th>, letting
+  // the browser re-layout the column to natural content width, measuring
+  // cell widths, then restoring. Capped at MAX_COL_WIDTH.
+  const autoFitColumn = (col: Column<T>) => {
+    if (!tableRef.current) return;
+    const th = tableRef.current.querySelector<HTMLElement>(`th[data-col-key="${col.key}"]`);
+    if (!th) return;
+    const cells = Array.from(
+      tableRef.current.querySelectorAll<HTMLElement>(`[data-col-key="${col.key}"]`),
+    );
+    if (cells.length === 0) return;
+    const saved = { w: th.style.width, mw: th.style.minWidth };
+    th.style.width = "";
+    th.style.minWidth = "";
+    // Force reflow so auto-sized column width is reflected.
+    void th.offsetWidth;
+    let max = MIN_COL_WIDTH;
+    cells.forEach((c) => { max = Math.max(max, c.offsetWidth); });
+    th.style.width = saved.w;
+    th.style.minWidth = saved.mw;
+    // +4px buffer for sub-pixel rounding.
+    setWidth(col.key, Math.min(max + 4, MAX_COL_WIDTH));
+  };
+
+  // Cross-page row cache: key → row for every row ever seen. Lets bulk
+  // actions access row objects for keys selected on pages the user has
+  // since navigated away from. Unbounded (bounded by total pages visited);
+  // cleared implicitly when the DataTable instance unmounts.
+  const rowCacheRef = useRef<Map<string, T>>(new Map());
   useEffect(() => {
-    if (!selectable) return;
+    // Only the cross-page selection path needs the cache — in single-page
+    // or client-pagination mode, `data` is always the full list so row
+    // lookups via `currentByKey` cover everything.
+    if (!selectable || !crossPageSelection) return;
+    data.forEach((r) => rowCacheRef.current.set(getKey(r), r));
+  }, [data, selectable, crossPageSelection, getKey]);
+
+  // When the data set changes, drop stale selection keys unless cross-page
+  // selection is on. Cross-page mode lets the caller keep selections across
+  // paginated refetches (and take responsibility for dedup at commit time).
+  useEffect(() => {
+    if (!selectable || crossPageSelection) return;
     const visible = new Set(data.map(getKey));
     setSelected((prev) => {
       let changed = false;
@@ -187,14 +391,27 @@ export default function DataTable<T extends Record<string, unknown>>({
       });
       return changed ? next : prev;
     });
-  }, [data, selectable, getKey]);
+  }, [data, selectable, crossPageSelection, getKey]);
 
-  // Emit selection changes to the caller — fed actual row objects, not keys,
-  // since the caller almost always wants the records.
+  // Shared row-lookup: built once per `data` change, consumed by both the
+  // selectedRows memo and the onSelectionChange effect.
+  const currentByKey = useMemo(
+    () => new Map(data.map((r) => [getKey(r), r] as const)),
+    [data, getKey],
+  );
+
+  // Emit selection changes to the caller. Rows come from current page +
+  // cross-page cache (same resolution as bulkActions); keys are authoritative.
   useEffect(() => {
     if (!onSelectionChange) return;
-    const rows = data.filter((r) => selected.has(getKey(r)));
-    onSelectionChange(rows);
+    const rows: T[] = [];
+    const keys: string[] = [];
+    selected.forEach((k) => {
+      keys.push(k);
+      const row = currentByKey.get(k) ?? rowCacheRef.current.get(k);
+      if (row) rows.push(row);
+    });
+    onSelectionChange(rows, keys);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selected]);
 
@@ -243,7 +460,7 @@ export default function DataTable<T extends Record<string, unknown>>({
   let accLeft = selectionWidth;
   for (const col of fixedLeftCols) {
     leftOffsets.set(col.key, accLeft);
-    accLeft += parseInt(col.width || "120", 10);
+    accLeft += getColumnWidth(col);
   }
   const lastLeftKey = fixedLeftCols.length > 0 ? fixedLeftCols[fixedLeftCols.length - 1].key : "";
 
@@ -292,13 +509,42 @@ export default function DataTable<T extends Record<string, unknown>>({
     return [...data].sort((a, b) => dir * cmp(a, b));
   }, [data, clientSort, sort, columns]);
 
-  // Selection helpers
-  const allVisibleKeys = useMemo(() => sortedData.map(getKey), [sortedData, getKey]);
+  // Pagination resolution. Server mode: caller owns page/total via props.
+  // Client mode: we own page, total is derived from sortedData.length.
+  const effectivePage = clientPagination ? pageInternal : (pageControlled ?? 1);
+  const effectiveTotal = clientPagination ? sortedData.length : (totalProp ?? 0);
+  const totalPages = Math.max(1, Math.ceil(effectiveTotal / effectivePageSize));
+  // Slice in client mode; in server mode, `data` is already a single page.
+  const pagedData = useMemo(() => {
+    if (!clientPagination) return sortedData;
+    const start = (effectivePage - 1) * effectivePageSize;
+    return sortedData.slice(start, start + effectivePageSize);
+  }, [clientPagination, sortedData, effectivePage, effectivePageSize]);
+  // If filters cut the list so current page is out of range, snap back.
+  useEffect(() => {
+    if (!clientPagination) return;
+    if (pageInternal > totalPages) setPageInternal(totalPages);
+  }, [clientPagination, totalPages, pageInternal]);
+
+  const goToPage = (p: number) => {
+    const clamped = Math.max(1, Math.min(totalPages, p));
+    if (clientPagination) setPageInternal(clamped);
+    onPageChange?.(clamped);
+  };
+
+  // Selection helpers. Header checkbox always operates on current-page keys
+  // only — in single-page mode that equals all rows, in cross-page mode it
+  // preserves selections made on other pages.
+  const allVisibleKeys = useMemo(() => pagedData.map(getKey), [pagedData, getKey]);
   const allSelected = allVisibleKeys.length > 0 && allVisibleKeys.every((k) => selected.has(k));
   const someSelected = allVisibleKeys.some((k) => selected.has(k)) && !allSelected;
   const toggleSelectAll = () => {
-    if (allSelected) setSelected(new Set());
-    else setSelected(new Set(allVisibleKeys));
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (allSelected) allVisibleKeys.forEach((k) => next.delete(k));
+      else allVisibleKeys.forEach((k) => next.add(k));
+      return next;
+    });
   };
   const toggleRow = (key: string) => {
     setSelected((prev) => {
@@ -308,68 +554,38 @@ export default function DataTable<T extends Record<string, unknown>>({
     });
   };
   const clearSelection = () => setSelected(new Set());
-  const selectedRows = useMemo(
-    () => (selectable ? data.filter((r) => selected.has(getKey(r))) : []),
-    [selectable, data, selected, getKey],
-  );
-
-  // Columns toggle helpers
-  const toggleColHidden = (key: string) => {
-    setHidden((prev) => {
-      const next = new Set(prev);
-      if (next.has(key)) next.delete(key); else next.add(key);
-      return next;
+  const selectedKeys = useMemo(() => Array.from(selected), [selected]);
+  // Resolve row objects: current-page data first (freshest), cross-page
+  // cache for rows selected on other pages. Keys without a resolvable row
+  // are skipped — caller still sees them via selectedKeys.
+  const selectedRows = useMemo(() => {
+    if (!selectable) return [];
+    const rows: T[] = [];
+    selected.forEach((k) => {
+      const row = currentByKey.get(k) ?? rowCacheRef.current.get(k);
+      if (row) rows.push(row);
     });
-  };
+    return rows;
+  }, [selectable, currentByKey, selected]);
 
   const bulkBarActive = selectable && !!bulkActions && selected.size > 0;
-  const toolbarVisible = bulkBarActive || columnsToggle || !!toolbar;
 
   // colspan used by loading skeleton + empty state
   const totalRenderedCols = visibleColumns.length + (selectable ? 1 : 0);
 
   return (
     <div className="rounded-xl border border-border bg-surface-1 overflow-hidden">
-      {toolbarVisible && (
-        <div className="flex items-center justify-between gap-2 border-b border-border-subtle bg-surface-2/50 px-3 py-2">
-          <div className="flex items-center gap-2 min-w-0 flex-1">
-            {bulkBarActive && bulkActions!({ selected: selectedRows, clear: clearSelection })}
-          </div>
-          <div className="flex items-center gap-2 flex-shrink-0">
-            {toolbar}
-            {columnsToggle && (
-              <div ref={colMenuRef} className="relative">
-                <button
-                  onClick={() => setColMenuOpen((v) => !v)}
-                  className="flex items-center gap-1.5 rounded-lg border border-border bg-surface-1 px-2.5 py-1 text-[12px] font-medium text-text-secondary hover:bg-surface-2 transition-colors"
-                  title={t("common.columns" as any) || "Columns"}
-                >
-                  <Columns3 size={13} />
-                  <ChevronDown size={11} />
-                </button>
-                {colMenuOpen && (
-                  <div className="absolute right-0 z-30 mt-1 min-w-[200px] rounded-lg border border-border bg-surface-1 p-1.5 shadow-[var(--shadow-elevated)]">
-                    {columns.filter((c) => c.hideable !== false && !c.fixed).map((c) => (
-                      <label key={c.key} className="flex items-center gap-2 rounded px-2 py-1.5 text-[12px] text-text-primary hover:bg-surface-2 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={!hidden.has(c.key)}
-                          onChange={() => toggleColHidden(c.key)}
-                          className="rounded border-border"
-                        />
-                        {c.title}
-                      </label>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
+      {/* Toolbar only renders when the bulk action bar has something to
+          show. The columns dropdown lives OUTSIDE the table — render
+          <ColumnsMenu> in your page header via useTablePrefs(). */}
+      {bulkBarActive && (
+        <div className="flex items-center gap-2 border-b border-border-subtle bg-accent/5 px-3 py-2">
+          {bulkActions!({ selected: selectedRows, selectedKeys, clear: clearSelection })}
         </div>
       )}
 
       <div className="overflow-x-auto">
-        <table className="w-full text-left" style={{ minWidth: "max-content" }}>
+        <table ref={tableRef} className="w-full text-left" style={{ minWidth: "max-content" }}>
           <thead>
             <tr className="border-b border-border bg-surface-2">
               {selectable && (
@@ -387,10 +603,17 @@ export default function DataTable<T extends Record<string, unknown>>({
                   />
                 </th>
               )}
-              {visibleColumns.map((col, colIdx) => (
+              {visibleColumns.map((col, colIdx) => {
+                const w = getColumnWidth(col);
+                const widthStyle = { width: `${w}px`, minWidth: `${w}px` };
+                // Fixed columns are locked (sticky offset math would break);
+                // everything else grows a resize handle when `resizable` is on.
+                const canResize = resizable && !col.fixed;
+                return (
                 <th
                   key={col.key}
-                  style={{ ...(col.width ? { width: col.width, minWidth: col.width } : {}), ...stickyStyle(col) }}
+                  data-col-key={col.key}
+                  style={{ ...widthStyle, ...stickyStyle(col) }}
                   className={`px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wider text-text-muted relative ${stickyHeadClass(col)} ${colIdx < visibleColumns.length - 1 ? "border-r border-border" : ""}`}
                 >
                   <div className="flex items-center gap-1">
@@ -411,8 +634,17 @@ export default function DataTable<T extends Record<string, unknown>>({
                       />
                     )}
                   </div>
+                  {canResize && (
+                    <div
+                      onMouseDown={(e) => startResize(col, e)}
+                      onDoubleClick={(e) => { e.stopPropagation(); autoFitColumn(col); }}
+                      onClick={(e) => e.stopPropagation()}
+                      title="拖拽调整列宽；双击自动适配"
+                      className="absolute right-0 top-0 bottom-0 w-1.5 -mr-0.5 cursor-col-resize select-none z-30 hover:bg-accent/40 active:bg-accent/60 transition-colors"
+                    />
+                  )}
                 </th>
-              ))}
+              );})}
             </tr>
           </thead>
           <tbody>
@@ -427,7 +659,7 @@ export default function DataTable<T extends Record<string, unknown>>({
                   ))}
                 </tr>
               ))
-            ) : sortedData.length === 0 ? (
+            ) : pagedData.length === 0 ? (
               <tr>
                 <td colSpan={totalRenderedCols} className="px-4 py-20 text-center">
                   <div className="flex flex-col items-center gap-3">
@@ -444,7 +676,7 @@ export default function DataTable<T extends Record<string, unknown>>({
                 </td>
               </tr>
             ) : (
-              sortedData.map((record, idx) => {
+              pagedData.map((record, idx) => {
                 const key = getKey(record);
                 const isSelected = selectable && selected.has(key);
                 const rowClickable = !!onRowClick;
@@ -490,6 +722,7 @@ export default function DataTable<T extends Record<string, unknown>>({
                       return (
                         <td
                           key={col.key}
+                          data-col-key={col.key}
                           style={stickyStyle(col)}
                           className={`px-4 py-2.5 text-[13px] ${
                             col.mono ? "font-mono text-text-secondary" : "text-text-primary"
@@ -509,40 +742,57 @@ export default function DataTable<T extends Record<string, unknown>>({
         </table>
       </div>
 
-      {total > 0 && (
-        <div className="flex items-center justify-between border-t border-border-subtle px-4 py-2.5">
-          <span className="text-[12px] text-text-muted">
-            {(page - 1) * pageSize + 1}–{Math.min(page * pageSize, total)} / {total}
+      {effectiveTotal > 0 && (
+        <div className="flex items-center justify-between gap-3 border-t border-border-subtle px-4 py-2.5">
+          <span className="text-[12px] text-text-muted tabular-nums">
+            {(effectivePage - 1) * effectivePageSize + 1}–{Math.min(effectivePage * effectivePageSize, effectiveTotal)} / {effectiveTotal}
           </span>
-          <div className="flex items-center gap-1">
-            <button
-              disabled={page <= 1}
-              onClick={() => onPageChange?.(page - 1)}
-              className="rounded-lg p-1 text-text-muted hover:bg-surface-3 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-            >
-              <ChevronLeft size={16} />
-            </button>
-            {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
-              const p = i + 1;
-              return (
-                <button
-                  key={p}
-                  onClick={() => onPageChange?.(p)}
-                  className={`min-w-[28px] rounded-lg px-1.5 py-0.5 text-[12px] font-medium transition-colors ${
-                    p === page ? "bg-accent text-surface-0" : "text-text-muted hover:bg-surface-3"
-                  }`}
-                >
-                  {p}
-                </button>
-              );
-            })}
-            <button
-              disabled={page >= totalPages}
-              onClick={() => onPageChange?.(page + 1)}
-              className="rounded-lg p-1 text-text-muted hover:bg-surface-3 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-            >
-              <ChevronRight size={16} />
-            </button>
+          <div className="flex items-center gap-2">
+            {/* Page-size selector — hidden on very small lists where it'd
+                just be noise. Exposed whenever there are more rows than
+                the smallest available option. */}
+            {pageSizeOptions.length > 1 && effectiveTotal > Math.min(...pageSizeOptions) && (
+              <select
+                value={effectivePageSize}
+                onChange={(e) => setPageSize(Number(e.target.value))}
+                className="rounded-lg border border-border bg-surface-1 px-1.5 py-0.5 text-[12px] text-text-secondary outline-none hover:bg-surface-2 focus:border-accent cursor-pointer"
+                aria-label="Rows per page"
+              >
+                {pageSizeOptions.map((n) => (
+                  <option key={n} value={n}>{(t("common.rowsPerPage" as any) || "{n} / page").replace("{n}", String(n))}</option>
+                ))}
+              </select>
+            )}
+            <div className="flex items-center gap-1">
+              <button
+                disabled={effectivePage <= 1}
+                onClick={() => goToPage(effectivePage - 1)}
+                className="rounded-lg p-1 text-text-muted hover:bg-surface-3 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+              >
+                <ChevronLeft size={16} />
+              </button>
+              {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
+                const p = i + 1;
+                return (
+                  <button
+                    key={p}
+                    onClick={() => goToPage(p)}
+                    className={`min-w-[28px] rounded-lg px-1.5 py-0.5 text-[12px] font-medium transition-colors ${
+                      p === effectivePage ? "bg-accent text-surface-0" : "text-text-muted hover:bg-surface-3"
+                    }`}
+                  >
+                    {p}
+                  </button>
+                );
+              })}
+              <button
+                disabled={effectivePage >= totalPages}
+                onClick={() => goToPage(effectivePage + 1)}
+                className="rounded-lg p-1 text-text-muted hover:bg-surface-3 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+              >
+                <ChevronRight size={16} />
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -609,7 +859,7 @@ function FilterPopover({
       {isOpen && (
         <div
           ref={popRef}
-          className={`fixed z-10 rounded-lg border border-border bg-surface-2 shadow-[var(--shadow-elevated)] ${options ? "w-24" : "w-52"}`}
+          className={`fixed z-50 rounded-lg border border-border bg-surface-2 shadow-[var(--shadow-elevated)] ${options ? "w-24" : "w-52"}`}
           style={{ top: pos.top, left: pos.left, transform: "translateX(-50%)" }}
         >
           {options ? (
@@ -662,5 +912,129 @@ function FilterPopover({
         </div>
       )}
     </>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// useTablePrefs + ColumnsMenu — externalize the columns dropdown so callers
+// can place it wherever fits their page layout (typically next to a primary
+// CTA like "New Role"). Pair these with DataTable's controlled `sort` and
+// `hidden` props.
+//
+// Usage:
+//   const prefs = useTablePrefs({ persistKey: "my-table:org/app" });
+//   <ColumnsMenu columns={columns} hidden={prefs.hidden} onToggle={prefs.toggleHidden} />
+//   <DataTable ... sort={prefs.sort} onSortChange={prefs.setSort} hidden={prefs.hidden} />
+// ═══════════════════════════════════════════════════════════════════════
+
+export interface TablePrefs {
+  sort: SortState;
+  setSort: (s: SortState) => void;
+  hidden: Set<string>;
+  setHidden: (h: Set<string>) => void;
+  toggleHidden: (key: string) => void;
+  widths: Record<string, number>;
+  setWidth: (key: string, width: number) => void;
+  resetWidths: () => void;
+  pageSize: number;
+  setPageSize: (n: number) => void;
+}
+
+export function useTablePrefs(opts?: {
+  persistKey?: string;
+  defaultSort?: SortState;
+  defaultHiddenKeys?: string[];
+  defaultPageSize?: number;
+}): TablePrefs {
+  const { persistKey, defaultSort, defaultHiddenKeys, defaultPageSize } = opts || {};
+  const initial = useMemo(
+    () => readInitialPrefs(persistKey, defaultSort, defaultHiddenKeys ?? [], defaultPageSize ?? 20),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [persistKey],
+  );
+  const [sort, setSort] = useState<SortState>(initial.sort);
+  const [hidden, setHidden] = useState<Set<string>>(initial.hidden);
+  const [widths, setWidths] = useState<Record<string, number>>(initial.widths);
+  const [pageSize, setPageSize] = useState<number>(initial.pageSize);
+  usePersistedPrefs(persistKey, true, sort, hidden, widths, pageSize);
+  const toggleHidden = useCallback((key: string) => {
+    setHidden((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key); else next.add(key);
+      return next;
+    });
+  }, []);
+  const setWidth = useCallback((key: string, width: number) => {
+    setWidths((prev) => (prev[key] === width ? prev : { ...prev, [key]: width }));
+  }, []);
+  const resetWidths = useCallback(() => setWidths({}), []);
+  return { sort, setSort, hidden, setHidden, toggleHidden, widths, setWidth, resetWidths, pageSize, setPageSize };
+}
+
+export function ColumnsMenu<T>({
+  columns,
+  hidden,
+  onToggle,
+  onResetWidths,
+  align = "right",
+}: {
+  columns: Column<T>[];
+  hidden: Set<string>;
+  onToggle: (key: string) => void;
+  // When provided, a "Reset column widths" footer appears in the dropdown.
+  // Typically wire this to `useTablePrefs().resetWidths`.
+  onResetWidths?: () => void;
+  align?: "left" | "right";
+}) {
+  const { t } = useTranslation();
+  const [open, setOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const h = (e: MouseEvent) => {
+      if (rootRef.current && !rootRef.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", h);
+    return () => document.removeEventListener("mousedown", h);
+  }, [open]);
+  const toggleable = columns.filter((c) => c.hideable !== false && !c.fixed);
+  return (
+    <div ref={rootRef} className="relative">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="flex items-center gap-1.5 rounded-lg border border-border bg-surface-1 px-2.5 py-2 text-[12px] font-medium text-text-secondary hover:bg-surface-2 transition-colors"
+        title={t("common.columns" as any) || "Columns"}
+        aria-label={t("common.columns" as any) || "Columns"}
+      >
+        <Columns3 size={13} />
+        <ChevronDown size={11} />
+      </button>
+      {open && (
+        <div className={`absolute ${align === "right" ? "right-0" : "left-0"} z-30 mt-1 min-w-[200px] rounded-lg border border-border bg-surface-1 p-1.5 shadow-[var(--shadow-elevated)]`}>
+          {toggleable.map((c) => (
+            <label key={c.key} className="flex items-center gap-2 rounded px-2 py-1.5 text-[12px] text-text-primary hover:bg-surface-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={!hidden.has(c.key)}
+                onChange={() => onToggle(c.key)}
+                className="rounded border-border"
+              />
+              {c.title}
+            </label>
+          ))}
+          {onResetWidths && (
+            <>
+              <div className="my-1 h-px bg-border-subtle" />
+              <button
+                onClick={() => { onResetWidths(); setOpen(false); }}
+                className="w-full text-left rounded px-2 py-1.5 text-[12px] text-text-secondary hover:bg-surface-2 transition-colors"
+              >
+                {t("common.resetColumnWidths" as any) || "重置列宽"}
+              </button>
+            </>
+          )}
+        </div>
+      )}
+    </div>
   );
 }

@@ -4,7 +4,7 @@ import { bizKeys } from "../backend/bizQueryKeys";
 import { useParams, useNavigate, useSearchParams, Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, Plus, Play, Copy, Check, X, RefreshCw, RotateCcw, Pencil, Trash2, LayoutDashboard, Crown, ShieldCheck, FlaskConical, Code } from "lucide-react";
-import DataTable, { type Column } from "../components/DataTable";
+import DataTable, { type Column, useTablePrefs, ColumnsMenu } from "../components/DataTable";
 import { useTranslation } from "../i18n";
 import { useModal } from "../components/Modal";
 import * as BizBackend from "../backend/BizBackend";
@@ -588,12 +588,21 @@ function RolesTab({ roles, onRefresh, appOwner, appName, t, modal, navigate }: {
   appOwner: string; appName: string;
   t: (key: any) => string; modal: any; navigate: any;
 }) {
-  // Cross-column filters stay OUTSIDE the DataTable (chips above the table)
-  // because scope is multi-select and status is a radio — neither fits the
-  // per-column dropdown FilterPopover well. Sort + selection + columns menu
-  // are all handled by DataTable itself.
+  // Cross-column filters stay OUTSIDE the DataTable — scope is multi-select
+  // and status is a radio, neither of which fits the per-column FilterPopover.
+  // The role-name text filter IS a column-level filter (fires via onFilter),
+  // tracked here so the filter pipeline can honor it.
   const [scopeSel, setScopeSel] = useState<Set<"app" | "org">>(new Set());
   const [statusSel, setStatusSel] = useState<"all" | "enabled" | "disabled">("all");
+  const [nameFilter, setNameFilter] = useState("");
+
+  // Sort + column visibility are lifted out of DataTable so the "Columns"
+  // dropdown can render in the page header next to the primary CTA instead
+  // of inside the table.
+  const tablePrefs = useTablePrefs({
+    persistKey: `biz-role-table:${appOwner}/${appName}`,
+    defaultSort: { field: "updatedTime", order: "descend" },
+  });
 
   const handleAddRole = () => {
     navigate(`/authorization/${appOwner}/${appName}/roles/new`, { state: { mode: "add" } });
@@ -645,13 +654,20 @@ function RolesTab({ roles, onRefresh, appOwner, appName, t, modal, navigate }: {
   const orgScopeCount = roles.filter((r) => r.scopeKind === "org").length;
 
   const filteredRoles = useMemo(() => {
+    const q = nameFilter.trim().toLowerCase();
     return roles.filter((r) => {
       if (scopeSel.size > 0 && !scopeSel.has(r.scopeKind as "app" | "org")) return false;
       if (statusSel === "enabled" && !r.isEnabled) return false;
       if (statusSel === "disabled" && r.isEnabled) return false;
+      if (q) {
+        // Match either displayName or raw name so admins searching by either
+        // convention find what they expect.
+        const hay = `${r.displayName || ""} ${r.name || ""}`.toLowerCase();
+        if (!hay.includes(q)) return false;
+      }
       return true;
     });
-  }, [roles, scopeSel, statusSel]);
+  }, [roles, scopeSel, statusSel, nameFilter]);
 
   const toggleScope = (s: "app" | "org") => {
     setScopeSel((prev) => {
@@ -661,13 +677,17 @@ function RolesTab({ roles, onRefresh, appOwner, appName, t, modal, navigate }: {
     });
   };
 
-  const editUrl = (name: string) => `/authorization/${appOwner}/${appName}/roles/${encodeURIComponent(name)}`;
+  const editUrl = useCallback(
+    (name: string) => `/authorization/${appOwner}/${appName}/roles/${encodeURIComponent(name)}`,
+    [appOwner, appName],
+  );
 
-  const columns: Column<BizRole>[] = [
+  const columns = useMemo<Column<BizRole>[]>(() => [
     {
       key: "role",
       title: t("authz.roles.col.name"),
       sortable: true,
+      filterable: true,
       hideable: false,
       width: "240px",
       sortFn: (a, b) => (a.displayName || a.name).localeCompare(b.displayName || b.name),
@@ -807,7 +827,7 @@ function RolesTab({ roles, onRefresh, appOwner, appName, t, modal, navigate }: {
         </div>
       ),
     },
-  ];
+  ], [t, editUrl, navigate, handleDeleteRole]);
 
   return (
     <div className="space-y-4">
@@ -845,9 +865,17 @@ function RolesTab({ roles, onRefresh, appOwner, appName, t, modal, navigate }: {
             ))}
           </div>
         </div>
-        <button onClick={handleAddRole} className="flex items-center gap-1.5 rounded-lg bg-accent px-3 py-2 text-[12px] font-semibold text-white hover:bg-accent-hover transition-colors">
-          <Plus size={14} /> {t("authz.roles.add")}
-        </button>
+        <div className="flex items-center gap-2">
+          <ColumnsMenu
+            columns={columns}
+            hidden={tablePrefs.hidden}
+            onToggle={tablePrefs.toggleHidden}
+            onResetWidths={tablePrefs.resetWidths}
+          />
+          <button onClick={handleAddRole} className="flex items-center gap-1.5 rounded-lg bg-accent px-3 py-2 text-[12px] font-semibold text-white hover:bg-accent-hover transition-colors">
+            <Plus size={14} /> {t("authz.roles.add")}
+          </button>
+        </div>
       </div>
 
       <DataTable
@@ -858,9 +886,19 @@ function RolesTab({ roles, onRefresh, appOwner, appName, t, modal, navigate }: {
         onRowClick={(r) => navigate(editUrl(r.name))}
         selectable
         clientSort
-        defaultSort={{ field: "updatedTime", order: "descend" }}
-        persistKey={`biz-role-table:${appOwner}/${appName}`}
-        columnsToggle
+        clientPagination
+        pageSize={tablePrefs.pageSize}
+        onPageSizeChange={tablePrefs.setPageSize}
+        sort={tablePrefs.sort}
+        onSortChange={tablePrefs.setSort}
+        hidden={tablePrefs.hidden}
+        resizable
+        widths={tablePrefs.widths}
+        onWidthChange={tablePrefs.setWidth}
+        onFilter={(f) => {
+          // Column-level text filter on the role name (FilterPopover).
+          if (f.field === "role") setNameFilter(f.value);
+        }}
         bulkActions={({ selected, clear }) => (
           <div className="flex items-center gap-2">
             <span className="text-[12px] font-medium text-text-primary">

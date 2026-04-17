@@ -41,6 +41,8 @@ const en = {
   "common.disabled": "Disabled",
   "common.columns": "Columns",
   "common.failed": "failed",
+  "common.resetColumnWidths": "Reset column widths",
+  "common.rowsPerPage": "{n} / page",
   "common.yes": "Yes",
   "common.no": "No",
   "common.saveSuccess": "Saved successfully",

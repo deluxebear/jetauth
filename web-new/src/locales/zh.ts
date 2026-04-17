@@ -41,6 +41,8 @@ const zh: Record<string, string> = {
   "common.disabled": "已禁用",
   "common.columns": "列",
   "common.failed": "失败",
+  "common.resetColumnWidths": "重置列宽",
+  "common.rowsPerPage": "{n} / 页",
   "common.yes": "是",
   "common.no": "否",
   "common.saveSuccess": "保存成功",
