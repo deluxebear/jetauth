@@ -23,7 +23,7 @@ import (
 
 	"github.com/beego/beego/v2/core/logs"
 	"github.com/beego/beego/v2/server/web/context"
-	"github.com/deluxebear/casdoor/util"
+	"github.com/deluxebear/jetauth/util"
 )
 
 const (

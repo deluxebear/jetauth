@@ -23,7 +23,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/deluxebear/casdoor/util"
+	"github.com/deluxebear/jetauth/util"
 )
 
 // LarkSyncerProvider implements SyncerProvider for Lark API-based syncers

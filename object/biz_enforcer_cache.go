@@ -14,9 +14,9 @@ import (
 
 	"github.com/casbin/casbin/v3"
 	"github.com/casbin/casbin/v3/model"
-	xormadapter "github.com/deluxebear/casdoor/adapters/xormadapter"
-	"github.com/deluxebear/casdoor/conf"
-	"github.com/deluxebear/casdoor/util"
+	xormadapter "github.com/deluxebear/jetauth/adapters/xormadapter"
+	"github.com/deluxebear/jetauth/conf"
+	"github.com/deluxebear/jetauth/util"
 	"golang.org/x/sync/singleflight"
 )
 

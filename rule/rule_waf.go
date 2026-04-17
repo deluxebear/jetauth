@@ -21,8 +21,8 @@ import (
 
 	"github.com/corazawaf/coraza/v3"
 	"github.com/corazawaf/coraza/v3/types"
-	"github.com/deluxebear/casdoor/conf"
-	"github.com/deluxebear/casdoor/object"
+	"github.com/deluxebear/jetauth/conf"
+	"github.com/deluxebear/jetauth/object"
 	"github.com/hsluoyz/modsecurity-go/seclang/parser"
 )
 

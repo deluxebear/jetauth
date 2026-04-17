@@ -16,7 +16,7 @@ import (
 	"time"
 
 	"github.com/beego/beego/v2/core/logs"
-	"github.com/deluxebear/casdoor/conf"
+	"github.com/deluxebear/jetauth/conf"
 	"github.com/redis/go-redis/v9"
 )
 

@@ -21,7 +21,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/deluxebear/casdoor/util"
+	"github.com/deluxebear/jetauth/util"
 )
 
 type permissionRuleRecord struct {

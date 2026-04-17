@@ -1,7 +1,7 @@
 package object
 
 import (
-	xormadapter "github.com/deluxebear/casdoor/adapters/xormadapter"
+	xormadapter "github.com/deluxebear/jetauth/adapters/xormadapter"
 	"github.com/xorm-io/xorm"
 )
 

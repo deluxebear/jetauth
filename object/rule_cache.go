@@ -18,7 +18,7 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/deluxebear/casdoor/util"
+	"github.com/deluxebear/jetauth/util"
 )
 
 var (

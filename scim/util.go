@@ -18,8 +18,8 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/deluxebear/casdoor/object"
-	"github.com/deluxebear/casdoor/util"
+	"github.com/deluxebear/jetauth/object"
+	"github.com/deluxebear/jetauth/util"
 	"github.com/elimity-com/scim"
 	"github.com/elimity-com/scim/optional"
 	"github.com/elimity-com/scim/schema"

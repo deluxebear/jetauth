@@ -21,7 +21,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/deluxebear/casdoor/i18n"
+	"github.com/deluxebear/jetauth/i18n"
 )
 
 // Hard-coded thresholds for OTP / verification-code brute force protection (per IP + dest).

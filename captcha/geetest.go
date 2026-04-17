@@ -23,7 +23,7 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/deluxebear/casdoor/util"
+	"github.com/deluxebear/jetauth/util"
 )
 
 const GEETESTCaptchaVerifyUrl = "http://gcaptcha4.geetest.com/validate"

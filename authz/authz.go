@@ -18,10 +18,10 @@ import (
 	"strings"
 
 	"github.com/casbin/casbin/v3"
-	"github.com/deluxebear/casdoor/conf"
-	"github.com/deluxebear/casdoor/object"
-	"github.com/deluxebear/casdoor/util"
-	stringadapter "github.com/deluxebear/casdoor/adapters/stringadapter"
+	"github.com/deluxebear/jetauth/conf"
+	"github.com/deluxebear/jetauth/object"
+	"github.com/deluxebear/jetauth/util"
+	stringadapter "github.com/deluxebear/jetauth/adapters/stringadapter"
 )
 
 var Enforcer *casbin.Enforcer

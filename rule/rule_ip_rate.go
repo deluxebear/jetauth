@@ -19,8 +19,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/deluxebear/casdoor/object"
-	"github.com/deluxebear/casdoor/util"
+	"github.com/deluxebear/jetauth/object"
+	"github.com/deluxebear/jetauth/util"
 	"golang.org/x/time/rate"
 )
 

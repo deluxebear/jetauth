@@ -17,7 +17,7 @@ package form
 import (
 	"strings"
 
-	"github.com/deluxebear/casdoor/i18n"
+	"github.com/deluxebear/jetauth/i18n"
 )
 
 type VerificationForm struct {

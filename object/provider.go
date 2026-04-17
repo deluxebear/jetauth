@@ -23,12 +23,12 @@ import (
 	"strings"
 
 	"github.com/beego/beego/v2/server/web/context"
-	"github.com/deluxebear/casdoor/i18n"
-	"github.com/deluxebear/casdoor/idp"
-	"github.com/deluxebear/casdoor/idv"
-	"github.com/deluxebear/casdoor/log"
-	"github.com/deluxebear/casdoor/pp"
-	"github.com/deluxebear/casdoor/util"
+	"github.com/deluxebear/jetauth/i18n"
+	"github.com/deluxebear/jetauth/idp"
+	"github.com/deluxebear/jetauth/idv"
+	"github.com/deluxebear/jetauth/log"
+	"github.com/deluxebear/jetauth/pp"
+	"github.com/deluxebear/jetauth/util"
 	"github.com/xorm-io/core"
 )
 

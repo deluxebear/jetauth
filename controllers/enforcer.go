@@ -19,9 +19,9 @@ import (
 	"fmt"
 
 	"github.com/beego/beego/v2/core/utils/pagination"
-	"github.com/deluxebear/casdoor/object"
-	"github.com/deluxebear/casdoor/util"
-	xormadapter "github.com/deluxebear/casdoor/adapters/xormadapter"
+	"github.com/deluxebear/jetauth/object"
+	"github.com/deluxebear/jetauth/util"
+	xormadapter "github.com/deluxebear/jetauth/adapters/xormadapter"
 )
 
 // EnforcerListResponse represents the response for enforcer list APIs

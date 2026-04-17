@@ -21,8 +21,8 @@ import (
 	"strings"
 
 	"github.com/beego/beego/v2/server/web/pagination"
-	"github.com/deluxebear/casdoor/object"
-	"github.com/deluxebear/casdoor/util"
+	"github.com/deluxebear/jetauth/object"
+	"github.com/deluxebear/jetauth/util"
 	"github.com/hsluoyz/modsecurity-go/seclang/parser"
 )
 

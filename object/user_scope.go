@@ -18,7 +18,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/deluxebear/casdoor/i18n"
+	"github.com/deluxebear/jetauth/i18n"
 )
 
 // ConsentRecord represents the data for OAuth consent API requests/responses

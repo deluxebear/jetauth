@@ -18,7 +18,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/deluxebear/casdoor/i18n"
+	"github.com/deluxebear/jetauth/i18n"
 )
 
 func validateBalanceForTransaction(transaction *Transaction, amount float64, lang string) error {

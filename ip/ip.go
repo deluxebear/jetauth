@@ -17,7 +17,7 @@ package ip
 import (
 	"fmt"
 
-	"github.com/deluxebear/casdoor/util"
+	"github.com/deluxebear/jetauth/util"
 )
 
 func InitIpDb() {

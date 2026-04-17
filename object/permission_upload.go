@@ -18,7 +18,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/deluxebear/casdoor/xlsx"
+	"github.com/deluxebear/jetauth/xlsx"
 )
 
 func getPermissionMap(owner string) (map[string]*Permission, error) {

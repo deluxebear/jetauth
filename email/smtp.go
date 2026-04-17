@@ -17,7 +17,7 @@ package email
 import (
 	"crypto/tls"
 
-	"github.com/deluxebear/casdoor/conf"
+	"github.com/deluxebear/jetauth/conf"
 	"github.com/casdoor/gomail/v2"
 )
 

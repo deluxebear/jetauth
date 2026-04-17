@@ -18,7 +18,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/deluxebear/casdoor/conf"
+	"github.com/deluxebear/jetauth/conf"
 	sender "github.com/casdoor/go-sms-sender"
 )
 

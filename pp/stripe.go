@@ -18,7 +18,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/deluxebear/casdoor/conf"
+	"github.com/deluxebear/jetauth/conf"
 	"github.com/stripe/stripe-go/v74"
 	stripeCheckout "github.com/stripe/stripe-go/v74/checkout/session"
 	stripeIntent "github.com/stripe/stripe-go/v74/paymentintent"

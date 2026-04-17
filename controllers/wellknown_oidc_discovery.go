@@ -17,7 +17,7 @@ package controllers
 import (
 	"strings"
 
-	"github.com/deluxebear/casdoor/object"
+	"github.com/deluxebear/jetauth/object"
 )
 
 // GetOidcDiscovery

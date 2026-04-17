@@ -20,9 +20,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/deluxebear/casdoor/object"
-	"github.com/deluxebear/casdoor/storage"
-	"github.com/deluxebear/casdoor/util"
+	"github.com/deluxebear/jetauth/object"
+	"github.com/deluxebear/jetauth/storage"
+	"github.com/deluxebear/jetauth/util"
 	"github.com/casdoor/oss"
 )
 

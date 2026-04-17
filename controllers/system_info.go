@@ -17,7 +17,7 @@ package controllers
 import (
 	"errors"
 
-	"github.com/deluxebear/casdoor/util"
+	"github.com/deluxebear/jetauth/util"
 	"github.com/go-git/go-git/v5"
 )
 

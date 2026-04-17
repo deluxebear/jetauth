@@ -19,7 +19,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/deluxebear/casdoor/util"
+	"github.com/deluxebear/jetauth/util"
 )
 
 var (

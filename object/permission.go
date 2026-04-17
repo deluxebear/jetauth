@@ -18,8 +18,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/deluxebear/casdoor/conf"
-	"github.com/deluxebear/casdoor/util"
+	"github.com/deluxebear/jetauth/conf"
+	"github.com/deluxebear/jetauth/util"
 	"github.com/xorm-io/core"
 )
 

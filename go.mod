@@ -1,4 +1,4 @@
-module github.com/deluxebear/casdoor
+module github.com/deluxebear/jetauth
 
 go 1.25.0
 

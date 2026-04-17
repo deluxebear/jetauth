@@ -7,7 +7,7 @@ import (
 	"github.com/casbin/casbin/v3/errors"
 
 	"github.com/casbin/casbin/v3"
-	"github.com/deluxebear/casdoor/util"
+	"github.com/deluxebear/jetauth/util"
 )
 
 type UserGroupEnforcer struct {

@@ -15,7 +15,7 @@ import (
 	"github.com/beego/beego/v2/core/logs"
 	"github.com/casbin/casbin/v3"
 	"github.com/casbin/casbin/v3/model"
-	"github.com/deluxebear/casdoor/util"
+	"github.com/deluxebear/jetauth/util"
 	"github.com/xorm-io/core"
 )
 

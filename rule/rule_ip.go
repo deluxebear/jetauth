@@ -20,9 +20,9 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/deluxebear/casdoor/ip"
-	"github.com/deluxebear/casdoor/object"
-	"github.com/deluxebear/casdoor/util"
+	"github.com/deluxebear/jetauth/ip"
+	"github.com/deluxebear/jetauth/object"
+	"github.com/deluxebear/jetauth/util"
 )
 
 type IpRule struct{}

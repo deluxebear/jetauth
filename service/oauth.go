@@ -21,8 +21,8 @@ import (
 	"strings"
 
 	"github.com/casdoor/casdoor-go-sdk/casdoorsdk"
-	"github.com/deluxebear/casdoor/object"
-	"github.com/deluxebear/casdoor/util"
+	"github.com/deluxebear/jetauth/object"
+	"github.com/deluxebear/jetauth/util"
 )
 
 func getSigninUrl(casdoorClient *casdoorsdk.Client, callbackUrl string, originalPath string) string {

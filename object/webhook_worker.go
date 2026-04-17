@@ -21,7 +21,7 @@ import (
 	"time"
 
 	"github.com/beego/beego/v2/core/logs"
-	"github.com/deluxebear/casdoor/util"
+	"github.com/deluxebear/jetauth/util"
 )
 
 var (

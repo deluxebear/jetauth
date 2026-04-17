@@ -15,7 +15,7 @@
 package object
 
 import (
-	"github.com/deluxebear/casdoor/util"
+	"github.com/deluxebear/jetauth/util"
 )
 
 type Ldap struct {

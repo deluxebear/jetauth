@@ -22,7 +22,7 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/deluxebear/casdoor/proxy"
+	"github.com/deluxebear/jetauth/proxy"
 )
 
 type HttpSmsClient struct {

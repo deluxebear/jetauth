@@ -20,8 +20,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/deluxebear/casdoor/conf"
-	"github.com/deluxebear/casdoor/email"
+	"github.com/deluxebear/jetauth/conf"
+	"github.com/deluxebear/jetauth/email"
 )
 
 // TestSmtpServer Test the SMTP server

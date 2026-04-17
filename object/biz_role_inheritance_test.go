@@ -15,7 +15,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/deluxebear/casdoor/util"
+	"github.com/deluxebear/jetauth/util"
 )
 
 // ── Pure-function tests (no DB) ──

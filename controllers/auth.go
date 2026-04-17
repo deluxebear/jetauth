@@ -29,14 +29,14 @@ import (
 	"time"
 
 	"github.com/beego/beego/v2/server/web"
-	"github.com/deluxebear/casdoor/captcha"
-	"github.com/deluxebear/casdoor/conf"
-	"github.com/deluxebear/casdoor/form"
-	"github.com/deluxebear/casdoor/i18n"
-	"github.com/deluxebear/casdoor/idp"
-	"github.com/deluxebear/casdoor/object"
-	"github.com/deluxebear/casdoor/proxy"
-	"github.com/deluxebear/casdoor/util"
+	"github.com/deluxebear/jetauth/captcha"
+	"github.com/deluxebear/jetauth/conf"
+	"github.com/deluxebear/jetauth/form"
+	"github.com/deluxebear/jetauth/i18n"
+	"github.com/deluxebear/jetauth/idp"
+	"github.com/deluxebear/jetauth/object"
+	"github.com/deluxebear/jetauth/proxy"
+	"github.com/deluxebear/jetauth/util"
 	"golang.org/x/oauth2"
 )
 

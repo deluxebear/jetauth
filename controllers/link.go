@@ -17,7 +17,7 @@ package controllers
 import (
 	"encoding/json"
 
-	"github.com/deluxebear/casdoor/object"
+	"github.com/deluxebear/jetauth/object"
 )
 
 type LinkForm struct {

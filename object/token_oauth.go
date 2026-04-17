@@ -19,8 +19,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/deluxebear/casdoor/idp"
-	"github.com/deluxebear/casdoor/util"
+	"github.com/deluxebear/jetauth/idp"
+	"github.com/deluxebear/jetauth/util"
 )
 
 func GetOAuthToken(grantType string, clientId string, clientSecret string, code string, verifier string, scope string, nonce string, username string, password string, host string, refreshToken string, tag string, avatar string, lang string, subjectToken string, subjectTokenType string, assertion string, clientAssertion string, clientAssertionType string, audience string, resource string, dpopProof string) (interface{}, error) {

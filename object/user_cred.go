@@ -15,8 +15,8 @@
 package object
 
 import (
-	"github.com/deluxebear/casdoor/cred"
-	"github.com/deluxebear/casdoor/util"
+	"github.com/deluxebear/jetauth/cred"
+	"github.com/deluxebear/jetauth/util"
 )
 
 func calculateHash(user *User) (string, error) {

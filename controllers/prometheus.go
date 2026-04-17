@@ -15,7 +15,7 @@
 package controllers
 
 import (
-	"github.com/deluxebear/casdoor/object"
+	"github.com/deluxebear/jetauth/object"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 

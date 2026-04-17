@@ -13,7 +13,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/deluxebear/casdoor/util"
+	"github.com/deluxebear/jetauth/util"
 )
 
 const openClawTranscriptSyncInterval = 10 * time.Second

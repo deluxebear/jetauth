@@ -20,7 +20,7 @@ import (
 	"net/http"
 
 	"github.com/beego/beego/v2/server/web"
-	"github.com/deluxebear/casdoor/object"
+	"github.com/deluxebear/jetauth/object"
 )
 
 // MCP JSON-RPC 2.0 structures

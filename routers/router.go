@@ -25,8 +25,8 @@ package routers
 
 import (
 	"github.com/beego/beego/v2/server/web"
-	"github.com/deluxebear/casdoor/controllers"
-	"github.com/deluxebear/casdoor/mcpself"
+	"github.com/deluxebear/jetauth/controllers"
+	"github.com/deluxebear/jetauth/mcpself"
 )
 
 func InitAPI() {

@@ -14,7 +14,7 @@
 
 package controllers
 
-import "github.com/deluxebear/casdoor/object"
+import "github.com/deluxebear/jetauth/object"
 
 // DashboardResponse represents the response for the GetDashboard API
 type DashboardResponse struct {

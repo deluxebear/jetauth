@@ -11,7 +11,7 @@ package object
 import (
 	"fmt"
 
-	"github.com/deluxebear/casdoor/util"
+	"github.com/deluxebear/jetauth/util"
 )
 
 // BizResourceImportApplyRequest is the body for biz-import-app-resources —

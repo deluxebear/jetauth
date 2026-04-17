@@ -13,8 +13,8 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/deluxebear/casdoor/object"
-	"github.com/deluxebear/casdoor/util"
+	"github.com/deluxebear/jetauth/object"
+	"github.com/deluxebear/jetauth/util"
 )
 
 // translateBizError returns a user-facing string for any error, applying

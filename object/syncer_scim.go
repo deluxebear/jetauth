@@ -23,7 +23,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/deluxebear/casdoor/util"
+	"github.com/deluxebear/jetauth/util"
 )
 
 // SCIMSyncerProvider implements SyncerProvider for SCIM 2.0 API-based syncers

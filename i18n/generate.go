@@ -22,7 +22,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/deluxebear/casdoor/util"
+	"github.com/deluxebear/jetauth/util"
 )
 
 type I18nData map[string]map[string]string

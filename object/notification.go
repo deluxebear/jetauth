@@ -21,8 +21,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/deluxebear/casdoor/notification"
-	"github.com/deluxebear/casdoor/util"
+	"github.com/deluxebear/jetauth/notification"
+	"github.com/deluxebear/jetauth/util"
 	notify "github.com/casdoor/notify2"
 )
 

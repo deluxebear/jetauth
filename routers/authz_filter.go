@@ -24,12 +24,12 @@ import (
 	"time"
 
 	"github.com/beego/beego/v2/core/logs"
-	"github.com/deluxebear/casdoor/controllers"
-	"github.com/deluxebear/casdoor/object"
+	"github.com/deluxebear/jetauth/controllers"
+	"github.com/deluxebear/jetauth/object"
 
 	"github.com/beego/beego/v2/server/web/context"
-	"github.com/deluxebear/casdoor/authz"
-	"github.com/deluxebear/casdoor/util"
+	"github.com/deluxebear/jetauth/authz"
+	"github.com/deluxebear/jetauth/util"
 )
 
 type Object struct {

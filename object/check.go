@@ -22,10 +22,10 @@ import (
 	"time"
 	"unicode"
 
-	"github.com/deluxebear/casdoor/cred"
-	"github.com/deluxebear/casdoor/form"
-	"github.com/deluxebear/casdoor/i18n"
-	"github.com/deluxebear/casdoor/util"
+	"github.com/deluxebear/jetauth/cred"
+	"github.com/deluxebear/jetauth/form"
+	"github.com/deluxebear/jetauth/i18n"
+	"github.com/deluxebear/jetauth/util"
 	goldap "github.com/go-ldap/ldap/v3"
 )
 

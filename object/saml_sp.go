@@ -22,8 +22,8 @@ import (
 	"fmt"
 	"net/url"
 
-	"github.com/deluxebear/casdoor/i18n"
-	"github.com/deluxebear/casdoor/idp"
+	"github.com/deluxebear/jetauth/i18n"
+	"github.com/deluxebear/jetauth/idp"
 	"github.com/mitchellh/mapstructure"
 	saml2 "github.com/russellhaering/gosaml2"
 	dsig "github.com/russellhaering/goxmldsig"

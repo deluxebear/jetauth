@@ -21,7 +21,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/deluxebear/casdoor/i18n"
+	"github.com/deluxebear/jetauth/i18n"
 )
 
 var reRealName *regexp.Regexp

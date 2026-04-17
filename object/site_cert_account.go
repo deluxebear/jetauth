@@ -21,9 +21,9 @@ import (
 	"github.com/casbin/lego/v4/certcrypto"
 	"github.com/casbin/lego/v4/lego"
 	"github.com/casbin/lego/v4/registration"
-	"github.com/deluxebear/casdoor/certificate"
-	"github.com/deluxebear/casdoor/conf"
-	"github.com/deluxebear/casdoor/proxy"
+	"github.com/deluxebear/jetauth/certificate"
+	"github.com/deluxebear/jetauth/conf"
+	"github.com/deluxebear/jetauth/proxy"
 )
 
 func getLegoClientAndAccount(email string, privateKey string, devMode bool, useProxy bool) (*lego.Client, *certificate.Account, error) {

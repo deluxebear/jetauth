@@ -21,7 +21,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/deluxebear/casdoor/object"
+	"github.com/deluxebear/jetauth/object"
 )
 
 type UaRule struct{}

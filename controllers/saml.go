@@ -19,7 +19,7 @@ import (
 	"net/http"
 	"net/url"
 
-	"github.com/deluxebear/casdoor/object"
+	"github.com/deluxebear/jetauth/object"
 )
 
 func (c *ApiController) GetSamlMeta() {

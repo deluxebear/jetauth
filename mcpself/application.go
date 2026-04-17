@@ -17,9 +17,9 @@ package mcpself
 import (
 	"fmt"
 
-	"github.com/deluxebear/casdoor/conf"
-	"github.com/deluxebear/casdoor/object"
-	"github.com/deluxebear/casdoor/util"
+	"github.com/deluxebear/jetauth/conf"
+	"github.com/deluxebear/jetauth/object"
+	"github.com/deluxebear/jetauth/util"
 )
 
 // handleGetApplicationsTool handles the get_applications MCP tool

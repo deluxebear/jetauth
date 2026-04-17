@@ -31,7 +31,7 @@ import (
 	"time"
 
 	"github.com/beevik/etree"
-	"github.com/deluxebear/casdoor/util"
+	"github.com/deluxebear/jetauth/util"
 	"github.com/golang-jwt/jwt/v5"
 	saml "github.com/russellhaering/gosaml2"
 	dsig "github.com/russellhaering/goxmldsig"

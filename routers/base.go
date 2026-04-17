@@ -25,11 +25,11 @@ import (
 	"time"
 
 	"github.com/beego/beego/v2/server/web/context"
-	"github.com/deluxebear/casdoor/conf"
-	"github.com/deluxebear/casdoor/i18n"
-	"github.com/deluxebear/casdoor/mcpself"
-	"github.com/deluxebear/casdoor/object"
-	"github.com/deluxebear/casdoor/util"
+	"github.com/deluxebear/jetauth/conf"
+	"github.com/deluxebear/jetauth/i18n"
+	"github.com/deluxebear/jetauth/mcpself"
+	"github.com/deluxebear/jetauth/object"
+	"github.com/deluxebear/jetauth/util"
 )
 
 type Response struct {

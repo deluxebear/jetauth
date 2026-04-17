@@ -18,7 +18,7 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/deluxebear/casdoor/object"
+	"github.com/deluxebear/jetauth/object"
 )
 
 // DynamicClientRegister

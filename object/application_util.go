@@ -21,8 +21,8 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/deluxebear/casdoor/i18n"
-	"github.com/deluxebear/casdoor/util"
+	"github.com/deluxebear/jetauth/i18n"
+	"github.com/deluxebear/jetauth/util"
 )
 
 func getProviderMap(owner string) (m map[string]*Provider, err error) {

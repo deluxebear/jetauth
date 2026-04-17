@@ -23,7 +23,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/deluxebear/casdoor/mcp"
+	"github.com/deluxebear/jetauth/mcp"
 )
 
 const (

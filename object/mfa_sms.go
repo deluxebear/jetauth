@@ -17,7 +17,7 @@ package object
 import (
 	"errors"
 
-	"github.com/deluxebear/casdoor/util"
+	"github.com/deluxebear/jetauth/util"
 )
 
 type SmsMfa struct {

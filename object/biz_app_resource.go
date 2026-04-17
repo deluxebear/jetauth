@@ -12,7 +12,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/deluxebear/casdoor/util"
+	"github.com/deluxebear/jetauth/util"
 )
 
 // Known sources for a catalog entry. Kept as strings so future additions

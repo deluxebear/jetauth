@@ -24,7 +24,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/deluxebear/casdoor/util"
+	"github.com/deluxebear/jetauth/util"
 	"golang.org/x/oauth2"
 )
 

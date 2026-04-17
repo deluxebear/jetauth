@@ -18,9 +18,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/deluxebear/casdoor/idp"
-	"github.com/deluxebear/casdoor/pp"
-	"github.com/deluxebear/casdoor/util"
+	"github.com/deluxebear/jetauth/idp"
+	"github.com/deluxebear/jetauth/pp"
+	"github.com/deluxebear/jetauth/util"
 )
 
 func PlaceOrder(owner string, reqProductInfos []ProductInfo, user *User) (*Order, error) {

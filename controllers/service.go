@@ -22,9 +22,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/deluxebear/casdoor/email"
-	"github.com/deluxebear/casdoor/object"
-	"github.com/deluxebear/casdoor/util"
+	"github.com/deluxebear/jetauth/email"
+	"github.com/deluxebear/jetauth/object"
+	"github.com/deluxebear/jetauth/util"
 )
 
 type EmailForm struct {

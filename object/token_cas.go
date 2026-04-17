@@ -27,8 +27,8 @@ import (
 	"time"
 
 	"github.com/beevik/etree"
-	"github.com/deluxebear/casdoor/i18n"
-	"github.com/deluxebear/casdoor/util"
+	"github.com/deluxebear/jetauth/i18n"
+	"github.com/deluxebear/jetauth/util"
 	dsig "github.com/russellhaering/goxmldsig"
 )
 

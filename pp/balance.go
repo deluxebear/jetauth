@@ -17,7 +17,7 @@ package pp
 import (
 	"fmt"
 
-	"github.com/deluxebear/casdoor/util"
+	"github.com/deluxebear/jetauth/util"
 )
 
 type BalancePaymentProvider struct{}

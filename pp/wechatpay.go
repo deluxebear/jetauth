@@ -19,7 +19,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/deluxebear/casdoor/util"
+	"github.com/deluxebear/jetauth/util"
 	"github.com/go-pay/gopay"
 	"github.com/go-pay/gopay/wechat/v3"
 )

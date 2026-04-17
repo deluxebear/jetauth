@@ -22,7 +22,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/deluxebear/casdoor/util"
+	"github.com/deluxebear/jetauth/util"
 	"github.com/mitchellh/mapstructure"
 	"golang.org/x/oauth2"
 )

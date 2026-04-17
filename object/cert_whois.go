@@ -18,7 +18,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/deluxebear/casdoor/util"
+	"github.com/deluxebear/jetauth/util"
 	"github.com/likexian/whois"
 	whoisparser "github.com/likexian/whois-parser"
 )

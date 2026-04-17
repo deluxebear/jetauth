@@ -18,8 +18,8 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/deluxebear/casdoor/object"
-	"github.com/deluxebear/casdoor/util"
+	"github.com/deluxebear/jetauth/object"
+	"github.com/deluxebear/jetauth/util"
 )
 
 type Rule interface {

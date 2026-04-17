@@ -11,7 +11,7 @@ package object
 import (
 	"fmt"
 
-	"github.com/deluxebear/casdoor/util"
+	"github.com/deluxebear/jetauth/util"
 )
 
 const MaxBizRoleInheritanceDepth = 10

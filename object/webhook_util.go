@@ -21,7 +21,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/deluxebear/casdoor/util"
+	"github.com/deluxebear/jetauth/util"
 )
 
 func sendWebhook(webhook *Webhook, record *Record, extendedUser *User) (int, string, error) {

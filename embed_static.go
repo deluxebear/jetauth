@@ -20,7 +20,7 @@ import (
 	"embed"
 	"io/fs"
 
-	"github.com/deluxebear/casdoor/embedded"
+	"github.com/deluxebear/jetauth/embedded"
 )
 
 //go:embed all:web/build

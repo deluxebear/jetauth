@@ -14,7 +14,7 @@
 
 package captcha
 
-import "github.com/deluxebear/casdoor/object"
+import "github.com/deluxebear/jetauth/object"
 
 type DefaultCaptchaProvider struct{}
 

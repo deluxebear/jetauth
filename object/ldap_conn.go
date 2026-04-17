@@ -22,9 +22,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/deluxebear/casdoor/conf"
-	"github.com/deluxebear/casdoor/i18n"
-	"github.com/deluxebear/casdoor/util"
+	"github.com/deluxebear/jetauth/conf"
+	"github.com/deluxebear/jetauth/i18n"
+	"github.com/deluxebear/jetauth/util"
 	goldap "github.com/go-ldap/ldap/v3"
 	"github.com/nyaruka/phonenumbers"
 	"github.com/thanhpk/randstr"

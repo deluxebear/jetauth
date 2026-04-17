@@ -17,8 +17,8 @@ package object
 import (
 	"fmt"
 
-	"github.com/deluxebear/casdoor/pp"
-	"github.com/deluxebear/casdoor/util"
+	"github.com/deluxebear/jetauth/pp"
+	"github.com/deluxebear/jetauth/util"
 	"github.com/xorm-io/core"
 )
 

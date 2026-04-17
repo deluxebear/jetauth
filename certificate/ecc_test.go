@@ -20,7 +20,7 @@ package certificate
 import (
 	"testing"
 
-	"github.com/deluxebear/casdoor/util"
+	"github.com/deluxebear/jetauth/util"
 	"github.com/stretchr/testify/assert"
 )
 

@@ -18,7 +18,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/deluxebear/casdoor/util"
+	"github.com/deluxebear/jetauth/util"
 )
 
 func TestGenerateRsaKeys(t *testing.T) {

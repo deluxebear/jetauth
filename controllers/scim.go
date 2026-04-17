@@ -17,7 +17,7 @@ package controllers
 import (
 	"strings"
 
-	"github.com/deluxebear/casdoor/scim"
+	"github.com/deluxebear/jetauth/scim"
 )
 
 func (c *RootController) HandleScim() {

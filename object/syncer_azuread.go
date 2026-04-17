@@ -24,7 +24,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/deluxebear/casdoor/util"
+	"github.com/deluxebear/jetauth/util"
 )
 
 // AzureAdSyncerProvider implements SyncerProvider for Azure AD API-based syncers

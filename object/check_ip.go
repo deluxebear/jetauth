@@ -20,7 +20,7 @@ import (
 	"net"
 	"strings"
 
-	"github.com/deluxebear/casdoor/i18n"
+	"github.com/deluxebear/jetauth/i18n"
 )
 
 func CheckEntryIp(clientIp string, user *User, application *Application, organization *Organization, lang string) error {

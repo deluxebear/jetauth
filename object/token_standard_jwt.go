@@ -18,7 +18,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/deluxebear/casdoor/util"
+	"github.com/deluxebear/jetauth/util"
 	"github.com/golang-jwt/jwt/v5"
 )
 

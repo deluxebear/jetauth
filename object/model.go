@@ -19,7 +19,7 @@ import (
 
 	"github.com/casbin/casbin/v3/config"
 	"github.com/casbin/casbin/v3/model"
-	"github.com/deluxebear/casdoor/util"
+	"github.com/deluxebear/jetauth/util"
 	"github.com/xorm-io/core"
 )
 

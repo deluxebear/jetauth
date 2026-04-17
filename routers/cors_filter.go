@@ -18,9 +18,9 @@ import (
 	"net/http"
 
 	"github.com/beego/beego/v2/server/web/context"
-	"github.com/deluxebear/casdoor/conf"
-	"github.com/deluxebear/casdoor/object"
-	"github.com/deluxebear/casdoor/util"
+	"github.com/deluxebear/jetauth/conf"
+	"github.com/deluxebear/jetauth/object"
+	"github.com/deluxebear/jetauth/util"
 )
 
 const (

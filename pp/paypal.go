@@ -19,7 +19,7 @@ import (
 	"errors"
 	"strconv"
 
-	"github.com/deluxebear/casdoor/conf"
+	"github.com/deluxebear/jetauth/conf"
 
 	"github.com/go-pay/gopay"
 	"github.com/go-pay/gopay/paypal"

@@ -18,8 +18,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/deluxebear/casdoor/certificate"
-	"github.com/deluxebear/casdoor/util"
+	"github.com/deluxebear/jetauth/certificate"
+	"github.com/deluxebear/jetauth/util"
 	"github.com/xorm-io/core"
 	"golang.org/x/net/publicsuffix"
 )

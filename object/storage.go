@@ -22,10 +22,10 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/deluxebear/casdoor/conf"
-	"github.com/deluxebear/casdoor/i18n"
-	"github.com/deluxebear/casdoor/storage"
-	"github.com/deluxebear/casdoor/util"
+	"github.com/deluxebear/jetauth/conf"
+	"github.com/deluxebear/jetauth/i18n"
+	"github.com/deluxebear/jetauth/storage"
+	"github.com/deluxebear/jetauth/util"
 	"github.com/casdoor/oss"
 )
 

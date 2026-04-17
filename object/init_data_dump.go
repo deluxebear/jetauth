@@ -14,7 +14,7 @@
 
 package object
 
-import "github.com/deluxebear/casdoor/util"
+import "github.com/deluxebear/jetauth/util"
 
 func DumpToFile(filePath string) error {
 	return writeInitDataToFile(filePath)

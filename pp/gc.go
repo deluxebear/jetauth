@@ -24,7 +24,7 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/deluxebear/casdoor/util"
+	"github.com/deluxebear/jetauth/util"
 )
 
 type GcPaymentProvider struct {

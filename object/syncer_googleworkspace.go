@@ -19,7 +19,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/deluxebear/casdoor/util"
+	"github.com/deluxebear/jetauth/util"
 	"golang.org/x/oauth2/google"
 	"golang.org/x/oauth2/jwt"
 	admin "google.golang.org/api/admin/directory/v1"

@@ -24,7 +24,7 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/deluxebear/casdoor/util"
+	"github.com/deluxebear/jetauth/util"
 )
 
 // DingtalkSyncerProvider implements SyncerProvider for DingTalk API-based syncers

@@ -17,7 +17,7 @@ package object
 import (
 	"fmt"
 
-	"github.com/deluxebear/casdoor/util"
+	"github.com/deluxebear/jetauth/util"
 )
 
 func (syncer *Syncer) syncUsers() error {

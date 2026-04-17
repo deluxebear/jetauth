@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/deluxebear/casdoor/util"
+	"github.com/deluxebear/jetauth/util"
 	"github.com/xorm-io/core"
 )
 

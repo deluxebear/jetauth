@@ -18,7 +18,7 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/deluxebear/casdoor/object"
+	"github.com/deluxebear/jetauth/object"
 )
 
 func TestIpRateRule_checkRule(t *testing.T) {

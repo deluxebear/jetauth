@@ -19,8 +19,8 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/deluxebear/casdoor/conf"
-	"github.com/deluxebear/casdoor/proxy"
+	"github.com/deluxebear/jetauth/conf"
+	"github.com/deluxebear/jetauth/proxy"
 )
 
 var defaultStorageProvider *Provider = nil

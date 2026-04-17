@@ -18,9 +18,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/deluxebear/casdoor/conf"
-	"github.com/deluxebear/casdoor/util"
-	xormadapter "github.com/deluxebear/casdoor/adapters/xormadapter"
+	"github.com/deluxebear/jetauth/conf"
+	"github.com/deluxebear/jetauth/util"
+	xormadapter "github.com/deluxebear/jetauth/adapters/xormadapter"
 	"github.com/xorm-io/core"
 	"github.com/xorm-io/xorm"
 )

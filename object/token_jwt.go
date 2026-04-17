@@ -20,8 +20,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/deluxebear/casdoor/conf"
-	"github.com/deluxebear/casdoor/util"
+	"github.com/deluxebear/jetauth/conf"
+	"github.com/deluxebear/jetauth/util"
 	"github.com/golang-jwt/jwt/v5"
 )
 

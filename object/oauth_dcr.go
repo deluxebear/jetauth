@@ -18,7 +18,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/deluxebear/casdoor/util"
+	"github.com/deluxebear/jetauth/util"
 )
 
 // DynamicClientRegistrationRequest represents an RFC 7591 client registration request

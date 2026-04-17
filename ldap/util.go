@@ -19,8 +19,8 @@ import (
 	"log"
 	"strings"
 
-	"github.com/deluxebear/casdoor/object"
-	"github.com/deluxebear/casdoor/util"
+	"github.com/deluxebear/jetauth/object"
+	"github.com/deluxebear/jetauth/util"
 	"github.com/lor00x/goldap/message"
 
 	ldap "github.com/casdoor/ldapserver"

@@ -15,7 +15,7 @@
 package mcpself
 
 import (
-	"github.com/deluxebear/casdoor/object"
+	"github.com/deluxebear/jetauth/object"
 )
 
 // BuiltinScopes defines the default scope-to-tool mappings for Casdoor's MCP server

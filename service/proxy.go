@@ -26,10 +26,10 @@ import (
 	"time"
 
 	"github.com/beego/beego/v2/core/logs"
-	"github.com/deluxebear/casdoor/conf"
-	"github.com/deluxebear/casdoor/object"
-	"github.com/deluxebear/casdoor/rule"
-	"github.com/deluxebear/casdoor/util"
+	"github.com/deluxebear/jetauth/conf"
+	"github.com/deluxebear/jetauth/object"
+	"github.com/deluxebear/jetauth/rule"
+	"github.com/deluxebear/jetauth/util"
 )
 
 // Shared transport for connection reuse across all proxied requests.

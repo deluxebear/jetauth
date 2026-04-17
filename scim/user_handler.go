@@ -18,7 +18,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/deluxebear/casdoor/object"
+	"github.com/deluxebear/jetauth/object"
 	"github.com/elimity-com/scim"
 	"github.com/elimity-com/scim/errors"
 )

@@ -20,8 +20,8 @@ import (
 	"strconv"
 
 	"github.com/beego/beego/v2/core/utils/pagination"
-	"github.com/deluxebear/casdoor/object"
-	"github.com/deluxebear/casdoor/util"
+	"github.com/deluxebear/jetauth/object"
+	"github.com/deluxebear/jetauth/util"
 )
 
 // ProductListResponse represents the response for product list APIs

@@ -23,7 +23,7 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/deluxebear/casdoor/util"
+	"github.com/deluxebear/jetauth/util"
 )
 
 // WecomSyncerProvider implements SyncerProvider for WeCom (WeChat Work) API-based syncers

@@ -18,8 +18,8 @@ import (
 	"fmt"
 	"slices"
 
-	"github.com/deluxebear/casdoor/mcp"
-	"github.com/deluxebear/casdoor/util"
+	"github.com/deluxebear/jetauth/mcp"
+	"github.com/deluxebear/jetauth/util"
 	mcpsdk "github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/xorm-io/core"
 )

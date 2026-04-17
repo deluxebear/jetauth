@@ -21,7 +21,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/deluxebear/casdoor/util"
+	"github.com/deluxebear/jetauth/util"
 	"github.com/go-sql-driver/mysql"
 	"golang.org/x/crypto/ssh"
 )
@@ -97,7 +97,7 @@ func (p *DatabaseSyncerProvider) GetOriginalUsers() ([]*OriginalUser, error) {
 	}
 
 	// Memory leak problem handling
-	// https://github.com/deluxebear/casdoor/issues/1256
+	// https://github.com/deluxebear/jetauth/issues/1256
 	users := p.Syncer.getOriginalUsersFromMap(results)
 	// Clear map contents to help garbage collection
 	for i := range results {

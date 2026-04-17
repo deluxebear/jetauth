@@ -21,9 +21,9 @@ import (
 	"github.com/casbin/casbin/v3"
 	"github.com/casbin/casbin/v3/config"
 	"github.com/casbin/casbin/v3/model"
-	"github.com/deluxebear/casdoor/conf"
-	"github.com/deluxebear/casdoor/util"
-	xormadapter "github.com/deluxebear/casdoor/adapters/xormadapter"
+	"github.com/deluxebear/jetauth/conf"
+	"github.com/deluxebear/jetauth/util"
+	xormadapter "github.com/deluxebear/jetauth/adapters/xormadapter"
 )
 
 func getPermissionEnforcer(p *Permission, permissionIDs ...string) (*casbin.Enforcer, error) {

@@ -20,8 +20,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/deluxebear/casdoor/notification"
-	"github.com/deluxebear/casdoor/util"
+	"github.com/deluxebear/jetauth/notification"
+	"github.com/deluxebear/jetauth/util"
 )
 
 type PushMfa struct {

@@ -22,8 +22,8 @@ import (
 	"strings"
 
 	"github.com/casdoor/casdoor-go-sdk/casdoorsdk"
-	"github.com/deluxebear/casdoor/conf"
-	"github.com/deluxebear/casdoor/object"
+	"github.com/deluxebear/jetauth/conf"
+	"github.com/deluxebear/jetauth/object"
 )
 
 func joinPath(a string, b string) string {

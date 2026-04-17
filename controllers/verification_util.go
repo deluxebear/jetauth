@@ -17,7 +17,7 @@ package controllers
 import (
 	"fmt"
 
-	"github.com/deluxebear/casdoor/object"
+	"github.com/deluxebear/jetauth/object"
 )
 
 func (c *ApiController) checkOrgMasterVerificationCode(user *object.User, code string) (bool, error) {

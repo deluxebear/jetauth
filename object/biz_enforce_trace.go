@@ -11,7 +11,7 @@ package object
 import (
 	"fmt"
 
-	"github.com/deluxebear/casdoor/i18n"
+	"github.com/deluxebear/jetauth/i18n"
 )
 
 // EnforceTraceResult surfaces WHY an enforce decision came out the way it did.

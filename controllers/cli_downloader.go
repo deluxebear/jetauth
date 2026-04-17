@@ -16,9 +16,9 @@ import (
 	"time"
 
 	"github.com/beego/beego/v2/server/web"
-	"github.com/deluxebear/casdoor/conf"
-	"github.com/deluxebear/casdoor/proxy"
-	"github.com/deluxebear/casdoor/util"
+	"github.com/deluxebear/jetauth/conf"
+	"github.com/deluxebear/jetauth/proxy"
+	"github.com/deluxebear/jetauth/util"
 )
 
 const (

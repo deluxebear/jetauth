@@ -19,7 +19,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/deluxebear/casdoor/util"
+	"github.com/deluxebear/jetauth/util"
 	"github.com/go-webauthn/webauthn/webauthn"
 )
 

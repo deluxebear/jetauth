@@ -18,8 +18,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/deluxebear/casdoor/object"
-	"github.com/deluxebear/casdoor/util"
+	"github.com/deluxebear/jetauth/object"
+	"github.com/deluxebear/jetauth/util"
 )
 
 // SessionData represents session metadata

@@ -15,7 +15,7 @@
 package object
 
 import (
-	"github.com/deluxebear/casdoor/xlsx"
+	"github.com/deluxebear/jetauth/xlsx"
 )
 
 func getGroupMap(owner string) (map[string]*Group, error) {

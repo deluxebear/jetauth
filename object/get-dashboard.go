@@ -19,7 +19,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/deluxebear/casdoor/conf"
+	"github.com/deluxebear/jetauth/conf"
 )
 
 type DashboardDateItem struct {

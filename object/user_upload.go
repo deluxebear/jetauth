@@ -19,9 +19,9 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/deluxebear/casdoor/i18n"
-	"github.com/deluxebear/casdoor/util"
-	"github.com/deluxebear/casdoor/xlsx"
+	"github.com/deluxebear/jetauth/i18n"
+	"github.com/deluxebear/jetauth/util"
+	"github.com/deluxebear/jetauth/xlsx"
 )
 
 func getUserMap(owner string) (map[string]*User, error) {

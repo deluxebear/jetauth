@@ -11,7 +11,7 @@ package object
 import (
 	"fmt"
 
-	"github.com/deluxebear/casdoor/util"
+	"github.com/deluxebear/jetauth/util"
 )
 
 // BizPermission is a business-scoped permission rule. The synthetic Id is the
