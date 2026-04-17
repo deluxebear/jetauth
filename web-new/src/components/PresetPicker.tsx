@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useTranslation } from "react-i18next";
+import { useTranslation } from "../i18n";
 import { fetchEmailPresets, type EmailPreset } from "../data/emailPresets";
 
 type Props = { onPick: (p: EmailPreset) => void };
