@@ -9,25 +9,33 @@
 package object
 
 import (
-	"github.com/beego/beego/v2/core/logs"
+	"fmt"
+
 	"github.com/deluxebear/casdoor/util"
-	"github.com/xorm-io/core"
 )
 
+// BizPermission is a business-scoped permission rule. The synthetic Id is the
+// stable primary key; (Owner, AppName, Name) is enforced unique via
+// ux_biz_perm. Subject grants (users, groups, roles) now live in the
+// biz_permission_grantee relational table; Resources/Actions remain JSON
+// arrays as they are small, permission-local, and not joined to.
 type BizPermission struct {
-	Owner       string   `xorm:"varchar(100) notnull pk" json:"owner"`
-	AppName     string   `xorm:"varchar(100) notnull pk" json:"appName"`
-	Name        string   `xorm:"varchar(100) notnull pk" json:"name"`
-	CreatedTime string   `xorm:"varchar(100)" json:"createdTime"`
-	DisplayName string   `xorm:"varchar(100)" json:"displayName"`
-	Description string   `xorm:"varchar(500)" json:"description"`
-	Users       []string `xorm:"mediumtext" json:"users"`
-	Roles       []string `xorm:"mediumtext" json:"roles"` // references BizRole.Name in same app
-	Resources   []string `xorm:"mediumtext" json:"resources"`
-	Actions     []string `xorm:"mediumtext" json:"actions"`
-	Effect      string   `xorm:"varchar(20)" json:"effect"` // Allow / Deny
-	IsEnabled   bool     `json:"isEnabled"`
-	// Approval
+	Id          int64  `xorm:"pk autoincr" json:"id"`
+	Owner       string `xorm:"varchar(100) notnull unique(ux_biz_perm)" json:"owner"`
+	AppName     string `xorm:"varchar(100) notnull unique(ux_biz_perm)" json:"appName"`
+	Name        string `xorm:"varchar(100) notnull unique(ux_biz_perm)" json:"name"`
+	CreatedTime string `xorm:"varchar(100)" json:"createdTime"`
+	DisplayName string `xorm:"varchar(100)" json:"displayName"`
+	Description string `xorm:"varchar(500)" json:"description"`
+
+	// Grantees (Users + Roles) moved to biz_permission_grantee table.
+
+	Resources []string `xorm:"mediumtext" json:"resources"`
+	Actions   []string `xorm:"mediumtext" json:"actions"`
+	Effect    string   `xorm:"varchar(20)" json:"effect"` // Allow / Deny
+	IsEnabled bool     `json:"isEnabled"`
+
+	// Approval workflow
 	Submitter   string `xorm:"varchar(100)" json:"submitter"`
 	Approver    string `xorm:"varchar(100)" json:"approver"`
 	ApproveTime string `xorm:"varchar(100)" json:"approveTime"`
@@ -38,6 +46,8 @@ func (p *BizPermission) GetId() string {
 	return util.GetSessionId(p.Owner, p.Name, p.AppName)
 }
 
+// GetBizPermissions lists all permissions for a business app, ordered by most
+// recently created first.
 func GetBizPermissions(owner, appName string) ([]*BizPermission, error) {
 	perms := []*BizPermission{}
 	err := ormer.Engine.Desc("created_time").Find(&perms, &BizPermission{Owner: owner, AppName: appName})
@@ -47,7 +57,9 @@ func GetBizPermissions(owner, appName string) ([]*BizPermission, error) {
 	return perms, nil
 }
 
-func getBizPermission(owner, appName, name string) (*BizPermission, error) {
+// GetBizPermission looks up a permission by its natural key (owner, app, name).
+// Prefer getBizPermissionById internally where an id is already known.
+func GetBizPermission(owner, appName, name string) (*BizPermission, error) {
 	if util.IsStringsEmpty(owner, appName, name) {
 		return nil, nil
 	}
@@ -62,68 +74,90 @@ func getBizPermission(owner, appName, name string) (*BizPermission, error) {
 	return nil, nil
 }
 
-func GetBizPermission(owner, appName, name string) (*BizPermission, error) {
-	return getBizPermission(owner, appName, name)
+// getBizPermissionById is the id-based lookup used by all CRUD paths.
+func getBizPermissionById(id int64) (*BizPermission, error) {
+	p := BizPermission{Id: id}
+	existed, err := ormer.Engine.Get(&p)
+	if err != nil || !existed {
+		return nil, err
+	}
+	return &p, nil
 }
 
 func AddBizPermission(perm *BizPermission) (bool, error) {
 	if err := validateBizPermission(perm); err != nil {
 		return false, err
 	}
-
+	if perm.CreatedTime == "" {
+		perm.CreatedTime = util.GetCurrentTime()
+	}
 	affected, err := ormer.Engine.Insert(perm)
 	if err != nil {
 		return false, err
 	}
-
 	if affected != 0 {
-		SyncAfterPermissionAdd(perm)
+		syncAffectedAppsByPermissionId(perm.Id)
 	}
-
 	return affected != 0, nil
 }
 
-func UpdateBizPermission(owner, appName, name string, perm *BizPermission) (bool, error) {
+// UpdateBizPermission updates an existing permission identified by its
+// synthetic id. Owner and AppName are immutable — attempts to change them
+// via the update body are rejected.
+func UpdateBizPermission(id int64, perm *BizPermission) (bool, error) {
 	if err := validateBizPermission(perm); err != nil {
 		return false, err
 	}
 
-	// Read old state before update (needed for incremental diff)
-	oldPerm, err := getBizPermission(owner, appName, name)
-	if err != nil {
-		logs.Warning("failed to read old permission for incremental sync: %v", err)
-	}
-
-	affected, err := ormer.Engine.ID(core.PK{owner, appName, name}).AllCols().Update(perm)
+	existing, err := getBizPermissionById(id)
 	if err != nil {
 		return false, err
 	}
-
-	if affected != 0 {
-		SyncAfterPermissionUpdate(oldPerm, perm)
+	if existing == nil {
+		return false, nil
 	}
 
+	// Lock immutable fields
+	if perm.Owner != existing.Owner || perm.AppName != existing.AppName {
+		return false, fmt.Errorf("cannot change owner or appName via update (id=%d)", id)
+	}
+
+	perm.Id = id
+	affected, err := ormer.Engine.ID(id).AllCols().Update(perm)
+	if err != nil {
+		return false, err
+	}
+	if affected != 0 {
+		syncAffectedAppsByPermissionId(id)
+	}
 	return affected != 0, nil
 }
 
-func DeleteBizPermission(perm *BizPermission) (bool, error) {
-	// Read full state before delete (needed for incremental diff)
-	fullPerm, err := getBizPermission(perm.Owner, perm.AppName, perm.Name)
-	if err != nil {
-		logs.Warning("failed to read permission for incremental sync: %v", err)
-	}
-	if fullPerm == nil {
-		fullPerm = perm
-	}
-
-	affected, err := ormer.Engine.ID(core.PK{perm.Owner, perm.AppName, perm.Name}).Delete(&BizPermission{})
+// DeleteBizPermission removes a permission by id, cascading all rows in
+// biz_permission_grantee that reference it before deleting the permission
+// itself.
+func DeleteBizPermission(id int64) (bool, error) {
+	perm, err := getBizPermissionById(id)
 	if err != nil {
 		return false, err
 	}
-
-	if affected != 0 {
-		SyncAfterPermissionDelete(fullPerm)
+	if perm == nil {
+		return false, nil
 	}
 
+	// Cascade grantees first so we never leave orphaned grant rows.
+	if _, err := ormer.Engine.Where("permission_id = ?", id).Delete(&BizPermissionGrantee{}); err != nil {
+		return false, err
+	}
+
+	affected, err := ormer.Engine.ID(id).Delete(&BizPermission{})
+	if err != nil {
+		return false, err
+	}
+	if affected != 0 {
+		go func(owner, appName string) {
+			_, _ = SyncAppPolicies(owner, appName)
+		}(perm.Owner, perm.AppName)
+	}
 	return affected != 0, nil
 }
