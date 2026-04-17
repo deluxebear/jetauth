@@ -30,6 +30,7 @@ export default function BizPermissionEditPage() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [customAction, setCustomAction] = useState("");
 
   useEffect(() => { if (saved) { const timer = setTimeout(() => setSaved(false), 1500); return () => clearTimeout(timer); } }, [saved]);
 
@@ -131,7 +132,6 @@ export default function BizPermissionEditPage() {
   const removeAction = (act: string) => {
     set("actions", perm.actions.filter((a) => a !== act));
   };
-  const [customAction, setCustomAction] = useState("");
 
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
