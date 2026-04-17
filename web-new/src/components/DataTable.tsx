@@ -1,5 +1,5 @@
-import { useState, useRef, useEffect } from "react";
-import { ChevronLeft, ChevronRight, ArrowUp, ArrowDown, ArrowUpDown, Search, X, ChevronDown } from "lucide-react";
+import { useState, useRef, useEffect, useMemo, useCallback } from "react";
+import { ChevronLeft, ChevronRight, ArrowUp, ArrowDown, ArrowUpDown, Search, X, ChevronDown, Columns3 } from "lucide-react";
 import { useTranslation } from "../i18n";
 
 export interface Column<T> {
@@ -12,6 +12,15 @@ export interface Column<T> {
   render?: (value: unknown, record: T, index: number) => React.ReactNode;
   width?: string;
   mono?: boolean;
+  // Column visibility menu knobs — only read when `columnsToggle` is enabled.
+  // hideable=false keeps the column in the visible set regardless of menu
+  // toggles (e.g. primary-identity columns); defaultHidden=true makes the
+  // column start hidden until a user opts in.
+  hideable?: boolean;
+  defaultHidden?: boolean;
+  // Client-side sort comparator. When `clientSort` is enabled on the table,
+  // columns without a comparator fall back to string-compare on the raw value.
+  sortFn?: (a: T, b: T) => number;
 }
 
 export interface SortState {
@@ -22,6 +31,14 @@ export interface SortState {
 export interface FilterState {
   field: string;
   value: string;
+}
+
+// Render-prop context passed to `bulkActions` so callers get the currently
+// selected rows + a clear() callback without having to manage selection state
+// themselves.
+export interface BulkActionContext<T> {
+  selected: T[];
+  clear: () => void;
 }
 
 interface DataTableProps<T> {
@@ -36,6 +53,54 @@ interface DataTableProps<T> {
   onSort?: (sort: SortState) => void;
   onFilter?: (filter: FilterState) => void;
   emptyText?: string;
+
+  // ── Optional, additive features (all off by default) ─────────────────
+  // Row click: when provided, rows become clickable. Cells that shouldn't
+  // trigger row click (checkboxes, action buttons, count badges that route
+  // somewhere specific) must call e.stopPropagation() in their own handlers.
+  onRowClick?: (record: T) => void;
+
+  // Bulk selection: adds a leading checkbox column. `bulkActions` renders a
+  // floating bar above the table when at least one row is selected.
+  selectable?: boolean;
+  bulkActions?: (ctx: BulkActionContext<T>) => React.ReactNode;
+  onSelectionChange?: (selected: T[]) => void;
+
+  // Client-side sort — for lists that fit in memory (few hundred rows). When
+  // off, the table preserves its current "callback-only" behavior: sort
+  // header clicks fire onSort and the caller re-fetches / re-sorts.
+  clientSort?: boolean;
+  defaultSort?: SortState;
+
+  // Persistence: when provided, sort state + hidden-column set survive
+  // reloads under `localStorage[persistKey]`. Use a stable per-screen key
+  // like "biz-role-table:{owner}/{app}".
+  persistKey?: string;
+
+  // Column visibility menu: renders a "Columns" dropdown in the toolbar so
+  // users can hide/show columns. Columns with `hideable: false` are locked.
+  columnsToggle?: boolean;
+
+  // Extra toolbar content (buttons, search, etc.) rendered right-aligned in
+  // the toolbar bar. The toolbar only appears when there's something to show
+  // (bulk actions, columns toggle, or this prop).
+  toolbar?: React.ReactNode;
+}
+
+interface PersistShape {
+  sort?: SortState;
+  hidden?: string[];
+}
+
+function loadPersisted(key?: string): PersistShape | null {
+  if (!key) return null;
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (parsed && typeof parsed === "object") return parsed as PersistShape;
+  } catch { /* quota / parse — ignore */ }
+  return null;
 }
 
 export default function DataTable<T extends Record<string, unknown>>({
@@ -50,13 +115,88 @@ export default function DataTable<T extends Record<string, unknown>>({
   onSort,
   onFilter,
   emptyText = "No data",
+  onRowClick,
+  selectable,
+  bulkActions,
+  onSelectionChange,
+  clientSort,
+  defaultSort,
+  persistKey,
+  columnsToggle,
+  toolbar,
 }: DataTableProps<T>) {
-  const getKey = (r: T) =>
-    typeof rowKey === "function" ? rowKey(r) : String(r[rowKey]);
+  const { t } = useTranslation();
+
+  const getKey = useCallback(
+    (r: T) => (typeof rowKey === "function" ? rowKey(r) : String(r[rowKey])),
+    [rowKey],
+  );
 
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
-  const [sort, setSort] = useState<SortState>({ field: "", order: "" });
+
+  // ── Sort state ───────────────────────────────────────────────────────
+  // Init precedence: persisted → defaultSort → empty. Only runs on mount
+  // (and when persistKey changes, which is rare).
+  const initial = useMemo(() => {
+    const p = loadPersisted(persistKey);
+    const sort: SortState = p?.sort ?? defaultSort ?? { field: "", order: "" };
+    const hiddenFromPersist = p?.hidden && Array.isArray(p.hidden) ? p.hidden : null;
+    const hiddenDefault = columns.filter((c) => c.defaultHidden).map((c) => c.key);
+    const hidden = hiddenFromPersist ?? hiddenDefault;
+    return { sort, hidden: new Set(hidden) };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [persistKey]);
+
+  const [sort, setSort] = useState<SortState>(initial.sort);
+  const [hidden, setHidden] = useState<Set<string>>(initial.hidden);
   const [activeFilter, setActiveFilter] = useState<string | null>(null);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [colMenuOpen, setColMenuOpen] = useState(false);
+  const colMenuRef = useRef<HTMLDivElement>(null);
+
+  // Persist sort + hidden on change (no-op if persistKey is unset).
+  useEffect(() => {
+    if (!persistKey) return;
+    try {
+      localStorage.setItem(persistKey, JSON.stringify({ sort, hidden: Array.from(hidden) }));
+    } catch { /* quota — non-fatal */ }
+  }, [persistKey, sort, hidden]);
+
+  // Close columns menu on outside click.
+  useEffect(() => {
+    if (!colMenuOpen) return;
+    const h = (e: MouseEvent) => {
+      if (colMenuRef.current && !colMenuRef.current.contains(e.target as Node)) setColMenuOpen(false);
+    };
+    document.addEventListener("mousedown", h);
+    return () => document.removeEventListener("mousedown", h);
+  }, [colMenuOpen]);
+
+  // When the data set changes (refetch / pagination), drop stale selection
+  // keys that no longer correspond to a visible row. This keeps "select-all"
+  // indeterminate logic honest.
+  useEffect(() => {
+    if (!selectable) return;
+    const visible = new Set(data.map(getKey));
+    setSelected((prev) => {
+      let changed = false;
+      const next = new Set<string>();
+      prev.forEach((k) => {
+        if (visible.has(k)) next.add(k);
+        else changed = true;
+      });
+      return changed ? next : prev;
+    });
+  }, [data, selectable, getKey]);
+
+  // Emit selection changes to the caller — fed actual row objects, not keys,
+  // since the caller almost always wants the records.
+  useEffect(() => {
+    if (!onSelectionChange) return;
+    const rows = data.filter((r) => selected.has(getKey(r)));
+    onSelectionChange(rows);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selected]);
 
   const handleSort = (col: Column<T>) => {
     if (!col.sortable) return;
@@ -85,18 +225,28 @@ export default function DataTable<T extends Record<string, unknown>>({
     return <ArrowUpDown size={12} className="opacity-30 group-hover:opacity-60 transition-opacity" />;
   };
 
-  // Compute left offsets for fixed-left columns
-  const fixedLeftCols = columns.filter((c) => c.fixed === "left");
+  // Visible columns respect the columnsToggle hidden set. `fixed` and
+  // hideable:false columns can never be hidden, so they're filtered out of
+  // the hidden check before we compute anything positional.
+  const visibleColumns = useMemo(
+    () => columns.filter((c) => !hidden.has(c.key) || c.hideable === false || !!c.fixed),
+    [columns, hidden],
+  );
+
+  // Compute left offsets for fixed-left columns — using VISIBLE columns so
+  // hiding a middle column doesn't open a gap in the sticky offset math.
+  // When `selectable`, reserve the checkbox column's width (40px) so fixed
+  // columns start after it.
+  const selectionWidth = selectable ? 40 : 0;
+  const fixedLeftCols = visibleColumns.filter((c) => c.fixed === "left");
   const leftOffsets = new Map<string, number>();
-  let accLeft = 0;
+  let accLeft = selectionWidth;
   for (const col of fixedLeftCols) {
     leftOffsets.set(col.key, accLeft);
     accLeft += parseInt(col.width || "120", 10);
   }
-
   const lastLeftKey = fixedLeftCols.length > 0 ? fixedLeftCols[fixedLeftCols.length - 1].key : "";
 
-  // Fixed column divider: use ::after pseudo-element for a persistent visible line
   const dividerLeft = "after:absolute after:right-0 after:top-0 after:bottom-0 after:w-[2px] after:bg-[var(--color-border)]";
   const dividerRight = "after:absolute after:left-0 after:top-0 after:bottom-0 after:w-[2px] after:bg-[var(--color-border)]";
 
@@ -119,23 +269,129 @@ export default function DataTable<T extends Record<string, unknown>>({
   };
 
   const stickyStyle = (col: Column<T>): React.CSSProperties | undefined => {
-    if (col.fixed === "left") {
-      return { left: leftOffsets.get(col.key) ?? 0 };
-    }
+    if (col.fixed === "left") return { left: leftOffsets.get(col.key) ?? 0 };
     return undefined;
   };
 
+  // Client-side sort — only when `clientSort` is on AND a sort is active.
+  // Columns can supply `sortFn` for custom ordering; otherwise fall back to
+  // a naive localeCompare on the string value at col.key.
+  const sortedData = useMemo(() => {
+    if (!clientSort || !sort.field || !sort.order) return data;
+    const col = columns.find((c) => c.key === sort.field);
+    if (!col) return data;
+    const dir = sort.order === "ascend" ? 1 : -1;
+    const cmp = col.sortFn
+      ? col.sortFn
+      : (a: T, b: T) => {
+          const av = a[col.key];
+          const bv = b[col.key];
+          if (typeof av === "number" && typeof bv === "number") return av - bv;
+          return String(av ?? "").localeCompare(String(bv ?? ""));
+        };
+    return [...data].sort((a, b) => dir * cmp(a, b));
+  }, [data, clientSort, sort, columns]);
+
+  // Selection helpers
+  const allVisibleKeys = useMemo(() => sortedData.map(getKey), [sortedData, getKey]);
+  const allSelected = allVisibleKeys.length > 0 && allVisibleKeys.every((k) => selected.has(k));
+  const someSelected = allVisibleKeys.some((k) => selected.has(k)) && !allSelected;
+  const toggleSelectAll = () => {
+    if (allSelected) setSelected(new Set());
+    else setSelected(new Set(allVisibleKeys));
+  };
+  const toggleRow = (key: string) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key); else next.add(key);
+      return next;
+    });
+  };
+  const clearSelection = () => setSelected(new Set());
+  const selectedRows = useMemo(
+    () => (selectable ? data.filter((r) => selected.has(getKey(r))) : []),
+    [selectable, data, selected, getKey],
+  );
+
+  // Columns toggle helpers
+  const toggleColHidden = (key: string) => {
+    setHidden((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key); else next.add(key);
+      return next;
+    });
+  };
+
+  const bulkBarActive = selectable && !!bulkActions && selected.size > 0;
+  const toolbarVisible = bulkBarActive || columnsToggle || !!toolbar;
+
+  // colspan used by loading skeleton + empty state
+  const totalRenderedCols = visibleColumns.length + (selectable ? 1 : 0);
+
   return (
     <div className="rounded-xl border border-border bg-surface-1 overflow-hidden">
+      {toolbarVisible && (
+        <div className="flex items-center justify-between gap-2 border-b border-border-subtle bg-surface-2/50 px-3 py-2">
+          <div className="flex items-center gap-2 min-w-0 flex-1">
+            {bulkBarActive && bulkActions!({ selected: selectedRows, clear: clearSelection })}
+          </div>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            {toolbar}
+            {columnsToggle && (
+              <div ref={colMenuRef} className="relative">
+                <button
+                  onClick={() => setColMenuOpen((v) => !v)}
+                  className="flex items-center gap-1.5 rounded-lg border border-border bg-surface-1 px-2.5 py-1 text-[12px] font-medium text-text-secondary hover:bg-surface-2 transition-colors"
+                  title={t("common.columns" as any) || "Columns"}
+                >
+                  <Columns3 size={13} />
+                  <ChevronDown size={11} />
+                </button>
+                {colMenuOpen && (
+                  <div className="absolute right-0 z-30 mt-1 min-w-[200px] rounded-lg border border-border bg-surface-1 p-1.5 shadow-[var(--shadow-elevated)]">
+                    {columns.filter((c) => c.hideable !== false && !c.fixed).map((c) => (
+                      <label key={c.key} className="flex items-center gap-2 rounded px-2 py-1.5 text-[12px] text-text-primary hover:bg-surface-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={!hidden.has(c.key)}
+                          onChange={() => toggleColHidden(c.key)}
+                          className="rounded border-border"
+                        />
+                        {c.title}
+                      </label>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       <div className="overflow-x-auto">
         <table className="w-full text-left" style={{ minWidth: "max-content" }}>
           <thead>
             <tr className="border-b border-border bg-surface-2">
-              {columns.map((col, colIdx) => (
+              {selectable && (
+                <th
+                  className="sticky left-0 z-20 bg-surface-2 px-3 py-2.5 w-10"
+                  style={{ width: 40, minWidth: 40 }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={allSelected}
+                    ref={(el) => { if (el) el.indeterminate = someSelected; }}
+                    onChange={toggleSelectAll}
+                    className="rounded border-border cursor-pointer"
+                    aria-label="Select all rows"
+                  />
+                </th>
+              )}
+              {visibleColumns.map((col, colIdx) => (
                 <th
                   key={col.key}
                   style={{ ...(col.width ? { width: col.width, minWidth: col.width } : {}), ...stickyStyle(col) }}
-                  className={`px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wider text-text-muted relative ${stickyHeadClass(col)} ${colIdx < columns.length - 1 ? "border-r border-border" : ""}`}
+                  className={`px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wider text-text-muted relative ${stickyHeadClass(col)} ${colIdx < visibleColumns.length - 1 ? "border-r border-border" : ""}`}
                 >
                   <div className="flex items-center gap-1">
                     <span
@@ -163,16 +419,17 @@ export default function DataTable<T extends Record<string, unknown>>({
             {loading ? (
               Array.from({ length: 5 }).map((_, i) => (
                 <tr key={i} className="border-b border-border-subtle">
-                  {columns.map((col) => (
+                  {selectable && <td className="sticky left-0 z-10 bg-surface-1 px-3 py-3 w-10"><div className="h-4 w-4 animate-pulse rounded bg-surface-3" /></td>}
+                  {visibleColumns.map((col) => (
                     <td key={col.key} style={stickyStyle(col)} className={`px-4 py-3 ${stickyClass(col)}`}>
                       <div className="h-4 w-24 animate-pulse rounded bg-surface-3" />
                     </td>
                   ))}
                 </tr>
               ))
-            ) : data.length === 0 ? (
+            ) : sortedData.length === 0 ? (
               <tr>
-                <td colSpan={columns.length} className="px-4 py-20 text-center">
+                <td colSpan={totalRenderedCols} className="px-4 py-20 text-center">
                   <div className="flex flex-col items-center gap-3">
                     <div className="rounded-full bg-surface-2 p-4">
                       <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-text-muted/50">
@@ -187,32 +444,71 @@ export default function DataTable<T extends Record<string, unknown>>({
                 </td>
               </tr>
             ) : (
-              data.map((record, idx) => (
-                <tr
-                  key={getKey(record)}
-                  className="border-b border-border-subtle transition-colors hover:bg-surface-2/50"
-                >
-                  {columns.map((col) => (
-                    <td
-                      key={col.key}
-                      style={stickyStyle(col)}
-                      className={`px-4 py-2.5 text-[13px] ${
-                        col.mono ? "font-mono text-text-secondary" : "text-text-primary"
-                      } ${stickyClass(col)}`}
-                    >
-                      {col.render
-                        ? col.render(record[col.key], record, idx)
-                        : (record[col.key] as React.ReactNode) ?? "—"}
-                    </td>
-                  ))}
-                </tr>
-              ))
+              sortedData.map((record, idx) => {
+                const key = getKey(record);
+                const isSelected = selectable && selected.has(key);
+                const rowClickable = !!onRowClick;
+                // Row-bg is driven by selection > clickable hover > default.
+                // We keep a `group` on the tr so child cells can opt into
+                // hover-reveal styling via `group-hover:...`.
+                const rowClass = `group border-b border-border-subtle transition-colors ${
+                  isSelected
+                    ? "bg-accent/5 hover:bg-accent/10"
+                    : rowClickable
+                      ? "cursor-pointer hover:bg-surface-2/50"
+                      : "hover:bg-surface-2/50"
+                }`;
+                // Cells need to match the row bg when selected so sticky
+                // columns don't look out-of-band.
+                const cellStickyBg = isSelected
+                  ? "bg-accent/5 group-hover:bg-accent/10"
+                  : "bg-surface-1 group-hover:bg-surface-2/50";
+                return (
+                  <tr
+                    key={key}
+                    onClick={rowClickable ? () => onRowClick!(record) : undefined}
+                    className={rowClass}
+                  >
+                    {selectable && (
+                      <td
+                        className={`sticky left-0 z-10 px-3 py-2.5 w-10 ${cellStickyBg}`}
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={!!isSelected}
+                          onChange={() => toggleRow(key)}
+                          className="rounded border-border cursor-pointer"
+                          aria-label="Select row"
+                        />
+                      </td>
+                    )}
+                    {visibleColumns.map((col) => {
+                      const isStickyLeft = col.fixed === "left";
+                      const isStickyRight = col.fixed === "right";
+                      const needsBg = isStickyLeft || isStickyRight;
+                      return (
+                        <td
+                          key={col.key}
+                          style={stickyStyle(col)}
+                          className={`px-4 py-2.5 text-[13px] ${
+                            col.mono ? "font-mono text-text-secondary" : "text-text-primary"
+                          } ${stickyClass(col)} ${needsBg ? cellStickyBg : ""}`}
+                        >
+                          {col.render
+                            ? col.render(record[col.key], record, idx)
+                            : (record[col.key] as React.ReactNode) ?? "—"}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                );
+              })
             )}
           </tbody>
         </table>
       </div>
 
-      {/* Pagination */}
       {total > 0 && (
         <div className="flex items-center justify-between border-t border-border-subtle px-4 py-2.5">
           <span className="text-[12px] text-text-muted">

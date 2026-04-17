@@ -40,6 +40,11 @@ type BizPermission struct {
 	Approver    string `xorm:"varchar(100)" json:"approver"`
 	ApproveTime string `xorm:"varchar(100)" json:"approveTime"`
 	State       string `xorm:"varchar(20)" json:"state"` // Approved / Pending / Rejected
+
+	UpdatedTime string `xorm:"varchar(100)" json:"updatedTime"`
+
+	// Derived stats populated by enrichBizPermissions for list responses.
+	GranteeCount int64 `xorm:"-" json:"granteeCount"`
 }
 
 func (p *BizPermission) GetId() string {
@@ -54,7 +59,42 @@ func GetBizPermissions(owner, appName string) ([]*BizPermission, error) {
 	if err != nil {
 		return nil, err
 	}
+	if err := enrichBizPermissions(perms); err != nil {
+		return perms, nil
+	}
 	return perms, nil
+}
+
+// enrichBizPermissions fills GranteeCount via a single grouped count query.
+func enrichBizPermissions(perms []*BizPermission) error {
+	if len(perms) == 0 {
+		return nil
+	}
+	ids := make([]int64, 0, len(perms))
+	byId := make(map[int64]*BizPermission, len(perms))
+	for _, p := range perms {
+		ids = append(ids, p.Id)
+		byId[p.Id] = p
+	}
+	type row struct {
+		PermissionId int64
+		C            int64
+	}
+	rows := []row{}
+	err := ormer.Engine.Table(&BizPermissionGrantee{}).
+		Select("permission_id, COUNT(*) AS c").
+		In("permission_id", ids).
+		GroupBy("permission_id").
+		Find(&rows)
+	if err != nil {
+		return err
+	}
+	for _, r := range rows {
+		if p, ok := byId[r.PermissionId]; ok {
+			p.GranteeCount = r.C
+		}
+	}
+	return nil
 }
 
 // GetBizPermission looks up a permission by its natural key (owner, app, name).
@@ -97,6 +137,7 @@ func AddBizPermission(perm *BizPermission) (bool, error) {
 	if perm.CreatedTime == "" {
 		perm.CreatedTime = util.GetCurrentTime()
 	}
+	perm.UpdatedTime = perm.CreatedTime
 	affected, err := ormer.Engine.Insert(perm)
 	if err != nil {
 		return false, err
@@ -129,6 +170,7 @@ func UpdateBizPermission(id int64, perm *BizPermission) (bool, error) {
 	}
 
 	perm.Id = id
+	perm.UpdatedTime = util.GetCurrentTime()
 	affected, err := ormer.Engine.ID(id).AllCols().Update(perm)
 	if err != nil {
 		return false, err

@@ -54,6 +54,20 @@ export default function BizRoleEditPage() {
 
   useEffect(() => { if (saved) { const timer = setTimeout(() => setSaved(false), 1500); return () => clearTimeout(timer); } }, [saved]);
 
+  // Deep-link hash anchors (#members, #permissions) from the roles list page.
+  // Wait one paint after role data settles so target nodes exist, then scroll
+  // smoothly. Re-run whenever the hash changes so clicking the same anchor
+  // from list → already-open edit page still moves focus.
+  useEffect(() => {
+    if (!location.hash) return;
+    if (!role?.id) return; // target nodes are gated on role.id
+    const id = location.hash.slice(1);
+    const raf = requestAnimationFrame(() => {
+      document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+    return () => cancelAnimationFrame(raf);
+  }, [location.hash, role?.id]);
+
   const initPropsEntries = (props: string) => {
     if (!props) { setPropsEntries([]); return; }
     try {
@@ -344,8 +358,11 @@ export default function BizRoleEditPage() {
       </FormSection>
 
       {/* ── Members ── (skipped on add mode since role doesn't exist yet) */}
+      {/* id="members" — deep-link target from roles list "成员" count click */}
       {!(isAddMode && isNew) && role.id && (
-        <BizRoleMemberTable roleId={role.id} organization={role.organization} />
+        <div id="members" className="scroll-mt-24">
+          <BizRoleMemberTable roleId={role.id} organization={role.organization} />
+        </div>
       )}
 
       {/* ── Inherits from (parents) ── */}
@@ -391,8 +408,9 @@ export default function BizRoleEditPage() {
       )}
 
       {/* ── Permissions granted to this role (reverse lookup) ── */}
+      {/* id="permissions" — deep-link target from roles list "权限" count click */}
       {!(isAddMode && isNew) && role.id && (
-        <div className="rounded-xl border border-border bg-surface-1">
+        <div id="permissions" className="scroll-mt-24 rounded-xl border border-border bg-surface-1">
           <div className="px-5 py-3 border-b border-border-subtle bg-surface-2/30">
             <h3 className="text-[13px] font-semibold text-text-primary">
               {t("bizRole.grantedPerms.title") || "Permissions granted to this role"}

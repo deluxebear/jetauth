@@ -30,6 +30,12 @@ type BizRole struct {
 	Properties   string `xorm:"mediumtext" json:"properties"`
 	IsEnabled    bool   `xorm:"notnull default true" json:"isEnabled"`
 	CreatedTime  string `xorm:"varchar(100)" json:"createdTime"`
+	UpdatedTime  string `xorm:"varchar(100)" json:"updatedTime"`
+
+	// Derived stats populated by enrichBizRoles for list responses. Not stored.
+	MemberCount     int64    `xorm:"-" json:"memberCount"`
+	PermissionCount int64    `xorm:"-" json:"permissionCount"`
+	ParentNames     []string `xorm:"-" json:"parentNames"`
 }
 
 func (r *BizRole) IsOrgScope() bool {
@@ -66,6 +72,7 @@ func AddBizRole(role *BizRole) (bool, error) {
 	if role.CreatedTime == "" {
 		role.CreatedTime = util.GetCurrentTime()
 	}
+	role.UpdatedTime = role.CreatedTime
 	affected, err := ormer.Engine.Insert(role)
 	return affected != 0, err
 }
@@ -75,6 +82,7 @@ func UpdateBizRole(id int64, role *BizRole) (bool, error) {
 		return false, err
 	}
 	role.Id = id
+	role.UpdatedTime = util.GetCurrentTime()
 	affected, err := ormer.Engine.ID(id).AllCols().Update(role)
 	if err != nil {
 		return false, err
@@ -170,5 +178,107 @@ func GetBizRoles(org, appName string) ([]*BizRole, error) {
 	} else {
 		err = ormer.Engine.Where("organization = ? AND (app_name = ? OR app_name = '')", org, appName).Find(&roles)
 	}
-	return roles, err
+	if err != nil {
+		return nil, err
+	}
+	if err := enrichBizRoles(roles); err != nil {
+		// Enrichment failures shouldn't break the list endpoint — log via
+		// returned zero stats and continue.
+		return roles, nil
+	}
+	return roles, nil
+}
+
+// enrichBizRoles fills MemberCount / PermissionCount / ParentNames on the given
+// roles via three aggregate queries. Runs once per list call (not per row), so
+// the cost stays constant regardless of role count.
+func enrichBizRoles(roles []*BizRole) error {
+	if len(roles) == 0 {
+		return nil
+	}
+	ids := make([]int64, 0, len(roles))
+	names := make([]string, 0, len(roles))
+	byId := make(map[int64]*BizRole, len(roles))
+	byName := make(map[string]*BizRole, len(roles))
+	for _, r := range roles {
+		ids = append(ids, r.Id)
+		names = append(names, r.Name)
+		byId[r.Id] = r
+		byName[r.Name] = r
+	}
+
+	// Member counts: one row per role_id with COUNT(*).
+	type countRow struct {
+		RoleId int64
+		C      int64
+	}
+	memberRows := []countRow{}
+	err := ormer.Engine.Table(&BizRoleMember{}).
+		Select("role_id, COUNT(*) AS c").
+		In("role_id", ids).
+		GroupBy("role_id").
+		Find(&memberRows)
+	if err != nil {
+		return err
+	}
+	for _, row := range memberRows {
+		if r, ok := byId[row.RoleId]; ok {
+			r.MemberCount = row.C
+		}
+	}
+
+	// Permission counts: number of permissions granted to each role. Grantees
+	// key role-grants by role NAME (not id), so group by subject_id scoped
+	// to subject_type='role'.
+	type permCountRow struct {
+		SubjectId string
+		C         int64
+	}
+	permRows := []permCountRow{}
+	err = ormer.Engine.Table(&BizPermissionGrantee{}).
+		Select("subject_id, COUNT(*) AS c").
+		Where("subject_type = ?", BizPermGranteeRole).
+		In("subject_id", names).
+		GroupBy("subject_id").
+		Find(&permRows)
+	if err != nil {
+		return err
+	}
+	for _, row := range permRows {
+		if r, ok := byName[row.SubjectId]; ok {
+			r.PermissionCount = row.C
+		}
+	}
+
+	// Parent names: collect all inheritance edges where child is one of our
+	// roles, then resolve parent_role_id → parent name in a second query.
+	edges := []BizRoleInheritance{}
+	err = ormer.Engine.In("child_role_id", ids).Find(&edges)
+	if err != nil {
+		return err
+	}
+	if len(edges) > 0 {
+		parentIds := make([]int64, 0, len(edges))
+		for _, e := range edges {
+			parentIds = append(parentIds, e.ParentRoleId)
+		}
+		parents := []BizRole{}
+		if err := ormer.Engine.Cols("id", "name").In("id", parentIds).Find(&parents); err != nil {
+			return err
+		}
+		parentNameById := make(map[int64]string, len(parents))
+		for _, p := range parents {
+			parentNameById[p.Id] = p.Name
+		}
+		for _, e := range edges {
+			child, ok := byId[e.ChildRoleId]
+			if !ok {
+				continue
+			}
+			if name, ok2 := parentNameById[e.ParentRoleId]; ok2 {
+				child.ParentNames = append(child.ParentNames, name)
+			}
+		}
+	}
+	return nil
 }

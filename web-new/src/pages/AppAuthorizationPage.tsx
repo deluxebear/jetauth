@@ -580,69 +580,185 @@ function OverviewTab({ config, roles, permissions, allowCount, denyCount, onRefr
 
 // ═══════ ROLES TAB ═══════
 // After the id-based refactor, role rows no longer carry embedded user/sub-role arrays
-// (those live in biz_role_member and biz_role_inheritance). The list becomes leaner:
-// Name | DisplayName | Scope | IsEnabled | actions. Filter chips select by scope.
-
-type RoleScopeFilter = "all" | "app" | "org";
+// (those live in biz_role_member and biz_role_inheritance). Table includes
+// selection, multi-filter, sorting, and column visibility, all persisted.
 
 function RolesTab({ roles, onRefresh, appOwner, appName, t, modal, navigate }: {
   roles: BizRole[]; permissions: BizPermission[]; onRefresh: () => void;
   appOwner: string; appName: string;
   t: (key: any) => string; modal: any; navigate: any;
 }) {
-  const [scopeFilter, setScopeFilter] = useState<RoleScopeFilter>("all");
+  // Cross-column filters stay OUTSIDE the DataTable (chips above the table)
+  // because scope is multi-select and status is a radio — neither fits the
+  // per-column dropdown FilterPopover well. Sort + selection + columns menu
+  // are all handled by DataTable itself.
+  const [scopeSel, setScopeSel] = useState<Set<"app" | "org">>(new Set());
+  const [statusSel, setStatusSel] = useState<"all" | "enabled" | "disabled">("all");
 
   const handleAddRole = () => {
     navigate(`/authorization/${appOwner}/${appName}/roles/new`, { state: { mode: "add" } });
   };
 
-  const handleDeleteRole = (role: BizRole, e: React.MouseEvent) => {
-    e.stopPropagation();
+  const handleDeleteRole = (role: BizRole) => {
     if (!role.id) return;
-    modal.showConfirm(`${t("common.confirmDelete")} [${role.name}]`, async () => {
+    modal.showConfirm(`${t("common.confirmDelete")} [${role.displayName || role.name}]`, async () => {
       const res = await BizBackend.deleteBizRole(role.id!);
       if (res.status === "ok") onRefresh();
       else modal.toast(res.msg || t("common.deleteFailed" as any), "error");
     });
   };
 
-  const filteredRoles = useMemo(() => {
-    if (scopeFilter === "all") return roles;
-    return roles.filter((r) => r.scopeKind === scopeFilter);
-  }, [roles, scopeFilter]);
+  const bulkSetEnabled = async (targets: BizRole[], enabled: boolean, clear: () => void) => {
+    if (targets.length === 0) return;
+    const results = await Promise.all(
+      targets.map((r) => BizBackend.updateBizRole(r.id!, { ...r, isEnabled: enabled })),
+    );
+    const failed = results.filter((r) => r.status !== "ok");
+    if (failed.length > 0) {
+      modal.toast(`${failed.length} / ${targets.length} ${t("common.failed" as any) || "failed"}`, "error");
+    } else {
+      modal.toast(`${targets.length} ${t("authz.roles.bulk.updated" as any) || "updated"}`, "success");
+    }
+    clear();
+    onRefresh();
+  };
+
+  const bulkDelete = (targets: BizRole[], clear: () => void) => {
+    if (targets.length === 0) return;
+    modal.showConfirm(
+      `${t("common.confirmDelete")} ${targets.length} ${t("authz.roles.bulk.roles" as any) || "roles"}?`,
+      async () => {
+        const results = await Promise.all(targets.map((r) => BizBackend.deleteBizRole(r.id!)));
+        const failed = results.filter((r) => r.status !== "ok");
+        if (failed.length > 0) {
+          modal.toast(`${failed.length} / ${targets.length} ${t("common.failed" as any) || "failed"}`, "error");
+        } else {
+          modal.toast(`${targets.length} ${t("authz.roles.bulk.deleted" as any) || "deleted"}`, "success");
+        }
+        clear();
+        onRefresh();
+      },
+    );
+  };
 
   const appScopeCount = roles.filter((r) => r.scopeKind === "app").length;
   const orgScopeCount = roles.filter((r) => r.scopeKind === "org").length;
 
+  const filteredRoles = useMemo(() => {
+    return roles.filter((r) => {
+      if (scopeSel.size > 0 && !scopeSel.has(r.scopeKind as "app" | "org")) return false;
+      if (statusSel === "enabled" && !r.isEnabled) return false;
+      if (statusSel === "disabled" && r.isEnabled) return false;
+      return true;
+    });
+  }, [roles, scopeSel, statusSel]);
+
+  const toggleScope = (s: "app" | "org") => {
+    setScopeSel((prev) => {
+      const next = new Set(prev);
+      if (next.has(s)) next.delete(s); else next.add(s);
+      return next;
+    });
+  };
+
+  const editUrl = (name: string) => `/authorization/${appOwner}/${appName}/roles/${encodeURIComponent(name)}`;
+
   const columns: Column<BizRole>[] = [
     {
-      key: "name", title: t("authz.roles.col.name"), sortable: true, filterable: true, fixed: "left" as const, width: "220px",
-      render: (_, r) => <Link to={`/authorization/${appOwner}/${appName}/roles/${encodeURIComponent(r.name)}`} className="font-mono font-medium text-accent hover:underline" onClick={(e) => e.stopPropagation()}>{r.name}</Link>,
-    },
-    {
-      key: "displayName", title: t("authz.roles.col.displayName" as any), sortable: true, filterable: true, width: "220px",
-      render: (_, r) => <span className="text-[12px] text-text-secondary">{r.displayName || "\u2014"}</span>,
-    },
-    {
-      key: "scopeKind", title: t("bizRole.col.scope") || "Scope", sortable: true, filterable: true, width: "120px",
-      filterOptions: [
-        { label: t("bizRole.scope.app") || "App", value: "app" },
-        { label: t("bizRole.scope.org") || "Org", value: "org" },
-      ],
+      key: "role",
+      title: t("authz.roles.col.name"),
+      sortable: true,
+      hideable: false,
+      width: "240px",
+      sortFn: (a, b) => (a.displayName || a.name).localeCompare(b.displayName || b.name),
       render: (_, r) => (
-        r.scopeKind === "org" ? (
-          <span className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold bg-purple-500/10 text-purple-500">
-            {t("bizRole.scope.org") || "组织共享"}
-          </span>
+        <div className="flex flex-col">
+          <span className="font-semibold text-text-primary">{r.displayName || r.name}</span>
+          <span className="font-mono text-[11px] text-text-muted">{r.name}</span>
+        </div>
+      ),
+    },
+    {
+      key: "scopeKind",
+      title: t("bizRole.col.scope") || "Scope",
+      sortable: true,
+      width: "120px",
+      sortFn: (a, b) => (a.scopeKind || "").localeCompare(b.scopeKind || ""),
+      render: (_, r) => r.scopeKind === "org" ? (
+        <span className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold bg-purple-500/10 text-purple-500">
+          {t("bizRole.scope.org") || "组织共享"}
+        </span>
+      ) : (
+        <span className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold bg-blue-500/10 text-blue-500">
+          {t("bizRole.scope.app") || "仅本应用"}
+        </span>
+      ),
+    },
+    {
+      key: "memberCount",
+      title: t("authz.roles.col.members" as any) || "成员",
+      sortable: true,
+      width: "90px",
+      sortFn: (a, b) => (a.memberCount || 0) - (b.memberCount || 0),
+      render: (_, r) => (
+        <button
+          onClick={(e) => { e.stopPropagation(); navigate(`${editUrl(r.name)}#members`); }}
+          title={t("authz.roles.col.members" as any) || "成员"}
+          className={`inline-flex items-center justify-center rounded-md px-2 py-0.5 text-[12px] font-semibold tabular-nums transition-colors ${
+            (r.memberCount || 0) > 0 ? "bg-indigo-500/10 text-indigo-500 hover:bg-indigo-500/20" : "bg-surface-2 text-text-muted hover:bg-surface-3"
+          }`}
+        >
+          {r.memberCount || 0}
+        </button>
+      ),
+    },
+    {
+      key: "permissionCount",
+      title: t("authz.roles.col.permissions" as any) || "权限",
+      sortable: true,
+      width: "90px",
+      sortFn: (a, b) => (a.permissionCount || 0) - (b.permissionCount || 0),
+      render: (_, r) => (
+        <button
+          onClick={(e) => { e.stopPropagation(); navigate(`${editUrl(r.name)}#permissions`); }}
+          title={t("authz.roles.col.permissions" as any) || "权限"}
+          className={`inline-flex items-center justify-center rounded-md px-2 py-0.5 text-[12px] font-semibold tabular-nums transition-colors ${
+            (r.permissionCount || 0) > 0 ? "bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20" : "bg-surface-2 text-text-muted hover:bg-surface-3"
+          }`}
+        >
+          {r.permissionCount || 0}
+        </button>
+      ),
+    },
+    {
+      key: "parentNames",
+      title: t("authz.roles.col.inherits" as any) || "继承自",
+      width: "200px",
+      render: (_, r) => (
+        r.parentNames && r.parentNames.length > 0 ? (
+          <div className="flex flex-wrap gap-1">
+            {r.parentNames.map((n) => (
+              <button
+                key={n}
+                onClick={(e) => { e.stopPropagation(); navigate(editUrl(n)); }}
+                className="inline-flex items-center gap-1 rounded-full bg-surface-2 px-2 py-0.5 text-[10px] font-medium text-text-secondary hover:bg-accent/10 hover:text-accent transition-colors"
+              >
+                <span className="text-text-muted">←</span>
+                <span className="font-mono">{n}</span>
+              </button>
+            ))}
+          </div>
         ) : (
-          <span className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold bg-blue-500/10 text-blue-500">
-            {t("bizRole.scope.app") || "仅本应用"}
-          </span>
+          <span className="text-text-muted">—</span>
         )
       ),
     },
     {
-      key: "isEnabled", title: t("authz.roles.col.status" as any), sortable: true, width: "110px",
+      key: "isEnabled",
+      title: t("authz.roles.col.status" as any),
+      sortable: true,
+      width: "100px",
+      sortFn: (a, b) => Number(a.isEnabled) - Number(b.isEnabled),
       render: (_, r) => (
         <span className={`inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold ${r.isEnabled ? "bg-success/10 text-success" : "bg-warning/10 text-warning"}`}>
           {r.isEnabled ? t("common.enabled" as any) : t("common.disabled" as any)}
@@ -650,37 +766,81 @@ function RolesTab({ roles, onRefresh, appOwner, appName, t, modal, navigate }: {
       ),
     },
     {
-      key: "__actions", title: t("common.action" as any), fixed: "right" as const, width: "100px",
+      key: "updatedTime",
+      title: t("authz.roles.col.updated" as any) || "最后修改",
+      sortable: true,
+      width: "130px",
+      sortFn: (a, b) => {
+        const ta = a.updatedTime || a.createdTime || "";
+        const tb = b.updatedTime || b.createdTime || "";
+        return ta.localeCompare(tb);
+      },
       render: (_, r) => (
-        <div className="flex items-center gap-0.5">
-          <Link to={`/authorization/${appOwner}/${appName}/roles/${encodeURIComponent(r.name)}`} className="rounded p-1.5 text-text-muted hover:text-warning hover:bg-warning/10 transition-colors" title={t("common.edit")} onClick={(e) => e.stopPropagation()}><Pencil size={14} /></Link>
-          <button onClick={(e) => handleDeleteRole(r, e)} className="rounded p-1.5 text-text-muted hover:text-danger hover:bg-danger/10 transition-colors" title={t("common.delete")}><Trash2 size={14} /></button>
+        <span className="text-[12px] text-text-muted tabular-nums">
+          {formatRelativeTimeLocal(r.updatedTime || r.createdTime || "", t) || "—"}
+        </span>
+      ),
+    },
+    {
+      key: "__actions",
+      title: t("common.action" as any),
+      fixed: "right" as const,
+      hideable: false,
+      width: "100px",
+      render: (_, r) => (
+        <div className="flex items-center justify-end gap-0.5">
+          <Link
+            to={editUrl(r.name)}
+            className="rounded p-1.5 text-text-muted hover:text-warning hover:bg-warning/10 transition-colors"
+            title={t("common.edit")}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <Pencil size={14} />
+          </Link>
+          <button
+            onClick={(e) => { e.stopPropagation(); handleDeleteRole(r); }}
+            className="rounded p-1.5 text-text-muted hover:text-danger hover:bg-danger/10 transition-colors"
+            title={t("common.delete")}
+          >
+            <Trash2 size={14} />
+          </button>
         </div>
       ),
     },
   ];
 
-  const chips: { key: RoleScopeFilter; label: string; count: number }[] = [
-    { key: "all", label: t("bizRole.filter.all") || "全部", count: roles.length },
-    { key: "app", label: t("bizRole.filter.app") || "本应用", count: appScopeCount },
-    { key: "org", label: t("bizRole.filter.org") || "组织共享", count: orgScopeCount },
-  ];
-
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
+      <div className="flex items-center justify-between gap-4 flex-wrap">
+        <div className="flex items-center gap-3 flex-wrap">
           <h3 className="text-[14px] font-semibold text-text-primary">{t("authz.roles.title")}</h3>
+          <span className="text-[11px] text-text-muted">({roles.length})</span>
           <div className="flex items-center gap-1.5">
-            {chips.map((c) => (
+            <span className="text-[11px] text-text-muted">{t("bizRole.col.scope") || "作用域"}:</span>
+            <FilterChip
+              label={t("bizRole.scope.app") || "本应用"}
+              count={appScopeCount}
+              active={scopeSel.has("app")}
+              onClick={() => toggleScope("app")}
+            />
+            <FilterChip
+              label={t("bizRole.scope.org") || "组织共享"}
+              count={orgScopeCount}
+              active={scopeSel.has("org")}
+              onClick={() => toggleScope("org")}
+            />
+          </div>
+          <div className="flex items-center gap-1">
+            <span className="text-[11px] text-text-muted">{t("authz.roles.col.status" as any)}:</span>
+            {(["all", "enabled", "disabled"] as const).map((s) => (
               <button
-                key={c.key}
-                onClick={() => setScopeFilter(c.key)}
-                className={`rounded-full px-2.5 py-0.5 text-[11px] font-medium transition-colors ${
-                  scopeFilter === c.key ? "bg-accent/15 text-accent" : "bg-surface-2 text-text-muted hover:text-text-secondary"
+                key={s}
+                onClick={() => setStatusSel(s)}
+                className={`rounded-full px-2 py-0.5 text-[11px] font-medium transition-colors ${
+                  statusSel === s ? "bg-accent/15 text-accent" : "bg-surface-2 text-text-muted hover:text-text-secondary"
                 }`}
               >
-                {c.label} <span className="opacity-60">({c.count})</span>
+                {s === "all" ? (t("bizRole.filter.all") || "全部") : s === "enabled" ? (t("common.enabled" as any)) : (t("common.disabled" as any))}
               </button>
             ))}
           </div>
@@ -689,8 +849,55 @@ function RolesTab({ roles, onRefresh, appOwner, appName, t, modal, navigate }: {
           <Plus size={14} /> {t("authz.roles.add")}
         </button>
       </div>
-      <DataTable columns={columns} data={filteredRoles} rowKey={(r) => r.name} emptyText={t("common.noData")} />
+
+      <DataTable
+        columns={columns}
+        data={filteredRoles}
+        rowKey={(r) => r.name}
+        emptyText={t("common.noData")}
+        onRowClick={(r) => navigate(editUrl(r.name))}
+        selectable
+        clientSort
+        defaultSort={{ field: "updatedTime", order: "descend" }}
+        persistKey={`biz-role-table:${appOwner}/${appName}`}
+        columnsToggle
+        bulkActions={({ selected, clear }) => (
+          <div className="flex items-center gap-2">
+            <span className="text-[12px] font-medium text-text-primary">
+              {selected.length} {t("authz.roles.bulk.selected" as any) || "已选"}
+            </span>
+            <button onClick={() => bulkSetEnabled(selected, true, clear)} className="rounded-lg border border-border bg-surface-1 px-2.5 py-1 text-[11px] font-medium text-text-secondary hover:bg-surface-2 transition-colors">
+              {t("authz.roles.bulk.enable" as any) || "启用"}
+            </button>
+            <button onClick={() => bulkSetEnabled(selected, false, clear)} className="rounded-lg border border-border bg-surface-1 px-2.5 py-1 text-[11px] font-medium text-text-secondary hover:bg-surface-2 transition-colors">
+              {t("authz.roles.bulk.disable" as any) || "停用"}
+            </button>
+            <button onClick={() => bulkDelete(selected, clear)} className="rounded-lg border border-danger/30 bg-danger/5 px-2.5 py-1 text-[11px] font-medium text-danger hover:bg-danger/10 transition-colors">
+              {t("common.delete")}
+            </button>
+            <button onClick={clear} className="text-[11px] text-text-muted hover:text-text-secondary ml-1">
+              {t("common.cancel")}
+            </button>
+          </div>
+        )}
+      />
     </div>
+  );
+}
+
+// Small shared chip used by cross-column filters above the table (scope,
+// status, etc.). Stays outside DataTable since these are multi-select and
+// don't match the column-level FilterPopover model.
+function FilterChip({ label, count, active, onClick }: { label: string; count: number; active: boolean; onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      className={`rounded-full px-2.5 py-0.5 text-[11px] font-medium transition-colors ${
+        active ? "bg-accent/15 text-accent ring-1 ring-accent/30" : "bg-surface-2 text-text-muted hover:text-text-secondary"
+      }`}
+    >
+      {label} <span className="opacity-60">({count})</span>
+    </button>
   );
 }
 

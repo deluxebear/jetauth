@@ -36,6 +36,11 @@ export interface BizRole {
   properties: string;
   isEnabled: boolean;
   createdTime?: string;
+  updatedTime?: string;
+  // Derived stats populated by backend list response; present on list rows only.
+  memberCount?: number;
+  permissionCount?: number;
+  parentNames?: string[];
   [key: string]: unknown;
 }
 
@@ -56,6 +61,7 @@ export interface BizPermission {
   appName: string;
   name: string;
   createdTime?: string;
+  updatedTime?: string;
   displayName: string;
   description: string;
   resources: string[];
@@ -66,6 +72,7 @@ export interface BizPermission {
   approver?: string;
   approveTime?: string;
   state?: "Approved" | "Pending" | "Rejected";
+  granteeCount?: number;
   [key: string]: unknown;
 }
 
