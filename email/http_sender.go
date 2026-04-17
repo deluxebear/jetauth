@@ -69,6 +69,19 @@ func (s *HttpEmailSender) Send(fromAddress, fromName string, toAddress []string,
 		req.Header.Set(k, v)
 	}
 
+	// TEMP DEBUG: dump request for troubleshooting
+	fmt.Printf("[http_sender DEBUG] %s %s\n", method, s.Endpoint)
+	fmt.Printf("[http_sender DEBUG] Content-Type: %s\n", s.ContentType)
+	for k, v := range s.HttpHeaders {
+		if strings.EqualFold(k, "Authorization") || strings.EqualFold(k, "X-Postmark-Server-Token") || strings.EqualFold(k, "api-key") {
+			fmt.Printf("[http_sender DEBUG] Header: %s: <%d chars>\n", k, len(v))
+		} else {
+			fmt.Printf("[http_sender DEBUG] Header: %s: %s\n", k, v)
+		}
+	}
+	fmt.Printf("[http_sender DEBUG] Body (%d bytes): %s\n", len(body), body)
+	// END TEMP DEBUG
+
 	client := &http.Client{Transport: NewSafeTransport(s.Allowlist), Timeout: 30 * time.Second}
 	resp, err := client.Do(req)
 	if err != nil {
@@ -76,12 +89,15 @@ func (s *HttpEmailSender) Send(fromAddress, fromName string, toAddress []string,
 	}
 	defer resp.Body.Close()
 
+	// TEMP DEBUG: dump response
+	respBody, _ := io.ReadAll(io.LimitReader(resp.Body, 16*1024))
+	fmt.Printf("[http_sender DEBUG] Response status: %s\n", resp.Status)
+	fmt.Printf("[http_sender DEBUG] Response body: %s\n", string(respBody))
+	// END TEMP DEBUG
+
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		excerpt, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
-		return fmt.Errorf("HttpEmailSender: status %s body=%s", resp.Status, string(excerpt))
+		return fmt.Errorf("HttpEmailSender: status %s body=%s", resp.Status, string(respBody))
 	}
-	// drain rest so connection can be reused
-	_, _ = io.Copy(io.Discard, io.LimitReader(resp.Body, 64*1024))
 	return nil
 }
 
