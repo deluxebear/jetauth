@@ -94,7 +94,11 @@ func SyncAppPolicies(owner, appName string) (*SyncStats, error) {
 	// 5. Generate p policies from permissions (Cartesian product) — batch
 	var policies [][]string
 	for _, perm := range permissions {
-		policies = append(policies, computePermPPolicies(perm, hasEft)...)
+		permPolicies, err := computePermPPolicies(perm, hasEft)
+		if err != nil {
+			return nil, fmt.Errorf("compute p for permission %s: %w", perm.Name, err)
+		}
+		policies = append(policies, permPolicies...)
 	}
 	if len(policies) > 0 {
 		if _, err := e.AddPolicies(policies); err != nil {
@@ -107,7 +111,11 @@ func SyncAppPolicies(owner, appName string) (*SyncStats, error) {
 	hasRoleDef := HasRoleDefinition(e.GetModel())
 	if hasRoleDef {
 		for _, role := range roles {
-			groupingPolicies = append(groupingPolicies, computeRoleGPolicies(role)...)
+			rolePolicies, err := computeRoleGPolicies(role)
+			if err != nil {
+				return nil, fmt.Errorf("compute g for role %s: %w", role.Name, err)
+			}
+			groupingPolicies = append(groupingPolicies, rolePolicies...)
 		}
 		if len(groupingPolicies) > 0 {
 			if _, err := e.AddGroupingPolicies(groupingPolicies); err != nil {

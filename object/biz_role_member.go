@@ -58,7 +58,15 @@ func AddBizRoleMember(m *BizRoleMember, addedBy string) (bool, error) {
 	}
 	m.AddedBy = addedBy
 	affected, err := ormer.Engine.Insert(m)
-	return affected != 0, err
+	if err != nil {
+		return false, err
+	}
+	if affected != 0 {
+		if role, _ := getBizRoleById(m.RoleId); role != nil {
+			SyncAfterRoleMemberAdded(role.Organization, role.AppName, role.Id)
+		}
+	}
+	return affected != 0, nil
 }
 
 func RemoveBizRoleMember(roleId int64, subjectType, subjectId string) (bool, error) {
@@ -69,7 +77,15 @@ func RemoveBizRoleMember(roleId int64, subjectType, subjectId string) (bool, err
 		"role_id = ? AND subject_type = ? AND subject_id = ?",
 		roleId, subjectType, subjectId,
 	).Delete(&BizRoleMember{})
-	return affected != 0, err
+	if err != nil {
+		return false, err
+	}
+	if affected != 0 {
+		if role, _ := getBizRoleById(roleId); role != nil {
+			SyncAfterRoleMemberRemoved(role.Organization, role.AppName, role.Id)
+		}
+	}
+	return affected != 0, nil
 }
 
 // ListBizRoleMembers returns all direct members of a role (not transitive via

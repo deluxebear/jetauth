@@ -304,19 +304,25 @@ func BizGetUserPermissionSummary(owner, appName, userId string) (map[string]inte
 			continue
 		}
 		// Check if this permission applies to the user (directly or via role)
-		applies := false
-		for _, u := range perm.Users {
-			if u == userId || u == "*" {
-				applies = true
-				break
-			}
+		// by scanning grantees for a matching user or role subject.
+		grantees, err := ListBizPermissionGrantees(perm.Id)
+		if err != nil {
+			return nil, err
 		}
-		if !applies {
-			for _, r := range perm.Roles {
-				if roleSet[r] {
+		applies := false
+		for _, g := range grantees {
+			switch g.SubjectType {
+			case BizPermGranteeUser:
+				if g.SubjectId == userId || g.SubjectId == "*" {
 					applies = true
-					break
 				}
+			case BizPermGranteeRole:
+				if roleSet[g.SubjectId] {
+					applies = true
+				}
+			}
+			if applies {
+				break
 			}
 		}
 		if !applies {

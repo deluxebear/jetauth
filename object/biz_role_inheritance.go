@@ -95,7 +95,13 @@ func AddBizRoleInheritance(parentRoleId, childRoleId int64) (bool, error) {
 		CreatedTime:  util.GetCurrentTime(),
 	}
 	affected, err := ormer.Engine.Insert(link)
-	return affected != 0, err
+	if err != nil {
+		return false, err
+	}
+	if affected != 0 {
+		SyncAfterInheritanceChanged(child.Organization, child.AppName, childRoleId)
+	}
+	return affected != 0, nil
 }
 
 func RemoveBizRoleInheritance(parentRoleId, childRoleId int64) (bool, error) {
@@ -103,7 +109,15 @@ func RemoveBizRoleInheritance(parentRoleId, childRoleId int64) (bool, error) {
 		"parent_role_id = ? AND child_role_id = ?",
 		parentRoleId, childRoleId,
 	).Delete(&BizRoleInheritance{})
-	return affected != 0, err
+	if err != nil {
+		return false, err
+	}
+	if affected != 0 {
+		if child, _ := getBizRoleById(childRoleId); child != nil {
+			SyncAfterInheritanceChanged(child.Organization, child.AppName, childRoleId)
+		}
+	}
+	return affected != 0, nil
 }
 
 // ListParentRoles: all direct parents of a role (one level up)
