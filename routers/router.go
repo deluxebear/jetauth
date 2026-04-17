@@ -236,6 +236,7 @@ func InitAPI() {
 
 	web.Router("/api/biz-get-roles", &controllers.ApiController{}, "GET:GetBizRoles")
 	web.Router("/api/biz-get-role", &controllers.ApiController{}, "GET:GetBizRole")
+	web.Router("/api/biz-get-role-stats", &controllers.ApiController{}, "GET:GetBizRoleStats")
 	web.Router("/api/biz-add-role", &controllers.ApiController{}, "POST:AddBizRole")
 	web.Router("/api/biz-update-role", &controllers.ApiController{}, "POST:UpdateBizRole")
 	web.Router("/api/biz-delete-role", &controllers.ApiController{}, "POST:DeleteBizRole")
@@ -253,6 +254,7 @@ func InitAPI() {
 
 	web.Router("/api/biz-get-permissions", &controllers.ApiController{}, "GET:GetBizPermissions")
 	web.Router("/api/biz-get-permission", &controllers.ApiController{}, "GET:GetBizPermission")
+	web.Router("/api/biz-get-permission-stats", &controllers.ApiController{}, "GET:GetBizPermissionStats")
 	web.Router("/api/biz-add-permission", &controllers.ApiController{}, "POST:AddBizPermission")
 	web.Router("/api/biz-update-permission", &controllers.ApiController{}, "POST:UpdateBizPermission")
 	web.Router("/api/biz-delete-permission", &controllers.ApiController{}, "POST:DeleteBizPermission")
@@ -262,6 +264,14 @@ func InitAPI() {
 	web.Router("/api/biz-add-permission-grantee", &controllers.ApiController{}, "POST:AddBizPermissionGrantee")
 	web.Router("/api/biz-remove-permission-grantee", &controllers.ApiController{}, "POST:RemoveBizPermissionGrantee")
 	web.Router("/api/biz-list-permissions-by-role", &controllers.ApiController{}, "GET:ListPermissionsByRole")
+
+	web.Router("/api/biz-list-app-resources", &controllers.ApiController{}, "GET:ListBizAppResources")
+	web.Router("/api/biz-add-app-resource", &controllers.ApiController{}, "POST:AddBizAppResource")
+	web.Router("/api/biz-update-app-resource", &controllers.ApiController{}, "POST:UpdateBizAppResource")
+	web.Router("/api/biz-delete-app-resource", &controllers.ApiController{}, "POST:DeleteBizAppResource")
+	web.Router("/api/biz-parse-resource-import", &controllers.ApiController{}, "POST:ParseBizResourceImport")
+	web.Router("/api/biz-import-app-resources", &controllers.ApiController{}, "POST:ImportBizAppResources")
+	web.Router("/api/biz-test-permission-match", &controllers.ApiController{}, "POST:TestBizPermissionMatch")
 	web.Router("/api/biz-list-permissions-by-user", &controllers.ApiController{}, "GET:ListPermissionsByUser")
 
 	web.Router("/api/biz-enforce", &controllers.ApiController{}, "POST:BizEnforce")

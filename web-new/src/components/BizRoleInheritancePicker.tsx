@@ -47,8 +47,11 @@ export default function BizRoleInheritancePicker({ roleId, organization: _organi
 
   const parents = parentsQuery.data ?? [];
   const loading = parentsQuery.isLoading;
-  const invalidate = () =>
+  const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: bizKeys.roleParents(roleId) });
+    // Stats overview shows parentRoleCount; keep it fresh after add/remove.
+    queryClient.invalidateQueries({ queryKey: bizKeys.roleStats(roleId) });
+  };
 
   const parentIds = useMemo(() => new Set(parents.map((p) => p.id!)), [parents]);
 

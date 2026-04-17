@@ -142,6 +142,183 @@ export function getBizRole(id: number) {
   return request<BizRole>("GET", `/api/biz-get-role?id=${id}`);
 }
 
+// Aggregated counters for a single role — used by the detail page overview
+// to render stat cards without 4 separate list calls just for their lengths.
+export interface BizRoleStats {
+  roleId: number;
+  memberCount: number;
+  userMemberCount: number;
+  groupMemberCount: number;
+  parentRoleCount: number;
+  childRoleCount: number;
+  permissionCount: number;
+  lastUpdatedTime: string;
+}
+
+export function getBizRoleStats(id: number) {
+  return request<BizRoleStats>("GET", `/api/biz-get-role-stats?id=${id}`);
+}
+
+// Aggregated counters for a single permission — used by the detail page
+// overview (grantees broken down by subject type, resource/action counts).
+export interface BizPermissionStats {
+  permissionId: number;
+  granteeCount: number;
+  userGranteeCount: number;
+  groupGranteeCount: number;
+  roleGranteeCount: number;
+  resourceCount: number;
+  actionCount: number;
+  lastUpdatedTime: string;
+}
+
+export function getBizPermissionStats(id: number) {
+  return request<BizPermissionStats>("GET", `/api/biz-get-permission-stats?id=${id}`);
+}
+
+// ── BizAppResource catalog ──
+
+export type BizResourceMatchMode = "keyMatch" | "keyMatch2" | "regex";
+export type BizResourceSource = "manual" | "openapi" | "template" | "paste";
+
+export interface BizAppResource {
+  id?: number;
+  owner: string;
+  appName: string;
+  name: string;
+  group: string;
+  displayName: string;
+  description: string;
+  pattern: string;
+  methods: string;
+  matchMode: BizResourceMatchMode;
+  source: BizResourceSource;
+  sourceRef: string;
+  deprecated: boolean;
+  createdTime?: string;
+  updatedTime?: string;
+}
+
+export function newBizAppResource(owner: string, appName: string): BizAppResource {
+  return {
+    owner,
+    appName,
+    name: `res_${Math.random().toString(36).slice(2, 8)}`,
+    group: "",
+    displayName: "",
+    description: "",
+    pattern: "",
+    methods: "",
+    matchMode: "keyMatch2",
+    source: "manual",
+    sourceRef: "",
+    deprecated: false,
+  };
+}
+
+export function listBizAppResources(owner: string, appName: string) {
+  return request<BizAppResource[]>(
+    "GET",
+    `/api/biz-list-app-resources?owner=${encodeURIComponent(owner)}&appName=${encodeURIComponent(appName)}`,
+  );
+}
+
+export function addBizAppResource(r: BizAppResource) {
+  return request("POST", "/api/biz-add-app-resource", r);
+}
+
+export function updateBizAppResource(id: number, r: BizAppResource) {
+  return request("POST", `/api/biz-update-app-resource?id=${id}`, r);
+}
+
+export function deleteBizAppResource(id: number) {
+  return request("POST", `/api/biz-delete-app-resource?id=${id}`);
+}
+
+// ── Resource catalog import (parse preview + apply) ──
+
+export type BizResourceImportFormat = "openapi" | "csv" | "yaml" | "json" | "paste";
+export type BizResourceImportPathParamMode = "colon" | "star" | "keep";
+
+export interface BizResourceImportOptions {
+  pathParamMode: BizResourceImportPathParamMode;
+  defaultMatchMode: BizResourceMatchMode;
+  defaultGroup: string;
+  fullReplace: boolean;
+}
+
+export interface BizResourceImportRequest {
+  owner: string;
+  appName: string;
+  format: BizResourceImportFormat;
+  content: string;
+  options: BizResourceImportOptions;
+}
+
+export type BizResourceImportRowKind = "new" | "update" | "deprecated" | "error";
+
+export interface BizResourceImportRow {
+  kind: BizResourceImportRowKind;
+  lineNo?: number;
+  error?: string;
+  proposed: BizAppResource;
+  existing?: BizAppResource;
+}
+
+export interface BizResourceImportPreview {
+  owner: string;
+  appName: string;
+  format: BizResourceImportFormat;
+  options: BizResourceImportOptions;
+  rows: BizResourceImportRow[];
+  newCount: number;
+  updateCount: number;
+  deprecatedCount: number;
+  errorCount: number;
+}
+
+export interface BizResourceImportApplyResult {
+  added: number;
+  updated: number;
+  deprecated: number;
+  failed: number;
+  errors?: string[];
+}
+
+export function parseBizResourceImport(req: BizResourceImportRequest) {
+  return request<BizResourceImportPreview>("POST", "/api/biz-parse-resource-import", req);
+}
+
+export function importBizAppResources(owner: string, appName: string, rows: BizResourceImportRow[]) {
+  return request<BizResourceImportApplyResult>("POST", "/api/biz-import-app-resources", {
+    owner, appName, rows,
+  });
+}
+
+// ── Permission match test ──
+
+export interface BizPermissionMatchRequest {
+  permissionId: number;
+  testMethod: string;
+  testUrl: string;
+}
+
+export interface BizPermissionMatchResult {
+  match: boolean;
+  effect: "Allow" | "Deny";
+  resourceHit?: string;
+  actionHit?: string;
+  resourceChecks: string[];
+  actionChecks: string[];
+  reason: string;
+  enabled: boolean;
+  state: string;
+}
+
+export function testBizPermissionMatch(req: BizPermissionMatchRequest) {
+  return request<BizPermissionMatchResult>("POST", "/api/biz-test-permission-match", req);
+}
+
 export function addBizRole(role: BizRole) {
   return request("POST", "/api/biz-add-role", role);
 }

@@ -72,6 +72,20 @@ components:
           example: ok
           type: string
       type: object
+    controllers.BizAppResourceListResponse:
+      properties:
+        data:
+          items:
+            $ref: '#/components/schemas/object.BizAppResource'
+          type: array
+          uniqueItems: false
+        msg:
+          example: ""
+          type: string
+        status:
+          example: ok
+          type: string
+      type: object
     controllers.BizBatchEnforceResponse:
       properties:
         data:
@@ -180,10 +194,32 @@ components:
           example: ok
           type: string
       type: object
+    controllers.BizPermissionMatchResponse:
+      properties:
+        data:
+          $ref: '#/components/schemas/object.BizPermissionMatchResult'
+        msg:
+          example: ""
+          type: string
+        status:
+          example: ok
+          type: string
+      type: object
     controllers.BizPermissionResponse:
       properties:
         data:
           $ref: '#/components/schemas/object.BizPermission'
+        msg:
+          example: ""
+          type: string
+        status:
+          example: ok
+          type: string
+      type: object
+    controllers.BizPermissionStatsResponse:
+      properties:
+        data:
+          $ref: '#/components/schemas/object.BizPermissionStats'
         msg:
           example: ""
           type: string
@@ -214,6 +250,28 @@ components:
             version:
               type: string
           type: object
+        msg:
+          example: ""
+          type: string
+        status:
+          example: ok
+          type: string
+      type: object
+    controllers.BizResourceImportApplyResponse:
+      properties:
+        data:
+          $ref: '#/components/schemas/object.BizResourceImportApplyResult'
+        msg:
+          example: ""
+          type: string
+        status:
+          example: ok
+          type: string
+      type: object
+    controllers.BizResourceImportPreviewResponse:
+      properties:
+        data:
+          $ref: '#/components/schemas/object.BizResourceImportPreview'
         msg:
           example: ""
           type: string
@@ -307,6 +365,17 @@ components:
       properties:
         data:
           $ref: '#/components/schemas/object.BizRole'
+        msg:
+          example: ""
+          type: string
+        status:
+          example: ok
+          type: string
+      type: object
+    controllers.BizRoleStatsResponse:
+      properties:
+        data:
+          $ref: '#/components/schemas/object.BizRoleStats'
         msg:
           example: ""
           type: string
@@ -1199,6 +1268,41 @@ components:
         updatedTime:
           type: string
       type: object
+    object.BizAppResource:
+      description: For kind="update", Existing carries the current row so UI can show
+        diff.
+      properties:
+        appName:
+          type: string
+        createdTime:
+          type: string
+        deprecated:
+          type: boolean
+        description:
+          type: string
+        displayName:
+          type: string
+        group:
+          type: string
+        id:
+          type: integer
+        matchMode:
+          type: string
+        methods:
+          type: string
+        name:
+          type: string
+        owner:
+          type: string
+        pattern:
+          type: string
+        source:
+          type: string
+        sourceRef:
+          type: string
+        updatedTime:
+          type: string
+      type: object
     object.BizPermission:
       properties:
         actions:
@@ -1259,6 +1363,171 @@ components:
         subjectType:
           type: string
       type: object
+    object.BizPermissionMatchRequest:
+      properties:
+        permissionId:
+          type: integer
+        testMethod:
+          type: string
+        testUrl:
+          type: string
+      type: object
+    object.BizPermissionMatchResult:
+      properties:
+        actionChecks:
+          items:
+            type: string
+          type: array
+          uniqueItems: false
+        actionHit:
+          type: string
+        effect:
+          type: string
+        enabled:
+          type: boolean
+        match:
+          type: boolean
+        reason:
+          type: string
+        resourceChecks:
+          items:
+            type: string
+          type: array
+          uniqueItems: false
+        resourceHit:
+          type: string
+        state:
+          type: string
+      type: object
+    object.BizPermissionStats:
+      properties:
+        actionCount:
+          example: 4
+          type: integer
+        granteeCount:
+          example: 23
+          type: integer
+        groupGranteeCount:
+          example: 5
+          type: integer
+        lastUpdatedTime:
+          example: "2026-04-15T08:21:34Z"
+          type: string
+        permissionId:
+          example: 42
+          type: integer
+        resourceCount:
+          example: 3
+          type: integer
+        roleGranteeCount:
+          example: 3
+          type: integer
+        userGranteeCount:
+          example: 15
+          type: integer
+      type: object
+    object.BizResourceImportApplyRequest:
+      properties:
+        appName:
+          type: string
+        owner:
+          type: string
+        rows:
+          items:
+            $ref: '#/components/schemas/object.BizResourceImportRow'
+          type: array
+          uniqueItems: false
+      type: object
+    object.BizResourceImportApplyResult:
+      properties:
+        added:
+          type: integer
+        deprecated:
+          type: integer
+        errors:
+          items:
+            type: string
+          type: array
+          uniqueItems: false
+        failed:
+          type: integer
+        updated:
+          type: integer
+      type: object
+    object.BizResourceImportOptions:
+      properties:
+        defaultGroup:
+          description: DefaultGroup used when the entry has no group. Default "".
+          type: string
+        defaultMatchMode:
+          description: |-
+            DefaultMatchMode applied when the source does not carry one. Default
+            "keyMatch2".
+          type: string
+        fullReplace:
+          description: |-
+            FullReplace: when true and Format=="openapi", entries in the existing
+            catalog but absent from the OpenAPI spec are marked Deprecated.
+          type: boolean
+        pathParamMode:
+          description: |-
+            PathParamMode: "colon" → {id} → :id (keyMatch2); "star" → * ;
+            "keep" → leave {id} as-is. Default "colon".
+          type: string
+      type: object
+    object.BizResourceImportPreview:
+      properties:
+        appName:
+          type: string
+        deprecatedCount:
+          type: integer
+        errorCount:
+          type: integer
+        format:
+          type: string
+        newCount:
+          description: Aggregates to show "新增 23 / 更新 5 / 废弃 2 / 错误 3".
+          type: integer
+        options:
+          $ref: '#/components/schemas/object.BizResourceImportOptions'
+        owner:
+          type: string
+        rows:
+          items:
+            $ref: '#/components/schemas/object.BizResourceImportRow'
+          type: array
+          uniqueItems: false
+        updateCount:
+          type: integer
+      type: object
+    object.BizResourceImportRequest:
+      properties:
+        appName:
+          type: string
+        content:
+          type: string
+        format:
+          description: openapi | csv | yaml | json | paste
+          type: string
+        options:
+          $ref: '#/components/schemas/object.BizResourceImportOptions'
+        owner:
+          type: string
+      type: object
+    object.BizResourceImportRow:
+      properties:
+        error:
+          type: string
+        existing:
+          $ref: '#/components/schemas/object.BizAppResource'
+        kind:
+          description: new | update | deprecated | error
+          type: string
+        lineNo:
+          type: integer
+        proposed:
+          $ref: '#/components/schemas/object.BizAppResource'
+      type: object
     object.BizRole:
       properties:
         appName:
@@ -1308,6 +1577,33 @@ components:
           type: string
         subjectType:
           type: string
+      type: object
+    object.BizRoleStats:
+      properties:
+        childRoleCount:
+          example: 0
+          type: integer
+        groupMemberCount:
+          example: 2
+          type: integer
+        lastUpdatedTime:
+          example: "2026-04-15T08:21:34Z"
+          type: string
+        memberCount:
+          example: 12
+          type: integer
+        parentRoleCount:
+          example: 2
+          type: integer
+        permissionCount:
+          example: 5
+          type: integer
+        roleId:
+          example: 1042
+          type: integer
+        userMemberCount:
+          example: 10
+          type: integer
       type: object
     object.Cert:
       properties:
@@ -5713,6 +6009,27 @@ paths:
       summary: Add business app config
       tags:
       - Business Permission API
+  /biz-add-app-resource:
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/object.BizAppResource'
+              description: The resource (must include owner, appName, name, pattern)
+              summary: body
+        description: The resource (must include owner, appName, name, pattern)
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/controllers.ActionResponse'
+          description: Action result
+      summary: Add a resource catalog entry
+      tags:
+      - Business Permission API
   /biz-add-permission:
     post:
       requestBody:
@@ -5922,6 +6239,25 @@ paths:
       summary: Delete business app config
       tags:
       - Business Permission API
+  /biz-delete-app-resource:
+    post:
+      parameters:
+      - description: The numeric resource id
+        in: query
+        name: id
+        required: true
+        schema:
+          type: integer
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/controllers.ActionResponse'
+          description: Action result
+      summary: Delete a resource catalog entry
+      tags:
+      - Business Permission API
   /biz-delete-permission:
     post:
       parameters:
@@ -6079,6 +6415,26 @@ paths:
       summary: Get a business permission by id
       tags:
       - Business Permission API
+  /biz-get-permission-stats:
+    get:
+      description: 'Returns derived counts used by the permission detail page overview:'
+      parameters:
+      - description: The numeric permission id
+        in: query
+        name: id
+        required: true
+        schema:
+          type: integer
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/controllers.BizPermissionStatsResponse'
+          description: Per-permission aggregate counters
+      summary: Get aggregated counters for a permission (grantees / resources / actions)
+      tags:
+      - Business Permission API
   /biz-get-permissions:
     get:
       parameters:
@@ -6142,6 +6498,26 @@ paths:
                 $ref: '#/components/schemas/controllers.BizRoleResponse'
           description: The Response object
       summary: Get a business role by id
+      tags:
+      - Business Permission API
+  /biz-get-role-stats:
+    get:
+      description: 'Returns derived counts used by the role detail page overview:'
+      parameters:
+      - description: The numeric role id
+        in: query
+        name: id
+        required: true
+        schema:
+          type: integer
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/controllers.BizRoleStatsResponse'
+          description: Per-role aggregate counters
+      summary: Get aggregated counters for a role (members / inheritance / permissions)
       tags:
       - Business Permission API
   /biz-get-roles:
@@ -6221,6 +6597,53 @@ paths:
                 $ref: '#/components/schemas/controllers.BizUserRolesResponse'
           description: The list of role names
       summary: Get user roles in business app
+      tags:
+      - Business Permission API
+  /biz-import-app-resources:
+    post:
+      description: Upsert the selected rows by natural key (owner, appName, name).
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/object.BizResourceImportApplyRequest'
+              description: Selected rows
+              summary: body
+        description: Selected rows
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/controllers.BizResourceImportApplyResponse'
+          description: Per-row outcomes + aggregate counts
+      summary: Apply a previewed resource import (selected rows)
+      tags:
+      - Business Permission API
+  /biz-list-app-resources:
+    get:
+      parameters:
+      - description: The organization owning the app
+        in: query
+        name: owner
+        required: true
+        schema:
+          type: string
+      - description: The app name
+        in: query
+        name: appName
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/controllers.BizAppResourceListResponse'
+          description: The Response object
+      summary: List resource catalog entries for a business app
       tags:
       - Business Permission API
   /biz-list-permission-grantees:
@@ -6395,6 +6818,28 @@ paths:
       summary: List all roles a user belongs to within an organization
       tags:
       - Business Permission API
+  /biz-parse-resource-import:
+    post:
+      description: Parse content without persisting. Returns per-row classification
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/object.BizResourceImportRequest'
+              description: Import source + content + options
+              summary: body
+        description: Import source + content + options
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/controllers.BizResourceImportPreviewResponse'
+          description: Parsed preview
+      summary: Parse an OpenAPI / template / paste into a resource import preview
+      tags:
+      - Business Permission API
   /biz-remove-permission-grantee:
     post:
       requestBody:
@@ -6478,6 +6923,28 @@ paths:
       summary: Sync business policies
       tags:
       - Business Permission API
+  /biz-test-permission-match:
+    post:
+      description: Given a permission id and (method, url), returns whether the
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/object.BizPermissionMatchRequest'
+              description: Test input
+              summary: body
+        description: Test input
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/controllers.BizPermissionMatchResponse'
+          description: Match result + explanation
+      summary: Dry-run a permission against a concrete request tuple
+      tags:
+      - Business Permission API
   /biz-update-app-config:
     post:
       description: Update an existing business permission app config
@@ -6505,6 +6972,34 @@ paths:
                 $ref: '#/components/schemas/controllers.ActionResponse'
           description: Action result
       summary: Update business app config
+      tags:
+      - Business Permission API
+  /biz-update-app-resource:
+    post:
+      parameters:
+      - description: The numeric resource id
+        in: query
+        name: id
+        required: true
+        schema:
+          type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/object.BizAppResource'
+              description: The updated resource (owner/appName/name must match)
+              summary: body
+        description: The updated resource (owner/appName/name must match)
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/controllers.ActionResponse'
+          description: Action result
+      summary: Update a resource catalog entry
       tags:
       - Business Permission API
   /biz-update-permission:

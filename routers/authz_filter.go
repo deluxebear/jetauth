@@ -105,6 +105,14 @@ func getObject(ctx *context.Context) (string, string, error) {
 	}
 
 	if method == http.MethodGet {
+		// Biz-* GET endpoints use numeric int64 ids and/or custom query
+		// params (roleId / permissionId / organization). Route through the
+		// shared biz resolver so scoped admins can exercise read endpoints
+		// with the same (owner, name) semantics as the write endpoints.
+		if strings.HasPrefix(path, "/api/biz-") {
+			return getBizAuthzTarget(ctx, path)
+		}
+
 		if ctx.Request.URL.Path == "/api/get-policies" {
 			if ctx.Input.Query("id") == "/" {
 				adapterId := ctx.Input.Query("adapterId")
@@ -249,10 +257,11 @@ type bizAuthzBody struct {
 	Ids          []int64 `json:"ids"` // bulk endpoints (e.g. biz-bulk-delete-role)
 }
 
-// getBizAuthzTarget resolves (objOwner, objName) for the biz-* POST endpoints.
-// Precedence: numeric ?id= (authoritative), then body roleId/parentRoleId, then
-// body permissionId, then body.organization, then body.owner. Unrecognized
-// shapes return ("", "", nil) so IsAllowed denies non-global admins safely.
+// getBizAuthzTarget resolves (objOwner, objName) for biz-* endpoints, both
+// GET and POST. Precedence: numeric ?id= → query ?roleId=/?permissionId= →
+// query ?organization=/?owner= → body.ids → body.roleId/parentRoleId →
+// body.permissionId → body.organization → body.owner. Unrecognized shapes
+// return ("", "", nil) so IsAllowed denies non-global admins safely.
 func getBizAuthzTarget(ctx *context.Context, path string) (string, string, error) {
 	// 1. Numeric ?id= for update/delete of BizRole or BizPermission.
 	if idStr := ctx.Input.Query("id"); idStr != "" {
@@ -274,6 +283,12 @@ func getBizAuthzTarget(ctx *context.Context, path string) (string, string, error
 				}
 				return "", "", nil
 			}
+			if strings.Contains(path, "-app-resource") {
+				if r, err := object.GetBizAppResourceById(id); err == nil && r != nil {
+					return r.Owner, r.Name, nil
+				}
+				return "", "", nil
+			}
 			// Composite string id (existing biz-update-app-config pattern).
 			return util.GetOwnerAndNameFromIdWithError(idStr)
 		}
@@ -281,6 +296,36 @@ func getBizAuthzTarget(ctx *context.Context, path string) (string, string, error
 		if owner, name, err := util.GetOwnerAndNameFromIdWithError(idStr); err == nil {
 			return owner, name, nil
 		}
+	}
+
+	// 1b. Query params for list/get endpoints (GET has no body).
+	//     biz-list-role-members / -role-parents / -role-children /
+	//     -permissions-by-role → ?roleId=
+	//     biz-list-permission-grantees → ?permissionId=
+	//     biz-get-roles / -list-user-roles / -get-user-roles /
+	//     -get-user-permissions → ?organization=
+	//     biz-get-permissions / -get-app-config(s) → ?owner=
+	if roleIdStr := ctx.Input.Query("roleId"); roleIdStr != "" {
+		if id, err := strconv.ParseInt(roleIdStr, 10, 64); err == nil {
+			if role, err := object.GetBizRoleById(id); err == nil && role != nil {
+				return role.Organization, role.Name, nil
+			}
+		}
+		return "", "", nil
+	}
+	if permIdStr := ctx.Input.Query("permissionId"); permIdStr != "" {
+		if id, err := strconv.ParseInt(permIdStr, 10, 64); err == nil {
+			if perm, err := object.GetBizPermissionById(id); err == nil && perm != nil {
+				return perm.Owner, perm.Name, nil
+			}
+		}
+		return "", "", nil
+	}
+	if org := ctx.Input.Query("organization"); org != "" {
+		return org, "", nil
+	}
+	if owner := ctx.Input.Query("owner"); owner != "" {
+		return owner, "", nil
 	}
 
 	body := ctx.Input.RequestBody

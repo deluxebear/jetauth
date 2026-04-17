@@ -90,6 +90,57 @@ type BizRoleResponse struct {
 	Data   object.BizRole `json:"data"`
 }
 
+// BizRoleStatsResponse represents the response for biz role stats APIs
+type BizRoleStatsResponse struct {
+	Status string             `json:"status" example:"ok"`
+	Msg    string             `json:"msg" example:""`
+	Data   object.BizRoleStats `json:"data"`
+}
+
+// BizPermissionStatsResponse represents the response for biz permission stats APIs
+type BizPermissionStatsResponse struct {
+	Status string                   `json:"status" example:"ok"`
+	Msg    string                   `json:"msg" example:""`
+	Data   object.BizPermissionStats `json:"data"`
+}
+
+// BizAppResourceListResponse represents the response for biz app resource list APIs
+type BizAppResourceListResponse struct {
+	Status string                  `json:"status" example:"ok"`
+	Msg    string                  `json:"msg" example:""`
+	Data   []object.BizAppResource `json:"data"`
+}
+
+// BizAppResourceResponse represents the response for a single biz app resource APIs
+type BizAppResourceResponse struct {
+	Status string                `json:"status" example:"ok"`
+	Msg    string                `json:"msg" example:""`
+	Data   object.BizAppResource `json:"data"`
+}
+
+// BizResourceImportPreviewResponse wraps the preview payload from
+// biz-parse-resource-import so OpenAPI spec has a concrete data type.
+type BizResourceImportPreviewResponse struct {
+	Status string                           `json:"status" example:"ok"`
+	Msg    string                           `json:"msg" example:""`
+	Data   object.BizResourceImportPreview  `json:"data"`
+}
+
+// BizResourceImportApplyResponse wraps the per-row outcome aggregate
+// returned by biz-import-app-resources.
+type BizResourceImportApplyResponse struct {
+	Status string                              `json:"status" example:"ok"`
+	Msg    string                              `json:"msg" example:""`
+	Data   object.BizResourceImportApplyResult `json:"data"`
+}
+
+// BizPermissionMatchResponse wraps the test-match result.
+type BizPermissionMatchResponse struct {
+	Status string                            `json:"status" example:"ok"`
+	Msg    string                            `json:"msg" example:""`
+	Data   object.BizPermissionMatchResult   `json:"data"`
+}
+
 // BizRoleMemberListResponse represents the response for paginated role member lists
 type BizRoleMemberListResponse struct {
 	Status string `json:"status" example:"ok"`
@@ -432,14 +483,52 @@ func (c *ApiController) UpdateBizRole() {
 	// Security: the authz_filter decided based on body.organization; if the
 	// body disagrees with the existing row's organization, that decision does
 	// not cover this update. Same pattern as the cross-tenant-write fix in
-	// commit 49a6ee82. ScopeKind is also locked to prevent an app→org escape.
-	if role.Organization != existing.Organization || role.ScopeKind != existing.ScopeKind {
-		c.ResponseError("cannot change organization or scope via update")
+	// commit 49a6ee82. ScopeKind, AppName, and Name are also locked — they
+	// form the role's stable identity; any rename must go through a new row.
+	// AppName lock also prevents an app→org escape (via ScopeKind='app',
+	// AppName='' mismatch).
+	if role.Organization != existing.Organization ||
+		role.ScopeKind != existing.ScopeKind ||
+		role.AppName != existing.AppName ||
+		role.Name != existing.Name {
+		c.ResponseError("cannot change organization, scope, appName, or name via update")
 		return
 	}
+	// CreatedTime is also immutable — preserve regardless of what the body
+	// sends. Without this, AllCols().Update would overwrite the stored
+	// timestamp with whatever the client posted (often empty).
+	role.CreatedTime = existing.CreatedTime
 
 	c.Data["json"] = c.wrapBizActionResponse(object.UpdateBizRole(id, &role))
 	c.ServeJSON()
+}
+
+// GetBizRoleStats
+// @Summary Get aggregated counters for a role (members / inheritance / permissions)
+// @Tags Business Permission API
+// @Description Returns derived counts used by the role detail page overview:
+//	members (broken down by subject type), parent/child role counts, and the
+//	number of permissions that reference this role. Each counter is a COUNT
+//	query on an indexed column; the endpoint replaces what would otherwise be
+//	four separate list calls just to read their lengths.
+// @Param   id     query    int64   true  "The numeric role id"
+// @Success 200 {object} BizRoleStatsResponse "Per-role aggregate counters"
+// @Router /biz-get-role-stats [get]
+func (c *ApiController) GetBizRoleStats() {
+	id, ok := c.parseIdQuery("id")
+	if !ok {
+		return
+	}
+	stats, err := object.GetBizRoleStats(id)
+	if err != nil {
+		c.ResponseError(err.Error())
+		return
+	}
+	if stats == nil {
+		c.ResponseError(fmt.Sprintf("role not found: id=%d", id))
+		return
+	}
+	c.ResponseOk(stats)
 }
 
 // DeleteBizRole
@@ -805,16 +894,46 @@ func (c *ApiController) UpdateBizPermission() {
 		return
 	}
 
-	// Mirror the cross-tenant-write fix: body owner/appName must match the
-	// existing row. The object-layer also rejects these mismatches but we
-	// fail fast here so clients see a clear 4xx before any side effects.
-	if perm.Owner != existing.Owner || perm.AppName != existing.AppName {
-		c.ResponseError("cannot change owner or appName via update")
+	// Identity fields (owner, appName, name) are the stable policy key used by
+	// Casbin — renaming via PUT silently breaks historical grants. Reject the
+	// update if any drifts from the stored row. CreatedTime is also preserved
+	// so an empty body value cannot clobber the stored timestamp.
+	if perm.Owner != existing.Owner ||
+		perm.AppName != existing.AppName ||
+		perm.Name != existing.Name {
+		c.ResponseError("cannot change owner, appName, or name via update")
 		return
 	}
+	perm.CreatedTime = existing.CreatedTime
 
 	c.Data["json"] = c.wrapBizActionResponse(object.UpdateBizPermission(id, &perm))
 	c.ServeJSON()
+}
+
+// GetBizPermissionStats
+// @Summary Get aggregated counters for a permission (grantees / resources / actions)
+// @Tags Business Permission API
+// @Description Returns derived counts used by the permission detail page overview:
+//	grantees broken down by subject type (user/group/role), plus the size of
+//	the permission's resources and actions arrays.
+// @Param   id     query    int64   true  "The numeric permission id"
+// @Success 200 {object} BizPermissionStatsResponse "Per-permission aggregate counters"
+// @Router /biz-get-permission-stats [get]
+func (c *ApiController) GetBizPermissionStats() {
+	id, ok := c.parseIdQuery("id")
+	if !ok {
+		return
+	}
+	stats, err := object.GetBizPermissionStats(id)
+	if err != nil {
+		c.ResponseError(err.Error())
+		return
+	}
+	if stats == nil {
+		c.ResponseError(fmt.Sprintf("permission not found: id=%d", id))
+		return
+	}
+	c.ResponseOk(stats)
 }
 
 // DeleteBizPermission
@@ -888,6 +1007,152 @@ func (c *ApiController) BulkDeleteBizPermissions() {
 			Total:     len(items),
 		},
 	}
+	c.ServeJSON()
+}
+
+// ── BizAppResource catalog (permission resource directory) ──
+
+// ListBizAppResources
+// @Summary List resource catalog entries for a business app
+// @Tags Business Permission API
+// @Param   owner    query   string   true  "The organization owning the app"
+// @Param   appName  query   string   true  "The app name"
+// @Success 200 {object} BizAppResourceListResponse "The Response object"
+// @Router /biz-list-app-resources [get]
+func (c *ApiController) ListBizAppResources() {
+	owner := c.Ctx.Input.Query("owner")
+	appName := c.Ctx.Input.Query("appName")
+	if owner == "" || appName == "" {
+		c.ResponseError("owner and appName are required")
+		return
+	}
+	resources, err := object.ListBizAppResources(owner, appName)
+	if err != nil {
+		c.ResponseError(err.Error())
+		return
+	}
+	c.ResponseOk(resources)
+}
+
+// AddBizAppResource
+// @Summary Add a resource catalog entry
+// @Tags Business Permission API
+// @Param   body    body   object.BizAppResource  true  "The resource (must include owner, appName, name, pattern)"
+// @Success 200 {object} ActionResponse "Action result"
+// @Router /biz-add-app-resource [post]
+func (c *ApiController) AddBizAppResource() {
+	var r object.BizAppResource
+	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &r); err != nil {
+		c.ResponseError(err.Error())
+		return
+	}
+	c.Data["json"] = c.wrapBizActionResponse(object.AddBizAppResource(&r))
+	c.ServeJSON()
+}
+
+// UpdateBizAppResource
+// @Summary Update a resource catalog entry
+// @Tags Business Permission API
+// @Param   id      query    int64                  true  "The numeric resource id"
+// @Param   body    body     object.BizAppResource  true  "The updated resource (owner/appName/name must match)"
+// @Success 200 {object} ActionResponse "Action result"
+// @Router /biz-update-app-resource [post]
+func (c *ApiController) UpdateBizAppResource() {
+	id, ok := c.parseIdQuery("id")
+	if !ok {
+		return
+	}
+	var r object.BizAppResource
+	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &r); err != nil {
+		c.ResponseError(err.Error())
+		return
+	}
+	c.Data["json"] = c.wrapBizActionResponse(object.UpdateBizAppResource(id, &r))
+	c.ServeJSON()
+}
+
+// TestBizPermissionMatch
+// @Summary Dry-run a permission against a concrete request tuple
+// @Tags Business Permission API
+// @Description Given a permission id and (method, url), returns whether the
+//	permission would apply, with a row-by-row breakdown of which resource
+//	patterns and actions matched. Mirrors Casbin's keyMatch / keyMatch2
+//	semantics so the answer tracks enforce-time behavior.
+// @Param   body    body   object.BizPermissionMatchRequest  true  "Test input"
+// @Success 200 {object} BizPermissionMatchResponse "Match result + explanation"
+// @Router /biz-test-permission-match [post]
+func (c *ApiController) TestBizPermissionMatch() {
+	var req object.BizPermissionMatchRequest
+	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &req); err != nil {
+		c.ResponseError(err.Error())
+		return
+	}
+	res, err := object.TestBizPermissionMatch(&req)
+	if err != nil {
+		c.ResponseError(err.Error())
+		return
+	}
+	c.ResponseOk(res)
+}
+
+// ParseBizResourceImport
+// @Summary Parse an OpenAPI / template / paste into a resource import preview
+// @Tags Business Permission API
+// @Description Parse content without persisting. Returns per-row classification
+//	(new / update / deprecated / error). Use the preview as the request body of
+//	/biz-import-app-resources after the admin reviews and selects rows.
+// @Param   body    body   object.BizResourceImportRequest  true  "Import source + content + options"
+// @Success 200 {object} BizResourceImportPreviewResponse "Parsed preview"
+// @Router /biz-parse-resource-import [post]
+func (c *ApiController) ParseBizResourceImport() {
+	var req object.BizResourceImportRequest
+	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &req); err != nil {
+		c.ResponseError(err.Error())
+		return
+	}
+	preview, err := object.ParseBizResourceImport(&req)
+	if err != nil {
+		c.ResponseError(err.Error())
+		return
+	}
+	c.ResponseOk(preview)
+}
+
+// ImportBizAppResources
+// @Summary Apply a previewed resource import (selected rows)
+// @Tags Business Permission API
+// @Description Upsert the selected rows by natural key (owner, appName, name).
+//	The server re-validates each row; errors are reported per-row so partial
+//	success is the normal outcome.
+// @Param   body    body   object.BizResourceImportApplyRequest  true  "Selected rows"
+// @Success 200 {object} BizResourceImportApplyResponse "Per-row outcomes + aggregate counts"
+// @Router /biz-import-app-resources [post]
+func (c *ApiController) ImportBizAppResources() {
+	var req object.BizResourceImportApplyRequest
+	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &req); err != nil {
+		c.ResponseError(err.Error())
+		return
+	}
+	result, err := object.ImportBizAppResources(&req)
+	if err != nil {
+		c.ResponseError(err.Error())
+		return
+	}
+	c.ResponseOk(result)
+}
+
+// DeleteBizAppResource
+// @Summary Delete a resource catalog entry
+// @Tags Business Permission API
+// @Param   id     query    int64   true  "The numeric resource id"
+// @Success 200 {object} ActionResponse "Action result"
+// @Router /biz-delete-app-resource [post]
+func (c *ApiController) DeleteBizAppResource() {
+	id, ok := c.parseIdQuery("id")
+	if !ok {
+		return
+	}
+	c.Data["json"] = c.wrapBizActionResponse(object.DeleteBizAppResource(id))
 	c.ServeJSON()
 }
 

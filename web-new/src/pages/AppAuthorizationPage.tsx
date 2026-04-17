@@ -3,15 +3,16 @@ import { useQuery, useQueryClient, keepPreviousData } from "@tanstack/react-quer
 import { bizKeys } from "../backend/bizQueryKeys";
 import { useParams, useNavigate, useSearchParams, Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, Plus, Play, Copy, Check, X, RefreshCw, RotateCcw, Pencil, Trash2, LayoutDashboard, Crown, ShieldCheck, FlaskConical, Code } from "lucide-react";
+import { ArrowLeft, Plus, Play, Copy, Check, X, RefreshCw, RotateCcw, Pencil, Trash2, LayoutDashboard, Crown, ShieldCheck, FlaskConical, Code, Target } from "lucide-react";
 import DataTable, { type Column, useTablePrefs, ColumnsMenu } from "../components/DataTable";
+import BizAppResourceTab from "../components/BizAppResourceTab";
 import { useTranslation } from "../i18n";
 import { useModal } from "../components/Modal";
 import * as BizBackend from "../backend/BizBackend";
 import type { BizAppConfig, BizRole, BizPermission, PoliciesExport } from "../backend/BizBackend";
 import { pickAppIcon } from "../utils/appIcon";
 
-type TabKey = "overview" | "roles" | "permissions" | "test" | "integration";
+type TabKey = "overview" | "roles" | "permissions" | "resources" | "test" | "integration";
 
 // Shared helper for RolesTab + PermissionsTab: turns a bulk-delete API
 // response into the appropriate toast (all-success / all-failed / partial).
@@ -41,7 +42,7 @@ function showBulkDeleteToast(
   modal.toast(`${succeeded} ${deleted}, ${failed} ${failedLabel} — ${firstErr}`, "error");
 }
 
-const VALID_TABS: TabKey[] = ["overview", "roles", "permissions", "test", "integration"];
+const VALID_TABS: TabKey[] = ["overview", "roles", "permissions", "resources", "test", "integration"];
 
 // Local relative-time helper — mirrors the one in AuthorizationPage. Kept
 // here to avoid a cross-page import cycle; both functions are short.
@@ -193,6 +194,7 @@ export default function AppAuthorizationPage() {
     { key: "overview", label: t("authz.tab.overview" as any), icon: <LayoutDashboard size={14} /> },
     { key: "roles", label: t("authz.tab.roles" as any), count: roles.length, icon: <Crown size={14} /> },
     { key: "permissions", label: t("authz.tab.permissions" as any), count: permissions.length, icon: <ShieldCheck size={14} /> },
+    { key: "resources", label: t("authz.tab.resources" as any) || "资源目录", icon: <Target size={14} /> },
     { key: "test", label: t("authz.tab.test" as any), icon: <FlaskConical size={14} /> },
     { key: "integration", label: t("authz.tab.integration" as any), icon: <Code size={14} /> },
   ];
@@ -314,6 +316,9 @@ export default function AppAuthorizationPage() {
             modal={modal}
             navigate={navigate}
           />
+        )}
+        {activeTab === "resources" && (
+          <BizAppResourceTab owner={owner!} appName={appName!} />
         )}
         {activeTab === "test" && (
           <TestTab

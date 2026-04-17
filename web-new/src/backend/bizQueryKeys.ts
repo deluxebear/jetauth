@@ -33,6 +33,15 @@ export const bizKeys = {
   rolePermissions: (org: string | undefined, roleName: string | undefined) =>
     ["biz", "role-permissions", org, roleName] as const,
 
+  roleStats: (roleId: number | undefined) =>
+    ["biz", "role-stats", roleId] as const,
+
+  permissionStats: (permissionId: number | undefined) =>
+    ["biz", "permission-stats", permissionId] as const,
+
+  appResources: (owner: string | undefined, appName: string | undefined) =>
+    ["biz", "app-resources", owner, appName] as const,
+
   // The "prefix" form matches every paginated variant — use it to invalidate
   // all pages of a role's member list at once.
   roleMembers: (roleId: number) =>

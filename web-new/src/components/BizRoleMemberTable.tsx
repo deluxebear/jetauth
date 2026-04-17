@@ -77,9 +77,12 @@ export default function BizRoleMemberTable({ roleId, organization, onChanged }: 
 
   // Invalidate every page for this role — simplest correct behavior, since a
   // remove from any page shifts the set. If this becomes a perf issue, switch
-  // to setQueryData + optimistic slice update.
-  const invalidate = () =>
+  // to setQueryData + optimistic slice update. Also invalidate the role's
+  // stats so the detail-page overview count reflects the change immediately.
+  const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: bizKeys.roleMembers(roleId) });
+    queryClient.invalidateQueries({ queryKey: bizKeys.roleStats(roleId) });
+  };
 
   const removeMutation = useMutation({
     mutationFn: (m: BizRoleMember) => BizBackend.removeBizRoleMember(m),

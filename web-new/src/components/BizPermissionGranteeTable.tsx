@@ -60,8 +60,10 @@ export default function BizPermissionGranteeTable({ permissionId, organization, 
   const total = listQuery.data?.total ?? 0;
   const loading = listQuery.isLoading;
 
-  const invalidate = () =>
+  const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: bizKeys.permissionGrantees(permissionId) });
+    queryClient.invalidateQueries({ queryKey: bizKeys.permissionStats(permissionId) });
+  };
 
   const filtered = useMemo(() => {
     if (filter === "all") return grantees;
