@@ -19,6 +19,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -158,6 +159,15 @@ func getObject(ctx *context.Context) (string, string, error) {
 			}
 		}
 
+		// Biz-* endpoints use numeric int64 ids and/or body-level id references
+		// (roleId / permissionId / parentRoleId). They also split ownership
+		// between BizRole.Organization and BizPermission.Owner. Resolve the
+		// authz target explicitly so non-global admins can exercise these
+		// endpoints.
+		if strings.HasPrefix(path, "/api/biz-") {
+			return getBizAuthzTarget(ctx, path)
+		}
+
 		// For non-GET requests, if the `id` query param is present it is the
 		// authoritative identifier of the object being operated on.  Use it
 		// instead of the request body so that an attacker cannot spoof the
@@ -224,6 +234,97 @@ func getObject(ctx *context.Context) (string, string, error) {
 
 		return obj.Owner, obj.Name, nil
 	}
+}
+
+// bizAuthzBody captures every body field that biz-* POST endpoints use to
+// identify the target object. All fields are optional; unmarshal failures and
+// zero values simply fall through to the next resolution strategy.
+type bizAuthzBody struct {
+	Organization string `json:"organization"`
+	Owner        string `json:"owner"`
+	Name         string `json:"name"`
+	RoleId       int64  `json:"roleId"`
+	PermissionId int64  `json:"permissionId"`
+	ParentRoleId int64  `json:"parentRoleId"`
+}
+
+// getBizAuthzTarget resolves (objOwner, objName) for the biz-* POST endpoints.
+// Precedence: numeric ?id= (authoritative), then body roleId/parentRoleId, then
+// body permissionId, then body.organization, then body.owner. Unrecognized
+// shapes return ("", "", nil) so IsAllowed denies non-global admins safely.
+func getBizAuthzTarget(ctx *context.Context, path string) (string, string, error) {
+	// 1. Numeric ?id= for update/delete of BizRole or BizPermission.
+	if idStr := ctx.Input.Query("id"); idStr != "" {
+		if id, err := strconv.ParseInt(idStr, 10, 64); err == nil {
+			// "-role" matches update/delete of roles but must NOT match
+			// "-role-member" or "-role-inheritance" (those use body ids).
+			if strings.Contains(path, "-role") &&
+				!strings.Contains(path, "-role-member") &&
+				!strings.Contains(path, "-role-inheritance") {
+				if role, err := object.GetBizRoleById(id); err == nil && role != nil {
+					return role.Organization, role.Name, nil
+				}
+				return "", "", nil
+			}
+			if strings.Contains(path, "-permission") &&
+				!strings.Contains(path, "-permission-grantee") {
+				if perm, err := object.GetBizPermissionById(id); err == nil && perm != nil {
+					return perm.Owner, perm.Name, nil
+				}
+				return "", "", nil
+			}
+			// Composite string id (existing biz-update-app-config pattern).
+			return util.GetOwnerAndNameFromIdWithError(idStr)
+		}
+		// Non-numeric id: fall back to composite string lookup.
+		if owner, name, err := util.GetOwnerAndNameFromIdWithError(idStr); err == nil {
+			return owner, name, nil
+		}
+	}
+
+	body := ctx.Input.RequestBody
+	if len(body) == 0 {
+		return "", "", nil
+	}
+
+	var b bizAuthzBody
+	if err := json.Unmarshal(body, &b); err != nil {
+		return "", "", nil
+	}
+
+	// 2. Body roleId / parentRoleId — member / inheritance operations.
+	if b.RoleId != 0 {
+		if role, err := object.GetBizRoleById(b.RoleId); err == nil && role != nil {
+			return role.Organization, role.Name, nil
+		}
+		return "", "", nil
+	}
+	if b.ParentRoleId != 0 {
+		if role, err := object.GetBizRoleById(b.ParentRoleId); err == nil && role != nil {
+			return role.Organization, role.Name, nil
+		}
+		return "", "", nil
+	}
+
+	// 3. Body permissionId — grantee operations.
+	if b.PermissionId != 0 {
+		if perm, err := object.GetBizPermissionById(b.PermissionId); err == nil && perm != nil {
+			return perm.Owner, perm.Name, nil
+		}
+		return "", "", nil
+	}
+
+	// 4. Body.organization (BizRole add).
+	if b.Organization != "" {
+		return b.Organization, b.Name, nil
+	}
+
+	// 5. Body.owner (BizPermission add / BizAppConfig add/delete).
+	if b.Owner != "" {
+		return b.Owner, b.Name, nil
+	}
+
+	return "", "", nil
 }
 
 func willLog(subOwner string, subName string, method string, urlPath string, objOwner string, objName string) bool {
