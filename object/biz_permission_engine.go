@@ -117,6 +117,18 @@ func SyncAppPolicies(owner, appName string) (*SyncStats, error) {
 			}
 			groupingPolicies = append(groupingPolicies, rolePolicies...)
 		}
+
+		// 6b. Expand group membership: any group referenced as a subject
+		// (either as a permission grantee or as a role member) needs
+		// `g userId groupId` rules so Casbin can resolve user→group.
+		// Without this, enforce(alice, ...) fails even when alice is in
+		// a group that was granted the permission.
+		groupExpansion, err := expandGroupMembership(permissions, roles)
+		if err != nil {
+			return nil, fmt.Errorf("expand group membership: %w", err)
+		}
+		groupingPolicies = append(groupingPolicies, groupExpansion...)
+
 		if len(groupingPolicies) > 0 {
 			if _, err := e.AddGroupingPolicies(groupingPolicies); err != nil {
 				return nil, fmt.Errorf("failed to add grouping policies: %w", err)

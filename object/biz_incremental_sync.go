@@ -115,6 +115,68 @@ func computePermPPolicies(perm *BizPermission, hasEft bool) ([][]string, error) 
 	return pp, nil
 }
 
+// expandGroupMembership emits `g userId groupId` rules for every group that
+// is referenced as a subject by a permission grantee or a role member.
+//
+// Without this expansion, a policy like `p group:eng /api/x GET` is dead
+// weight — Casbin has no way to know that user alice is in group eng.
+// Casdoor stores group membership on the user side (User.Groups []string),
+// so we resolve users per-group via GetGroupUsers and emit the forward
+// `user → group` g-rule Casbin needs.
+//
+// Scope: direct membership only. Nested groups (group-in-group) are not
+// expanded in phase 1; add a closure walk here if that becomes a need.
+func expandGroupMembership(permissions []*BizPermission, roles []*BizRole) ([][]string, error) {
+	groupIds := map[string]bool{}
+
+	for _, perm := range permissions {
+		if perm == nil || !perm.IsEnabled || perm.State != StateApproved {
+			continue
+		}
+		grantees, err := ListBizPermissionGrantees(perm.Id)
+		if err != nil {
+			return nil, err
+		}
+		for _, g := range grantees {
+			if g.SubjectType == BizPermGranteeGroup {
+				groupIds[g.SubjectId] = true
+			}
+		}
+	}
+
+	for _, role := range roles {
+		if role == nil || !role.IsEnabled {
+			continue
+		}
+		members, err := ListBizRoleMembers(role.Id)
+		if err != nil {
+			return nil, err
+		}
+		for _, m := range members {
+			if m.SubjectType == BizRoleSubjectGroup {
+				groupIds[m.SubjectId] = true
+			}
+		}
+	}
+
+	if len(groupIds) == 0 {
+		return nil, nil
+	}
+
+	var out [][]string
+	for groupId := range groupIds {
+		users, err := GetGroupUsers(groupId)
+		if err != nil {
+			logs.Warning("expandGroupMembership: GetGroupUsers(%s) failed: %v", groupId, err)
+			continue
+		}
+		for _, u := range users {
+			out = append(out, []string{u.GetId(), groupId})
+		}
+	}
+	return out, nil
+}
+
 // detectHasEft checks whether the enforcer model includes an eft field in p.
 func detectHasEft(e *casbin.Enforcer) bool {
 	if pDef, ok := e.GetModel()["p"]["p"]; ok {
