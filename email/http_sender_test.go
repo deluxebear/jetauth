@@ -65,3 +65,33 @@ func TestHttpSender_ErrorPropagatesBody(t *testing.T) {
 		t.Errorf("error body not included: %v", err)
 	}
 }
+
+func TestHttpSender_CloudflarePreset(t *testing.T) {
+	var got map[string]any
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != "POST" { t.Fatalf("method=%s", r.Method) }
+		b, _ := io.ReadAll(r.Body)
+		_ = json.Unmarshal(b, &got)
+		w.WriteHeader(200)
+		_, _ = w.Write([]byte(`{"success":true}`))
+	}))
+	defer srv.Close()
+
+	tmpl := `{"from":{"address":"${fromAddress}","name":"${fromName}"},"to":"${toAddress}","subject":"${subject}","html":"${content}"}`
+	s := &HttpEmailSender{
+		Endpoint: srv.URL, Method: "POST", ContentType: "application/json",
+		HttpHeaders:  map[string]string{"Authorization": "Bearer cf-token"},
+		BodyTemplate: tmpl,
+		Allowlist:    []string{"127.0.0.0/8"},
+	}
+	if err := s.Send("eric@judgeany.com", "Eric", []string{"deluxebear@gmail.com"}, "hi", `<p>"Hello"</p>`); err != nil {
+		t.Fatal(err)
+	}
+	from := got["from"].(map[string]any)
+	if from["address"] != "eric@judgeany.com" || from["name"] != "Eric" {
+		t.Errorf("from mismatch: %v", from)
+	}
+	if got["html"] != `<p>"Hello"</p>` {
+		t.Errorf("html not preserved (escaping broken): %v", got["html"])
+	}
+}
