@@ -84,6 +84,12 @@ func getBizPermissionById(id int64) (*BizPermission, error) {
 	return &p, nil
 }
 
+// GetBizPermissionById is the exported id-based lookup used by HTTP handlers.
+// Returns (nil, nil) if not found so callers can distinguish "missing" from error.
+func GetBizPermissionById(id int64) (*BizPermission, error) {
+	return getBizPermissionById(id)
+}
+
 func AddBizPermission(perm *BizPermission) (bool, error) {
 	if err := validateBizPermission(perm); err != nil {
 		return false, err

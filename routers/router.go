@@ -240,11 +240,27 @@ func InitAPI() {
 	web.Router("/api/biz-update-role", &controllers.ApiController{}, "POST:UpdateBizRole")
 	web.Router("/api/biz-delete-role", &controllers.ApiController{}, "POST:DeleteBizRole")
 
+	web.Router("/api/biz-list-role-members", &controllers.ApiController{}, "GET:ListBizRoleMembers")
+	web.Router("/api/biz-add-role-member", &controllers.ApiController{}, "POST:AddBizRoleMember")
+	web.Router("/api/biz-remove-role-member", &controllers.ApiController{}, "POST:RemoveBizRoleMember")
+	web.Router("/api/biz-list-user-roles", &controllers.ApiController{}, "GET:ListUserRoles")
+
+	web.Router("/api/biz-list-role-parents", &controllers.ApiController{}, "GET:ListRoleParents")
+	web.Router("/api/biz-list-role-children", &controllers.ApiController{}, "GET:ListRoleChildren")
+	web.Router("/api/biz-add-role-inheritance", &controllers.ApiController{}, "POST:AddRoleInheritance")
+	web.Router("/api/biz-remove-role-inheritance", &controllers.ApiController{}, "POST:RemoveRoleInheritance")
+
 	web.Router("/api/biz-get-permissions", &controllers.ApiController{}, "GET:GetBizPermissions")
 	web.Router("/api/biz-get-permission", &controllers.ApiController{}, "GET:GetBizPermission")
 	web.Router("/api/biz-add-permission", &controllers.ApiController{}, "POST:AddBizPermission")
 	web.Router("/api/biz-update-permission", &controllers.ApiController{}, "POST:UpdateBizPermission")
 	web.Router("/api/biz-delete-permission", &controllers.ApiController{}, "POST:DeleteBizPermission")
+
+	web.Router("/api/biz-list-permission-grantees", &controllers.ApiController{}, "GET:ListBizPermissionGrantees")
+	web.Router("/api/biz-add-permission-grantee", &controllers.ApiController{}, "POST:AddBizPermissionGrantee")
+	web.Router("/api/biz-remove-permission-grantee", &controllers.ApiController{}, "POST:RemoveBizPermissionGrantee")
+	web.Router("/api/biz-list-permissions-by-role", &controllers.ApiController{}, "GET:ListPermissionsByRole")
+	web.Router("/api/biz-list-permissions-by-user", &controllers.ApiController{}, "GET:ListPermissionsByUser")
 
 	web.Router("/api/biz-enforce", &controllers.ApiController{}, "POST:BizEnforce")
 	web.Router("/api/biz-batch-enforce", &controllers.ApiController{}, "POST:BizBatchEnforce")

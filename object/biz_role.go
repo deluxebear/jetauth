@@ -126,6 +126,12 @@ func getBizRoleById(id int64) (*BizRole, error) {
 	return &r, nil
 }
 
+// GetBizRoleById is the exported id-based lookup used by HTTP handlers.
+// Returns (nil, nil) if not found so callers can distinguish "missing" from error.
+func GetBizRoleById(id int64) (*BizRole, error) {
+	return getBizRoleById(id)
+}
+
 // GetBizRoleByName looks up by (org, app_name, name). For app-level lookup with
 // org fallback, use ResolveScopedRoles instead.
 func GetBizRoleByName(org, appName, name string) (*BizRole, error) {

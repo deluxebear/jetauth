@@ -11,6 +11,7 @@ package controllers
 import (
 	"encoding/json"
 	"fmt"
+	"strconv"
 
 	"github.com/deluxebear/casdoor/object"
 	"github.com/deluxebear/casdoor/util"
@@ -33,6 +34,25 @@ func (c *ApiController) wrapBizActionResponse(affected bool, e ...error) *Respon
 		return &Response{Status: "ok", Msg: "", Data: "Unaffected"}
 	}
 }
+
+// parseIdQuery decodes a required int64 "id" query param, responding with a
+// 400 and returning ok=false if the value is missing or malformed. Callers
+// should `return` immediately on ok=false — the response is already written.
+func (c *ApiController) parseIdQuery(name string) (int64, bool) {
+	raw := c.Ctx.Input.Query(name)
+	if raw == "" {
+		c.ResponseError(fmt.Sprintf("missing required query parameter: %s", name))
+		return 0, false
+	}
+	id, err := strconv.ParseInt(raw, 10, 64)
+	if err != nil {
+		c.ResponseError(fmt.Sprintf("invalid %s query parameter: %s", name, err.Error()))
+		return 0, false
+	}
+	return id, true
+}
+
+// ── Response types (kept for OpenAPI annotations) ──
 
 // BizAppConfigListResponse represents the response for biz app config list APIs
 type BizAppConfigListResponse struct {
@@ -62,6 +82,16 @@ type BizRoleResponse struct {
 	Data   object.BizRole `json:"data"`
 }
 
+// BizRoleMemberListResponse represents the response for paginated role member lists
+type BizRoleMemberListResponse struct {
+	Status string `json:"status" example:"ok"`
+	Msg    string `json:"msg" example:""`
+	Data   struct {
+		Members []object.BizRoleMember `json:"members"`
+		Total   int64                  `json:"total" example:"0"`
+	} `json:"data"`
+}
+
 // BizPermissionListResponse represents the response for biz permission list APIs
 type BizPermissionListResponse struct {
 	Status string                 `json:"status" example:"ok"`
@@ -74,6 +104,16 @@ type BizPermissionResponse struct {
 	Status string               `json:"status" example:"ok"`
 	Msg    string               `json:"msg" example:""`
 	Data   object.BizPermission `json:"data"`
+}
+
+// BizPermissionGranteeListResponse represents the response for paginated grantee lists
+type BizPermissionGranteeListResponse struct {
+	Status string `json:"status" example:"ok"`
+	Msg    string `json:"msg" example:""`
+	Data   struct {
+		Grantees []object.BizPermissionGrantee `json:"grantees"`
+		Total    int64                         `json:"total" example:"0"`
+	} `json:"data"`
 }
 
 // BizEnforceResponse represents the response for biz enforce APIs
@@ -226,21 +266,23 @@ func (c *ApiController) DeleteBizAppConfig() {
 	c.ServeJSON()
 }
 
-// ── BizRole ──
+// ── BizRole CRUD (id-based) ──
 
 // GetBizRoles
 // @Summary Get business roles
 // @Tags Business Permission API
-// @Description Get all business roles for an app
-// @Param   owner     query    string  true  "The owner (organization)"
-// @Param   app       query    string  true  "The app name"
+// @Description Get all business roles visible in (organization, appName). If
+//	appName is empty, returns org-scope roles only; otherwise returns the union
+//	of app-scope and org-scope roles for the app.
+// @Param   organization  query    string  true   "The organization"
+// @Param   appName       query    string  false  "The app name ('' for org-scope only)"
 // @Success 200 {object} BizRoleListResponse "The Response object"
 // @Router /biz-get-roles [get]
 func (c *ApiController) GetBizRoles() {
-	owner := c.Ctx.Input.Query("owner")
-	appName := c.Ctx.Input.Query("app")
+	org := c.Ctx.Input.Query("organization")
+	appName := c.Ctx.Input.Query("appName")
 
-	roles, err := object.GetBizRoles(owner, appName)
+	roles, err := object.GetBizRoles(org, appName)
 	if err != nil {
 		c.ResponseError(err.Error())
 		return
@@ -249,114 +291,331 @@ func (c *ApiController) GetBizRoles() {
 }
 
 // GetBizRole
-// @Summary Get business role
+// @Summary Get a business role by id
 // @Tags Business Permission API
-// @Description Get a single business role
-// @Param   owner     query    string  true  "The owner (organization)"
-// @Param   app       query    string  true  "The app name"
-// @Param   name      query    string  true  "The role name"
+// @Param   id     query    int64   true  "The numeric role id"
 // @Success 200 {object} BizRoleResponse "The Response object"
 // @Router /biz-get-role [get]
 func (c *ApiController) GetBizRole() {
-	owner := c.Ctx.Input.Query("owner")
-	appName := c.Ctx.Input.Query("app")
-	name := c.Ctx.Input.Query("name")
-
-	role, err := object.GetBizRole(owner, appName, name)
+	id, ok := c.parseIdQuery("id")
+	if !ok {
+		return
+	}
+	role, err := object.GetBizRoleById(id)
 	if err != nil {
 		c.ResponseError(err.Error())
+		return
+	}
+	if role == nil {
+		c.ResponseError(fmt.Sprintf("role not found: id=%d", id))
 		return
 	}
 	c.ResponseOk(role)
 }
 
 // AddBizRole
-// @Summary Add business role
+// @Summary Add a business role
 // @Tags Business Permission API
-// @Description Create a new business role
-// @Param   body    body   object.BizRole  true  "The details of the role"
+// @Param   body    body   object.BizRole  true  "The role (must include organization, scopeKind, name)"
 // @Success 200 {object} ActionResponse "Action result"
 // @Router /biz-add-role [post]
 func (c *ApiController) AddBizRole() {
 	var role object.BizRole
-	err := json.Unmarshal(c.Ctx.Input.RequestBody, &role)
-	if err != nil {
+	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &role); err != nil {
 		c.ResponseError(err.Error())
 		return
 	}
+
+	// The authz_filter already gates access based on the subject's admin scope
+	// over body.organization; the object-layer enforces scope/shape. No extra
+	// controller-level authz logic is introduced here (see commit 49a6ee82 for
+	// the cross-tenant-write pattern we mirror on update/delete).
 
 	c.Data["json"] = c.wrapBizActionResponse(object.AddBizRole(&role))
 	c.ServeJSON()
 }
 
 // UpdateBizRole
-// @Summary Update business role
+// @Summary Update an existing business role
 // @Tags Business Permission API
-// @Description Update an existing business role
-// @Param   owner     query    string  true  "The owner (organization)"
-// @Param   app       query    string  true  "The app name"
-// @Param   name      query    string  true  "The role name"
-// @Param   body    body   object.BizRole  true  "The details of the role"
+// @Param   id      query    int64           true  "The numeric role id"
+// @Param   body    body     object.BizRole  true  "The role (organization and scopeKind must match the existing row)"
 // @Success 200 {object} ActionResponse "Action result"
 // @Router /biz-update-role [post]
 func (c *ApiController) UpdateBizRole() {
-	owner := c.Ctx.Input.Query("owner")
-	appName := c.Ctx.Input.Query("app")
-	name := c.Ctx.Input.Query("name")
+	id, ok := c.parseIdQuery("id")
+	if !ok {
+		return
+	}
 
 	var role object.BizRole
-	err := json.Unmarshal(c.Ctx.Input.RequestBody, &role)
-	if err != nil {
+	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &role); err != nil {
 		c.ResponseError(err.Error())
 		return
 	}
 
-	// Authz is granted against body owner/appName; query params drive the DB
-	// WHERE clause. Without this match, an attacker in tenant A can pass authz
-	// with body.owner=A while query.owner points at tenant B's row.
-	if role.Owner != owner || role.AppName != appName {
-		c.ResponseError("body owner/appName must match query parameters")
+	existing, err := object.GetBizRoleById(id)
+	if err != nil {
+		c.ResponseError(err.Error())
+		return
+	}
+	if existing == nil {
+		c.ResponseError(fmt.Sprintf("role not found: id=%d", id))
 		return
 	}
 
-	c.Data["json"] = c.wrapBizActionResponse(object.UpdateBizRole(owner, appName, name, &role))
+	// Security: the authz_filter decided based on body.organization; if the
+	// body disagrees with the existing row's organization, that decision does
+	// not cover this update. Same pattern as the cross-tenant-write fix in
+	// commit 49a6ee82. ScopeKind is also locked to prevent an app→org escape.
+	if role.Organization != existing.Organization || role.ScopeKind != existing.ScopeKind {
+		c.ResponseError("cannot change organization or scope via update")
+		return
+	}
+
+	c.Data["json"] = c.wrapBizActionResponse(object.UpdateBizRole(id, &role))
 	c.ServeJSON()
 }
 
 // DeleteBizRole
-// @Summary Delete business role
+// @Summary Delete a business role by id
 // @Tags Business Permission API
-// @Description Delete a business role
-// @Param   body    body   object.BizRole  true  "The details of the role"
+// @Param   id     query    int64   true  "The numeric role id"
 // @Success 200 {object} ActionResponse "Action result"
 // @Router /biz-delete-role [post]
 func (c *ApiController) DeleteBizRole() {
-	var role object.BizRole
-	err := json.Unmarshal(c.Ctx.Input.RequestBody, &role)
+	id, ok := c.parseIdQuery("id")
+	if !ok {
+		return
+	}
+
+	existing, err := object.GetBizRoleById(id)
 	if err != nil {
 		c.ResponseError(err.Error())
 		return
 	}
+	if existing == nil {
+		c.ResponseError(fmt.Sprintf("role not found: id=%d", id))
+		return
+	}
 
-	c.Data["json"] = c.wrapBizActionResponse(object.DeleteBizRole(&role))
+	c.Data["json"] = c.wrapBizActionResponse(object.DeleteBizRole(id))
 	c.ServeJSON()
 }
 
-// ── BizPermission ──
+// ── BizRole membership ──
+
+// ListBizRoleMembers
+// @Summary List direct members of a role (paginated)
+// @Tags Business Permission API
+// @Param   roleId    query   int64  true   "The role id"
+// @Param   offset    query   int    false  "Pagination offset (default 0)"
+// @Param   limit     query   int    false  "Pagination page size (default 50)"
+// @Success 200 {object} BizRoleMemberListResponse "The Response object"
+// @Router /biz-list-role-members [get]
+func (c *ApiController) ListBizRoleMembers() {
+	roleId, ok := c.parseIdQuery("roleId")
+	if !ok {
+		return
+	}
+	offset, _ := strconv.Atoi(c.Ctx.Input.Query("offset"))
+	limit, _ := strconv.Atoi(c.Ctx.Input.Query("limit"))
+	if limit <= 0 {
+		limit = 50
+	}
+
+	members, total, err := object.ListBizRoleMembersPaged(roleId, offset, limit)
+	if err != nil {
+		c.ResponseError(err.Error())
+		return
+	}
+	c.ResponseOk(map[string]interface{}{
+		"members": members,
+		"total":   total,
+	})
+}
+
+// AddBizRoleMember
+// @Summary Add a member (user/group) to a role
+// @Tags Business Permission API
+// @Param   body    body   object.BizRoleMember  true  "{roleId, subjectType, subjectId}"
+// @Success 200 {object} ActionResponse "Action result"
+// @Router /biz-add-role-member [post]
+func (c *ApiController) AddBizRoleMember() {
+	var m object.BizRoleMember
+	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &m); err != nil {
+		c.ResponseError(err.Error())
+		return
+	}
+	if m.RoleId == 0 {
+		c.ResponseError("roleId is required")
+		return
+	}
+
+	// Load the role so we surface "role not found" early (more helpful than
+	// an FK error). Same pattern as the id-based update/delete guards above.
+	role, err := object.GetBizRoleById(m.RoleId)
+	if err != nil {
+		c.ResponseError(err.Error())
+		return
+	}
+	if role == nil {
+		c.ResponseError(fmt.Sprintf("role not found: id=%d", m.RoleId))
+		return
+	}
+
+	c.Data["json"] = c.wrapBizActionResponse(object.AddBizRoleMember(&m, c.GetSessionUsername()))
+	c.ServeJSON()
+}
+
+// RemoveBizRoleMember
+// @Summary Remove a member from a role
+// @Tags Business Permission API
+// @Param   body    body   object.BizRoleMember  true  "{roleId, subjectType, subjectId}"
+// @Success 200 {object} ActionResponse "Action result"
+// @Router /biz-remove-role-member [post]
+func (c *ApiController) RemoveBizRoleMember() {
+	var m object.BizRoleMember
+	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &m); err != nil {
+		c.ResponseError(err.Error())
+		return
+	}
+	if m.RoleId == 0 {
+		c.ResponseError("roleId is required")
+		return
+	}
+
+	c.Data["json"] = c.wrapBizActionResponse(object.RemoveBizRoleMember(m.RoleId, m.SubjectType, m.SubjectId))
+	c.ServeJSON()
+}
+
+// ListUserRoles
+// @Summary List all roles a user belongs to within an organization
+// @Tags Business Permission API
+// @Param   organization  query  string  true  "The organization"
+// @Param   userId        query  string  true  "The user id (typically org/username)"
+// @Success 200 {object} BizRoleListResponse "The Response object"
+// @Router /biz-list-user-roles [get]
+func (c *ApiController) ListUserRoles() {
+	org := c.Ctx.Input.Query("organization")
+	userId := c.Ctx.Input.Query("userId")
+	if org == "" || userId == "" {
+		c.ResponseError("organization and userId are required")
+		return
+	}
+
+	roles, err := object.ListUserRoles(org, userId)
+	if err != nil {
+		c.ResponseError(err.Error())
+		return
+	}
+	c.ResponseOk(roles)
+}
+
+// ── BizRole inheritance ──
+
+// ListRoleParents
+// @Summary List direct parent roles (one level up) of a role
+// @Tags Business Permission API
+// @Param   roleId  query  int64  true  "The child role id"
+// @Success 200 {object} BizRoleListResponse "The Response object"
+// @Router /biz-list-role-parents [get]
+func (c *ApiController) ListRoleParents() {
+	roleId, ok := c.parseIdQuery("roleId")
+	if !ok {
+		return
+	}
+	parents, err := object.ListParentRoles(roleId)
+	if err != nil {
+		c.ResponseError(err.Error())
+		return
+	}
+	c.ResponseOk(parents)
+}
+
+// ListRoleChildren
+// @Summary List direct child roles (one level down) of a role
+// @Tags Business Permission API
+// @Param   roleId  query  int64  true  "The parent role id"
+// @Success 200 {object} BizRoleListResponse "The Response object"
+// @Router /biz-list-role-children [get]
+func (c *ApiController) ListRoleChildren() {
+	roleId, ok := c.parseIdQuery("roleId")
+	if !ok {
+		return
+	}
+	children, err := object.ListChildRoles(roleId)
+	if err != nil {
+		c.ResponseError(err.Error())
+		return
+	}
+	c.ResponseOk(children)
+}
+
+// roleInheritanceEdge is the body shape for add/remove-role-inheritance.
+// Kept as a local type so swag can document the field names.
+type roleInheritanceEdge struct {
+	ParentRoleId int64 `json:"parentRoleId"`
+	ChildRoleId  int64 `json:"childRoleId"`
+}
+
+// AddRoleInheritance
+// @Summary Add a role inheritance edge (child inherits from parent)
+// @Tags Business Permission API
+// @Description Cycle, depth, and cross-scope rules are enforced at the object-layer.
+// @Param   body    body   roleInheritanceEdge  true  "{parentRoleId, childRoleId}"
+// @Success 200 {object} ActionResponse "Action result"
+// @Router /biz-add-role-inheritance [post]
+func (c *ApiController) AddRoleInheritance() {
+	var edge roleInheritanceEdge
+	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &edge); err != nil {
+		c.ResponseError(err.Error())
+		return
+	}
+	if edge.ParentRoleId == 0 || edge.ChildRoleId == 0 {
+		c.ResponseError("parentRoleId and childRoleId are required")
+		return
+	}
+
+	c.Data["json"] = c.wrapBizActionResponse(object.AddBizRoleInheritance(edge.ParentRoleId, edge.ChildRoleId))
+	c.ServeJSON()
+}
+
+// RemoveRoleInheritance
+// @Summary Remove a role inheritance edge
+// @Tags Business Permission API
+// @Param   body    body   roleInheritanceEdge  true  "{parentRoleId, childRoleId}"
+// @Success 200 {object} ActionResponse "Action result"
+// @Router /biz-remove-role-inheritance [post]
+func (c *ApiController) RemoveRoleInheritance() {
+	var edge roleInheritanceEdge
+	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &edge); err != nil {
+		c.ResponseError(err.Error())
+		return
+	}
+	if edge.ParentRoleId == 0 || edge.ChildRoleId == 0 {
+		c.ResponseError("parentRoleId and childRoleId are required")
+		return
+	}
+
+	c.Data["json"] = c.wrapBizActionResponse(object.RemoveBizRoleInheritance(edge.ParentRoleId, edge.ChildRoleId))
+	c.ServeJSON()
+}
+
+// ── BizPermission CRUD (id-based) ──
 
 // GetBizPermissions
-// @Summary Get business permissions
+// @Summary Get business permissions in an app
 // @Tags Business Permission API
-// @Description Get all business permissions for an app
-// @Param   owner     query    string  true  "The owner (organization)"
-// @Param   app       query    string  true  "The app name"
+// @Param   organization  query  string  true  "The organization (permission owner)"
+// @Param   appName       query  string  true  "The app name"
 // @Success 200 {object} BizPermissionListResponse "The Response object"
 // @Router /biz-get-permissions [get]
 func (c *ApiController) GetBizPermissions() {
-	owner := c.Ctx.Input.Query("owner")
-	appName := c.Ctx.Input.Query("app")
+	org := c.Ctx.Input.Query("organization")
+	appName := c.Ctx.Input.Query("appName")
 
-	perms, err := object.GetBizPermissions(owner, appName)
+	perms, err := object.GetBizPermissions(org, appName)
 	if err != nil {
 		c.ResponseError(err.Error())
 		return
@@ -365,38 +624,37 @@ func (c *ApiController) GetBizPermissions() {
 }
 
 // GetBizPermission
-// @Summary Get business permission
+// @Summary Get a business permission by id
 // @Tags Business Permission API
-// @Description Get a single business permission
-// @Param   owner     query    string  true  "The owner (organization)"
-// @Param   app       query    string  true  "The app name"
-// @Param   name      query    string  true  "The permission name"
+// @Param   id     query    int64   true  "The numeric permission id"
 // @Success 200 {object} BizPermissionResponse "The Response object"
 // @Router /biz-get-permission [get]
 func (c *ApiController) GetBizPermission() {
-	owner := c.Ctx.Input.Query("owner")
-	appName := c.Ctx.Input.Query("app")
-	name := c.Ctx.Input.Query("name")
-
-	perm, err := object.GetBizPermission(owner, appName, name)
+	id, ok := c.parseIdQuery("id")
+	if !ok {
+		return
+	}
+	perm, err := object.GetBizPermissionById(id)
 	if err != nil {
 		c.ResponseError(err.Error())
+		return
+	}
+	if perm == nil {
+		c.ResponseError(fmt.Sprintf("permission not found: id=%d", id))
 		return
 	}
 	c.ResponseOk(perm)
 }
 
 // AddBizPermission
-// @Summary Add business permission
+// @Summary Add a business permission
 // @Tags Business Permission API
-// @Description Create a new business permission rule
-// @Param   body    body   object.BizPermission  true  "The details of the permission"
+// @Param   body    body   object.BizPermission  true  "The permission (must include owner, appName, name)"
 // @Success 200 {object} ActionResponse "Action result"
 // @Router /biz-add-permission [post]
 func (c *ApiController) AddBizPermission() {
 	var perm object.BizPermission
-	err := json.Unmarshal(c.Ctx.Input.RequestBody, &perm)
-	if err != nil {
+	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &perm); err != nil {
 		c.ResponseError(err.Error())
 		return
 	}
@@ -406,56 +664,203 @@ func (c *ApiController) AddBizPermission() {
 }
 
 // UpdateBizPermission
-// @Summary Update business permission
+// @Summary Update an existing business permission
 // @Tags Business Permission API
-// @Description Update an existing business permission rule
-// @Param   owner     query    string  true  "The owner (organization)"
-// @Param   app       query    string  true  "The app name"
-// @Param   name      query    string  true  "The permission name"
-// @Param   body    body   object.BizPermission  true  "The details of the permission"
+// @Param   id      query   int64                 true  "The numeric permission id"
+// @Param   body    body    object.BizPermission  true  "The permission (owner and appName must match the existing row)"
 // @Success 200 {object} ActionResponse "Action result"
 // @Router /biz-update-permission [post]
 func (c *ApiController) UpdateBizPermission() {
-	owner := c.Ctx.Input.Query("owner")
-	appName := c.Ctx.Input.Query("app")
-	name := c.Ctx.Input.Query("name")
+	id, ok := c.parseIdQuery("id")
+	if !ok {
+		return
+	}
 
 	var perm object.BizPermission
-	err := json.Unmarshal(c.Ctx.Input.RequestBody, &perm)
-	if err != nil {
+	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &perm); err != nil {
 		c.ResponseError(err.Error())
 		return
 	}
 
-	// Authz is granted against body owner/appName; query params drive the DB
-	// WHERE clause. Without this match, an attacker in tenant A can pass authz
-	// with body.owner=A while query.owner points at tenant B's row.
-	if perm.Owner != owner || perm.AppName != appName {
-		c.ResponseError("body owner/appName must match query parameters")
+	existing, err := object.GetBizPermissionById(id)
+	if err != nil {
+		c.ResponseError(err.Error())
+		return
+	}
+	if existing == nil {
+		c.ResponseError(fmt.Sprintf("permission not found: id=%d", id))
 		return
 	}
 
-	c.Data["json"] = c.wrapBizActionResponse(object.UpdateBizPermission(owner, appName, name, &perm))
+	// Mirror the cross-tenant-write fix: body owner/appName must match the
+	// existing row. The object-layer also rejects these mismatches but we
+	// fail fast here so clients see a clear 4xx before any side effects.
+	if perm.Owner != existing.Owner || perm.AppName != existing.AppName {
+		c.ResponseError("cannot change owner or appName via update")
+		return
+	}
+
+	c.Data["json"] = c.wrapBizActionResponse(object.UpdateBizPermission(id, &perm))
 	c.ServeJSON()
 }
 
 // DeleteBizPermission
-// @Summary Delete business permission
+// @Summary Delete a business permission by id
 // @Tags Business Permission API
-// @Description Delete a business permission rule
-// @Param   body    body   object.BizPermission  true  "The details of the permission"
+// @Param   id     query    int64   true  "The numeric permission id"
 // @Success 200 {object} ActionResponse "Action result"
 // @Router /biz-delete-permission [post]
 func (c *ApiController) DeleteBizPermission() {
-	var perm object.BizPermission
-	err := json.Unmarshal(c.Ctx.Input.RequestBody, &perm)
+	id, ok := c.parseIdQuery("id")
+	if !ok {
+		return
+	}
+
+	existing, err := object.GetBizPermissionById(id)
 	if err != nil {
 		c.ResponseError(err.Error())
 		return
 	}
+	if existing == nil {
+		c.ResponseError(fmt.Sprintf("permission not found: id=%d", id))
+		return
+	}
 
-	c.Data["json"] = c.wrapBizActionResponse(object.DeleteBizPermission(&perm))
+	c.Data["json"] = c.wrapBizActionResponse(object.DeleteBizPermission(id))
 	c.ServeJSON()
+}
+
+// ── BizPermission grantees ──
+
+// ListBizPermissionGrantees
+// @Summary List grantees of a permission (paginated)
+// @Tags Business Permission API
+// @Param   permissionId   query  int64  true   "The permission id"
+// @Param   offset         query  int    false  "Pagination offset (default 0)"
+// @Param   limit          query  int    false  "Pagination page size (default 50)"
+// @Success 200 {object} BizPermissionGranteeListResponse "The Response object"
+// @Router /biz-list-permission-grantees [get]
+func (c *ApiController) ListBizPermissionGrantees() {
+	permId, ok := c.parseIdQuery("permissionId")
+	if !ok {
+		return
+	}
+	offset, _ := strconv.Atoi(c.Ctx.Input.Query("offset"))
+	limit, _ := strconv.Atoi(c.Ctx.Input.Query("limit"))
+	if limit <= 0 {
+		limit = 50
+	}
+
+	grantees, total, err := object.ListBizPermissionGranteesPaged(permId, offset, limit)
+	if err != nil {
+		c.ResponseError(err.Error())
+		return
+	}
+	c.ResponseOk(map[string]interface{}{
+		"grantees": grantees,
+		"total":    total,
+	})
+}
+
+// AddBizPermissionGrantee
+// @Summary Grant a permission to a subject (user/group/role)
+// @Tags Business Permission API
+// @Param   body    body   object.BizPermissionGrantee  true  "{permissionId, subjectType, subjectId}"
+// @Success 200 {object} ActionResponse "Action result"
+// @Router /biz-add-permission-grantee [post]
+func (c *ApiController) AddBizPermissionGrantee() {
+	var g object.BizPermissionGrantee
+	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &g); err != nil {
+		c.ResponseError(err.Error())
+		return
+	}
+	if g.PermissionId == 0 {
+		c.ResponseError("permissionId is required")
+		return
+	}
+
+	perm, err := object.GetBizPermissionById(g.PermissionId)
+	if err != nil {
+		c.ResponseError(err.Error())
+		return
+	}
+	if perm == nil {
+		c.ResponseError(fmt.Sprintf("permission not found: id=%d", g.PermissionId))
+		return
+	}
+
+	c.Data["json"] = c.wrapBizActionResponse(object.AddBizPermissionGrantee(&g, c.GetSessionUsername()))
+	c.ServeJSON()
+}
+
+// RemoveBizPermissionGrantee
+// @Summary Revoke a permission grant from a subject
+// @Tags Business Permission API
+// @Param   body    body   object.BizPermissionGrantee  true  "{permissionId, subjectType, subjectId}"
+// @Success 200 {object} ActionResponse "Action result"
+// @Router /biz-remove-permission-grantee [post]
+func (c *ApiController) RemoveBizPermissionGrantee() {
+	var g object.BizPermissionGrantee
+	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &g); err != nil {
+		c.ResponseError(err.Error())
+		return
+	}
+	if g.PermissionId == 0 {
+		c.ResponseError("permissionId is required")
+		return
+	}
+
+	c.Data["json"] = c.wrapBizActionResponse(object.RemoveBizPermissionGrantee(g.PermissionId, g.SubjectType, g.SubjectId))
+	c.ServeJSON()
+}
+
+// ListPermissionsByRole
+// @Summary List permissions granted to a role within an organization
+// @Tags Business Permission API
+// @Param   organization  query  string  true  "The organization"
+// @Param   roleName      query  string  true  "The role name"
+// @Success 200 {object} BizPermissionListResponse "The Response object"
+// @Router /biz-list-permissions-by-role [get]
+func (c *ApiController) ListPermissionsByRole() {
+	org := c.Ctx.Input.Query("organization")
+	roleName := c.Ctx.Input.Query("roleName")
+	if org == "" || roleName == "" {
+		c.ResponseError("organization and roleName are required")
+		return
+	}
+
+	perms, err := object.ListPermissionsGrantedToRole(org, roleName)
+	if err != nil {
+		c.ResponseError(err.Error())
+		return
+	}
+	c.ResponseOk(perms)
+}
+
+// ListPermissionsByUser
+// @Summary List permissions directly granted to a user within an organization
+// @Tags Business Permission API
+// @Description Returns only direct user grants. Effective permissions (via role
+//	membership) must be composed on the caller side from biz-list-user-roles and
+//	biz-list-permissions-by-role.
+// @Param   organization  query  string  true  "The organization"
+// @Param   userId        query  string  true  "The user id (typically org/username)"
+// @Success 200 {object} BizPermissionListResponse "The Response object"
+// @Router /biz-list-permissions-by-user [get]
+func (c *ApiController) ListPermissionsByUser() {
+	org := c.Ctx.Input.Query("organization")
+	userId := c.Ctx.Input.Query("userId")
+	if org == "" || userId == "" {
+		c.ResponseError("organization and userId are required")
+		return
+	}
+
+	perms, err := object.ListPermissionsGrantedToUser(org, userId)
+	if err != nil {
+		c.ResponseError(err.Error())
+		return
+	}
+	c.ResponseOk(perms)
 }
 
 // ── Enforce ──
