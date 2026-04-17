@@ -16,6 +16,7 @@ package object
 
 import (
 	"encoding/gob"
+	"fmt"
 	"os"
 
 	"github.com/deluxebear/casdoor/util"
@@ -582,5 +583,15 @@ func initBuiltInApiEnforcer() {
 	_, err = AddEnforcer(enforcer)
 	if err != nil {
 		panic(err)
+	}
+}
+
+func InitCustomHttpEmailMigration() {
+	n, err := migrateCustomHttpEmailProviders()
+	if err != nil {
+		panic(err)
+	}
+	if n > 0 {
+		fmt.Printf("[migration] upgraded %d Custom HTTP Email providers\n", n)
 	}
 }
