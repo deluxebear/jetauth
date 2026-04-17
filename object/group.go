@@ -158,7 +158,7 @@ func UpdateGroup(id string, group *Group) (bool, error) {
 	}
 
 	if name != group.Name {
-		err := GroupChangeTrigger(name, group.Name)
+		err := GroupChangeTrigger(group.Owner, name, group.Name)
 		if err != nil {
 			return false, err
 		}
@@ -257,6 +257,22 @@ func DeleteGroup(group *Group) (bool, error) {
 		return false, err
 	} else if count > 0 {
 		return false, errors.New("group has users")
+	}
+
+	// Block deletion while biz roles or permissions still reference this
+	// group — otherwise those rows become dangling (the biz schema has no
+	// foreign key into Casdoor's Group table, so the orphans would silently
+	// match nothing at enforce time). Admin must unlink in the biz UI first.
+	groupId := group.GetId()
+	if count, err := ormer.Engine.Where("subject_type = ? AND subject_id = ?", BizRoleSubjectGroup, groupId).Count(&BizRoleMember{}); err != nil {
+		return false, err
+	} else if count > 0 {
+		return false, errors.New("group is referenced by biz role members")
+	}
+	if count, err := ormer.Engine.Where("subject_type = ? AND subject_id = ?", BizPermGranteeGroup, groupId).Count(&BizPermissionGrantee{}); err != nil {
+		return false, err
+	} else if count > 0 {
+		return false, errors.New("group is referenced by biz permission grantees")
 	}
 
 	return deleteGroup(group)
@@ -421,7 +437,10 @@ func ExtendGroupsWithUsers(groups []*Group) error {
 	return nil
 }
 
-func GroupChangeTrigger(oldName, newName string) error {
+func GroupChangeTrigger(owner, oldName, newName string) error {
+	oldGroupId := util.GetId(owner, oldName)
+	newGroupId := util.GetId(owner, newName)
+
 	session := ormer.Engine.NewSession()
 	defer session.Close()
 	err := session.Begin()
@@ -436,7 +455,11 @@ func GroupChangeTrigger(oldName, newName string) error {
 	}
 
 	for _, user := range users {
+		// Users' Groups field stores either short names or owner-qualified ids
+		// depending on the code path that wrote them. Replace both forms so
+		// either representation stays consistent after the rename.
 		user.Groups = util.ReplaceVal(user.Groups, oldName, newName)
+		user.Groups = util.ReplaceVal(user.Groups, oldGroupId, newGroupId)
 		_, err := updateUser(user.GetId(), user, []string{"groups"})
 		if err != nil {
 			return err
@@ -456,9 +479,29 @@ func GroupChangeTrigger(oldName, newName string) error {
 		}
 	}
 
+	// Biz-permission edges store group subjects as owner/name; rename the
+	// subject_id columns so existing memberships and grants survive the
+	// rename rather than turning into dangling references.
+	if _, err := session.Exec(
+		"UPDATE biz_role_member SET subject_id = ? WHERE subject_type = ? AND subject_id = ?",
+		newGroupId, BizRoleSubjectGroup, oldGroupId,
+	); err != nil {
+		return err
+	}
+	if _, err := session.Exec(
+		"UPDATE biz_permission_grantee SET subject_id = ? WHERE subject_type = ? AND subject_id = ?",
+		newGroupId, BizPermGranteeGroup, oldGroupId,
+	); err != nil {
+		return err
+	}
+
 	err = session.Commit()
 	if err != nil {
 		return err
 	}
+
+	// After commit, resync every biz app whose policies reference this group
+	// so the Casbin g-rules reflect the new id.
+	SyncAfterUserGroupsChanged(owner, []string{newGroupId})
 	return nil
 }

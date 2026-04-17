@@ -880,7 +880,39 @@ func UpdateUser(id string, user *User, columns []string, isAdmin bool) (bool, er
 		return false, err
 	}
 
+	// Biz-permission sync: User.Groups backs the `g userId groupId` rules in
+	// every biz app's Casbin policy. Without this trigger, users who leave a
+	// group keep their group-derived permissions until the next manual sync.
+	if util.InSlice(columns, "groups") {
+		SyncAfterUserGroupsChanged(user.Owner, userGroupsSymmetricDiff(oldUser.Groups, user.Groups))
+	}
+
 	return affected != 0, nil
+}
+
+// userGroupsSymmetricDiff returns the set of groups that exist in exactly one
+// of the two lists — the groups the user joined or left.
+func userGroupsSymmetricDiff(oldGroups, newGroups []string) []string {
+	oldSet := map[string]bool{}
+	newSet := map[string]bool{}
+	for _, g := range oldGroups {
+		oldSet[g] = true
+	}
+	for _, g := range newGroups {
+		newSet[g] = true
+	}
+	var diff []string
+	for g := range oldSet {
+		if !newSet[g] {
+			diff = append(diff, g)
+		}
+	}
+	for g := range newSet {
+		if !oldSet[g] {
+			diff = append(diff, g)
+		}
+	}
+	return diff
 }
 
 func updateUser(id string, user *User, columns []string) (int64, error) {
@@ -948,6 +980,11 @@ func UpdateUserForAllFields(id string, user *User) (bool, error) {
 	affected, err := ormer.Engine.ID(core.PK{owner, name}).AllCols().Update(user)
 	if err != nil {
 		return false, err
+	}
+
+	// Biz-permission sync on Groups change — see UpdateUser for rationale.
+	if diff := userGroupsSymmetricDiff(oldUser.Groups, user.Groups); len(diff) > 0 {
+		SyncAfterUserGroupsChanged(user.Owner, diff)
 	}
 
 	return affected != 0, nil
@@ -1168,6 +1205,10 @@ func DeleteUser(user *User) (bool, error) {
 		return false, err
 	}
 
+	// Snapshot the user's groups before we wipe them so we can resync any biz
+	// app whose policies still reference those groups.
+	oldGroups := append([]string{}, user.Groups...)
+
 	_, err = userEnforcer.DeleteGroupsForUser(user.GetId())
 	if err != nil {
 		return false, err
@@ -1180,10 +1221,17 @@ func DeleteUser(user *User) (bool, error) {
 	if organization != nil && organization.EnableSoftDeletion {
 		user.IsDeleted = true
 		user.DeletedTime = util.GetCurrentTime()
-		return UpdateUser(user.GetId(), user, []string{"is_deleted", "deleted_time"}, false)
-	} else {
-		return deleteUser(user)
+		ok, err := UpdateUser(user.GetId(), user, []string{"is_deleted", "deleted_time"}, false)
+		if err == nil && ok {
+			SyncAfterUserGroupsChanged(user.Owner, oldGroups)
+		}
+		return ok, err
 	}
+	ok, err := deleteUser(user)
+	if err == nil && ok {
+		SyncAfterUserGroupsChanged(user.Owner, oldGroups)
+	}
+	return ok, err
 }
 
 func GetUserInfo(user *User, scope string, aud string, host string) (*Userinfo, error) {
@@ -1286,13 +1334,20 @@ func DeleteGroupForUser(user string, group string) (bool, error) {
 		return false, err
 	}
 
+	// Capture whether this call actually removes the group so we don't trigger
+	// a biz sync on a no-op.
+	wasMember := util.InSlice(userObj.Groups, group)
 	userObj.Groups = util.DeleteVal(userObj.Groups, group)
 	_, err = updateUser(user, userObj, []string{"groups"})
 	if err != nil {
 		return false, err
 	}
 
-	return userEnforcer.DeleteGroupForUser(user, group)
+	ok, err := userEnforcer.DeleteGroupForUser(user, group)
+	if err == nil && wasMember {
+		SyncAfterUserGroupsChanged(userObj.Owner, []string{group})
+	}
+	return ok, err
 }
 
 func userChangeTrigger(oldName string, newName string) error {

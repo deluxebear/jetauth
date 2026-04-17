@@ -219,6 +219,40 @@ func maxDescendantDepth(roleId int64) (int, error) {
 	return max, nil
 }
 
+// ExpandRoleDescendants: all descendants of a role (transitive closure
+// downward). Used when a group's users change and we need to find every role
+// that transitively has that group as a member (the descendants inherit the
+// group via ancestry expansion in computeRoleGPolicies).
+func ExpandRoleDescendants(roleId int64) ([]int64, error) {
+	descendants := []int64{}
+	visited := map[int64]bool{}
+	var walk func(id int64, depth int) error
+	walk = func(id int64, depth int) error {
+		if depth > MaxBizRoleInheritanceDepth {
+			return nil
+		}
+		links := []*BizRoleInheritance{}
+		if err := ormer.Engine.Where("parent_role_id = ?", id).Find(&links); err != nil {
+			return err
+		}
+		for _, link := range links {
+			if visited[link.ChildRoleId] {
+				continue
+			}
+			visited[link.ChildRoleId] = true
+			descendants = append(descendants, link.ChildRoleId)
+			if err := walk(link.ChildRoleId, depth+1); err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+	if err := walk(roleId, 1); err != nil {
+		return nil, err
+	}
+	return descendants, nil
+}
+
 // ExpandRoleAncestors: all ancestors of a role (transitive closure upward).
 // Used by sync engine to flatten inheritance into Casbin g-rules.
 func ExpandRoleAncestors(roleId int64) ([]int64, error) {

@@ -334,6 +334,115 @@ func syncAffectedApps(org, appName string, roleId int64) {
 	}
 }
 
+// SyncAfterUserGroupsChanged is called after a user's Groups list has been
+// mutated (add/remove/replace). The ONLY way Casdoor learns that a user has
+// joined or left a group is this User.Groups field — biz_role_member and
+// biz_permission_grantee never store per-user group-membership, they store
+// the group id as a subject. At sync time, expandGroupMembership resolves
+// group→users via GetGroupUsers and emits `g userId groupId` rules. If we
+// don't retrigger that resolution when User.Groups changes, stale rules keep
+// the old user in the group forever (or the new user out of it).
+//
+// affectedGroups is the symmetric difference of oldGroups and newGroups — the
+// groups the user joined OR left. Apps whose Casbin policies reference any
+// of these groups (directly as a permission grantee, or transitively via a
+// role member + inheritance) are resynced asynchronously.
+func SyncAfterUserGroupsChanged(org string, affectedGroups []string) {
+	if len(affectedGroups) == 0 {
+		return
+	}
+	apps, err := findAppsReferencingGroups(org, affectedGroups)
+	if err != nil {
+		logs.Warning("SyncAfterUserGroupsChanged(%s): findAppsReferencingGroups failed: %v", org, err)
+		return
+	}
+	for _, app := range apps {
+		go func(o, a string) { _, _ = SyncAppPolicies(o, a) }(org, app)
+	}
+}
+
+// findAppsReferencingGroups returns the distinct app names whose Casbin
+// policies would embed any of the given groups' user lists. Two sources:
+//   1. biz_permission_grantee rows where subject is one of the groups → the
+//      app owning the permission.
+//   2. biz_role_member rows where subject is one of the groups → the role,
+//      plus every descendant role (inheritance flattens ancestor members into
+//      descendant policies), then the apps those roles belong to (app-scope)
+//      or the apps granting those roles (org-scope).
+func findAppsReferencingGroups(org string, groupIds []string) ([]string, error) {
+	if len(groupIds) == 0 {
+		return nil, nil
+	}
+	subjectIds := make([]any, 0, len(groupIds))
+	for _, id := range groupIds {
+		subjectIds = append(subjectIds, id)
+	}
+
+	appSet := map[string]bool{}
+
+	// (1) Direct permission grantees.
+	directPerms := []*BizPermission{}
+	if err := ormer.Engine.
+		Join("INNER", "biz_permission_grantee",
+			"biz_permission.id = biz_permission_grantee.permission_id").
+		Where("biz_permission.owner = ? AND biz_permission_grantee.subject_type = ?",
+			org, BizPermGranteeGroup).
+		In("biz_permission_grantee.subject_id", subjectIds...).
+		Find(&directPerms); err != nil {
+		return nil, err
+	}
+	for _, p := range directPerms {
+		appSet[p.AppName] = true
+	}
+
+	// (2) Role memberships. Include every descendant role of any role that
+	//     has the group as a direct member, since inheritance flattens the
+	//     group's users into the descendant's g-rules.
+	members := []*BizRoleMember{}
+	if err := ormer.Engine.
+		Where("subject_type = ?", BizRoleSubjectGroup).
+		In("subject_id", subjectIds...).
+		Find(&members); err != nil {
+		return nil, err
+	}
+	affectedRoleIds := map[int64]bool{}
+	for _, m := range members {
+		affectedRoleIds[m.RoleId] = true
+		descendants, err := ExpandRoleDescendants(m.RoleId)
+		if err != nil {
+			return nil, err
+		}
+		for _, d := range descendants {
+			affectedRoleIds[d] = true
+		}
+	}
+
+	for rid := range affectedRoleIds {
+		role, err := getBizRoleById(rid)
+		if err != nil || role == nil || role.Organization != org {
+			continue
+		}
+		if role.ScopeKind == BizRoleScopeApp {
+			appSet[role.AppName] = true
+			continue
+		}
+		// Org-scope: fan out to every app that grants the role.
+		apps, err := findAppsReferencingRoleName(org, role.Name)
+		if err != nil {
+			return nil, err
+		}
+		for _, a := range apps {
+			appSet[a] = true
+		}
+	}
+
+	out := make([]string, 0, len(appSet))
+	for a := range appSet {
+		out = append(out, a)
+	}
+	return out, nil
+}
+
 // findAppsReferencingRoleName returns the distinct app names whose permissions
 // grant this role. Indexed lookup via biz_permission_grantee
 // (subject_type='role', subject_id=name) → biz_permission.app_name.
