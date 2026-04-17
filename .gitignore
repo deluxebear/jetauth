@@ -44,3 +44,4 @@ jetauth_server
 casdoor.db
 jetauth.db
 cookie.txt
+.worktrees/
