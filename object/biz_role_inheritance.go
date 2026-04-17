@@ -47,6 +47,17 @@ func AddBizRoleInheritance(parentRoleId, childRoleId int64) (bool, error) {
 		return false, fmt.Errorf("inheritance must be within the same organization")
 	}
 
+	// Idempotent on duplicate PK: if already linked, return (true, nil) before
+	// running any topology checks (no new edge → no new topology to validate).
+	existing := &BizRoleInheritance{ParentRoleId: parentRoleId, ChildRoleId: childRoleId}
+	found, err := ormer.Engine.Get(existing)
+	if err != nil {
+		return false, err
+	}
+	if found {
+		return true, nil
+	}
+
 	// Scope rule: org role cannot inherit from app role
 	if parent.IsOrgScope() != child.IsOrgScope() {
 		// Child is app-scope, parent is org-scope → ALLOWED (app inherits org)
@@ -56,16 +67,26 @@ func AddBizRoleInheritance(parentRoleId, childRoleId int64) (bool, error) {
 		}
 	}
 
-	// Cycle detection
-	cycle, depth, err := detectInheritanceCycle(parentRoleId, childRoleId)
+	// Cycle detection + ancestor-side depth (edges above parent, inclusive of
+	// the starting node at depth=1 → #edges above parent = ancestorDepth - 1).
+	cycle, ancestorDepth, err := detectInheritanceCycle(parentRoleId, childRoleId)
 	if err != nil {
 		return false, err
 	}
 	if cycle {
 		return false, fmt.Errorf("adding this inheritance would create a cycle")
 	}
-	if depth > MaxBizRoleInheritanceDepth {
-		return false, fmt.Errorf("inheritance depth would exceed maximum of %d", MaxBizRoleInheritanceDepth)
+
+	// Descendant-side depth (edges below child). The proposed new edge adds 1.
+	// Total chain edges through new edge = (ancestorDepth - 1) + 1 + descendantDepth
+	//                                    = ancestorDepth + descendantDepth.
+	descendantDepth, err := maxDescendantDepth(childRoleId)
+	if err != nil {
+		return false, err
+	}
+	totalDepth := ancestorDepth + descendantDepth
+	if totalDepth > MaxBizRoleInheritanceDepth {
+		return false, fmt.Errorf("inheritance depth %d would exceed maximum of %d", totalDepth, MaxBizRoleInheritanceDepth)
 	}
 
 	link := &BizRoleInheritance{
@@ -148,6 +169,40 @@ func detectInheritanceCycle(parentRoleId, childRoleId int64) (cycle bool, maxDep
 	}
 	err = walk(parentRoleId, 1)
 	return
+}
+
+// maxDescendantDepth walks downward from the given role and returns the longest
+// chain of descendants in edges (0 if the role has no descendants).
+func maxDescendantDepth(roleId int64) (int, error) {
+	visited := map[int64]bool{roleId: true}
+	max := 0
+	var walk func(id int64, depth int) error
+	walk = func(id int64, depth int) error {
+		if depth > MaxBizRoleInheritanceDepth+2 {
+			return nil // safety cap against pathological data
+		}
+		if depth > max {
+			max = depth
+		}
+		links := []*BizRoleInheritance{}
+		if err := ormer.Engine.Where("parent_role_id = ?", id).Find(&links); err != nil {
+			return err
+		}
+		for _, link := range links {
+			if visited[link.ChildRoleId] {
+				continue
+			}
+			visited[link.ChildRoleId] = true
+			if err := walk(link.ChildRoleId, depth+1); err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+	if err := walk(roleId, 0); err != nil {
+		return 0, err
+	}
+	return max, nil
 }
 
 // ExpandRoleAncestors: all ancestors of a role (transitive closure upward).

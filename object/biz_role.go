@@ -21,9 +21,9 @@ const (
 
 type BizRole struct {
 	Id           int64  `xorm:"pk autoincr" json:"id"`
-	Organization string `xorm:"varchar(100) notnull index(ux_biz_role_app) index(ux_biz_role_org)" json:"organization"`
-	AppName      string `xorm:"varchar(100) notnull default '' index(ux_biz_role_app)" json:"appName"`
-	Name         string `xorm:"varchar(100) notnull index(ux_biz_role_app) index(ux_biz_role_org)" json:"name"`
+	Organization string `xorm:"varchar(100) notnull unique(ux_biz_role_app)" json:"organization"`
+	AppName      string `xorm:"varchar(100) notnull default '' unique(ux_biz_role_app)" json:"appName"`
+	Name         string `xorm:"varchar(100) notnull unique(ux_biz_role_app)" json:"name"`
 	ScopeKind    string `xorm:"varchar(10) notnull default 'app'" json:"scopeKind"` // BizRoleScopeOrg | BizRoleScopeApp
 	DisplayName  string `xorm:"varchar(200)" json:"displayName"`
 	Description  string `xorm:"varchar(500)" json:"description"`

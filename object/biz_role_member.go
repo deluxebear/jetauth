@@ -44,6 +44,15 @@ func AddBizRoleMember(m *BizRoleMember, addedBy string) (bool, error) {
 	if m.RoleId == 0 || m.SubjectId == "" {
 		return false, fmt.Errorf("role_id and subject_id are required")
 	}
+	// Idempotent on duplicate PK: if already member, return (true, nil).
+	existing := &BizRoleMember{RoleId: m.RoleId, SubjectType: m.SubjectType, SubjectId: m.SubjectId}
+	found, err := ormer.Engine.Get(existing)
+	if err != nil {
+		return false, err
+	}
+	if found {
+		return true, nil
+	}
 	if m.AddedTime == "" {
 		m.AddedTime = util.GetCurrentTime()
 	}
