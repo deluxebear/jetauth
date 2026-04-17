@@ -1103,6 +1103,7 @@ function SearchableSelect({
   onChange: (v: string) => void;
   placeholder?: string;
 }) {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
   const ref = useRef<HTMLDivElement>(null);
