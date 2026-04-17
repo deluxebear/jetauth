@@ -79,16 +79,17 @@ export default function AuthorizationPage() {
           const roles = rolesRes.status === "ok" && rolesRes.data ? rolesRes.data : [];
           const perms = permsRes.status === "ok" && permsRes.data ? permsRes.data : [];
 
-          // Count unique users across roles
-          const userSet = new Set<string>();
-          roles.forEach((r) => r.users?.forEach((u) => userSet.add(u)));
-          perms.forEach((p) => p.users?.forEach((u) => userSet.add(u)));
+          // User aggregation across roles/permissions moved to biz_role_member /
+          // biz_permission_grantee tables — unique count is no longer available from the
+          // role/permission list alone and would need a dedicated backend aggregation.
+          // Surface 0 for now; this is cosmetic on the app-card overview.
+          const userCount = 0;
 
           return {
             config,
             roleCount: roles.length,
             permissionCount: perms.length,
-            userCount: userSet.size,
+            userCount,
             icon: faviconMap.get(config.appName) || "",
           };
         })

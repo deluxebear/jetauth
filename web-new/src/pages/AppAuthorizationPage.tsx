@@ -1,15 +1,12 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, Plus, Play, Copy, Check, X, Users as UsersIcon, RefreshCw, RotateCcw, Pencil, Trash2, LayoutDashboard, Crown, ShieldCheck, FlaskConical, Code, UserPlus, Shield, Search, UserCheck, Mail } from "lucide-react";
+import { ArrowLeft, Plus, Play, Copy, Check, X, RefreshCw, RotateCcw, Pencil, Trash2, LayoutDashboard, Crown, ShieldCheck, FlaskConical, Code } from "lucide-react";
 import DataTable, { type Column } from "../components/DataTable";
 import { useTranslation } from "../i18n";
 import { useModal } from "../components/Modal";
 import * as BizBackend from "../backend/BizBackend";
-import * as UserBackend from "../backend/UserBackend";
 import type { BizAppConfig, BizRole, BizPermission, PoliciesExport } from "../backend/BizBackend";
-import { getInitial, getAvatarColor } from "../utils/avatar";
-import UserAvatar from "../components/UserAvatar";
 
 type TabKey = "overview" | "roles" | "permissions" | "test" | "integration";
 
@@ -77,10 +74,10 @@ export default function AppAuthorizationPage() {
     );
   }
 
-  // Stats
+  // Stats — member counts now live in biz_role_member / biz_permission_grantee tables,
+  // so we no longer aggregate users from role/permission rows. The unique-user count
+  // would require a separate endpoint; show 0 here until that's wired up (non-blocking).
   const userSet = new Set<string>();
-  roles.forEach((r) => r.users?.forEach((u) => userSet.add(u)));
-  permissions.forEach((p) => p.users?.forEach((u) => userSet.add(u)));
   const allowCount = permissions.filter((p) => p.effect === "Allow").length;
   const denyCount = permissions.filter((p) => p.effect === "Deny").length;
 
@@ -421,51 +418,18 @@ function OverviewTab({ config, roles, permissions, userCount, allowCount, denyCo
 }
 
 // ═══════ ROLES TAB ═══════
-type SlidePanel = { type: "viewUsers" | "addUser" | "addRole"; role: BizRole } | null;
+// After the id-based refactor, role rows no longer carry embedded user/sub-role arrays
+// (those live in biz_role_member and biz_role_inheritance). The list becomes leaner:
+// Name | DisplayName | Scope | IsEnabled | actions. Filter chips select by scope.
 
-function RolesTab({ roles, permissions: allPerms, onRefresh, appOwner, appName, t, modal, navigate }: {
+type RoleScopeFilter = "all" | "app" | "org";
+
+function RolesTab({ roles, onRefresh, appOwner, appName, t, modal, navigate }: {
   roles: BizRole[]; permissions: BizPermission[]; onRefresh: () => void;
   appOwner: string; appName: string;
   t: (key: any) => string; modal: any; navigate: any;
 }) {
-  const [panel, setPanel] = useState<SlidePanel>(null);
-  const [orgUsers, setOrgUsers] = useState<{ value: string; displayName: string; email: string; avatar: string }[]>([]);
-  const [panelSearch, setPanelSearch] = useState("");
-  const [panelLoading, setPanelLoading] = useState(false);
-  const [refreshing, setRefreshing] = useState(false);
-  const [recentlyAdded, setRecentlyAdded] = useState<Set<string>>(new Set());
-
-  // Load org users when a user-related panel opens (refetch each time to stay fresh)
-  const needsUsers = panel?.type === "addUser" || panel?.type === "viewUsers";
-  useEffect(() => {
-    if (!needsUsers) return;
-    UserBackend.getUsers({ owner: appOwner }).then((res) => {
-      if (res.status === "ok" && res.data) {
-        setOrgUsers(res.data.map((u: any) => ({
-          value: `${u.owner}/${u.name}`,
-          displayName: u.displayName || u.name,
-          email: u.email || "",
-          avatar: u.avatar || "",
-        })));
-      }
-    });
-  }, [needsUsers, appOwner]);
-
-  // Escape key — document-level listener for all panel types
-  useEffect(() => {
-    if (!panel) return;
-    const handler = (e: KeyboardEvent) => { if (e.key === "Escape") setPanel(null); };
-    document.addEventListener("keydown", handler);
-    return () => document.removeEventListener("keydown", handler);
-  }, [panel]);
-
-  // Lock body scroll when panel is open
-  useEffect(() => {
-    if (panel) {
-      document.body.style.overflow = "hidden";
-      return () => { document.body.style.overflow = ""; };
-    }
-  }, [panel]);
+  const [scopeFilter, setScopeFilter] = useState<RoleScopeFilter>("all");
 
   const handleAddRole = () => {
     navigate(`/authorization/${appOwner}/${appName}/roles/new`, { state: { mode: "add" } });
@@ -473,114 +437,51 @@ function RolesTab({ roles, permissions: allPerms, onRefresh, appOwner, appName, 
 
   const handleDeleteRole = (role: BizRole, e: React.MouseEvent) => {
     e.stopPropagation();
-    const warnings: string[] = [];
-    const userCount = role.users?.length ?? 0;
-    const subRoleCount = role.roles?.length ?? 0;
-    if (userCount > 0) {
-      warnings.push((t("authz.role.deleteHasUsers" as any) as string).replace("{count}", String(userCount)));
-    }
-    if (subRoleCount > 0) {
-      warnings.push((t("authz.role.deleteHasSubRoles" as any) as string).replace("{count}", String(subRoleCount)).replace("{roles}", role.roles.join(", ")));
-    }
-    const msg = warnings.length > 0
-      ? `${t("common.confirmDelete")} [${role.name}]\n\n${warnings.join("\n\n")}`
-      : `${t("common.confirmDelete")} [${role.name}]`;
-    modal.showConfirm(msg, async () => {
-      const res = await BizBackend.deleteBizRole(role);
+    if (!role.id) return;
+    modal.showConfirm(`${t("common.confirmDelete")} [${role.name}]`, async () => {
+      const res = await BizBackend.deleteBizRole(role.id!);
       if (res.status === "ok") onRefresh();
       else modal.toast(res.msg || t("common.deleteFailed" as any), "error");
     });
   };
 
-  // Quick action: add user or sub-role to a role, then save
-  const handleQuickUpdate = async (role: BizRole, field: "users" | "roles", value: string) => {
-    if (!value || panelLoading || refreshing) return;
-    const arr = [...(role[field] || [])];
-    if (arr.includes(value)) return;
-    arr.push(value);
-    const updated = { ...role, [field]: arr };
-    setPanelLoading(true);
-    const res = await BizBackend.updateBizRole(appOwner, appName, role.name, updated);
-    setPanelLoading(false);
-    if (res.status === "ok") {
-      // Flash animation: show "added" state briefly
-      setRecentlyAdded((prev) => new Set(prev).add(value));
-      setTimeout(() => setRecentlyAdded((prev) => { const next = new Set(prev); next.delete(value); return next; }), 1500);
-      modal.toast(t("authz.roles.panel.addSuccess" as any), "success");
-      setRefreshing(true);
-      onRefresh();
-      setRefreshing(false);
-    } else {
-      modal.toast(res.msg || t("common.saveFailed" as any), "error");
-    }
-  };
+  const filteredRoles = useMemo(() => {
+    if (scopeFilter === "all") return roles;
+    return roles.filter((r) => r.scopeKind === scopeFilter);
+  }, [roles, scopeFilter]);
 
-  const handleQuickRemoveUser = async (role: BizRole, userId: string) => {
-    if (panelLoading || refreshing) return;
-    const updated = { ...role, users: role.users.filter((u) => u !== userId) };
-    setPanelLoading(true);
-    const res = await BizBackend.updateBizRole(appOwner, appName, role.name, updated);
-    setPanelLoading(false);
-    if (res.status === "ok") {
-      modal.toast(t("authz.roles.panel.removeSuccess" as any), "success");
-      setRefreshing(true);
-      onRefresh();
-      setRefreshing(false);
-    } else {
-      modal.toast(res.msg || t("common.saveFailed" as any), "error");
-    }
-  };
-
-  // Precompute permission count per role (avoids O(roles*perms) per render)
-  const permCountByRole = useMemo(() => {
-    const map = new Map<string, number>();
-    allPerms.forEach((p) => p.roles?.forEach((r) => map.set(r, (map.get(r) || 0) + 1)));
-    return map;
-  }, [allPerms]);
+  const appScopeCount = roles.filter((r) => r.scopeKind === "app").length;
+  const orgScopeCount = roles.filter((r) => r.scopeKind === "org").length;
 
   const columns: Column<BizRole>[] = [
     {
-      key: "name", title: t("authz.roles.col.name"), sortable: true, filterable: true, fixed: "left" as const, width: "200px",
+      key: "name", title: t("authz.roles.col.name"), sortable: true, filterable: true, fixed: "left" as const, width: "220px",
       render: (_, r) => <Link to={`/authorization/${appOwner}/${appName}/roles/${encodeURIComponent(r.name)}`} className="font-mono font-medium text-accent hover:underline" onClick={(e) => e.stopPropagation()}>{r.name}</Link>,
     },
     {
-      key: "displayName", title: t("authz.roles.col.displayName" as any), sortable: true, filterable: true, width: "200px",
+      key: "displayName", title: t("authz.roles.col.displayName" as any), sortable: true, filterable: true, width: "220px",
       render: (_, r) => <span className="text-[12px] text-text-secondary">{r.displayName || "\u2014"}</span>,
     },
     {
-      key: "users", title: t("authz.roles.col.users"), sortable: true, width: "100px",
-      render: (_, r) => {
-        const count = r.users?.length ?? 0;
-        return (
-          <button
-            onClick={(e) => { e.stopPropagation(); setPanel({ type: "viewUsers", role: r }); setPanelSearch(""); }}
-            className={`inline-flex items-center gap-1 font-mono font-semibold rounded px-2 py-0.5 transition-colors ${count > 0 ? "text-blue-400 hover:bg-blue-500/10" : "text-text-muted hover:bg-surface-2"}`}
-            title={t("authz.roles.viewUsers" as any)}
-          >
-            <UsersIcon size={12} className="opacity-60" />
-            {count}
-          </button>
-        );
-      },
-    },
-    {
-      key: "roles", title: t("authz.roles.col.subRoles"), width: "160px",
-      render: (_, r) => <span className="text-text-muted font-mono text-[11px]">{r.roles?.length ? r.roles.join(", ") : "\u2014"}</span>,
-    },
-    {
-      key: "permCount", title: t("authz.roles.col.permCount" as any), sortable: true, width: "100px",
-      render: (_, r) => {
-        const count = permCountByRole.get(r.name) ?? 0;
-        return (
-          <span className={`inline-flex items-center gap-1 font-mono font-semibold rounded px-2 py-0.5 ${count > 0 ? "text-emerald-400" : "text-text-muted"}`}>
-            <ShieldCheck size={12} className="opacity-60" />
-            {count}
+      key: "scopeKind", title: t("bizRole.col.scope") || "Scope", sortable: true, filterable: true, width: "120px",
+      filterOptions: [
+        { label: t("bizRole.scope.app") || "App", value: "app" },
+        { label: t("bizRole.scope.org") || "Org", value: "org" },
+      ],
+      render: (_, r) => (
+        r.scopeKind === "org" ? (
+          <span className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold bg-purple-500/10 text-purple-500">
+            {t("bizRole.scope.org") || "组织共享"}
           </span>
-        );
-      },
+        ) : (
+          <span className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold bg-blue-500/10 text-blue-500">
+            {t("bizRole.scope.app") || "仅本应用"}
+          </span>
+        )
+      ),
     },
     {
-      key: "isEnabled", title: t("authz.roles.col.status" as any), sortable: true, width: "100px",
+      key: "isEnabled", title: t("authz.roles.col.status" as any), sortable: true, width: "110px",
       render: (_, r) => (
         <span className={`inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold ${r.isEnabled ? "bg-success/10 text-success" : "bg-warning/10 text-warning"}`}>
           {r.isEnabled ? t("common.enabled" as any) : t("common.disabled" as any)}
@@ -588,11 +489,9 @@ function RolesTab({ roles, permissions: allPerms, onRefresh, appOwner, appName, 
       ),
     },
     {
-      key: "__actions", title: t("common.action" as any), fixed: "right" as const, width: "160px",
+      key: "__actions", title: t("common.action" as any), fixed: "right" as const, width: "100px",
       render: (_, r) => (
         <div className="flex items-center gap-0.5">
-          <button onClick={(e) => { e.stopPropagation(); setPanel({ type: "addUser", role: r }); setPanelSearch(""); }} className="rounded p-1.5 text-text-muted hover:text-blue-500 hover:bg-blue-500/10 transition-colors" title={t("authz.roles.quickAddUser" as any)}><UserPlus size={14} /></button>
-          <button onClick={(e) => { e.stopPropagation(); setPanel({ type: "addRole", role: r }); setPanelSearch(""); }} className="rounded p-1.5 text-text-muted hover:text-emerald-500 hover:bg-emerald-500/10 transition-colors" title={t("authz.roles.quickAddRole" as any)}><Shield size={14} /></button>
           <Link to={`/authorization/${appOwner}/${appName}/roles/${encodeURIComponent(r.name)}`} className="rounded p-1.5 text-text-muted hover:text-warning hover:bg-warning/10 transition-colors" title={t("common.edit")} onClick={(e) => e.stopPropagation()}><Pencil size={14} /></Link>
           <button onClick={(e) => handleDeleteRole(r, e)} className="rounded p-1.5 text-text-muted hover:text-danger hover:bg-danger/10 transition-colors" title={t("common.delete")}><Trash2 size={14} /></button>
         </div>
@@ -600,280 +499,36 @@ function RolesTab({ roles, permissions: allPerms, onRefresh, appOwner, appName, 
     },
   ];
 
-  // Get the latest role data (roles list refreshes after onRefresh)
-  const panelRole = panel ? roles.find((r) => r.name === panel.role.name) ?? panel.role : null;
-
-  // Filter helpers for panels (memoized to avoid recomputation on every render)
-  const filteredUsersForAdd = useMemo(() => {
-    if (panel?.type !== "addUser" || !panelRole) return [];
-    return orgUsers.filter((u) => !(panelRole.users || []).includes(u.value) && (panelSearch === "" || u.value.toLowerCase().includes(panelSearch.toLowerCase()) || u.displayName.toLowerCase().includes(panelSearch.toLowerCase())));
-  }, [panel?.type, panelRole, orgUsers, panelSearch]);
-  const filteredRolesForAdd = useMemo(() => {
-    if (panel?.type !== "addRole" || !panelRole) return [];
-    return roles.filter((r) => r.name !== panelRole.name && !(panelRole.roles || []).includes(r.name) && (panelSearch === "" || r.name.toLowerCase().includes(panelSearch.toLowerCase()) || (r.displayName || "").toLowerCase().includes(panelSearch.toLowerCase())));
-  }, [panel?.type, panelRole, roles, panelSearch]);
+  const chips: { key: RoleScopeFilter; label: string; count: number }[] = [
+    { key: "all", label: t("bizRole.filter.all") || "全部", count: roles.length },
+    { key: "app", label: t("bizRole.filter.app") || "本应用", count: appScopeCount },
+    { key: "org", label: t("bizRole.filter.org") || "组织共享", count: orgScopeCount },
+  ];
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="text-[14px] font-semibold text-text-primary">{t("authz.roles.title")}</h3>
+        <div className="flex items-center gap-3">
+          <h3 className="text-[14px] font-semibold text-text-primary">{t("authz.roles.title")}</h3>
+          <div className="flex items-center gap-1.5">
+            {chips.map((c) => (
+              <button
+                key={c.key}
+                onClick={() => setScopeFilter(c.key)}
+                className={`rounded-full px-2.5 py-0.5 text-[11px] font-medium transition-colors ${
+                  scopeFilter === c.key ? "bg-accent/15 text-accent" : "bg-surface-2 text-text-muted hover:text-text-secondary"
+                }`}
+              >
+                {c.label} <span className="opacity-60">({c.count})</span>
+              </button>
+            ))}
+          </div>
+        </div>
         <button onClick={handleAddRole} className="flex items-center gap-1.5 rounded-lg bg-accent px-3 py-2 text-[12px] font-semibold text-white hover:bg-accent-hover transition-colors">
           <Plus size={14} /> {t("authz.roles.add")}
         </button>
       </div>
-      <DataTable columns={columns} data={roles} rowKey={(r) => r.name} emptyText={t("common.noData")} />
-
-      {/* ── Slide-out panel ── */}
-      <AnimatePresence>
-        {panel && panelRole && (
-          <>
-            <motion.div
-              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              className="fixed inset-0 z-[90] bg-black/30 backdrop-blur-[2px]"
-              onClick={() => setPanel(null)}
-            />
-            <motion.div
-              initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }}
-              transition={{ type: "spring", damping: 25, stiffness: 300 }}
-              className="fixed top-0 right-0 bottom-0 z-[91] w-[400px] max-w-[90vw] bg-surface-1 border-l border-border shadow-xl flex flex-col"
-            >
-              {/* ── Header ── */}
-              <div className="px-5 pt-5 pb-4">
-                <div className="flex items-start justify-between mb-3">
-                  <div className="flex items-center gap-3">
-                    <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${panel.type === "addRole" ? "from-emerald-500 to-teal-600" : "from-blue-500 to-indigo-600"} flex items-center justify-center text-white flex-shrink-0`}>
-                      {panel.type === "addRole" ? <Shield size={18} /> : panel.type === "viewUsers" ? <UsersIcon size={18} /> : <UserPlus size={18} />}
-                    </div>
-                    <div>
-                      <h3 className="text-[15px] font-semibold leading-tight">
-                        {panel.type === "viewUsers" && t("authz.roles.panel.viewUsers" as any)}
-                        {panel.type === "addUser" && t("authz.roles.panel.addUser" as any)}
-                        {panel.type === "addRole" && t("authz.roles.panel.addRole" as any)}
-                      </h3>
-                      <p className="text-[12px] text-text-muted mt-0.5 font-mono">{panelRole.name}{panelRole.displayName ? ` · ${panelRole.displayName}` : ""}</p>
-                    </div>
-                  </div>
-                  <button onClick={() => setPanel(null)} className="rounded-lg p-1.5 text-text-muted hover:bg-surface-2 transition-colors -mt-1 -mr-1"><X size={16} /></button>
-                </div>
-
-                {/* Search bar with icon */}
-                {panel.type !== "viewUsers" && (
-                  <div className="relative">
-                    <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none" />
-                    <input
-                      className="w-full rounded-lg border border-border bg-surface-2 pl-9 pr-8 py-2.5 text-[13px] text-text-primary placeholder:text-text-muted focus:border-accent focus:ring-2 focus:ring-accent/20 outline-none transition-all"
-                      placeholder={panel.type === "addUser" ? t("authz.roles.panel.searchUsers" as any) : t("authz.roles.panel.searchRoles" as any)}
-                      value={panelSearch}
-                      onChange={(e) => setPanelSearch(e.target.value)}
-                      autoFocus
-                    />
-                    {panelSearch && (
-                      <button onClick={() => setPanelSearch("")} className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded p-0.5 text-text-muted hover:text-text-secondary transition-colors">
-                        <X size={12} />
-                      </button>
-                    )}
-                  </div>
-                )}
-
-                {/* Counter badge */}
-                {panel.type !== "viewUsers" && (
-                  <div className="flex items-center gap-2 mt-2.5">
-                    <span className="text-[11px] text-text-muted">
-                      {(panel.type === "addUser"
-                        ? (t("authz.roles.panel.available" as any) as string).replace("{count}", String(filteredUsersForAdd.length))
-                        : (t("authz.roles.panel.available" as any) as string).replace("{count}", String(filteredRolesForAdd.length))
-                      )}
-                    </span>
-                    {(panelRole.users?.length ?? 0) > 0 && panel.type === "addUser" && (
-                      <>
-                        <span className="w-px h-3 bg-border" />
-                        <button
-                          onClick={() => { setPanel({ type: "viewUsers", role: panelRole }); setPanelSearch(""); }}
-                          className="text-[11px] text-accent hover:text-accent-hover transition-colors"
-                        >
-                          {(t("authz.roles.panel.assigned" as any) as string).replace("{count}", String(panelRole.users.length))}
-                        </button>
-                      </>
-                    )}
-                  </div>
-                )}
-                {panel.type === "viewUsers" && (
-                  <div className="flex items-center gap-2 mt-2.5">
-                    <span className="text-[11px] text-text-muted">
-                      {(t("authz.roles.panel.assigned" as any) as string).replace("{count}", String(panelRole.users?.length ?? 0))}
-                    </span>
-                  </div>
-                )}
-              </div>
-
-              <div className="h-px bg-border" />
-
-              {/* ── Content ── */}
-              <div className="flex-1 overflow-y-auto">
-                {/* View Users */}
-                {panel.type === "viewUsers" && (
-                  (panelRole.users?.length ?? 0) === 0 ? (
-                    <div className="flex flex-col items-center justify-center py-20 px-8">
-                      <div className="w-16 h-16 rounded-2xl bg-surface-2 flex items-center justify-center mb-4">
-                        <UsersIcon size={24} className="text-text-muted/40" />
-                      </div>
-                      <p className="text-[13px] font-medium text-text-secondary mb-1">{t("authz.roles.panel.noUsersYet" as any)}</p>
-                      <p className="text-[11px] text-text-muted">{t("authz.roles.panel.noUsersHint" as any)}</p>
-                    </div>
-                  ) : (
-                    <div className="py-1">
-                      {panelRole.users.map((userId, idx) => {
-                        const info = orgUsers.find((u) => u.value === userId);
-                        return (
-                          <motion.div
-                            key={userId}
-                            initial={{ opacity: 0, x: 8 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            transition={{ delay: idx * 0.03 }}
-                            className="group flex items-center gap-3 px-5 py-2.5 hover:bg-surface-2/60 transition-colors"
-                          >
-                            <UserAvatar userId={userId} avatar={info?.avatar} />
-                            <div className="flex-1 min-w-0">
-                              <div className="text-[13px] font-medium truncate">{info?.displayName || userId.split("/")[1]}</div>
-                              <div className="flex items-center gap-2 mt-0.5">
-                                <span className="text-[11px] text-text-muted font-mono truncate">{userId}</span>
-                                {info?.email && (
-                                  <>
-                                    <span className="w-px h-3 bg-border-subtle" />
-                                    <span className="text-[10px] text-text-muted truncate flex items-center gap-1"><Mail size={9} />{info.email}</span>
-                                  </>
-                                )}
-                              </div>
-                            </div>
-                            <button
-                              onClick={() => handleQuickRemoveUser(panelRole, userId)}
-                              disabled={panelLoading}
-                              className="rounded-lg p-1.5 text-text-muted opacity-0 group-hover:opacity-100 hover:text-danger hover:bg-danger/10 transition-all"
-                              title={t("authz.roles.panel.removeUser" as any)}
-                            >
-                              <X size={14} />
-                            </button>
-                          </motion.div>
-                        );
-                      })}
-                    </div>
-                  )
-                )}
-
-                {/* Add User */}
-                {panel.type === "addUser" && (
-                  filteredUsersForAdd.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center py-20 px-8">
-                      <div className="w-16 h-16 rounded-2xl bg-surface-2 flex items-center justify-center mb-4">
-                        <Search size={24} className="text-text-muted/40" />
-                      </div>
-                      <p className="text-[13px] font-medium text-text-secondary">{t("authz.roles.panel.noResults" as any)}</p>
-                    </div>
-                  ) : (
-                    <div className="py-1">
-                      {filteredUsersForAdd.map((u, idx) => {
-                        const justAdded = recentlyAdded.has(u.value);
-                        return (
-                          <motion.button
-                            key={u.value}
-                            initial={{ opacity: 0, y: 4 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: idx * 0.02 }}
-                            onClick={() => handleQuickUpdate(panelRole, "users", u.value)}
-                            disabled={panelLoading || justAdded}
-                            className={`w-full flex items-center gap-3 px-5 py-2.5 text-left transition-all ${justAdded ? "bg-success/5" : "hover:bg-surface-2/60"} disabled:cursor-default`}
-                          >
-                            <UserAvatar userId={u.value} avatar={u.avatar} />
-                            <div className="flex-1 min-w-0">
-                              <div className="text-[13px] font-medium truncate">{u.displayName}</div>
-                              <div className="flex items-center gap-2 mt-0.5">
-                                <span className="text-[11px] text-text-muted font-mono truncate">{u.value}</span>
-                                {u.email && (
-                                  <>
-                                    <span className="w-px h-3 bg-border-subtle" />
-                                    <span className="text-[10px] text-text-muted truncate flex items-center gap-1"><Mail size={9} />{u.email}</span>
-                                  </>
-                                )}
-                              </div>
-                            </div>
-                            {justAdded ? (
-                              <span className="flex items-center gap-1 rounded-full bg-success/10 px-2 py-1 text-[10px] font-semibold text-success">
-                                <UserCheck size={12} /> {t("authz.roles.panel.added" as any)}
-                              </span>
-                            ) : (
-                              <div className="rounded-lg border border-border bg-surface-2 p-1.5 text-text-muted hover:border-accent hover:text-accent hover:bg-accent/5 transition-all">
-                                <Plus size={14} />
-                              </div>
-                            )}
-                          </motion.button>
-                        );
-                      })}
-                    </div>
-                  )
-                )}
-
-                {/* Add Sub-Role */}
-                {panel.type === "addRole" && (
-                  filteredRolesForAdd.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center py-20 px-8">
-                      <div className="w-16 h-16 rounded-2xl bg-surface-2 flex items-center justify-center mb-4">
-                        <Search size={24} className="text-text-muted/40" />
-                      </div>
-                      <p className="text-[13px] font-medium text-text-secondary">{t("authz.roles.panel.noResults" as any)}</p>
-                    </div>
-                  ) : (
-                    <div className="py-1">
-                      {filteredRolesForAdd.map((r, idx) => {
-                        const justAdded = recentlyAdded.has(r.name);
-                        return (
-                          <motion.button
-                            key={r.name}
-                            initial={{ opacity: 0, y: 4 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: idx * 0.02 }}
-                            onClick={() => handleQuickUpdate(panelRole, "roles", r.name)}
-                            disabled={panelLoading || justAdded}
-                            className={`w-full flex items-center gap-3 px-5 py-2.5 text-left transition-all ${justAdded ? "bg-success/5" : "hover:bg-surface-2/60"} disabled:cursor-default`}
-                          >
-                            <div className="w-9 h-9 rounded-xl bg-surface-2 border border-border flex items-center justify-center text-text-muted flex-shrink-0">
-                              <Shield size={15} />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <div className="text-[13px] font-medium truncate font-mono">{r.name}</div>
-                              <div className="text-[11px] text-text-muted mt-0.5">{r.displayName || "\u2014"} · {r.users?.length ?? 0} {t("authz.roles.col.users" as any).toLowerCase()}</div>
-                            </div>
-                            {justAdded ? (
-                              <span className="flex items-center gap-1 rounded-full bg-success/10 px-2 py-1 text-[10px] font-semibold text-success">
-                                <Check size={12} /> {t("authz.roles.panel.added" as any)}
-                              </span>
-                            ) : (
-                              <div className="rounded-lg border border-border bg-surface-2 p-1.5 text-text-muted hover:border-emerald-500 hover:text-emerald-500 hover:bg-emerald-500/5 transition-all">
-                                <Plus size={14} />
-                              </div>
-                            )}
-                          </motion.button>
-                        );
-                      })}
-                    </div>
-                  )
-                )}
-              </div>
-
-              {/* ── Footer ── */}
-              {panel.type === "viewUsers" && (
-                <div className="px-5 py-3 border-t border-border flex items-center justify-center">
-                  <button
-                    onClick={() => { setPanel({ type: "addUser", role: panelRole }); setPanelSearch(""); }}
-                    className="inline-flex items-center gap-1.5 rounded-lg bg-accent/10 px-4 py-2 text-[12px] font-semibold text-accent hover:bg-accent/20 transition-colors"
-                  >
-                    <UserPlus size={14} /> {t("authz.roles.quickAddUser" as any)}
-                  </button>
-                </div>
-              )}
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
+      <DataTable columns={columns} data={filteredRoles} rowKey={(r) => r.name} emptyText={t("common.noData")} />
     </div>
   );
 }
@@ -890,8 +545,9 @@ function PermissionsTab({ permissions, onRefresh, appOwner, appName, t, modal, n
 
   const handleDeletePermission = (perm: BizPermission, e: React.MouseEvent) => {
     e.stopPropagation();
+    if (!perm.id) return;
     modal.showConfirm(`${t("common.confirmDelete")} [${perm.name}]`, async () => {
-      const res = await BizBackend.deleteBizPermission(perm);
+      const res = await BizBackend.deleteBizPermission(perm.id!);
       if (res.status === "ok") onRefresh();
       else modal.toast(res.msg || t("common.deleteFailed" as any), "error");
     });
@@ -906,18 +562,10 @@ function PermissionsTab({ permissions, onRefresh, appOwner, appName, t, modal, n
       key: "displayName", title: t("authz.roles.col.displayName" as any), sortable: true, filterable: true, width: "140px",
       render: (_, p) => <span className="text-[12px] text-text-secondary">{p.displayName || "\u2014"}</span>,
     },
+    // Grantees no longer live on the permission row (they're in biz_permission_grantee)
+    // so the "Subject" column was dropped. The edit page's grantee table surfaces them.
     {
-      key: "subjects", title: t("authz.perms.col.subject"), width: "200px",
-      render: (_, p) => (
-        <div className="flex flex-wrap gap-1">
-          {p.roles?.map((r) => <span key={r} className="inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold bg-accent/10 text-accent">{r}</span>)}
-          {p.users?.filter((u) => u !== "*").map((u) => <span key={u} className="inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold bg-blue-500/10 text-blue-400">{u}</span>)}
-          {p.users?.includes("*") && <span className="inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold bg-amber-500/10 text-amber-400">*</span>}
-        </div>
-      ),
-    },
-    {
-      key: "resources", title: t("authz.perms.col.resources"), width: "250px",
+      key: "resources", title: t("authz.perms.col.resources"), width: "260px",
       render: (_, p) => <span className="font-mono text-[11px] text-text-secondary">{p.resources?.join(", ") || "\u2014"}</span>,
     },
     {
@@ -1020,17 +668,16 @@ function TestTab({ appOwner, appName, config, roles, permissions, t }: {
     return false;
   }, [config?.modelText]);
 
-  // Extract suggestions from existing data
+  // Extract suggestions from existing data. Subject list is now limited to role names
+  // since direct user/group grants live in biz_permission_grantee and aren't loaded here.
   const suggestions = useMemo(() => {
     const subjects = new Set<string>();
     const resources = new Set<string>();
     const actions = new Set<string>();
-    roles.forEach((r) => { r.users?.forEach((u) => subjects.add(u)); subjects.add(r.name); });
+    roles.forEach((r) => { subjects.add(r.name); });
     permissions.forEach((p) => {
-      p.users?.forEach((u) => subjects.add(u));
-      p.roles?.forEach((r) => subjects.add(r));
-      p.resources?.forEach((r) => resources.add(r));
-      p.actions?.forEach((a) => actions.add(a));
+      (p.resources ?? []).forEach((r) => resources.add(r));
+      (p.actions ?? []).forEach((a) => actions.add(a));
     });
     return {
       subjects: [...subjects].sort(),
