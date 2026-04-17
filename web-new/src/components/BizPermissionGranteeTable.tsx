@@ -1,4 +1,6 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useMutation, useQuery, useQueryClient, keepPreviousData } from "@tanstack/react-query";
+import { bizKeys } from "../backend/bizQueryKeys";
 import { motion, AnimatePresence } from "framer-motion";
 import { Check, ChevronLeft, ChevronRight, Plus, Search, Shield, User as UserIcon, Users as UsersIcon, X } from "lucide-react";
 import { inputClass } from "./FormSection";
@@ -27,52 +29,64 @@ type FilterKind = "all" | BizPermissionGranteeSubjectType;
 export default function BizPermissionGranteeTable({ permissionId, organization, appName, onChanged }: Props) {
   const { t } = useTranslation();
   const modal = useModal();
-  const [loading, setLoading] = useState(false);
-  const [grantees, setGrantees] = useState<BizPermissionGrantee[]>([]);
-  const [total, setTotal] = useState(0);
+  const queryClient = useQueryClient();
   const [offset, setOffset] = useState(0);
   const [filter, setFilter] = useState<FilterKind>("all");
   const [showAdd, setShowAdd] = useState(false);
 
-  const load = useCallback(() => {
-    if (!permissionId) return;
-    setLoading(true);
-    // Note: server-side filtering by subjectType is not an endpoint concern — we filter
-    // on the client over the current page. If this ever becomes a perf issue, add a
-    // subjectType query param to biz-list-permission-grantees.
-    BizBackend.listBizPermissionGrantees(permissionId, offset, PAGE_SIZE)
-      .then((res) => {
-        if (res.status === "ok" && res.data) {
-          setGrantees(res.data.grantees ?? []);
-          setTotal(res.data.total ?? 0);
-        } else {
-          modal.toast(friendlyError(res.msg, t) || res.msg, "error");
-        }
-      })
-      .finally(() => setLoading(false));
-  }, [permissionId, offset, modal, t]);
+  // Note: server-side filtering by subjectType is not an endpoint concern — we filter
+  // on the client over the current page. If this ever becomes a perf issue, add a
+  // subjectType query param to biz-list-permission-grantees.
+  const listQuery = useQuery({
+    enabled: !!permissionId,
+    queryKey: bizKeys.permissionGranteesPage(permissionId, offset),
+    placeholderData: keepPreviousData,
+    queryFn: async () => {
+      const res = await BizBackend.listBizPermissionGrantees(permissionId, offset, PAGE_SIZE);
+      if (res.status !== "ok" || !res.data) {
+        throw new Error(friendlyError(res.msg, t) || res.msg);
+      }
+      return { grantees: res.data.grantees ?? [], total: res.data.total ?? 0 };
+    },
+  });
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    if (listQuery.error) {
+      modal.toast((listQuery.error as Error).message, "error");
+    }
+  }, [listQuery.error, modal]);
+
+  const grantees = listQuery.data?.grantees ?? [];
+  const total = listQuery.data?.total ?? 0;
+  const loading = listQuery.isLoading;
+
+  const invalidate = () =>
+    queryClient.invalidateQueries({ queryKey: bizKeys.permissionGrantees(permissionId) });
 
   const filtered = useMemo(() => {
     if (filter === "all") return grantees;
     return grantees.filter((g) => g.subjectType === filter);
   }, [grantees, filter]);
 
-  const handleRemove = (g: BizPermissionGrantee) => {
-    const msg = (t("bizPerm.grantee.confirmRemove") || "Revoke grant to {id}?")
-      .replace("{id}", g.subjectId);
-    modal.showConfirm(msg, async () => {
-      const res = await BizBackend.removeBizPermissionGrantee(g);
+  const removeMutation = useMutation({
+    mutationFn: (g: BizPermissionGrantee) => BizBackend.removeBizPermissionGrantee(g),
+    onSuccess: (res) => {
       if (res.status === "ok") {
         modal.toast(t("common.deleteSuccess") || "Revoked", "success");
         if (grantees.length === 1 && offset > 0) setOffset(Math.max(0, offset - PAGE_SIZE));
-        else load();
+        else invalidate();
         onChanged?.();
       } else {
         modal.toast(friendlyError(res.msg, t) || res.msg, "error");
       }
-    });
+    },
+    onError: (err: Error) => modal.toast(err.message || t("common.error"), "error"),
+  });
+
+  const handleRemove = (g: BizPermissionGrantee) => {
+    const msg = (t("bizPerm.grantee.confirmRemove") || "Revoke grant to {id}?")
+      .replace("{id}", g.subjectId);
+    modal.showConfirm(msg, () => { removeMutation.mutate(g); });
   };
 
   const page = Math.floor(offset / PAGE_SIZE) + 1;
@@ -199,7 +213,7 @@ export default function BizPermissionGranteeTable({ permissionId, organization, 
             onAdded={() => {
               setShowAdd(false);
               setOffset(0);
-              load();
+              invalidate();
               onChanged?.();
             }}
           />

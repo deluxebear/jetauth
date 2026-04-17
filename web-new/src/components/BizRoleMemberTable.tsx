@@ -1,4 +1,6 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useMutation, useQuery, useQueryClient, keepPreviousData } from "@tanstack/react-query";
+import { bizKeys } from "../backend/bizQueryKeys";
 import { motion, AnimatePresence } from "framer-motion";
 import { Check, ChevronLeft, ChevronRight, Plus, Search, User as UserIcon, Users as UsersIcon, X } from "lucide-react";
 import { inputClass } from "./FormSection";
@@ -44,44 +46,61 @@ function SubjectTypeBadge({ type }: { type: BizRoleMemberSubjectType }) {
 export default function BizRoleMemberTable({ roleId, organization, onChanged }: Props) {
   const { t } = useTranslation();
   const modal = useModal();
-  const [loading, setLoading] = useState(false);
-  const [members, setMembers] = useState<BizRoleMember[]>([]);
-  const [total, setTotal] = useState(0);
+  const queryClient = useQueryClient();
   const [offset, setOffset] = useState(0);
   const [showAdd, setShowAdd] = useState(false);
 
-  const load = useCallback(() => {
-    if (!roleId) return;
-    setLoading(true);
-    BizBackend.listBizRoleMembers(roleId, offset, PAGE_SIZE)
-      .then((res) => {
-        if (res.status === "ok" && res.data) {
-          setMembers(res.data.members ?? []);
-          setTotal(res.data.total ?? 0);
-        } else {
-          modal.toast(friendlyError(res.msg, t) || t("common.loadFailed") || res.msg, "error");
-        }
-      })
-      .finally(() => setLoading(false));
-  }, [roleId, offset, modal, t]);
+  const listQuery = useQuery({
+    enabled: !!roleId,
+    queryKey: bizKeys.roleMembersPage(roleId, offset),
+    // Keep the previous page visible during pagination refetch — prevents
+    // the table from flashing to a loading state when the offset changes.
+    placeholderData: keepPreviousData,
+    queryFn: async () => {
+      const res = await BizBackend.listBizRoleMembers(roleId, offset, PAGE_SIZE);
+      if (res.status !== "ok" || !res.data) {
+        throw new Error(friendlyError(res.msg, t) || t("common.loadFailed") || res.msg);
+      }
+      return { members: res.data.members ?? [], total: res.data.total ?? 0 };
+    },
+  });
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    if (listQuery.error) {
+      modal.toast((listQuery.error as Error).message, "error");
+    }
+  }, [listQuery.error, modal]);
 
-  const handleRemove = (m: BizRoleMember) => {
-    const msg =
-      (t("bizRole.member.confirmRemove") || "Remove member {id} from this role?").replace("{id}", m.subjectId);
-    modal.showConfirm(msg, async () => {
-      const res = await BizBackend.removeBizRoleMember(m);
+  const members = listQuery.data?.members ?? [];
+  const total = listQuery.data?.total ?? 0;
+  const loading = listQuery.isLoading;
+
+  // Invalidate every page for this role — simplest correct behavior, since a
+  // remove from any page shifts the set. If this becomes a perf issue, switch
+  // to setQueryData + optimistic slice update.
+  const invalidate = () =>
+    queryClient.invalidateQueries({ queryKey: bizKeys.roleMembers(roleId) });
+
+  const removeMutation = useMutation({
+    mutationFn: (m: BizRoleMember) => BizBackend.removeBizRoleMember(m),
+    onSuccess: (res) => {
       if (res.status === "ok") {
         modal.toast(t("common.deleteSuccess") || "Removed", "success");
         // If we deleted the last visible row on a non-first page, step back one page
         if (members.length === 1 && offset > 0) setOffset(Math.max(0, offset - PAGE_SIZE));
-        else load();
+        else invalidate();
         onChanged?.();
       } else {
         modal.toast(friendlyError(res.msg, t) || res.msg, "error");
       }
-    });
+    },
+    onError: (err: Error) => modal.toast(err.message || t("common.error"), "error"),
+  });
+
+  const handleRemove = (m: BizRoleMember) => {
+    const msg =
+      (t("bizRole.member.confirmRemove") || "Remove member {id} from this role?").replace("{id}", m.subjectId);
+    modal.showConfirm(msg, () => { removeMutation.mutate(m); });
   };
 
   const page = Math.floor(offset / PAGE_SIZE) + 1;
@@ -195,7 +214,7 @@ export default function BizRoleMemberTable({ roleId, organization, onChanged }: 
               setShowAdd(false);
               // After adding, reset to first page so the user sees their additions.
               setOffset(0);
-              load();
+              invalidate();
               onChanged?.();
             }}
           />

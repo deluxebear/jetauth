@@ -898,6 +898,41 @@ func (c *ApiController) BizEnforce() {
 	c.ResponseOk(result)
 }
 
+// BizEnforceEx
+// @Summary Enforce with explanation (for admin UI)
+// @Tags Business Permission API
+// @Description Same as BizEnforce but also returns the matched policy and the
+// subject's transitive role chain, so the admin test page can explain the
+// decision. Intended for interactive debugging, not SDK hot paths.
+// @Param   appId   query    string           true   "The app id (owner/appName)"
+// @Param   body    body     []interface{}    true   "The Casbin request array"
+// @Success 200 {object} object.EnforceTraceResult "allowed + matched policy + role chain"
+// @Router /biz-enforce-ex [post]
+func (c *ApiController) BizEnforceEx() {
+	appId := c.Ctx.Input.Query("appId")
+
+	owner, appName, err := util.GetOwnerAndNameFromIdWithError(appId)
+	if err != nil {
+		c.ResponseError(err.Error())
+		return
+	}
+
+	var request []interface{}
+	err = json.Unmarshal(c.Ctx.Input.RequestBody, &request)
+	if err != nil {
+		c.ResponseError(err.Error())
+		return
+	}
+
+	result, err := object.BizEnforceEx(owner, appName, request, c.GetAcceptLanguage())
+	if err != nil {
+		c.ResponseError(err.Error())
+		return
+	}
+
+	c.ResponseOk(result)
+}
+
 // BizBatchEnforce
 // @Summary Batch enforce business permissions
 // @Tags Business Permission API

@@ -9,6 +9,8 @@
 package object
 
 import (
+	"sync"
+
 	"github.com/casbin/casbin/v3"
 	"github.com/casbin/casbin/v3/model"
 	"github.com/deluxebear/casdoor/util"
@@ -34,6 +36,13 @@ type BizAppConfig struct {
 	SupportsDeny bool `xorm:"-" json:"supportsDeny"`
 }
 
+// modelDenySupportCache memoizes modelTextSupportsDeny by the exact model
+// text. ModelText is admin-controlled and mostly static — distinct values
+// are few, so the cache is naturally bounded and never needs eviction. The
+// alternative (parsing a Casbin model + building an enforcer on every app
+// read) was measurable backend overhead on large-tenant list endpoints.
+var modelDenySupportCache sync.Map // modelText string → bool
+
 // modelTextSupportsDeny probes a Casbin model text to report whether
 // Effect=Deny has a chance of firing. Shared by JSON marshalling of
 // BizAppConfig and by the save-time validator.
@@ -41,6 +50,15 @@ func modelTextSupportsDeny(modelText string) bool {
 	if modelText == "" {
 		return false
 	}
+	if v, ok := modelDenySupportCache.Load(modelText); ok {
+		return v.(bool)
+	}
+	result := computeModelSupportsDeny(modelText)
+	modelDenySupportCache.Store(modelText, result)
+	return result
+}
+
+func computeModelSupportsDeny(modelText string) bool {
 	m, err := model.NewModelFromString(modelText)
 	if err != nil {
 		return false

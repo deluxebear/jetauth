@@ -1,4 +1,6 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { bizKeys } from "../backend/bizQueryKeys";
 import { motion, AnimatePresence } from "framer-motion";
 import { Check, Plus, Search, Shield, X } from "lucide-react";
 import { inputClass } from "./FormSection";
@@ -22,51 +24,73 @@ interface Props {
 export default function BizRoleInheritancePicker({ roleId, organization: _organization, candidatePool, onChanged }: Props) {
   const { t } = useTranslation();
   const modal = useModal();
-  const [parents, setParents] = useState<BizRole[]>([]);
-  const [loading, setLoading] = useState(false);
+  const queryClient = useQueryClient();
   const [showAdd, setShowAdd] = useState(false);
 
-  const load = useCallback(() => {
-    if (!roleId) return;
-    setLoading(true);
-    BizBackend.listRoleParents(roleId)
-      .then((res) => {
-        if (res.status === "ok" && res.data) setParents(res.data);
-      })
-      .finally(() => setLoading(false));
-  }, [roleId]);
+  const parentsQuery = useQuery({
+    enabled: !!roleId,
+    queryKey: bizKeys.roleParents(roleId),
+    queryFn: async () => {
+      const res = await BizBackend.listRoleParents(roleId);
+      if (res.status !== "ok" || !res.data) {
+        throw new Error(friendlyError(res.msg, t) || res.msg);
+      }
+      return res.data;
+    },
+  });
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    if (parentsQuery.error) {
+      modal.toast((parentsQuery.error as Error).message, "error");
+    }
+  }, [parentsQuery.error, modal]);
+
+  const parents = parentsQuery.data ?? [];
+  const loading = parentsQuery.isLoading;
+  const invalidate = () =>
+    queryClient.invalidateQueries({ queryKey: bizKeys.roleParents(roleId) });
 
   const parentIds = useMemo(() => new Set(parents.map((p) => p.id!)), [parents]);
 
-  const addParent = async (parent: BizRole) => {
+  const addMutation = useMutation({
+    mutationFn: (parentId: number) => BizBackend.addBizRoleInheritance(parentId, roleId),
+    onSuccess: (res) => {
+      if (res.status === "ok") {
+        modal.toast(t("common.saveSuccess") || "Added", "success");
+        invalidate();
+        onChanged?.();
+      } else {
+        // Cycle detection lives server-side; its error message surfaces here.
+        modal.toast(friendlyError(res.msg, t) || res.msg, "error");
+      }
+    },
+    onError: (err: Error) => modal.toast(err.message || t("common.error"), "error"),
+  });
+
+  const addParent = (parent: BizRole) => {
     if (!parent.id || !roleId || parent.id === roleId) return;
-    const res = await BizBackend.addBizRoleInheritance(parent.id, roleId);
-    if (res.status === "ok") {
-      modal.toast(t("common.saveSuccess") || "Added", "success");
-      load();
-      onChanged?.();
-    } else {
-      // Cycle detection lives server-side; its error message surfaces here.
-      modal.toast(friendlyError(res.msg, t) || res.msg, "error");
-    }
+    addMutation.mutate(parent.id);
   };
+
+  const removeMutation = useMutation({
+    mutationFn: (parentId: number) => BizBackend.removeBizRoleInheritance(parentId, roleId),
+    onSuccess: (res) => {
+      if (res.status === "ok") {
+        modal.toast(t("common.deleteSuccess") || "Removed", "success");
+        invalidate();
+        onChanged?.();
+      } else {
+        modal.toast(friendlyError(res.msg, t) || res.msg, "error");
+      }
+    },
+    onError: (err: Error) => modal.toast(err.message || t("common.error"), "error"),
+  });
 
   const removeParent = (parent: BizRole) => {
     if (!parent.id || !roleId) return;
     const msg = (t("bizRole.inheritance.confirmRemove") || "Remove inheritance from {name}?")
       .replace("{name}", parent.displayName || parent.name);
-    modal.showConfirm(msg, async () => {
-      const res = await BizBackend.removeBizRoleInheritance(parent.id!, roleId);
-      if (res.status === "ok") {
-        modal.toast(t("common.deleteSuccess") || "Removed", "success");
-        load();
-        onChanged?.();
-      } else {
-        modal.toast(friendlyError(res.msg, t) || res.msg, "error");
-      }
-    });
+    modal.showConfirm(msg, () => { removeMutation.mutate(parent.id!); });
   };
 
   // Candidates: same org (already ensured by candidatePool being app-scoped), not self, not already a parent.

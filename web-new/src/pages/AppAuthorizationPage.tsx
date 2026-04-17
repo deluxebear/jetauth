@@ -1,5 +1,7 @@
-import { useEffect, useState, useCallback, useMemo } from "react";
-import { useParams, useNavigate, Link } from "react-router-dom";
+import { useEffect, useState, useCallback, useMemo, useRef } from "react";
+import { useQuery, useQueryClient, keepPreviousData } from "@tanstack/react-query";
+import { bizKeys } from "../backend/bizQueryKeys";
+import { useParams, useNavigate, useSearchParams, Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, Plus, Play, Copy, Check, X, RefreshCw, RotateCcw, Pencil, Trash2, LayoutDashboard, Crown, ShieldCheck, FlaskConical, Code } from "lucide-react";
 import DataTable, { type Column } from "../components/DataTable";
@@ -10,44 +12,102 @@ import type { BizAppConfig, BizRole, BizPermission, PoliciesExport } from "../ba
 
 type TabKey = "overview" | "roles" | "permissions" | "test" | "integration";
 
+const VALID_TABS: TabKey[] = ["overview", "roles", "permissions", "test", "integration"];
+
+function parseTab(raw: string | null): TabKey {
+  return (VALID_TABS as string[]).includes(raw ?? "") ? (raw as TabKey) : "overview";
+}
+
 export default function AppAuthorizationPage() {
   const { owner, appName } = useParams<{ owner: string; appName: string }>();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { t } = useTranslation();
   const modal = useModal();
 
-  const [activeTab, setActiveTab] = useState<TabKey>("overview");
-  const [loading, setLoading] = useState(true);
-  const [config, setConfig] = useState<BizAppConfig | null>(null);
-  const [roles, setRoles] = useState<BizRole[]>([]);
-  const [permissions, setPermissions] = useState<BizPermission[]>([]);
+  // Tab persists in the URL so edit pages can deep-link back to the right
+  // tab and browser refresh preserves the user's position.
+  const activeTab = parseTab(searchParams.get("tab"));
+  const setActiveTab = useCallback((tab: TabKey) => {
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      if (tab === "overview") next.delete("tab");
+      else next.set("tab", tab);
+      return next;
+    }, { replace: true });
+  }, [setSearchParams]);
+  const queryClient = useQueryClient();
+  const appId = owner && appName ? `${owner}/${appName}` : "";
+
+  // Main app data — split into 4 parallel queries so a slow "app metadata"
+  // fetch doesn't block the overview, and so children can invalidate just
+  // the slice they changed. staleTime of 30s covers the typical edit-save-
+  // return cycle without hammering the server.
+  const configQuery = useQuery({
+    enabled: !!appId,
+    queryKey: bizKeys.app(owner, appName),
+    staleTime: 30_000,
+    queryFn: async () => {
+      const res = await BizBackend.getBizAppConfig(appId);
+      return res.status === "ok" && res.data ? res.data : null;
+    },
+  });
+
+  const rolesQuery = useQuery({
+    enabled: !!owner && !!appName,
+    queryKey: bizKeys.roles(owner, appName),
+    staleTime: 30_000,
+    queryFn: async () => {
+      const res = await BizBackend.getBizRoles(owner!, appName!);
+      return res.status === "ok" && res.data ? res.data : [];
+    },
+  });
+
+  const permissionsQuery = useQuery({
+    enabled: !!owner && !!appName,
+    queryKey: bizKeys.permissions(owner, appName),
+    staleTime: 30_000,
+    queryFn: async () => {
+      const res = await BizBackend.getBizPermissions(owner!, appName!);
+      return res.status === "ok" && res.data ? res.data : [];
+    },
+  });
+
+  const appMetaQuery = useQuery({
+    enabled: !!appName,
+    queryKey: bizKeys.appMeta(appName),
+    // App metadata (favicon / logo) rarely changes — long stale window.
+    staleTime: 5 * 60_000,
+    queryFn: async () => {
+      const mod = await import("../backend/ApplicationBackend");
+      const res = await mod.getApplication("admin", appName!);
+      return res.status === "ok" && res.data ? res.data : null;
+    },
+  });
+
+  const config = configQuery.data ?? null;
+  const roles = rolesQuery.data ?? [];
+  const permissions = permissionsQuery.data ?? [];
+  const loading = configQuery.isLoading || rolesQuery.isLoading || permissionsQuery.isLoading;
+
+  const appIcon = useMemo(() => {
+    const app = appMetaQuery.data as any;
+    if (!app) return "";
+    return app.favicon && app.favicon !== "/img/favicon.png"
+      ? app.favicon
+      : (app.logo && app.logo !== "/img/logo.png" ? app.logo : "");
+  }, [appMetaQuery.data]);
+
+  // Children (edit pages, table cells, modals) invalidate via this callback
+  // after a mutation so the overview refetches without each child needing to
+  // know the query key shape.
+  const refreshData = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: bizKeys.app(owner, appName) });
+    queryClient.invalidateQueries({ queryKey: bizKeys.roles(owner, appName) });
+    queryClient.invalidateQueries({ queryKey: bizKeys.permissions(owner, appName) });
+  }, [queryClient, owner, appName]);
+
   const [syncing, setSyncing] = useState(false);
-  const [appIcon, setAppIcon] = useState("");
-
-  const fetchData = useCallback(() => {
-    if (!owner || !appName) return;
-    setLoading(true);
-    const appId = `${owner}/${appName}`;
-
-    Promise.all([
-      BizBackend.getBizAppConfig(appId).catch(() => ({ status: "error" as const, msg: "", data: null as any })),
-      BizBackend.getBizRoles(owner, appName).catch(() => ({ status: "error" as const, msg: "", data: [] as any })),
-      BizBackend.getBizPermissions(owner, appName).catch(() => ({ status: "error" as const, msg: "", data: [] as any })),
-      import("../backend/ApplicationBackend").then((mod) => mod.getApplication("admin", appName)).catch(() => ({ status: "error" as const, data: null as any })),
-    ]).then(([configRes, rolesRes, permsRes, appRes]) => {
-      if (configRes.status === "ok" && configRes.data) setConfig(configRes.data);
-      setRoles(rolesRes.status === "ok" && rolesRes.data ? rolesRes.data : []);
-      setPermissions(permsRes.status === "ok" && permsRes.data ? permsRes.data : []);
-      if (appRes.status === "ok" && appRes.data) {
-        const app = appRes.data as any;
-        const favicon = app.favicon && app.favicon !== "/img/favicon.png" ? app.favicon : (app.logo && app.logo !== "/img/logo.png" ? app.logo : "");
-        setAppIcon(favicon);
-      }
-    }).finally(() => setLoading(false));
-  }, [owner, appName]);
-
-  useEffect(() => { fetchData(); }, [fetchData]);
-
   const handleSyncPolicies = async () => {
     if (!owner || !appName) return;
     setSyncing(true);
@@ -55,7 +115,7 @@ export default function AppAuthorizationPage() {
       const res = await BizBackend.bizSyncPolicies(`${owner}/${appName}`);
       if (res.status === "ok" && res.data) {
         modal.toast(`${t("authz.overview.syncSuccess" as any)} — ${res.data.policyCount} policies, ${res.data.roleCount} roles`, "success");
-        fetchData();
+        refreshData();
       } else {
         modal.toast(res.msg || t("common.error"), "error");
       }
@@ -129,7 +189,7 @@ export default function AppAuthorizationPage() {
             <motion.button
               whileHover={{ rotate: 180 }}
               transition={{ duration: 0.3 }}
-              onClick={fetchData}
+              onClick={refreshData}
               className="rounded-lg border border-border p-2 text-text-muted hover:bg-surface-2 transition-colors"
               title={t("common.refresh")}
             >
@@ -172,7 +232,7 @@ export default function AppAuthorizationPage() {
             userCount={userSet.size}
             allowCount={allowCount}
             denyCount={denyCount}
-            onRefresh={fetchData}
+            onRefresh={refreshData}
             t={t}
             modal={modal}
           />
@@ -181,7 +241,7 @@ export default function AppAuthorizationPage() {
           <RolesTab
             roles={roles}
             permissions={permissions}
-            onRefresh={fetchData}
+            onRefresh={refreshData}
             appOwner={owner!}
             appName={appName!}
             t={t}
@@ -192,7 +252,7 @@ export default function AppAuthorizationPage() {
         {activeTab === "permissions" && (
           <PermissionsTab
             permissions={permissions}
-            onRefresh={fetchData}
+            onRefresh={refreshData}
             appOwner={owner!}
             appName={appName!}
             supportsDeny={config?.supportsDeny !== false}
@@ -658,6 +718,51 @@ function PermissionsTab({ permissions, onRefresh, appOwner, appName, supportsDen
 }
 
 // ═══════ TEST TAB ═══════
+// Candidate subject: a concrete subject you can pick from a dropdown. Users
+// and groups carry displayName so admins see something human; role/free-form
+// entries fall back to id/name.
+type SubjectCandidate = {
+  id: string;
+  displayName: string;
+  kind: "user" | "group" | "role";
+};
+
+// Persisted test-run entry. We snapshot the result + the full request so a
+// click-to-replay re-runs with exactly the same inputs.
+type TestHistoryEntry = {
+  id: string;
+  time: number;
+  sub: string;
+  dom?: string;
+  obj: string;
+  act: string;
+  allowed: boolean;
+  reason: string;
+};
+
+const TEST_HISTORY_MAX = 10;
+
+function testHistoryKey(owner: string, appName: string) {
+  return `biz-test-history:${owner}/${appName}`;
+}
+
+function loadTestHistory(owner: string, appName: string): TestHistoryEntry[] {
+  try {
+    const raw = localStorage.getItem(testHistoryKey(owner, appName));
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed.slice(0, TEST_HISTORY_MAX) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveTestHistory(owner: string, appName: string, entries: TestHistoryEntry[]) {
+  try {
+    localStorage.setItem(testHistoryKey(owner, appName), JSON.stringify(entries.slice(0, TEST_HISTORY_MAX)));
+  } catch { /* quota — not fatal */ }
+}
+
 function TestTab({ appOwner, appName, config, roles, permissions, t }: {
   appOwner: string; appName: string;
   config: BizAppConfig | null; roles: BizRole[]; permissions: BizPermission[];
@@ -667,9 +772,10 @@ function TestTab({ appOwner, appName, config, roles, permissions, t }: {
   const [obj, setObj] = useState("");
   const [act, setAct] = useState("");
   const [dom, setDom] = useState("");
-  const [result, setResult] = useState<{ allowed: boolean; detail: string } | null>(null);
+  const [result, setResult] = useState<BizBackend.EnforceTraceResult | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const [testing, setTesting] = useState(false);
-  const [history, setHistory] = useState<{ time: string; sub: string; obj: string; act: string; dom?: string; allowed: boolean }[]>([]);
+  const [history, setHistory] = useState<TestHistoryEntry[]>(() => loadTestHistory(appOwner, appName));
 
   // Detect if model uses domain by checking request_definition field count (4+ = has domain)
   const hasDomain = useMemo(() => {
@@ -684,156 +790,574 @@ function TestTab({ appOwner, appName, config, roles, permissions, t }: {
     return false;
   }, [config?.modelText]);
 
-  // Extract suggestions from existing data. Subject list is now limited to role names
-  // since direct user/group grants live in biz_permission_grantee and aren't loaded here.
+  // Role candidates are always eager — roles are bounded by app size (small).
+  // Users and groups are fetched by SubjectPicker on demand via useQuery so
+  // large tenants don't pay for a full dump on page open.
+  const roleCandidates = useMemo<SubjectCandidate[]>(
+    () => roles.map((r) => ({
+      id: r.name,
+      displayName: r.displayName || r.name,
+      kind: "role" as const,
+    })),
+    [roles],
+  );
+
   const suggestions = useMemo(() => {
-    const subjects = new Set<string>();
     const resources = new Set<string>();
     const actions = new Set<string>();
-    roles.forEach((r) => { subjects.add(r.name); });
     permissions.forEach((p) => {
       (p.resources ?? []).forEach((r) => resources.add(r));
       (p.actions ?? []).forEach((a) => actions.add(a));
     });
     return {
-      subjects: [...subjects].sort(),
       resources: [...resources].sort(),
       actions: [...actions].sort(),
     };
-  }, [roles, permissions]);
+  }, [permissions]);
 
-  const handleTest = async () => {
+  const handleTest = useCallback(async () => {
     if (!sub || !obj || !act) return;
     if (hasDomain && !dom) return;
     setTesting(true);
+    setError(null);
     try {
       const appId = `${appOwner}/${appName}`;
       const request = hasDomain ? [sub, dom, obj, act] : [sub, obj, act];
-      const res = await BizBackend.bizEnforce(appId, request);
-      if (res.status === "ok") {
-        const allowed = !!res.data;
-        setResult({ allowed, detail: "" });
-        setHistory((h) => [{ time: new Date().toLocaleTimeString(), sub, obj, act, dom: hasDomain ? dom : undefined, allowed }, ...h.slice(0, 19)]);
+      const res = await BizBackend.bizEnforceEx(appId, request);
+      if (res.status === "ok" && res.data) {
+        const data = res.data;
+        setResult(data);
+        setHistory((h) => {
+          const next: TestHistoryEntry[] = [
+            {
+              id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+              time: Date.now(),
+              sub,
+              dom: hasDomain ? dom : undefined,
+              obj,
+              act,
+              allowed: data.allowed,
+              reason: data.reason || "",
+            },
+            ...h,
+          ].slice(0, TEST_HISTORY_MAX);
+          saveTestHistory(appOwner, appName, next);
+          return next;
+        });
       } else {
-        setResult({ allowed: false, detail: res.msg || "Error" });
+        setResult(null);
+        setError(res.msg || "Error");
       }
     } catch (e: any) {
-      setResult({ allowed: false, detail: e.message || "Error" });
+      setResult(null);
+      setError(e?.message || "Error");
     } finally {
       setTesting(false);
     }
+  }, [sub, obj, act, dom, hasDomain, appOwner, appName]);
+
+  // Cmd/Ctrl+Enter from anywhere inside the form triggers a run. Placed on
+  // the form container via onKeyDown; individual inputs don't need their
+  // own Enter handlers.
+  const handleFormKeyDown = (e: React.KeyboardEvent) => {
+    if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+      e.preventDefault();
+      handleTest();
+    }
   };
 
-  const inputCls = "w-full rounded-lg border border-border bg-surface-2 px-3 py-2 text-[12px] font-mono text-text-primary outline-none focus:border-accent placeholder:text-text-muted";
+  const replayEntry = useCallback((entry: TestHistoryEntry) => {
+    setSub(entry.sub);
+    setObj(entry.obj);
+    setAct(entry.act);
+    if (entry.dom !== undefined) setDom(entry.dom);
+  }, []);
+
+  const clearHistory = useCallback(() => {
+    setHistory([]);
+    saveTestHistory(appOwner, appName, []);
+  }, [appOwner, appName]);
+
+  const inputCls = "w-full rounded-lg border border-border bg-surface-2 px-3 py-2 text-[12px] font-mono text-text-primary outline-none focus:border-accent placeholder:text-text-muted h-[36px]";
   const labelCls = "block text-[10px] font-bold uppercase tracking-wider text-text-muted mb-1.5";
 
-  return (
-    <div className="space-y-5">
-      {/* Playground */}
-      <div className="rounded-xl border border-border bg-surface-1 p-5">
-        <h4 className="text-[14px] font-semibold text-text-primary mb-1 flex items-center gap-2">
-          <Play size={16} className="text-accent" />
-          {t("authz.test.title")}
-        </h4>
-        <p className="text-[12px] text-text-muted mb-4">{t("authz.test.subtitle")}</p>
+  // Preset chips: since users are now lazy-loaded by the picker, we only offer
+  // role-based quickfills here. Users can still pick via the subject dropdown.
+  const presets = useMemo(() => {
+    const out: { label: string; sub?: string; obj?: string; act?: string }[] = [];
+    const firstRole = roles[0];
+    const firstPerm = permissions[0];
+    const firstRes = firstPerm?.resources?.[0];
+    const firstAct = firstPerm?.actions?.[0];
+    if (firstRole && firstRes && firstAct) {
+      out.push({ label: `${firstRole.displayName || firstRole.name} → ${firstRes} · ${firstAct}`, sub: firstRole.name, obj: firstRes, act: firstAct });
+    }
+    return out;
+  }, [roles, permissions]);
 
-        <div className={`grid grid-cols-1 gap-3 items-end ${hasDomain ? "md:grid-cols-[1fr_1fr_1fr_1fr_auto]" : "md:grid-cols-[1fr_1fr_1fr_auto]"}`}>
-          <div>
-            <label className={labelCls}>{t("authz.test.subject")}</label>
-            <input value={sub} onChange={(e) => setSub(e.target.value)} placeholder={`${appOwner}/alice`}
-              list="test-subjects" className={inputCls} />
-            <datalist id="test-subjects">
-              {suggestions.subjects.map((s) => <option key={s} value={s} />)}
-            </datalist>
-          </div>
-          {hasDomain && (
-            <div>
-              <label className={labelCls}>{t("authz.test.domain" as any)}</label>
-              <input value={dom} onChange={(e) => setDom(e.target.value)} placeholder={t("authz.test.domainPlaceholder" as any)}
-                className={inputCls} />
+  const applyPreset = (p: { sub?: string; obj?: string; act?: string }) => {
+    if (p.sub !== undefined) setSub(p.sub);
+    if (p.obj !== undefined) setObj(p.obj);
+    if (p.act !== undefined) setAct(p.act);
+  };
+
+  return (
+    <div className="grid gap-5 grid-cols-1 lg:grid-cols-[minmax(0,1fr)_320px]">
+      <div className="space-y-5 min-w-0">
+        {/* Playground */}
+        <div className="rounded-xl border border-border bg-surface-1 p-5" onKeyDown={handleFormKeyDown}>
+          <h4 className="text-[14px] font-semibold text-text-primary mb-1 flex items-center gap-2">
+            <Play size={16} className="text-accent" />
+            {t("authz.test.title")}
+          </h4>
+          <p className="text-[12px] text-text-muted mb-4">
+            {t("authz.test.subtitle")}
+            <span className="ml-1 text-text-muted/70">({t("authz.test.shortcutHint" as any) || "Cmd/Ctrl + Enter to run"})</span>
+          </p>
+
+          {presets.length > 0 && (
+            <div className="flex flex-wrap gap-1.5 mb-3">
+              <span className="text-[11px] text-text-muted mr-1">{t("authz.test.presets" as any) || "Quick fill:"}</span>
+              {presets.map((p, i) => (
+                <button key={i} onClick={() => applyPreset(p)}
+                  className="inline-flex items-center gap-1 rounded-full border border-border bg-surface-2 px-2 py-0.5 text-[11px] text-text-secondary hover:border-accent hover:text-accent transition-colors">
+                  {p.label}
+                </button>
+              ))}
             </div>
           )}
-          <div>
-            <label className={labelCls}>{t("authz.test.object")}</label>
-            <input value={obj} onChange={(e) => setObj(e.target.value)} placeholder="/orders/list"
-              list="test-resources" className={inputCls} />
-            <datalist id="test-resources">
-              {suggestions.resources.map((r) => <option key={r} value={r} />)}
-            </datalist>
+
+          <div className={`grid grid-cols-1 gap-3 items-end ${hasDomain ? "md:grid-cols-[1fr_1fr_1fr_1fr_auto]" : "md:grid-cols-[1fr_1fr_1fr_auto]"}`}>
+            <div>
+              <label className={labelCls}>{t("authz.test.subject")}</label>
+              <SubjectPicker
+                value={sub}
+                onChange={setSub}
+                owner={appOwner}
+                roleCandidates={roleCandidates}
+                placeholder={`${appOwner}/alice`}
+                inputCls={inputCls}
+                t={t}
+              />
+            </div>
+            {hasDomain && (
+              <div>
+                <label className={labelCls}>{t("authz.test.domain" as any)}</label>
+                <input value={dom} onChange={(e) => setDom(e.target.value)} placeholder={t("authz.test.domainPlaceholder" as any)}
+                  className={inputCls} />
+              </div>
+            )}
+            <div>
+              <label className={labelCls}>{t("authz.test.object")}</label>
+              <SuggestPicker
+                value={obj}
+                onChange={setObj}
+                suggestions={suggestions.resources}
+                placeholder="/orders/list"
+                inputCls={inputCls}
+                t={t}
+              />
+            </div>
+            <div>
+              <label className={labelCls}>{t("authz.test.action")}</label>
+              <SuggestPicker
+                value={act}
+                onChange={setAct}
+                suggestions={suggestions.actions}
+                placeholder="GET"
+                inputCls={inputCls}
+                t={t}
+              />
+            </div>
+            <button onClick={handleTest} disabled={testing || !sub || !obj || !act || (hasDomain && !dom)}
+              className="flex items-center justify-center gap-1.5 rounded-lg bg-accent px-5 py-2 text-[12px] font-semibold text-white hover:bg-accent-hover disabled:opacity-50 transition-colors h-[36px] min-w-[100px]">
+              {testing ? <div className="h-3 w-3 rounded-full border-2 border-white/30 border-t-white animate-spin" /> : <Play size={13} />}
+              {t("authz.test.run")}
+            </button>
           </div>
-          <div>
-            <label className={labelCls}>{t("authz.test.action")}</label>
-            <input value={act} onChange={(e) => setAct(e.target.value)} placeholder="GET"
-              list="test-actions" className={inputCls}
-              onKeyDown={(e) => e.key === "Enter" && handleTest()} />
-            <datalist id="test-actions">
-              {suggestions.actions.map((a) => <option key={a} value={a} />)}
-            </datalist>
-          </div>
-          <button onClick={handleTest} disabled={testing || !sub || !obj || !act || (hasDomain && !dom)}
-            className="flex items-center gap-1.5 rounded-lg bg-accent px-5 py-2 text-[12px] font-semibold text-white hover:bg-accent-hover disabled:opacity-50 transition-colors h-[36px]">
-            {testing ? <div className="h-3 w-3 rounded-full border-2 border-white/30 border-t-white animate-spin" /> : <Play size={13} />}
-            {t("authz.test.run")}
-          </button>
         </div>
 
-        {/* Result */}
-        <AnimatePresence>
-          {result && (
-            <motion.div
-              initial={{ opacity: 0, y: -8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0 }}
-              className={`mt-4 rounded-lg px-4 py-3 text-[13px] font-semibold flex items-center gap-2 ${
-                result.allowed
-                  ? "bg-success/10 text-success border border-success/20"
-                  : "bg-danger/10 text-danger border border-danger/20"
-              }`}
-            >
-              {result.allowed ? <Check size={16} /> : <X size={16} />}
-              <strong>{result.allowed ? t("authz.test.result.allow") : t("authz.test.result.deny")}</strong>
-              {result.detail && <span className="font-normal text-[12px] ml-2 opacity-80">— {result.detail}</span>}
-            </motion.div>
-          )}
-        </AnimatePresence>
+        {/* Result — reserved surface so the page doesn't jump on first run */}
+        <TestResultPanel result={result} error={error} testing={testing} t={t} />
       </div>
 
-      {/* History */}
-      {history.length > 0 && (
-        <div>
-          <h3 className="text-[14px] font-semibold text-text-primary mb-3">{t("authz.test.history")}</h3>
-          <div className="rounded-xl border border-border overflow-hidden">
-            <table className="w-full text-[12px]">
-              <thead>
-                <tr className="bg-surface-2 border-b border-border">
-                  <th className="text-left px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-text-muted">{t("authz.test.col.time")}</th>
-                  <th className="text-left px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-text-muted">{t("authz.test.col.user")}</th>
-                  {hasDomain && <th className="text-left px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-text-muted">{t("authz.test.domain" as any)}</th>}
-                  <th className="text-left px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-text-muted">{t("authz.test.col.resource")}</th>
-                  <th className="text-left px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-text-muted">{t("authz.test.col.action")}</th>
-                  <th className="text-left px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-text-muted">{t("authz.test.col.result")}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {history.map((h, i) => (
-                  <tr key={i} className="border-b border-border-subtle">
-                    <td className="px-4 py-2 font-mono text-text-muted text-[11px]">{h.time}</td>
-                    <td className="px-4 py-2 font-mono text-[11px]">{h.sub}</td>
-                    {hasDomain && <td className="px-4 py-2 font-mono text-[11px]">{h.dom || ""}</td>}
-                    <td className="px-4 py-2 font-mono text-[11px]">{h.obj}</td>
-                    <td className="px-4 py-2 text-[11px]">{h.act}</td>
-                    <td className="px-4 py-2">
-                      <span className={`inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold ${
-                        h.allowed ? "bg-success/10 text-success" : "bg-danger/10 text-danger"
-                      }`}>
-                        {h.allowed ? t("authz.test.result.allow" as any) : t("authz.test.result.deny" as any)}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+      {/* History sidebar */}
+      <div className="rounded-xl border border-border bg-surface-1 p-4 h-fit lg:sticky lg:top-4">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-[13px] font-semibold text-text-primary">
+            {t("authz.test.history")}
+            <span className="ml-1.5 text-text-muted font-normal">({history.length})</span>
+          </h3>
+          {history.length > 0 && (
+            <button onClick={clearHistory} className="text-[11px] text-text-muted hover:text-danger transition-colors">
+              {t("common.clear" as any) || "Clear"}
+            </button>
+          )}
+        </div>
+        {history.length === 0 ? (
+          <p className="text-[12px] text-text-muted py-8 text-center">{t("authz.test.historyEmpty" as any) || "No runs yet."}</p>
+        ) : (
+          <div className="space-y-1.5">
+            {history.map((h) => (
+              <button key={h.id} onClick={() => replayEntry(h)}
+                className="block w-full text-left rounded-lg border border-border-subtle bg-surface-2/40 p-2 hover:border-accent/40 hover:bg-surface-2 transition-colors">
+                <div className="flex items-center justify-between mb-0.5">
+                  <span className="font-mono text-[11px] text-text-secondary truncate">{h.sub}</span>
+                  <span className={`inline-block rounded-full px-1.5 py-0.5 text-[9px] font-semibold flex-shrink-0 ml-2 ${
+                    h.allowed ? "bg-success/10 text-success" : "bg-danger/10 text-danger"
+                  }`}>
+                    {h.allowed ? (t("authz.test.result.allow" as any) || "ALLOW") : (t("authz.test.result.deny" as any) || "DENY")}
+                  </span>
+                </div>
+                <div className="font-mono text-[10px] text-text-muted truncate">
+                  {h.obj} · {h.act}{h.dom ? ` · ${h.dom}` : ""}
+                </div>
+                <div className="text-[10px] text-text-muted mt-0.5">
+                  {new Date(h.time).toLocaleTimeString()}
+                </div>
+              </button>
+            ))}
           </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ═══════ SUBJECT PICKER ═══════
+// Adaptive combobox. Users and groups are fetched lazily via TanStack Query:
+//   - `pageSize=200` on every request → small tenants get everything in one
+//     shot (still fast, cached by query key)
+//   - `data2 > 200` → UI hints the user to keep typing to narrow the result;
+//     the search is also server-side (`field=name&value=q`), so large tenants
+//     never pay for a full dump
+//   - 250ms debounce between keystrokes and the actual network call
+// Roles are always eager (bounded by app size) and come in from props.
+// Free-form input is preserved when the user types something off-list.
+const SUBJECT_PAGE_SIZE = 200;
+const SUBJECT_DEBOUNCE_MS = 250;
+
+function SubjectPicker({ value, onChange, owner, roleCandidates, placeholder, inputCls, t }: {
+  value: string;
+  onChange: (v: string) => void;
+  owner: string;
+  roleCandidates: SubjectCandidate[];
+  placeholder: string;
+  inputCls: string;
+  t: (key: any) => string;
+}) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState(value);
+  const [debouncedQuery, setDebouncedQuery] = useState(value);
+  const rootRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => { setQuery(value); }, [value]);
+
+  useEffect(() => {
+    const h = setTimeout(() => setDebouncedQuery(query), SUBJECT_DEBOUNCE_MS);
+    return () => clearTimeout(h);
+  }, [query]);
+
+  useEffect(() => {
+    if (!open) return;
+    const onDoc = (e: MouseEvent) => {
+      if (rootRef.current && !rootRef.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", onDoc);
+    return () => document.removeEventListener("mousedown", onDoc);
+  }, [open]);
+
+  // Whether we already have the full set for this query. The server returns
+  // `data2` (total rows matching the filter); if it exceeds pageSize we tell
+  // the user to narrow down rather than silently serving only a prefix.
+  const usersQuery = useQuery({
+    enabled: open && !!owner,
+    queryKey: bizKeys.testSubjects("users", owner, debouncedQuery.trim()),
+    placeholderData: keepPreviousData,
+    staleTime: 30_000,
+    queryFn: async () => {
+      const mod = await import("../backend/UserBackend");
+      const q = debouncedQuery.trim();
+      const res = await mod.getUsers({
+        owner,
+        p: 1,
+        pageSize: SUBJECT_PAGE_SIZE,
+        ...(q ? { field: "name", value: q } : {}),
+      });
+      if (res.status !== "ok") return { items: [] as SubjectCandidate[], total: 0 };
+      const items: SubjectCandidate[] = (res.data as any[] ?? []).map((u) => ({
+        id: `${u.owner}/${u.name}`,
+        displayName: u.displayName || u.name,
+        kind: "user" as const,
+      }));
+      const total = typeof (res as any).data2 === "number" ? (res as any).data2 : items.length;
+      return { items, total };
+    },
+  });
+
+  const groupsQuery = useQuery({
+    enabled: open && !!owner,
+    queryKey: bizKeys.testSubjects("groups", owner, debouncedQuery.trim()),
+    placeholderData: keepPreviousData,
+    staleTime: 30_000,
+    queryFn: async () => {
+      const mod = await import("../backend/GroupBackend");
+      const q = debouncedQuery.trim();
+      const res = await mod.getGroups({
+        owner,
+        p: 1,
+        pageSize: SUBJECT_PAGE_SIZE,
+        ...(q ? { field: "name", value: q } : {}),
+      });
+      if (res.status !== "ok") return { items: [] as SubjectCandidate[], total: 0 };
+      const items: SubjectCandidate[] = (res.data as any[] ?? []).map((g) => ({
+        id: `${g.owner}/${g.name}`,
+        displayName: g.displayName || g.name,
+        kind: "group" as const,
+      }));
+      const total = typeof (res as any).data2 === "number" ? (res as any).data2 : items.length;
+      return { items, total };
+    },
+  });
+
+  const filteredRoles = useMemo(() => {
+    const q = debouncedQuery.trim().toLowerCase();
+    if (!q) return roleCandidates;
+    return roleCandidates.filter((r) => r.id.toLowerCase().includes(q) || r.displayName.toLowerCase().includes(q));
+  }, [roleCandidates, debouncedQuery]);
+
+  const userItems = usersQuery.data?.items ?? [];
+  const groupItems = groupsQuery.data?.items ?? [];
+  const userTotal = usersQuery.data?.total ?? 0;
+  const groupTotal = groupsQuery.data?.total ?? 0;
+
+  const items = useMemo(() => [...userItems, ...groupItems, ...filteredRoles], [userItems, groupItems, filteredRoles]);
+  const loading = usersQuery.isFetching || groupsQuery.isFetching;
+  const truncated =
+    (userTotal > userItems.length) ||
+    (groupTotal > groupItems.length);
+
+  const commit = (c: SubjectCandidate) => {
+    onChange(c.id);
+    setQuery(c.id);
+    setOpen(false);
+  };
+
+  const kindLabel = (k: SubjectCandidate["kind"]) => k === "user" ? "U" : k === "group" ? "G" : "R";
+  const kindCls = (k: SubjectCandidate["kind"]) =>
+    k === "user" ? "bg-info/10 text-info" :
+    k === "group" ? "bg-emerald-500/10 text-emerald-500" :
+    "bg-amber-500/10 text-amber-500";
+
+  return (
+    <div ref={rootRef} className="relative">
+      <input
+        value={query}
+        placeholder={placeholder}
+        className={inputCls}
+        onFocus={() => setOpen(true)}
+        onChange={(e) => {
+          setQuery(e.target.value);
+          onChange(e.target.value);
+          setOpen(true);
+        }}
+      />
+      {open && (
+        <div className="absolute z-20 left-0 right-0 mt-1 rounded-lg border border-border bg-surface-1 shadow-[var(--shadow-elevated)] max-h-[280px] overflow-y-auto">
+          {loading && items.length === 0 && (
+            <div className="flex items-center gap-2 px-3 py-2 text-[11px] text-text-muted">
+              <div className="h-3 w-3 rounded-full border-2 border-accent/30 border-t-accent animate-spin" />
+              {t("common.loading" as any) || "Loading…"}
+            </div>
+          )}
+          {!loading && items.length === 0 && (
+            <div className="px-3 py-2 text-[11px] text-text-muted">{t("common.noData" as any) || "No results"}</div>
+          )}
+          {items.map((c) => (
+            <button key={`${c.kind}:${c.id}`} onClick={() => commit(c)}
+              className="flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-surface-2 transition-colors">
+              <span className={`inline-flex h-4 w-4 items-center justify-center rounded text-[9px] font-bold ${kindCls(c.kind)}`}>
+                {kindLabel(c.kind)}
+              </span>
+              <span className="flex-1 min-w-0">
+                <span className="block truncate text-[12px] text-text-primary">{c.displayName}</span>
+                <span className="block truncate font-mono text-[10px] text-text-muted">{c.id}</span>
+              </span>
+            </button>
+          ))}
+          {truncated && (
+            <div className="sticky bottom-0 border-t border-border-subtle bg-surface-2/80 backdrop-blur px-3 py-1.5 text-[11px] text-text-muted">
+              {(t("authz.test.pickerTruncated" as any) || "{shown} of {total} shown — keep typing to narrow results")
+                .replace("{shown}", String(userItems.length + groupItems.length))
+                .replace("{total}", String(userTotal + groupTotal))}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ═══════ SUGGEST PICKER ═══════
+// Plain-string counterpart of SubjectPicker. Data is in-memory (resources /
+// actions extracted from permissions), so no network path is needed. We do
+// cap the rendered rows because a permission-heavy app could still hit
+// hundreds of resources — rendering them all would jank the dropdown on
+// every keystroke; the cap keeps it O(1).
+const SUGGEST_RENDER_CAP = 50;
+
+function SuggestPicker({ value, onChange, suggestions, placeholder, inputCls, t }: {
+  value: string;
+  onChange: (v: string) => void;
+  suggestions: string[];
+  placeholder: string;
+  inputCls: string;
+  t: (key: any) => string;
+}) {
+  const [open, setOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onDoc = (e: MouseEvent) => {
+      if (rootRef.current && !rootRef.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", onDoc);
+    return () => document.removeEventListener("mousedown", onDoc);
+  }, [open]);
+
+  const filtered = useMemo(() => {
+    const q = value.trim().toLowerCase();
+    if (!q) return suggestions;
+    return suggestions.filter((s) => s.toLowerCase().includes(q));
+  }, [suggestions, value]);
+
+  const visible = filtered.slice(0, SUGGEST_RENDER_CAP);
+  const hidden = Math.max(0, filtered.length - visible.length);
+
+  const commit = (v: string) => {
+    onChange(v);
+    setOpen(false);
+  };
+
+  return (
+    <div ref={rootRef} className="relative">
+      <input
+        value={value}
+        placeholder={placeholder}
+        className={inputCls}
+        onFocus={() => setOpen(true)}
+        onChange={(e) => { onChange(e.target.value); setOpen(true); }}
+      />
+      {open && visible.length > 0 && (
+        <div className="absolute z-20 left-0 right-0 mt-1 rounded-lg border border-border bg-surface-1 shadow-[var(--shadow-elevated)] max-h-[260px] overflow-y-auto">
+          {visible.map((s) => (
+            <button key={s} onClick={() => commit(s)}
+              className="flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-surface-2 transition-colors">
+              <span className="font-mono text-[12px] text-text-primary truncate">{s}</span>
+            </button>
+          ))}
+          {hidden > 0 && (
+            <div className="sticky bottom-0 border-t border-border-subtle bg-surface-2/80 backdrop-blur px-3 py-1.5 text-[11px] text-text-muted">
+              {(t("authz.test.pickerTruncated" as any) || "{shown} of {total} shown — keep typing to narrow results")
+                .replace("{shown}", String(visible.length))
+                .replace("{total}", String(filtered.length))}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ═══════ TEST RESULT PANEL ═══════
+// Renders the outcome of BizEnforceEx. Always takes up the same vertical
+// footprint so running a test doesn't cause layout shift (CLS). An empty
+// state explains what will appear; aria-live announces changes for SR users.
+function TestResultPanel({ result, error, testing, t }: {
+  result: BizBackend.EnforceTraceResult | null;
+  error: string | null;
+  testing: boolean;
+  t: (key: any) => string;
+}) {
+  return (
+    <div
+      aria-live="polite"
+      role="status"
+      className="rounded-xl border border-border bg-surface-1 p-5 min-h-[180px]"
+    >
+      {!result && !error && (
+        <div className="flex flex-col items-center justify-center py-6 text-center">
+          <div className="mb-2 rounded-full bg-surface-2 p-3">
+            <Play size={18} className="text-text-muted" />
+          </div>
+          <p className="text-[13px] font-medium text-text-secondary">
+            {t("authz.test.resultEmptyTitle" as any) || "Result will appear here"}
+          </p>
+          <p className="text-[11px] text-text-muted mt-1">
+            {t("authz.test.resultEmptyHint" as any) || "Fill subject, object and action, then run."}
+          </p>
+        </div>
+      )}
+      {testing && !result && (
+        <div className="flex items-center gap-2 text-[12px] text-text-muted">
+          <div className="h-3 w-3 rounded-full border-2 border-accent/30 border-t-accent animate-spin" />
+          {t("common.loading" as any) || "Running…"}
+        </div>
+      )}
+      {error && (
+        <div className="rounded-lg border border-danger/30 bg-danger/5 px-4 py-3 text-[12px] text-danger">
+          <strong>{t("common.error" as any) || "Error"}:</strong> {error}
+        </div>
+      )}
+      {result && (
+        <div className="space-y-4">
+          {/* Verdict */}
+          <div className={`flex items-center gap-2 rounded-lg px-4 py-2.5 font-semibold text-[14px] border-l-4 ${
+            result.allowed
+              ? "bg-success/5 text-success border-success"
+              : "bg-danger/5 text-danger border-danger"
+          }`}>
+            {result.allowed ? <Check size={18} /> : <X size={18} />}
+            <span>{result.allowed ? (t("authz.test.result.allow" as any) || "ALLOW") : (t("authz.test.result.deny" as any) || "DENY")}</span>
+            <span className="ml-auto text-[11px] font-normal opacity-80">
+              {/* Backend already localized this via i18n.Translate using the
+                  request's Accept-Language header. */}
+              {result.reason}
+            </span>
+          </div>
+
+          {/* Matched policy */}
+          {result.matchedPolicy && result.matchedPolicy.length > 0 && (
+            <div>
+              <div className="text-[10px] font-bold uppercase tracking-wider text-text-muted mb-1.5">
+                {t("authz.test.matchedPolicy" as any) || "Matched policy"}
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {result.matchedPolicy.map((part, i) => (
+                  <span key={i} className="inline-block rounded bg-surface-2 border border-border px-2 py-0.5 font-mono text-[11px] text-text-primary">
+                    {part || '""'}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Role chain */}
+          {result.subjectRoles && result.subjectRoles.length > 0 && (
+            <div>
+              <div className="text-[10px] font-bold uppercase tracking-wider text-text-muted mb-1.5">
+                {t("authz.test.roleChain" as any) || "Subject roles (transitive)"}
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {result.subjectRoles.map((r) => (
+                  <span key={r} className="inline-block rounded-full bg-accent/10 text-accent px-2 py-0.5 font-mono text-[11px]">
+                    {r}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>

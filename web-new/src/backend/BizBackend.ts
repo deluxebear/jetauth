@@ -262,6 +262,23 @@ export function bizEnforce(appId: string, casbinRequest: unknown[]) {
   return request<boolean>("POST", `/api/biz-enforce?appId=${encodeURIComponent(appId)}`, casbinRequest);
 }
 
+export interface EnforceTraceResult {
+  allowed: boolean;
+  /** The p-rule that caused the decision (or empty when nothing matched). */
+  matchedPolicy: string[];
+  /** Transitive role closure of the subject — useful for debugging "why didn't this match?". */
+  subjectRoles: string[];
+  /**
+   * Human-readable summary. Already localized by the backend based on the
+   * request's Accept-Language header (via i18n.Translate).
+   */
+  reason: string;
+}
+
+export function bizEnforceEx(appId: string, casbinRequest: unknown[]) {
+  return request<EnforceTraceResult>("POST", `/api/biz-enforce-ex?appId=${encodeURIComponent(appId)}`, casbinRequest);
+}
+
 export function bizBatchEnforce(appId: string, casbinRequests: unknown[][]) {
   return request<boolean[]>("POST", `/api/biz-batch-enforce?appId=${encodeURIComponent(appId)}`, casbinRequests);
 }

@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { bizKeys } from "../backend/bizQueryKeys";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
@@ -28,16 +30,23 @@ export default function BizRoleEditPage() {
   const { t } = useTranslation();
   const modal = useModal();
 
+  const queryClient = useQueryClient();
+
+  // Shared query key with AppAuthorizationPage → navigating back from there
+  // hits cache if staleTime hasn't elapsed (no loading spinner on fast back).
+  const rolesQuery = useQuery({
+    enabled: !!owner && !!appName,
+    queryKey: bizKeys.roles(owner, appName),
+    staleTime: 30_000,
+    queryFn: async () => {
+      const res = await BizBackend.getBizRoles(owner!, appName!);
+      return res.status === "ok" && res.data ? res.data : [];
+    },
+  });
+
   const [role, setRole] = useState<BizRole | null>(null);
   const [originalJson, setOriginalJson] = useState("");
-  const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
-  const [loading, setLoading] = useState(true);
-
-  // Catalogue of roles in this app (used for inheritance picker + reverse summaries)
-  const [allAppRoles, setAllAppRoles] = useState<BizRole[]>([]);
-  const [children, setChildren] = useState<BizRole[]>([]);
-  const [permsGrantedToRole, setPermsGrantedToRole] = useState<BizPermission[]>([]);
 
   // Properties editor
   const [propsMode, setPropsMode] = useState<"visual" | "json">("visual");
@@ -59,46 +68,94 @@ export default function BizRoleEditPage() {
     }
   };
 
-  // Load role catalog + locate current role
+  // Populate the editable `role` from the roles-query once data arrives. We
+  // intentionally only seed when `role` is still null so a background
+  // refetch never clobbers the admin's in-progress edits.
   useEffect(() => {
-    if (!owner || !appName) return;
-    setLoading(true);
-    BizBackend.getBizRoles(owner, appName).then((res) => {
-      const list = (res.status === "ok" && res.data) ? res.data : [];
-      setAllAppRoles(list);
+    if (role || !owner || !appName) return;
+    if (isNew) {
+      const r = BizBackend.newBizRole(owner, appName);
+      setRole(r);
+      setOriginalJson(JSON.stringify(r));
+      setPropsEntries([]);
+      return;
+    }
+    if (rolesQuery.isLoading) return;
+    const list = rolesQuery.data ?? [];
+    const found = list.find((r) => r.name === name);
+    if (found) {
+      setRole(found);
+      setOriginalJson(JSON.stringify(found));
+      initPropsEntries(found.properties);
+    } else if (rolesQuery.isSuccess) {
+      // Only complain once the list actually loaded — an intermediate empty
+      // array while loading must not trigger a spurious not-found toast.
+      modal.toast((t("bizRole.notFound") || "Role not found: {name}").replace("{name}", name || ""), "error");
+    }
+  }, [role, rolesQuery.data, rolesQuery.isLoading, rolesQuery.isSuccess, isNew, owner, appName, name, modal, t]);
 
-      if (isNew) {
-        const r = BizBackend.newBizRole(owner, appName);
-        setRole(r);
-        setOriginalJson(JSON.stringify(r));
-        setPropsEntries([]);
-      } else {
-        const found = list.find((r) => r.name === name);
-        if (found) {
-          setRole(found);
-          setOriginalJson(JSON.stringify(found));
-          initPropsEntries(found.properties);
-        } else {
-          modal.toast((t("bizRole.notFound") || "Role not found: {name}").replace("{name}", name || ""), "error");
-        }
-      }
-      setLoading(false);
-    }).catch(() => setLoading(false));
-  }, [owner, appName, name, isNew]);
+  const allAppRoles = rolesQuery.data ?? [];
 
-  // Load children + reverse permissions once we know role.id/name
-  useEffect(() => {
-    if (!role || !role.id) { setChildren([]); setPermsGrantedToRole([]); return; }
-    BizBackend.listRoleChildren(role.id).then((res) => {
-      if (res.status === "ok" && res.data) setChildren(res.data);
-    });
-    BizBackend.listPermissionsByRole(role.organization, role.name).then((res) => {
-      if (res.status === "ok" && res.data) setPermsGrantedToRole(res.data);
-    });
-  }, [role?.id, role?.name, role?.organization]);
+  const childrenQuery = useQuery({
+    enabled: !!role?.id,
+    queryKey: bizKeys.roleChildren(role?.id),
+    queryFn: async () => {
+      const res = await BizBackend.listRoleChildren(role!.id!);
+      return res.status === "ok" && res.data ? res.data : [];
+    },
+  });
+  const children = childrenQuery.data ?? [];
+
+  const permsQuery = useQuery({
+    enabled: !!role?.id && !!role?.organization && !!role?.name,
+    queryKey: bizKeys.rolePermissions(role?.organization, role?.name),
+    queryFn: async () => {
+      const res = await BizBackend.listPermissionsByRole(role!.organization, role!.name);
+      return res.status === "ok" && res.data ? res.data : [];
+    },
+  });
+  const permsGrantedToRole = permsQuery.data ?? [];
+
+  const loading = !role && (rolesQuery.isLoading || (!isNew && rolesQuery.isPending));
 
   const isDirty = useMemo(() => !!role && originalJson !== "" && JSON.stringify(role) !== originalJson, [role, originalJson]);
+
+  // All remaining hooks (useMutation, derived handlers) MUST run before any
+  // early return so hook order is stable across renders. Their bodies still
+  // guard against `role` being null.
+  const saveMutation = useMutation({
+    mutationFn: (toSave: BizRole) =>
+      isAddMode && isNew
+        ? BizBackend.addBizRole(toSave)
+        : BizBackend.updateBizRole(role!.id!, toSave),
+  });
+  const deleteMutation = useMutation({
+    mutationFn: (id: number) => BizBackend.deleteBizRole(id),
+    onSuccess: (res) => {
+      if (res.status === "ok") {
+        invalidateRoles();
+        navigate(backPath);
+      } else {
+        modal.toast(friendlyError(res.msg, t) || res.msg, "error");
+      }
+    },
+    onError: (err: Error) => modal.toast(err.message || t("common.error"), "error"),
+  });
+
   const showBanner = !isAddMode && isDirty;
+  const saving = saveMutation.isPending;
+
+  // Back / save-and-exit return to the roles list tab; deep-link after new-
+  // save uses editBase without the tab query. Defined here (before the
+  // early return) because saveMutation handlers below reference them.
+  const backPath = `/authorization/${owner}/${appName}?tab=roles`;
+  const editBase = `/authorization/${owner}/${appName}`;
+
+  const invalidateRoles = () => {
+    queryClient.invalidateQueries({ queryKey: bizKeys.roles(owner, appName) });
+    // App's updatedTime bumps when policies rebuild → refresh app config too.
+    queryClient.invalidateQueries({ queryKey: bizKeys.app(owner, appName) });
+  };
 
   if (loading || !role) {
     return (
@@ -111,8 +168,6 @@ export default function BizRoleEditPage() {
   const set = (key: string, val: unknown) => {
     setRole((prev) => prev ? { ...prev, [key]: val } : prev);
   };
-
-  const backPath = `/authorization/${owner}/${appName}`;
 
   const setScope = (kind: BizRoleScopeKind) => {
     setRole((prev) => {
@@ -139,49 +194,41 @@ export default function BizRoleEditPage() {
   };
 
   const handleSave = async () => {
-    setSaving(true);
+    const toSave = prepareRoleForSave(role);
+    setRole(toSave);
     try {
-      const toSave = prepareRoleForSave(role);
-      setRole(toSave);
-      const res = isAddMode && isNew
-        ? await BizBackend.addBizRole(toSave)
-        : await BizBackend.updateBizRole(role.id!, toSave);
+      const res = await saveMutation.mutateAsync(toSave);
       if (res.status === "ok") {
         modal.toast(t("common.saveSuccess") || "Saved");
         setSaved(true);
         setOriginalJson(JSON.stringify(toSave));
         setIsAddMode(false);
+        invalidateRoles();
         if (isNew) {
           // After create, navigate to the edit URL by name (router resolves id via list again).
-          navigate(`${backPath}/roles/${toSave.name}`, { replace: true });
+          navigate(`${editBase}/roles/${toSave.name}`, { replace: true });
         }
       } else {
         modal.toast(friendlyError(res.msg, t) || res.msg, "error");
       }
     } catch (e: any) {
       modal.toast(e?.message || t("common.saveFailed") || "Save failed", "error");
-    } finally {
-      setSaving(false);
     }
   };
 
   const handleSaveAndExit = async () => {
-    setSaving(true);
+    const toSave = prepareRoleForSave(role);
     try {
-      const toSave = prepareRoleForSave(role);
-      const res = isAddMode && isNew
-        ? await BizBackend.addBizRole(toSave)
-        : await BizBackend.updateBizRole(role.id!, toSave);
+      const res = await saveMutation.mutateAsync(toSave);
       if (res.status === "ok") {
         modal.toast(t("common.saveSuccess") || "Saved");
+        invalidateRoles();
         navigate(backPath);
       } else {
         modal.toast(friendlyError(res.msg, t) || res.msg, "error");
       }
     } catch (e: any) {
       modal.toast(e?.message || t("common.saveFailed") || "Save failed", "error");
-    } finally {
-      setSaving(false);
     }
   };
 
@@ -189,10 +236,8 @@ export default function BizRoleEditPage() {
 
   const handleDelete = () => {
     if (!role.id) return;
-    modal.showConfirm(t("common.confirmDelete") || "Confirm delete?", async () => {
-      const res = await BizBackend.deleteBizRole(role.id!);
-      if (res.status === "ok") navigate(backPath);
-      else modal.toast(friendlyError(res.msg, t) || res.msg, "error");
+    modal.showConfirm(t("common.confirmDelete") || "Confirm delete?", () => {
+      deleteMutation.mutate(role.id!);
     });
   };
 

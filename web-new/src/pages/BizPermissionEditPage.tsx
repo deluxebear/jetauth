@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { bizKeys } from "../backend/bizQueryKeys";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Info, LogOut, Trash2, X } from "lucide-react";
@@ -25,52 +27,100 @@ export default function BizPermissionEditPage() {
   const { t } = useTranslation();
   const modal = useModal();
 
+  const queryClient = useQueryClient();
+
   const [perm, setPerm] = useState<BizPermission | null>(null);
   const [originalJson, setOriginalJson] = useState("");
-  const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
-  const [loading, setLoading] = useState(true);
   const [customAction, setCustomAction] = useState("");
-  // Whether this app's Casbin model honors deny. Backend-computed; we lazy-
-  // load it alongside the permission so the Deny button can be accurately
-  // gated instead of letting the user discover the problem on Save.
-  const [supportsDeny, setSupportsDeny] = useState<boolean>(true);
 
   useEffect(() => { if (saved) { const timer = setTimeout(() => setSaved(false), 1500); return () => clearTimeout(timer); } }, [saved]);
 
-  useEffect(() => {
-    if (!owner || !appName) return;
-    // Fetch supportsDeny in parallel with the permission load. The config
-    // rarely changes, so a fetch error defaults to "assume supported" (the
-    // save-time backend check still gates the actual write).
-    BizBackend.getBizAppConfig(`${owner}/${appName}`).then((res) => {
-      if (res.status === "ok" && res.data) {
-        setSupportsDeny(!!res.data.supportsDeny);
-      }
-    }).catch(() => {});
+  // App config — shared cache with AppAuthorizationPage. We derive supportsDeny
+  // so the Deny button can be accurately gated without a separate fetch.
+  const configQuery = useQuery({
+    enabled: !!owner && !!appName,
+    queryKey: bizKeys.app(owner, appName),
+    staleTime: 30_000,
+    queryFn: async () => {
+      const res = await BizBackend.getBizAppConfig(`${owner}/${appName}`);
+      return res.status === "ok" && res.data ? res.data : null;
+    },
+  });
+  const supportsDeny = configQuery.data?.supportsDeny !== false;
 
-    setLoading(true);
+  // Permissions list — shared cache with the roles/overview pages.
+  const permissionsQuery = useQuery({
+    enabled: !!owner && !!appName && !isNew,
+    queryKey: bizKeys.permissions(owner, appName),
+    staleTime: 30_000,
+    queryFn: async () => {
+      const res = await BizBackend.getBizPermissions(owner!, appName!);
+      return res.status === "ok" && res.data ? res.data : [];
+    },
+  });
+
+  // Seed the editable `perm` once from fetched data; do NOT re-seed on
+  // background refetch so admin edits aren't clobbered.
+  useEffect(() => {
+    if (perm || !owner || !appName) return;
     if (isNew) {
       const p = BizBackend.newBizPermission(owner, appName);
       setPerm(p);
       setOriginalJson(JSON.stringify(p));
-      setLoading(false);
       return;
     }
-    BizBackend.getBizPermissions(owner, appName).then((res) => {
-      const list = (res.status === "ok" && res.data) ? res.data : [];
-      const found = list.find((p) => p.name === name);
-      if (found) {
-        setPerm(found);
-        setOriginalJson(JSON.stringify(found));
-      } else {
-        modal.toast((t("bizPerm.notFound") || "Permission not found: {name}").replace("{name}", name || ""), "error");
-      }
-      setLoading(false);
-    }).catch(() => setLoading(false));
-  }, [owner, appName, name, isNew]);
+    if (permissionsQuery.isLoading) return;
+    const list = permissionsQuery.data ?? [];
+    const found = list.find((p) => p.name === name);
+    if (found) {
+      setPerm(found);
+      setOriginalJson(JSON.stringify(found));
+    } else if (permissionsQuery.isSuccess) {
+      modal.toast((t("bizPerm.notFound") || "Permission not found: {name}").replace("{name}", name || ""), "error");
+    }
+  }, [perm, permissionsQuery.data, permissionsQuery.isLoading, permissionsQuery.isSuccess, isNew, owner, appName, name, modal, t]);
+
+  const loading = !perm && (permissionsQuery.isLoading || (!isNew && permissionsQuery.isPending));
 
   const isDirty = !!perm && originalJson !== "" && JSON.stringify(perm) !== originalJson;
+
+  // All hook calls (useMutation + the invalidation helper that closes over
+  // queryClient) MUST run unconditionally before any early return so hook
+  // order stays stable across renders. Mutation bodies guard against the
+  // non-null assumptions at call time, not at registration time.
+  const invalidatePermissions = () => {
+    queryClient.invalidateQueries({ queryKey: bizKeys.permissions(owner, appName) });
+    // Grantees of this permission may affect the overview; bump app too.
+    queryClient.invalidateQueries({ queryKey: bizKeys.app(owner, appName) });
+  };
+
+  // Back / save-and-exit return to the permissions list tab, not the app
+  // overview. The `?tab=` query is read by AppAuthorizationPage.
+  const backPath = `/authorization/${owner}/${appName}?tab=permissions`;
+  // When deep-linking to the edit page itself (after save of a new item),
+  // the URL must not carry the tab query — the edit page doesn't use it.
+  const editBase = `/authorization/${owner}/${appName}`;
+
+  const saveMutation = useMutation({
+    mutationFn: (toSave: BizPermission) =>
+      isAddMode && isNew
+        ? BizBackend.addBizPermission(toSave)
+        : BizBackend.updateBizPermission(perm!.id!, toSave),
+  });
+  const deleteMutation = useMutation({
+    mutationFn: (id: number) => BizBackend.deleteBizPermission(id),
+    onSuccess: (res) => {
+      if (res.status === "ok") {
+        invalidatePermissions();
+        navigate(backPath);
+      } else {
+        modal.toast(friendlyError(res.msg, t) || res.msg, "error");
+      }
+    },
+    onError: (err: Error) => modal.toast(err.message || t("common.error"), "error"),
+  });
+  const saving = saveMutation.isPending;
   const showBanner = !isAddMode && isDirty;
 
   if (loading || !perm) {
@@ -85,46 +135,36 @@ export default function BizPermissionEditPage() {
     setPerm((prev) => prev ? { ...prev, [key]: val } : prev);
   };
 
-  const backPath = `/authorization/${owner}/${appName}`;
-
   const handleSave = async () => {
-    setSaving(true);
     try {
-      const res = isAddMode && isNew
-        ? await BizBackend.addBizPermission(perm)
-        : await BizBackend.updateBizPermission(perm.id!, perm);
+      const res = await saveMutation.mutateAsync(perm);
       if (res.status === "ok") {
         modal.toast(t("common.saveSuccess") || "Saved");
         setSaved(true);
         setOriginalJson(JSON.stringify(perm));
         setIsAddMode(false);
-        if (isNew) navigate(`${backPath}/permissions/${perm.name}`, { replace: true });
+        invalidatePermissions();
+        if (isNew) navigate(`${editBase}/permissions/${perm.name}`, { replace: true });
       } else {
         modal.toast(friendlyError(res.msg, t) || res.msg, "error");
       }
     } catch (e: any) {
       modal.toast(e?.message || t("common.saveFailed") || "Save failed", "error");
-    } finally {
-      setSaving(false);
     }
   };
 
   const handleSaveAndExit = async () => {
-    setSaving(true);
     try {
-      const res = isAddMode && isNew
-        ? await BizBackend.addBizPermission(perm)
-        : await BizBackend.updateBizPermission(perm.id!, perm);
+      const res = await saveMutation.mutateAsync(perm);
       if (res.status === "ok") {
         modal.toast(t("common.saveSuccess") || "Saved");
+        invalidatePermissions();
         navigate(backPath);
       } else {
         modal.toast(friendlyError(res.msg, t) || res.msg, "error");
       }
     } catch (e: any) {
       modal.toast(e?.message || t("common.saveFailed") || "Save failed", "error");
-    } finally {
-      setSaving(false);
     }
   };
 
@@ -132,10 +172,8 @@ export default function BizPermissionEditPage() {
 
   const handleDelete = () => {
     if (!perm.id) return;
-    modal.showConfirm(t("common.confirmDelete") || "Confirm delete?", async () => {
-      const res = await BizBackend.deleteBizPermission(perm.id!);
-      if (res.status === "ok") navigate(backPath);
-      else modal.toast(friendlyError(res.msg, t) || res.msg, "error");
+    modal.showConfirm(t("common.confirmDelete") || "Confirm delete?", () => {
+      deleteMutation.mutate(perm.id!);
     });
   };
 
