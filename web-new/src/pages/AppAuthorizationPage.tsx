@@ -9,10 +9,29 @@ import { useTranslation } from "../i18n";
 import { useModal } from "../components/Modal";
 import * as BizBackend from "../backend/BizBackend";
 import type { BizAppConfig, BizRole, BizPermission, PoliciesExport } from "../backend/BizBackend";
+import { pickAppIcon } from "../utils/appIcon";
 
 type TabKey = "overview" | "roles" | "permissions" | "test" | "integration";
 
 const VALID_TABS: TabKey[] = ["overview", "roles", "permissions", "test", "integration"];
+
+// Local relative-time helper — mirrors the one in AuthorizationPage. Kept
+// here to avoid a cross-page import cycle; both functions are short.
+function formatRelativeTimeLocal(iso: string, t: (k: any) => string): string {
+  if (!iso) return "";
+  const ts = new Date(iso).getTime();
+  if (Number.isNaN(ts)) return iso;
+  const diff = Date.now() - ts;
+  const sec = Math.floor(diff / 1000);
+  if (sec < 60) return t("common.justNow" as any) || "just now";
+  const min = Math.floor(sec / 60);
+  if (min < 60) return `${min} ${t("common.minAgo" as any) || "min ago"}`;
+  const hr = Math.floor(min / 60);
+  if (hr < 24) return `${hr} ${t("common.hrAgo" as any) || "hr ago"}`;
+  const day = Math.floor(hr / 24);
+  if (day < 30) return `${day} ${t("common.dayAgo" as any) || "d ago"}`;
+  return new Date(iso).toLocaleDateString();
+}
 
 function parseTab(raw: string | null): TabKey {
   return (VALID_TABS as string[]).includes(raw ?? "") ? (raw as TabKey) : "overview";
@@ -92,11 +111,12 @@ export default function AppAuthorizationPage() {
 
   const appIcon = useMemo(() => {
     const app = appMetaQuery.data as any;
-    if (!app) return "";
-    return app.favicon && app.favicon !== "/img/favicon.png"
-      ? app.favicon
-      : (app.logo && app.logo !== "/img/logo.png" ? app.logo : "");
+    return app ? pickAppIcon(app) : "";
   }, [appMetaQuery.data]);
+  // If the picked URL later fails to load (404, blocked), the detail-page
+  // header flips to the letter avatar instead of rendering a broken image.
+  const [appIconFailed, setAppIconFailed] = useState(false);
+  useEffect(() => { setAppIconFailed(false); }, [appIcon]);
 
   // Children (edit pages, table cells, modals) invalidate via this callback
   // after a mutation so the overview refetches without each child needing to
@@ -158,10 +178,16 @@ export default function AppAuthorizationPage() {
             <button onClick={() => navigate("/authorization")} className="rounded-lg p-1.5 text-text-muted hover:text-accent hover:bg-accent/10 transition-colors">
               <ArrowLeft size={18} />
             </button>
-            {appIcon ? (
-              <img src={appIcon} alt="" className="w-9 h-9 rounded-lg object-cover flex-shrink-0" />
+            {appIcon && !appIconFailed ? (
+              <img
+                src={appIcon}
+                alt=""
+                loading="lazy"
+                onError={() => setAppIconFailed(true)}
+                className="w-9 h-9 rounded-lg object-cover flex-shrink-0 bg-surface-2"
+              />
             ) : (
-              <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center text-white font-bold text-sm">
+              <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
                 {(config.displayName || config.appName).charAt(0).toUpperCase()}
               </div>
             )}
@@ -229,10 +255,10 @@ export default function AppAuthorizationPage() {
             config={config}
             roles={roles}
             permissions={permissions}
-            userCount={userSet.size}
             allowCount={allowCount}
             denyCount={denyCount}
             onRefresh={refreshData}
+            onJumpTab={setActiveTab}
             t={t}
             modal={modal}
           />
@@ -284,15 +310,20 @@ export default function AppAuthorizationPage() {
 }
 
 // ═══════ OVERVIEW TAB ═══════
-function OverviewTab({ config, roles, permissions, userCount, allowCount, denyCount, onRefresh, t, modal }: {
+function OverviewTab({ config, roles, permissions, allowCount, denyCount, onRefresh, onJumpTab, t, modal }: {
   config: BizAppConfig; roles: BizRole[]; permissions: BizPermission[];
-  userCount: number; allowCount: number; denyCount: number;
+  allowCount: number; denyCount: number;
   onRefresh: () => void;
+  onJumpTab: (tab: TabKey) => void;
   t: (key: any) => string; modal: any;
 }) {
   const [editingModel, setEditingModel] = useState(false);
   const [modelDraft, setModelDraft] = useState(config.modelText);
   const [savingConfig, setSavingConfig] = useState(false);
+  // Casbin model text is long and rarely consulted day-to-day. Keep it
+  // collapsed by default; admins who actually need to read or edit it
+  // expand on demand.
+  const [modelExpanded, setModelExpanded] = useState(false);
 
   // Parse model text
   let modelType = "";
@@ -355,7 +386,7 @@ function OverviewTab({ config, roles, permissions, userCount, allowCount, denyCo
     }
   };
 
-  const handleToggleEnabled = async () => {
+  const doToggleEnabled = async () => {
     const updated = { ...config, isEnabled: !config.isEnabled };
     const res = await BizBackend.updateBizAppConfig(`${config.owner}/${config.appName}`, updated);
     if (res.status === "ok") {
@@ -365,23 +396,63 @@ function OverviewTab({ config, roles, permissions, userCount, allowCount, denyCo
     }
   };
 
+  const handleToggleEnabled = () => {
+    // Enabling is harmless; disabling stops enforce for every integrated SDK
+    // on the spot. Confirm only on the destructive direction so the happy
+    // path stays one click.
+    if (config.isEnabled) {
+      modal.showConfirm(
+        t("authz.overview.disableConfirm" as any)
+          || "Disable this app? All Enforce calls will stop returning allow until you re-enable.",
+        doToggleEnabled,
+      );
+    } else {
+      doToggleEnabled();
+    }
+  };
+
+  const updatedAbsolute = config.updatedTime
+    ? new Date(config.updatedTime).toLocaleString()
+    : "";
+  const updatedRelative = formatRelativeTimeLocal(config.updatedTime, t);
+
   return (
     <div className="space-y-5">
-      {/* Stat cards */}
-      <div className="grid grid-cols-3 gap-3">
-        <div className="rounded-xl border border-border bg-surface-1 p-4">
+      {/* Stat cards — roles/permissions are clickable and jump straight to
+          their tab, which removes an extra click for the most common
+          drill-down path. The third card shows the last-updated timestamp
+          because "user count" was always 0 and actively misled admins; the
+          real aggregation would need a dedicated backend endpoint. */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <button
+          type="button"
+          onClick={() => onJumpTab("roles")}
+          className="text-left rounded-xl border border-border bg-surface-1 p-4 hover:border-accent hover:shadow-sm hover:-translate-y-0.5 transition-all"
+        >
           <div className="text-[10px] font-bold uppercase tracking-wider text-text-muted mb-1.5">{t("authz.metrics.roles")}</div>
           <div className="text-[28px] font-bold text-text-primary font-mono tracking-tight">{roles.length}</div>
           <div className="text-[11px] text-text-muted mt-0.5">{roles.filter((r) => r.isEnabled).length} {t("common.enabled" as any)}</div>
-        </div>
-        <div className="rounded-xl border border-border bg-surface-1 p-4">
+        </button>
+        <button
+          type="button"
+          onClick={() => onJumpTab("permissions")}
+          className="text-left rounded-xl border border-border bg-surface-1 p-4 hover:border-accent hover:shadow-sm hover:-translate-y-0.5 transition-all"
+        >
           <div className="text-[10px] font-bold uppercase tracking-wider text-text-muted mb-1.5">{t("authz.metrics.permissions")}</div>
           <div className="text-[28px] font-bold text-text-primary font-mono tracking-tight">{permissions.length}</div>
           <div className="text-[11px] text-text-muted mt-0.5">{allowCount} {t("authz.overview.allowRules")} · {denyCount} {t("authz.overview.denyRules")}</div>
-        </div>
-        <div className="rounded-xl border border-border bg-surface-1 p-4">
-          <div className="text-[10px] font-bold uppercase tracking-wider text-text-muted mb-1.5">{t("authz.metrics.users")}</div>
-          <div className="text-[28px] font-bold text-text-primary font-mono tracking-tight">{userCount}</div>
+        </button>
+        <div
+          className="rounded-xl border border-border bg-surface-1 p-4"
+          title={updatedAbsolute}
+        >
+          <div className="text-[10px] font-bold uppercase tracking-wider text-text-muted mb-1.5">
+            {t("authz.overview.lastUpdated" as any) || "Last updated"}
+          </div>
+          <div className="text-[18px] font-semibold text-text-primary tracking-tight leading-tight">
+            {updatedRelative || "—"}
+          </div>
+          <div className="text-[11px] text-text-muted mt-1 font-mono truncate">{updatedAbsolute || "—"}</div>
         </div>
       </div>
 
@@ -466,11 +537,40 @@ function OverviewTab({ config, roles, permissions, userCount, allowCount, denyCo
                 spellCheck={false}
                 className="w-full rounded-lg border border-accent bg-surface-2 px-4 py-3 text-[12px] font-mono leading-relaxed text-text-primary outline-none resize-y focus:ring-1 focus:ring-accent/30"
               />
-            ) : (
-              <pre className="rounded-lg border border-border bg-surface-2 px-4 py-3 text-[12px] font-mono leading-relaxed text-text-secondary overflow-x-auto max-h-[320px] overflow-y-auto whitespace-pre-wrap">
-                {config.modelText || "—"}
-              </pre>
-            )}
+            ) : (() => {
+              const lineCount = config.modelText ? config.modelText.split("\n").length : 0;
+              const collapsible = lineCount > 4;
+              return (
+                <div>
+                  {/* Gradient fade and pre are in their own wrapper so the
+                      fade anchors to the bottom of the code block only —
+                      anchoring it to the outer container would paint over
+                      the toggle button sitting just below. */}
+                  <div className="relative">
+                    <pre className={`rounded-lg border border-border bg-surface-2 px-4 py-3 text-[12px] font-mono leading-relaxed text-text-secondary overflow-x-auto whitespace-pre-wrap ${modelExpanded || !collapsible ? "max-h-[480px] overflow-y-auto" : "max-h-[96px] overflow-hidden"}`}>
+                      {config.modelText || "—"}
+                    </pre>
+                    {collapsible && !modelExpanded && (
+                      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-12 rounded-b-lg bg-gradient-to-t from-surface-2 to-transparent" />
+                    )}
+                  </div>
+                  {collapsible && (
+                    // Pill-shaped button matches the "编辑" action above the
+                    // code block so the two model-section controls feel like
+                    // siblings instead of one muted link floating alone.
+                    <button
+                      type="button"
+                      onClick={() => setModelExpanded((v) => !v)}
+                      className="mt-2 inline-flex items-center gap-1 rounded-md border border-border bg-surface-1 px-2.5 py-1 text-[12px] font-medium text-text-secondary hover:bg-surface-2 hover:border-accent/40 hover:text-accent transition-colors"
+                    >
+                      {modelExpanded
+                        ? (t("authz.overview.collapseModel" as any) || "Collapse")
+                        : `${t("authz.overview.expandModel" as any) || "Expand"} (${lineCount} ${t("authz.overview.lines" as any) || "lines"})`}
+                    </button>
+                  )}
+                </div>
+              );
+            })()}
           </div>
         </div>
       </div>

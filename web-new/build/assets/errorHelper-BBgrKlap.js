@@ -1,0 +1,1 @@
+import{i as e}from"./index-Dp0ZXs-t.js";export{e as friendlyError};

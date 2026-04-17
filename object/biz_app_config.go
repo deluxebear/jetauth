@@ -83,8 +83,17 @@ func (c *BizAppConfig) GetId() string {
 	return util.GetId(c.Owner, c.AppName)
 }
 
+// isCrossOrgOwner reports whether the caller-supplied owner should surface
+// configs from every organization. Frontend's "All" org selector sends an
+// empty string, while older / admin API paths send the literal "admin".
+// Accept both so the two conventions coexist instead of silently filtering
+// to the empty-owner row set.
+func isCrossOrgOwner(owner string) bool {
+	return owner == "" || owner == "admin"
+}
+
 func GetBizAppConfigCount(owner string) (int64, error) {
-	if owner == "admin" {
+	if isCrossOrgOwner(owner) {
 		return ormer.Engine.Count(&BizAppConfig{})
 	}
 	return ormer.Engine.Count(&BizAppConfig{Owner: owner})
@@ -93,7 +102,7 @@ func GetBizAppConfigCount(owner string) (int64, error) {
 func GetBizAppConfigs(owner string) ([]*BizAppConfig, error) {
 	configs := []*BizAppConfig{}
 	var err error
-	if owner == "admin" {
+	if isCrossOrgOwner(owner) {
 		err = ormer.Engine.Desc("created_time").Find(&configs)
 	} else {
 		err = ormer.Engine.Desc("created_time").Find(&configs, &BizAppConfig{Owner: owner})

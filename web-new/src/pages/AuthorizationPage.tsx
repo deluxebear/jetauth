@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, RefreshCw, X, Loader2, ChevronRight, ChevronLeft } from "lucide-react";
+import { Code, FlaskConical, Plus, RefreshCw, Shield, RotateCcw, X, Loader2, ChevronRight, ChevronLeft } from "lucide-react";
 import { useTranslation } from "../i18n";
 import { useModal } from "../components/Modal";
 import { useOrganization } from "../OrganizationContext";
@@ -11,13 +11,31 @@ import type { BizAppConfig } from "../backend/BizBackend";
 import { DEFAULT_RBAC_MODEL, MODEL_PRESETS } from "../backend/BizBackend";
 import type { ModelPreset } from "../backend/BizBackend";
 import type { Application } from "../backend/ApplicationBackend";
+import { pickAppIcon } from "../utils/appIcon";
 
 interface BizAppCardData {
   config: BizAppConfig;
   roleCount: number;
   permissionCount: number;
-  userCount: number;
-  icon: string; // favicon from Application module
+  icon: string; // favicon/logo from Application module; empty → letter fallback
+}
+
+// Relative time in Chinese-friendly short form. No dep on day.js for a
+// page-local helper — the math is trivial and keeps the bundle small.
+function formatRelativeTime(iso: string, t: (k: any) => string): string {
+  if (!iso) return t("common.unknown" as any) || "—";
+  const ts = new Date(iso).getTime();
+  if (Number.isNaN(ts)) return iso;
+  const diff = Date.now() - ts;
+  const sec = Math.floor(diff / 1000);
+  if (sec < 60) return t("common.justNow" as any) || "just now";
+  const min = Math.floor(sec / 60);
+  if (min < 60) return `${min} ${t("common.minAgo" as any) || "min ago"}`;
+  const hr = Math.floor(min / 60);
+  if (hr < 24) return `${hr} ${t("common.hrAgo" as any) || "hr ago"}`;
+  const day = Math.floor(hr / 24);
+  if (day < 30) return `${day} ${t("common.dayAgo" as any) || "d ago"}`;
+  return new Date(iso).toLocaleDateString();
 }
 
 // Color palette for app icons
@@ -61,12 +79,15 @@ export default function AuthorizationPage() {
     ]).then(async ([configsRes, appsRes]) => {
       const configs = configsRes.status === "ok" && configsRes.data ? configsRes.data : [];
 
-      // Build appName → favicon map from applications
+      // Build appName → favicon/logo map from Applications. We deliberately
+      // DON'T strip the Casdoor default favicon — if an admin hasn't set a
+      // custom one, the default image is still a legitimate visual anchor
+      // that reads better than a letter avatar.
       const apps = appsRes.status === "ok" && appsRes.data ? appsRes.data : [];
-      const faviconMap = new Map<string, string>();
+      const iconMap = new Map<string, string>();
       for (const app of apps) {
-        const favicon = app.favicon && app.favicon !== "/img/favicon.png" ? app.favicon : (app.logo && app.logo !== "/img/logo.png" ? app.logo : "");
-        if (favicon) faviconMap.set(app.name, favicon);
+        const icon = pickAppIcon(app);
+        if (icon) iconMap.set(app.name, icon);
       }
 
       // For each config, fetch roles and permissions to get counts
@@ -79,18 +100,11 @@ export default function AuthorizationPage() {
           const roles = rolesRes.status === "ok" && rolesRes.data ? rolesRes.data : [];
           const perms = permsRes.status === "ok" && permsRes.data ? permsRes.data : [];
 
-          // User aggregation across roles/permissions moved to biz_role_member /
-          // biz_permission_grantee tables — unique count is no longer available from the
-          // role/permission list alone and would need a dedicated backend aggregation.
-          // Surface 0 for now; this is cosmetic on the app-card overview.
-          const userCount = 0;
-
           return {
             config,
             roleCount: roles.length,
             permissionCount: perms.length,
-            userCount,
-            icon: faviconMap.get(config.appName) || "",
+            icon: iconMap.get(config.appName) || "",
           };
         })
       );
@@ -128,10 +142,16 @@ export default function AuthorizationPage() {
         </div>
       </div>
 
-      {/* App Grid */}
+      {/* App Grid — onRefresh propagates so in-card actions (sync) can
+          re-read counts without a full page reload. */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
         {cardData.map((data, i) => (
-          <AppCard key={`${data.config.owner}/${data.config.appName}`} data={data} index={i} />
+          <AppCard
+            key={`${data.config.owner}/${data.config.appName}`}
+            data={data}
+            index={i}
+            onRefresh={() => setRefreshKey((k) => k + 1)}
+          />
         ))}
 
         {/* Create app card */}
@@ -148,6 +168,23 @@ export default function AuthorizationPage() {
         </button>
       </div>
 
+      {/* Empty state lives INSIDE the grid flow only when there are no configs,
+          but because the create-tile is always present we instead surface
+          onboarding guidance above the grid on the zero case. */}
+      {cardData.length === 0 && (
+        <div className="mt-4 rounded-xl border border-dashed border-border-subtle bg-surface-1 p-8 text-center">
+          <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-accent/10">
+            <Shield size={22} className="text-accent" />
+          </div>
+          <h3 className="text-[14px] font-semibold text-text-primary">
+            {t("authz.empty.title" as any) || "No business apps yet"}
+          </h3>
+          <p className="mt-1 text-[12px] text-text-muted">
+            {t("authz.empty.hint" as any) || "Connect an application to start configuring roles, permissions, and policies."}
+          </p>
+        </div>
+      )}
+
       {/* Quick Create Wizard */}
       <QuickCreateWizard
         open={showWizard}
@@ -160,51 +197,149 @@ export default function AuthorizationPage() {
 }
 
 // ═══════ APP CARD ═══════
-function AppCard({ data, index }: { data: BizAppCardData; index: number }) {
+function AppCard({ data, index, onRefresh }: {
+  data: BizAppCardData;
+  index: number;
+  onRefresh: () => void;
+}) {
   const { t } = useTranslation();
+  const navigate = useNavigate();
+  const modal = useModal();
+  const [syncing, setSyncing] = useState(false);
+  // Load-failure fallback: if the favicon URL 404s or is blocked, flip to
+  // the letter avatar on the fly instead of rendering a broken image icon.
+  const [iconFailed, setIconFailed] = useState(false);
+
+  const appId = `${data.config.owner}/${data.config.appName}`;
+  const detailPath = `/authorization/${appId}`;
+  const showIcon = data.icon && !iconFailed;
+
+  // Quick actions need to escape the parent <Link>'s click target.
+  const stopAnd = (fn: () => void) => (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    fn();
+  };
+
+  const handleSync = stopAnd(async () => {
+    if (syncing) return;
+    setSyncing(true);
+    try {
+      const res = await BizBackend.bizSyncPolicies(appId);
+      if (res.status === "ok" && res.data) {
+        modal.toast(
+          `${t("authz.overview.syncSuccess" as any) || "Synced"} — ${res.data.policyCount} / ${res.data.roleCount}`,
+          "success",
+        );
+        onRefresh();
+      } else {
+        modal.toast(res.msg || t("common.error"), "error");
+      }
+    } catch (e: any) {
+      modal.toast(e?.message || t("common.error"), "error");
+    } finally {
+      setSyncing(false);
+    }
+  });
+
+  const handleTest = stopAnd(() => navigate(`${detailPath}?tab=test`));
+  const handleIntegration = stopAnd(() => navigate(`${detailPath}?tab=integration`));
 
   return (
     <Link
-      to={`/authorization/${data.config.owner}/${data.config.appName}`}
-      className="group block rounded-xl border border-border bg-surface-1 p-5 hover:border-accent hover:shadow-lg hover:shadow-accent/5 transition-all hover:-translate-y-0.5"
+      to={detailPath}
+      className="group relative block rounded-xl border border-border bg-surface-1 p-5 hover:border-accent hover:shadow-lg hover:shadow-accent/5 transition-all hover:-translate-y-0.5"
     >
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-3">
-          {data.icon ? (
-            <img src={data.icon} alt="" className="w-10 h-10 rounded-lg object-cover flex-shrink-0" />
+      {/* Top row: icon + titles + status */}
+      <div className="flex items-start justify-between gap-3 mb-4">
+        <div className="flex items-center gap-3 min-w-0 flex-1">
+          {showIcon ? (
+            <img
+              src={data.icon}
+              alt=""
+              loading="lazy"
+              onError={() => setIconFailed(true)}
+              className="w-10 h-10 rounded-lg object-cover flex-shrink-0 bg-surface-2"
+            />
           ) : (
-            <div className={`w-10 h-10 rounded-lg bg-gradient-to-br ${getGradient(index)} flex items-center justify-center text-white font-bold text-base`}>
+            <div className={`w-10 h-10 rounded-lg bg-gradient-to-br ${getGradient(index)} flex items-center justify-center text-white font-bold text-base flex-shrink-0`}>
               {getInitial(data.config)}
             </div>
           )}
-          <div>
-            <h3 className="text-[14px] font-semibold text-text-primary group-hover:text-accent transition-colors">
+          <div className="min-w-0">
+            <h3 className="text-[14px] font-semibold text-text-primary group-hover:text-accent transition-colors truncate">
               {data.config.displayName || data.config.appName}
             </h3>
-            <p className="text-[11px] text-text-muted font-mono">
+            <p className="text-[11px] text-text-muted font-mono truncate">
               {data.config.owner} / {data.config.appName}
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1.5 flex-shrink-0">
           <div className={`w-1.5 h-1.5 rounded-full ${data.config.isEnabled ? "bg-success shadow-[0_0_6px] shadow-success/50" : "bg-text-muted"}`} />
           <span className={`text-[10px] font-semibold ${data.config.isEnabled ? "text-success" : "text-text-muted"}`}>
             {data.config.isEnabled ? t("authz.configured" as any) : t("authz.notConfigured" as any)}
           </span>
         </div>
       </div>
-      <div className="grid grid-cols-4 gap-2 pt-3 border-t border-border-subtle">
-        {[
-          { label: t("authz.metrics.roles" as any), value: data.roleCount },
-          { label: t("authz.metrics.permissions" as any), value: data.permissionCount },
-          { label: t("authz.metrics.policies" as any) || "Policies", value: "-" },
-          { label: t("authz.metrics.users" as any), value: data.userCount },
-        ].map((m) => (
-          <div key={m.label} className="text-center">
-            <div className="text-[17px] font-bold text-text-primary font-mono">{m.value}</div>
-            <div className="text-[10px] text-text-muted mt-0.5">{m.label}</div>
-          </div>
-        ))}
+
+      {/* Stat chips: roles / permissions / last synced. Dropped the "policies"
+          and "users" numbers from the previous design — policies are always
+          derivable from roles + perms (implicit) and user-count requires a
+          dedicated aggregation endpoint we don't have yet. Showing them as
+          "-" / "0" was actively misleading. */}
+      <div className="flex flex-wrap items-center gap-1.5 pt-3 border-t border-border-subtle">
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-surface-2 px-2.5 py-0.5 text-[11px] font-medium text-text-secondary">
+          <span className="font-mono font-semibold text-text-primary">{data.roleCount}</span>
+          <span className="text-text-muted">{t("authz.metrics.roles" as any)}</span>
+        </span>
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-surface-2 px-2.5 py-0.5 text-[11px] font-medium text-text-secondary">
+          <span className="font-mono font-semibold text-text-primary">{data.permissionCount}</span>
+          <span className="text-text-muted">{t("authz.metrics.permissions" as any)}</span>
+        </span>
+        <span className="ml-auto inline-flex items-center gap-1 text-[11px] text-text-muted">
+          <span className="w-1 h-1 rounded-full bg-text-muted/60" />
+          {formatRelativeTime(data.config.updatedTime, t)}
+        </span>
+      </div>
+
+      {/* Quick actions — always visible for discoverability. Earlier hover-
+          only reveal proved unreliable on some trackpads and hurt discover-
+          ability for first-time users. Icons stay muted by default and
+          highlight on their own hover. */}
+      <div className="absolute right-3 bottom-3 flex items-center gap-1">
+        <button
+          type="button"
+          onClick={handleSync}
+          disabled={syncing}
+          title={t("authz.overview.syncPolicies" as any) || "Sync policies"}
+          aria-label={t("authz.overview.syncPolicies" as any) || "Sync policies"}
+          className="rounded-lg border border-border bg-surface-1 p-1.5 text-text-muted hover:bg-accent/10 hover:text-accent hover:border-accent/40 disabled:opacity-50 transition-colors"
+        >
+          {syncing ? (
+            <Loader2 size={14} className="animate-spin" />
+          ) : (
+            <RotateCcw size={14} />
+          )}
+        </button>
+        <button
+          type="button"
+          onClick={handleTest}
+          title={t("authz.tab.test" as any) || "Test"}
+          aria-label={t("authz.tab.test" as any) || "Test"}
+          className="rounded-lg border border-border bg-surface-1 p-1.5 text-text-muted hover:bg-accent/10 hover:text-accent hover:border-accent/40 transition-colors"
+        >
+          <FlaskConical size={14} />
+        </button>
+        <button
+          type="button"
+          onClick={handleIntegration}
+          title={t("authz.tab.integration" as any) || "Integration"}
+          aria-label={t("authz.tab.integration" as any) || "Integration"}
+          className="rounded-lg border border-border bg-surface-1 p-1.5 text-text-muted hover:bg-accent/10 hover:text-accent hover:border-accent/40 transition-colors"
+        >
+          <Code size={14} />
+        </button>
       </div>
     </Link>
   );
