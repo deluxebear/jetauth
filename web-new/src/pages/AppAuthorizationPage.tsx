@@ -195,6 +195,7 @@ export default function AppAuthorizationPage() {
             onRefresh={fetchData}
             appOwner={owner!}
             appName={appName!}
+            supportsDeny={config?.supportsDeny !== false}
             t={t}
             modal={modal}
             navigate={navigate}
@@ -534,9 +535,10 @@ function RolesTab({ roles, onRefresh, appOwner, appName, t, modal, navigate }: {
 }
 
 // ═══════ PERMISSIONS TAB ═══════
-function PermissionsTab({ permissions, onRefresh, appOwner, appName, t, modal, navigate }: {
+function PermissionsTab({ permissions, onRefresh, appOwner, appName, supportsDeny, t, modal, navigate }: {
   permissions: BizPermission[]; onRefresh: () => void;
   appOwner: string; appName: string;
+  supportsDeny: boolean;
   t: (key: any) => string; modal: any; navigate: any;
 }) {
   const handleAddPermission = () => {
@@ -577,16 +579,30 @@ function PermissionsTab({ permissions, onRefresh, appOwner, appName, t, modal, n
       ),
     },
     {
-      key: "effect", title: t("authz.perms.col.effect"), sortable: true, filterable: true, width: "90px",
+      key: "effect", title: t("authz.perms.col.effect"), sortable: true, filterable: true, width: "110px",
       filterOptions: [
         { label: t("permissions.effectAllow" as any), value: "Allow" },
         { label: t("permissions.effectDeny" as any), value: "Deny" },
       ],
-      render: (_, p) => (
-        <span className={`inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold ${p.effect === "Allow" ? "bg-success/10 text-success" : "bg-danger/10 text-danger"}`}>
-          {p.effect === "Allow" ? t("permissions.effectAllow" as any) : t("permissions.effectDeny" as any)}
-        </span>
-      ),
+      render: (_, p) => {
+        // A Deny row whose app model doesn't actually honor deny is a
+        // silent no-op at enforce time — flag it so admins notice without
+        // having to open each permission.
+        const denyInert = p.effect === "Deny" && !supportsDeny;
+        return (
+          <span
+            className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+              denyInert ? "bg-warning/15 text-warning" :
+              p.effect === "Allow" ? "bg-success/10 text-success" :
+              "bg-danger/10 text-danger"
+            }`}
+            title={denyInert ? (t("bizPerm.denyInertHint" as any) || "This app's model does not honor Deny — this permission has no enforcement effect.") : undefined}
+          >
+            {p.effect === "Allow" ? t("permissions.effectAllow" as any) : t("permissions.effectDeny" as any)}
+            {denyInert && <span className="text-[9px]">⚠</span>}
+          </span>
+        );
+      },
     },
     {
       key: "state", title: t("authz.perms.col.approval" as any), sortable: true, filterable: true, width: "100px",

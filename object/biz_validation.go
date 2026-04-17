@@ -70,10 +70,42 @@ func validateBizPermission(perm *BizPermission) error {
 		return newBizError("Effect must be \"%s\" or \"%s\", got \"%s\"", EffectAllow, EffectDeny, perm.Effect)
 	}
 
+	// Deny only takes effect when the app's Casbin model actually honors it.
+	// Fail at save time rather than at enforce time — a silent "Deny that
+	// behaves like Allow" is the worst kind of security bug.
+	if perm.Effect == EffectDeny {
+		if err := validateAppModelSupportsDeny(perm.Owner, perm.AppName); err != nil {
+			return err
+		}
+	}
+
 	if perm.State != "" && perm.State != StateApproved && perm.State != StatePending && perm.State != StateRejected {
 		return newBizError("State must be \"%s\", \"%s\", or \"%s\", got \"%s\"", StateApproved, StatePending, StateRejected, perm.State)
 	}
 
+	return nil
+}
+
+// validateAppModelSupportsDeny rejects a Deny permission when the app's
+// model would silently ignore it. Reuses modelTextSupportsDeny so the save-
+// time check and the computed JSON flag can't drift.
+func validateAppModelSupportsDeny(owner, appName string) error {
+	config, err := getBizAppConfig(owner, appName)
+	if err != nil {
+		return err
+	}
+	if config == nil || config.ModelText == "" {
+		return newBizError(
+			"Effect=Deny requires an app model that honors deny, but app \"%s/%s\" has no model configured yet",
+			owner, appName,
+		)
+	}
+	if !modelTextSupportsDeny(config.ModelText) {
+		return newBizError(
+			"Effect=Deny is not supported by app \"%s/%s\" — the model's [policy_definition] p must include p_eft AND [policy_effect] must reference p.eft == deny (e.g. `!some(where (p.eft == deny)) && some(where (p.eft == allow))`)",
+			owner, appName,
+		)
+	}
 	return nil
 }
 

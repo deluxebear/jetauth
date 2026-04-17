@@ -67,6 +67,15 @@ func AddBizRoleInheritance(parentRoleId, childRoleId int64) (bool, error) {
 		}
 	}
 
+	// Scope rule (both app-scope): parent and child must belong to the same app.
+	// Cross-app inheritance between sibling apps would flatten the parent's
+	// members into the child app's Casbin g-rules (via ExpandRoleAncestors in
+	// computeRoleGPolicies), granting parent-app members permission in the
+	// child app — the same kind of leakage the org→app check above prevents.
+	if !parent.IsOrgScope() && !child.IsOrgScope() && parent.AppName != child.AppName {
+		return false, fmt.Errorf("app-scope role cannot inherit from an app-scope role in a different app (would leak permissions across sibling apps)")
+	}
+
 	// Cycle detection + ancestor-side depth (edges above parent, inclusive of
 	// the starting node at depth=1 → #edges above parent = ancestorDepth - 1).
 	cycle, ancestorDepth, err := detectInheritanceCycle(parentRoleId, childRoleId)

@@ -12,6 +12,13 @@ export interface BizAppConfig {
   modelText: string;
   policyTable: string;
   isEnabled: boolean;
+  /**
+   * Backend-computed: true iff the current modelText has both a p_eft
+   * field and a policy_effect referencing p.eft == deny. When false,
+   * Deny permissions are silently ignored at enforce time — frontend
+   * should hide or disable the Deny option.
+   */
+  supportsDeny?: boolean;
   [key: string]: unknown;
 }
 

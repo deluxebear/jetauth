@@ -100,6 +100,11 @@ func DeleteBizRole(id int64) (bool, error) {
 		return false, fmt.Errorf("cannot delete role %s: it is inherited by other roles", role.Name)
 	}
 
+	// Snapshot the identity fields BEFORE we delete the row — post-delete
+	// sync fan-out needs name + scope to locate apps that still reference
+	// this role via biz_permission_grantee.
+	snapOrg, snapApp, snapName, snapScope := role.Organization, role.AppName, role.Name, role.ScopeKind
+
 	// Cascade members + inheritance edges
 	if _, err := ormer.Engine.Where("role_id = ?", id).Delete(&BizRoleMember{}); err != nil {
 		return false, err
@@ -112,7 +117,7 @@ func DeleteBizRole(id int64) (bool, error) {
 		return false, err
 	}
 	if affected != 0 {
-		SyncAfterRoleDeleted(role.Organization, role.AppName, id)
+		SyncAfterRoleDeleted(snapOrg, snapApp, snapName, snapScope)
 	}
 	return affected != 0, nil
 }

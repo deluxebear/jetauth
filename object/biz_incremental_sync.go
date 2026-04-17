@@ -10,6 +10,7 @@ package object
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/beego/beego/v2/core/logs"
 	"github.com/casbin/casbin/v3"
@@ -78,9 +79,29 @@ func computeRoleGPolicies(role *BizRole) ([][]string, error) {
 // role grantees are flattened into the p rule's `sub` slot identically — the
 // Casbin g-rules emitted by computeRoleGPolicies translate user→role lookups.
 // "userset" grantees are skipped in phase 1.
-func computePermPPolicies(perm *BizPermission, hasEft bool) ([][]string, error) {
+//
+// Deny semantics: a Deny permission only has enforcement teeth when the model
+// has a `p_eft` field AND the policy_effect expression actually consults
+// `p.eft == deny`. If hasEft is false, we have nowhere to write the deny
+// marker at all. If the effect expression ignores deny (the default
+// `some(where (p.eft == allow))` is a classic example), Casbin silently
+// treats the deny rule as inert. In both cases, emitting anything would turn
+// the admin's "Deny" choice into a no-op or — worse, on a 3-col model — into
+// an implicit Allow. Fail loud instead, surfacing the configuration error at
+// sync time rather than at enforce time.
+func computePermPPolicies(perm *BizPermission, hasEft, honorsDeny bool) ([][]string, error) {
 	if perm == nil || !perm.IsEnabled || perm.State != StateApproved {
 		return nil, nil
+	}
+
+	if perm.Effect == EffectDeny && !honorsDeny {
+		return nil, fmt.Errorf(
+			"permission %q has Effect=Deny but the app model does not honor deny: "+
+				"model must have [policy_definition] p = sub, obj, act, eft AND "+
+				"[policy_effect] must reference p.eft == deny "+
+				"(e.g. `!some(where (p.eft == deny)) && some(where (p.eft == allow))`)",
+			perm.Name,
+		)
 	}
 
 	grantees, err := ListBizPermissionGrantees(perm.Id)
@@ -189,6 +210,20 @@ func detectHasEft(e *casbin.Enforcer) bool {
 	return false
 }
 
+// modelHonorsDeny reports whether the model's policy_effect expression
+// actually consults `p.eft == deny`. Casbin normalizes `p.eft` to `p_eft`
+// during parsing, so we substring-probe the effect value. Without both
+// `p_eft` and `deny` in the effect, Casbin ignores any deny-typed rule —
+// e.g. the default `some(where (p.eft == allow))` is allow-only.
+func modelHonorsDeny(e *casbin.Enforcer) bool {
+	eDef, ok := e.GetModel()["e"]["e"]
+	if !ok {
+		return false
+	}
+	expr := eDef.Value
+	return strings.Contains(expr, "p_eft") && strings.Contains(expr, "deny")
+}
+
 // validateBizPermissionModel rejects models whose policy shape the engine
 // cannot populate from BizPermission. BizPermission carries Users/Roles,
 // Resources, Actions, and Effect — these map to a 3- or 4-column policy.
@@ -275,9 +310,12 @@ func SyncAfterRoleUpdated(org, appName string, roleId int64) {
 }
 
 // SyncAfterRoleDeleted is called after a BizRole (and its members/inheritance
-// edges) have been removed from the DB.
-func SyncAfterRoleDeleted(org, appName string, roleId int64) {
-	syncAffectedApps(org, appName, roleId)
+// edges) have been removed from the DB. Because the row is already gone,
+// `syncAffectedApps` can't re-query the role — callers MUST pass the
+// pre-delete snapshot so fan-out (especially for org-scope roles referenced
+// by other apps via biz_permission_grantee) still reaches every affected app.
+func SyncAfterRoleDeleted(org, appName, roleName, scopeKind string) {
+	syncAffectedAppsSnapshot(org, appName, roleName, scopeKind)
 }
 
 // SyncAfterRoleMemberAdded is called after biz_role_member gains a row.
@@ -298,38 +336,100 @@ func SyncAfterInheritanceChanged(org, appName string, childRoleId int64) {
 }
 
 // syncAffectedApps dispatches a rebuild for every app whose Casbin enforcer
-// depends on the given role.
-//   - App-scope role: just the owning app.
-//   - Org-scope role: every app that has a BizPermissionGrantee row of
-//     type='role' pointing at this role's name (indexed lookup).
+// depends on the given role. The role's OWN scope determines the starting
+// app set; descendants must also be walked because computeRoleGPolicies in
+// each descendant's app flattens this role's members into the descendant's
+// g-rules via ExpandRoleAncestors. Without the descendant walk, a member
+// change on an org-scope parent would never refresh an app-scope child's
+// enforcer.
 //
 // Rebuilds are fire-and-forget goroutines so mutation endpoints don't block.
 func syncAffectedApps(org, appName string, roleId int64) {
 	role, err := getBizRoleById(roleId)
 	if err != nil || role == nil {
-		// Role already gone (delete path) or a DB error. Best we can do for
-		// delete is sync the app we were told about; cross-app fan-out needs
-		// the role name which we no longer have, so callers that care about
-		// org-scope delete fan-out should pass appName == "" after a prior
-		// snapshot — today, that's not a code path.
+		// Role already gone (delete path) or a DB error. The snapshot-based
+		// delete path calls syncAffectedAppsSnapshot directly, so this branch
+		// is now reached only on DB errors or races. Fall back to the app we
+		// were told about.
 		if appName != "" {
 			go func(o, a string) { _, _ = SyncAppPolicies(o, a) }(org, appName)
 		}
 		return
 	}
 
-	if role.ScopeKind == BizRoleScopeApp {
-		go func(o, a string) { _, _ = SyncAppPolicies(o, a) }(org, role.AppName)
-		return
+	appSet := map[string]bool{}
+
+	// (1) Start from the role itself.
+	collectAppsForRole(org, role, appSet)
+
+	// (2) Walk descendants. Any role that transitively inherits from this
+	// one has our members flattened into its g-rules, so every descendant's
+	// owning (or grantor) app needs a rebuild too.
+	descendantIds, err := ExpandRoleDescendants(roleId)
+	if err != nil {
+		logs.Warning("ExpandRoleDescendants(%d) failed: %v", roleId, err)
+	}
+	for _, dId := range descendantIds {
+		dRole, err := getBizRoleById(dId)
+		if err != nil || dRole == nil || dRole.Organization != org {
+			continue
+		}
+		collectAppsForRole(org, dRole, appSet)
 	}
 
-	// Org-scope: fan out to every app that references this role name.
-	affected, err := findAppsReferencingRoleName(org, role.Name)
+	for app := range appSet {
+		go func(o, a string) { _, _ = SyncAppPolicies(o, a) }(org, app)
+	}
+}
+
+// collectAppsForRole adds every app whose Casbin enforcer depends on `role`
+// into `appSet`:
+//   - App-scope role: the owning app.
+//   - Org-scope role: every app that references this role name via
+//     biz_permission_grantee (indexed lookup).
+func collectAppsForRole(org string, role *BizRole, appSet map[string]bool) {
+	if role.ScopeKind == BizRoleScopeApp {
+		appSet[role.AppName] = true
+		return
+	}
+	apps, err := findAppsReferencingRoleName(org, role.Name)
 	if err != nil {
 		logs.Warning("findAppsReferencingRoleName(%s,%s) failed: %v", org, role.Name, err)
 		return
 	}
-	for _, app := range affected {
+	for _, a := range apps {
+		appSet[a] = true
+	}
+}
+
+// syncAffectedAppsSnapshot is the delete-path variant: the caller snapshotted
+// (name, scopeKind, appName) BEFORE the row was removed, so we don't need to
+// hit the DB to re-read the role. Fan-out rules mirror syncAffectedApps.
+//
+// NOTE: descendants cannot be walked here because the DELETE CASCADE also
+// wiped the role's inheritance edges before we got here — but that's fine:
+// once the inheritance row is gone, descendants no longer reference this
+// role at sync time, and their next rebuild (triggered independently) will
+// exclude the deleted role. The apps that currently still grant the role
+// via biz_permission_grantee ARE in the snapshot's fan-out set, which is
+// what this function ensures.
+func syncAffectedAppsSnapshot(org, appName, roleName, scopeKind string) {
+	appSet := map[string]bool{}
+	if scopeKind == BizRoleScopeApp {
+		if appName != "" {
+			appSet[appName] = true
+		}
+	} else {
+		apps, err := findAppsReferencingRoleName(org, roleName)
+		if err != nil {
+			logs.Warning("findAppsReferencingRoleName(%s,%s) failed: %v", org, roleName, err)
+		} else {
+			for _, a := range apps {
+				appSet[a] = true
+			}
+		}
+	}
+	for app := range appSet {
 		go func(o, a string) { _, _ = SyncAppPolicies(o, a) }(org, app)
 	}
 }

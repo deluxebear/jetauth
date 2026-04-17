@@ -9,6 +9,8 @@
 package object
 
 import (
+	"github.com/casbin/casbin/v3"
+	"github.com/casbin/casbin/v3/model"
 	"github.com/deluxebear/casdoor/util"
 	"github.com/xorm-io/core"
 )
@@ -23,6 +25,40 @@ type BizAppConfig struct {
 	ModelText   string `xorm:"mediumtext" json:"modelText"`
 	PolicyTable string `xorm:"varchar(100)" json:"policyTable"`
 	IsEnabled   bool   `json:"isEnabled"`
+
+	// SupportsDeny is a computed field (not persisted) that reports whether
+	// the current ModelText has both a p_eft field and a policy_effect that
+	// references p.eft == deny. The frontend uses this to hide or disable
+	// the Deny option in permission edit UIs so admins can't save a
+	// permission whose Effect will never fire.
+	SupportsDeny bool `xorm:"-" json:"supportsDeny"`
+}
+
+// modelTextSupportsDeny probes a Casbin model text to report whether
+// Effect=Deny has a chance of firing. Shared by JSON marshalling of
+// BizAppConfig and by the save-time validator.
+func modelTextSupportsDeny(modelText string) bool {
+	if modelText == "" {
+		return false
+	}
+	m, err := model.NewModelFromString(modelText)
+	if err != nil {
+		return false
+	}
+	e, err := casbin.NewEnforcer(m)
+	if err != nil {
+		return false
+	}
+	return detectHasEft(e) && modelHonorsDeny(e)
+}
+
+// fillSupportsDeny fills the computed flag on any BizAppConfig returned to
+// the HTTP layer. Called from every read path.
+func fillSupportsDeny(c *BizAppConfig) {
+	if c == nil {
+		return
+	}
+	c.SupportsDeny = modelTextSupportsDeny(c.ModelText)
 }
 
 func (c *BizAppConfig) GetId() string {
@@ -47,6 +83,9 @@ func GetBizAppConfigs(owner string) ([]*BizAppConfig, error) {
 	if err != nil {
 		return nil, err
 	}
+	for _, c := range configs {
+		fillSupportsDeny(c)
+	}
 	return configs, nil
 }
 
@@ -60,6 +99,7 @@ func getBizAppConfig(owner, appName string) (*BizAppConfig, error) {
 		return nil, err
 	}
 	if existed {
+		fillSupportsDeny(&config)
 		return &config, nil
 	}
 	return nil, nil

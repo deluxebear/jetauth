@@ -2710,6 +2710,8 @@ const en = {
   "bizPerm.resourceHint": "One per line. Wildcards: * all, :id param.",
   "bizPerm.actions": "Actions",
   "bizPerm.actionHint": "Actions are matched as regex against request.act.",
+  "bizPerm.denyUnsupportedHint": "This app's model does not support Deny. Update the model's policy_effect to reference p.eft == deny (e.g. `!some(where (p.eft == deny)) && some(where (p.eft == allow))`).",
+  "bizPerm.denyInertHint": "This app's model does not honor Deny — this permission has no enforcement effect.",
   "bizPerm.customAction": "Custom…",
   "bizPerm.effect": "Effect",
   "bizPerm.effectAllow": "Allow",

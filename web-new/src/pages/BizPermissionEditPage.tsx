@@ -31,11 +31,24 @@ export default function BizPermissionEditPage() {
   const [saved, setSaved] = useState(false);
   const [loading, setLoading] = useState(true);
   const [customAction, setCustomAction] = useState("");
+  // Whether this app's Casbin model honors deny. Backend-computed; we lazy-
+  // load it alongside the permission so the Deny button can be accurately
+  // gated instead of letting the user discover the problem on Save.
+  const [supportsDeny, setSupportsDeny] = useState<boolean>(true);
 
   useEffect(() => { if (saved) { const timer = setTimeout(() => setSaved(false), 1500); return () => clearTimeout(timer); } }, [saved]);
 
   useEffect(() => {
     if (!owner || !appName) return;
+    // Fetch supportsDeny in parallel with the permission load. The config
+    // rarely changes, so a fetch error defaults to "assume supported" (the
+    // save-time backend check still gates the actual write).
+    BizBackend.getBizAppConfig(`${owner}/${appName}`).then((res) => {
+      if (res.status === "ok" && res.data) {
+        setSupportsDeny(!!res.data.supportsDeny);
+      }
+    }).catch(() => {});
+
     setLoading(true);
     if (isNew) {
       const p = BizBackend.newBizPermission(owner, appName);
@@ -171,19 +184,33 @@ export default function BizPermissionEditPage() {
           <textarea className={`${inputClass} min-h-[72px] resize-y`} value={perm.description} onChange={(e) => set("description", e.target.value)} />
         </FormField>
         <FormField label={t("bizPerm.effect") || "Effect"}>
-          <div className="flex rounded-lg bg-surface-2 p-0.5 gap-0.5">
-            <button
-              onClick={() => set("effect", "Allow")}
-              className={`flex-1 py-2 px-4 rounded-md text-[13px] font-semibold transition-all ${perm.effect === "Allow" ? "bg-success text-white shadow-sm" : "text-text-muted hover:text-text-secondary"}`}
-            >
-              {t("bizPerm.effectAllow") || "Allow"}
-            </button>
-            <button
-              onClick={() => set("effect", "Deny")}
-              className={`flex-1 py-2 px-4 rounded-md text-[13px] font-semibold transition-all ${perm.effect === "Deny" ? "bg-danger text-white shadow-sm" : "text-text-muted hover:text-text-secondary"}`}
-            >
-              {t("bizPerm.effectDeny") || "Deny"}
-            </button>
+          <div>
+            <div className="flex rounded-lg bg-surface-2 p-0.5 gap-0.5">
+              <button
+                onClick={() => set("effect", "Allow")}
+                className={`flex-1 py-2 px-4 rounded-md text-[13px] font-semibold transition-all ${perm.effect === "Allow" ? "bg-success text-white shadow-sm" : "text-text-muted hover:text-text-secondary"}`}
+              >
+                {t("bizPerm.effectAllow") || "Allow"}
+              </button>
+              <button
+                onClick={() => { if (supportsDeny) set("effect", "Deny"); }}
+                disabled={!supportsDeny}
+                title={supportsDeny ? undefined : (t("bizPerm.denyUnsupportedHint") || "This app's model does not support Deny. Update the model's policy_effect to include p.eft == deny first.")}
+                className={`flex-1 py-2 px-4 rounded-md text-[13px] font-semibold transition-all ${
+                  perm.effect === "Deny" && supportsDeny ? "bg-danger text-white shadow-sm" :
+                  !supportsDeny ? "text-text-muted/50 cursor-not-allowed" :
+                  "text-text-muted hover:text-text-secondary"
+                }`}
+              >
+                {t("bizPerm.effectDeny") || "Deny"}
+              </button>
+            </div>
+            {!supportsDeny && (
+              <p className="mt-2 flex items-start gap-1 text-[11px] text-warning">
+                <Info size={12} className="mt-0.5 flex-shrink-0" />
+                <span>{t("bizPerm.denyUnsupportedHint") || "This app's model does not support Deny. Update the model's policy_effect to include p.eft == deny first."}</span>
+              </p>
+            )}
           </div>
         </FormField>
         <FormField label={t("field.isEnabled") || "Enabled"}>

@@ -2781,6 +2781,8 @@ const zh: Record<string, string> = {
   "bizPerm.resourceHint": "每行一个资源路径。通配符：* 匹配全部,:id 匹配参数。",
   "bizPerm.actions": "操作",
   "bizPerm.actionHint": "操作以正则方式匹配 request.act。",
+  "bizPerm.denyUnsupportedHint": "当前应用的模型不支持「拒绝」。请先在应用模型的 policy_effect 中引入 p.eft == deny（例如 `!some(where (p.eft == deny)) && some(where (p.eft == allow))`）。",
+  "bizPerm.denyInertHint": "当前应用的模型未启用拒绝效果，此条策略在运行时不会生效。",
   "bizPerm.customAction": "自定义…",
   "bizPerm.effect": "效果",
   "bizPerm.effectAllow": "允许",

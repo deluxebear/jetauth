@@ -88,13 +88,16 @@ func SyncAppPolicies(owner, appName string) (*SyncStats, error) {
 		return nil, err
 	}
 
-	// 4. Determine if model has eft field
+	// 4. Determine if model has eft field and whether the effect expression
+	// actually honors deny — needed so computePermPPolicies can fail loud on
+	// a Deny permission configured against an allow-only model.
 	hasEft := detectHasEft(e)
+	honorsDeny := hasEft && modelHonorsDeny(e)
 
 	// 5. Generate p policies from permissions (Cartesian product) — batch
 	var policies [][]string
 	for _, perm := range permissions {
-		permPolicies, err := computePermPPolicies(perm, hasEft)
+		permPolicies, err := computePermPPolicies(perm, hasEft, honorsDeny)
 		if err != nil {
 			return nil, fmt.Errorf("compute p for permission %s: %w", perm.Name, err)
 		}
