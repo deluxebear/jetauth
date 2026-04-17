@@ -10,27 +10,13 @@ package object
 
 import (
 	"fmt"
-	"strings"
-	"sync"
 
 	"github.com/beego/beego/v2/core/logs"
 	"github.com/casbin/casbin/v3"
 	"github.com/casbin/casbin/v3/model"
-	xormadapter "github.com/deluxebear/casdoor/adapters/xormadapter"
-	"github.com/deluxebear/casdoor/conf"
 	"github.com/deluxebear/casdoor/util"
 	"github.com/xorm-io/core"
 )
-
-// Per-app mutex ensures atomic incremental sync (no concurrent modification
-// of the same app's policies).
-var bizSyncMu sync.Map // key: "owner/appName" → *sync.Mutex
-
-func getBizSyncLock(owner, appName string) *sync.Mutex {
-	key := util.GetId(owner, appName)
-	val, _ := bizSyncMu.LoadOrStore(key, &sync.Mutex{})
-	return val.(*sync.Mutex)
-}
 
 // ── Policy computation helpers ──
 
@@ -179,12 +165,6 @@ func bumpBizAppConfigUpdatedTime(owner, appName string) string {
 	return now
 }
 
-// detectHasRoleDef checks whether the model has [role_definition].
-// Uses the shared HasRoleDefinition helper from model.go.
-func detectHasRoleDef(e *casbin.Enforcer) bool {
-	return HasRoleDefinition(e.GetModel())
-}
-
 // ── In-memory enforcer builder ──
 
 // buildEnforcerInMemory creates a new adapter-less enforcer with the given policies.
@@ -209,63 +189,6 @@ func buildEnforcerInMemory(modelText string, policies, groupingPolicies [][]stri
 		}
 	}
 	return e, nil
-}
-
-// ── Standalone DB adapter ──
-
-// buildPolicyAdapter creates a standalone xorm adapter for direct DB writes.
-func buildPolicyAdapter(policyTable string) (*xormadapter.Adapter, error) {
-	prefix := conf.GetConfigString("tableNamePrefix")
-	return xormadapter.NewAdapterByEngineWithTableName(ormer.Engine, policyTable, prefix)
-}
-
-// ── Policy diff helpers ──
-
-// policyKey returns a string key for dedup/comparison of a policy row.
-func policyKey(p []string) string {
-	return strings.Join(p, "\x00")
-}
-
-// diffPolicies computes added and removed policies between old and new sets.
-func diffPolicies(oldPolicies, newPolicies [][]string) (added, removed [][]string) {
-	oldSet := make(map[string]bool, len(oldPolicies))
-	for _, p := range oldPolicies {
-		oldSet[policyKey(p)] = true
-	}
-	newSet := make(map[string]bool, len(newPolicies))
-	for _, p := range newPolicies {
-		newSet[policyKey(p)] = true
-	}
-	for _, p := range newPolicies {
-		if !oldSet[policyKey(p)] {
-			added = append(added, p)
-		}
-	}
-	for _, p := range oldPolicies {
-		if !newSet[policyKey(p)] {
-			removed = append(removed, p)
-		}
-	}
-	return
-}
-
-// applyDiff removes and adds policies to a slice, returning the result.
-func applyDiff(current [][]string, toRemove, toAdd [][]string) [][]string {
-	if len(toRemove) == 0 && len(toAdd) == 0 {
-		return current
-	}
-	removeSet := make(map[string]bool, len(toRemove))
-	for _, p := range toRemove {
-		removeSet[policyKey(p)] = true
-	}
-	result := make([][]string, 0, len(current)+len(toAdd))
-	for _, p := range current {
-		if !removeSet[policyKey(p)] {
-			result = append(result, p)
-		}
-	}
-	result = append(result, toAdd...)
-	return result
 }
 
 // ── Sync trigger wrappers (relational model) ──

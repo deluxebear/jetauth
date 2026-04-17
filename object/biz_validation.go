@@ -9,12 +9,9 @@
 package object
 
 import (
-	"encoding/json"
 	"fmt"
 	"strings"
 )
-
-const maxRoleInheritanceDepth = 10
 
 // BizError carries a translatable error template with arguments.
 // The controller layer translates the template via c.T() before formatting.
@@ -45,30 +42,6 @@ const (
 
 // Error messages use "biz:" namespace for i18n translation.
 // Controller layer translates them via c.T() before returning to client.
-
-// validateBizRole validates a BizRole row before add or update.
-//
-// Membership (users/groups) and sub-role inheritance moved to the
-// biz_role_member and biz_role_inheritance tables, so they are validated at
-// their own add paths (with cycle-detection in AddBizRoleInheritance). This
-// function only checks the row's own shape.
-func validateBizRole(role *BizRole) error {
-	if strings.TrimSpace(role.Organization) == "" {
-		return newBizError("Role organization cannot be empty")
-	}
-	if strings.TrimSpace(role.Name) == "" {
-		return newBizError("Role name cannot be empty")
-	}
-
-	if role.Properties != "" {
-		role.Properties = strings.TrimSpace(role.Properties)
-		if role.Properties != "" && !json.Valid([]byte(role.Properties)) {
-			return newBizError("Role properties must be valid JSON")
-		}
-	}
-
-	return nil
-}
 
 // validateBizPermission validates a BizPermission row before add or update.
 //
@@ -104,20 +77,6 @@ func validateBizPermission(perm *BizPermission) error {
 	return nil
 }
 
-// validateBizRoleDelete is a row-level pre-check before deleting a role.
-//
-// The meaningful cross-entity checks (roles inheriting this role, permissions
-// granted to this role) now live in the relational tables
-// biz_role_inheritance and biz_permission_grantee; their own delete paths
-// cascade or block as appropriate. This function is intentionally a no-op
-// placeholder that callers may keep invoking without behavioural change.
-func validateBizRoleDelete(role *BizRole) error {
-	if role == nil {
-		return newBizError("Role is nil")
-	}
-	return nil
-}
-
 // ── Helpers ──
 
 func dedup(ss []string) []string {
@@ -139,64 +98,3 @@ func dedup(ss []string) []string {
 	return result
 }
 
-func detectCycle(adj map[string][]string, startNode string) string {
-	visited := make(map[string]bool)
-	inStack := make(map[string]bool)
-	var stack []string
-
-	var dfs func(node string) string
-	dfs = func(node string) string {
-		visited[node] = true
-		inStack[node] = true
-		stack = append(stack, node)
-
-		for _, next := range adj[node] {
-			if !visited[next] {
-				if result := dfs(next); result != "" {
-					return result
-				}
-			} else if inStack[next] {
-				stack = append(stack, next)
-				for i, n := range stack {
-					if n == next {
-						return strings.Join(stack[i:], " → ")
-					}
-				}
-			}
-		}
-
-		inStack[node] = false
-		stack = stack[:len(stack)-1]
-		return ""
-	}
-
-	return dfs(startNode)
-}
-
-func computeMaxDepth(adj map[string][]string, node string) int {
-	memo := make(map[string]int)
-	var compute func(n string, visiting map[string]bool) int
-	compute = func(n string, visiting map[string]bool) int {
-		if visiting[n] {
-			return 0
-		}
-		if v, ok := memo[n]; ok {
-			return v
-		}
-		visiting[n] = true
-		maxChild := 0
-		for _, child := range adj[n] {
-			d := compute(child, visiting)
-			if d > maxChild {
-				maxChild = d
-			}
-			if maxChild+1 > maxRoleInheritanceDepth {
-				break
-			}
-		}
-		visiting[n] = false
-		memo[n] = maxChild + 1
-		return maxChild + 1
-	}
-	return compute(node, make(map[string]bool))
-}
