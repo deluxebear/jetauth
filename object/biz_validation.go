@@ -46,63 +46,18 @@ const (
 // Error messages use "biz:" namespace for i18n translation.
 // Controller layer translates them via c.T() before returning to client.
 
-// validateBizRole validates a BizRole before add or update.
-func validateBizRole(role *BizRole, isUpdate bool) error {
-	if strings.TrimSpace(role.Owner) == "" || strings.TrimSpace(role.AppName) == "" {
-		return newBizError("Role owner and appName cannot be empty")
+// validateBizRole validates a BizRole row before add or update.
+//
+// Membership (users/groups) and sub-role inheritance moved to the
+// biz_role_member and biz_role_inheritance tables, so they are validated at
+// their own add paths (with cycle-detection in AddBizRoleInheritance). This
+// function only checks the row's own shape.
+func validateBizRole(role *BizRole) error {
+	if strings.TrimSpace(role.Organization) == "" {
+		return newBizError("Role organization cannot be empty")
 	}
 	if strings.TrimSpace(role.Name) == "" {
 		return newBizError("Role name cannot be empty")
-	}
-
-	role.Users = dedup(role.Users)
-	role.Roles = dedup(role.Roles)
-
-	for _, r := range role.Roles {
-		if r == role.Name {
-			return newBizError("Role \"%s\" cannot inherit from itself", role.Name)
-		}
-	}
-
-	if len(role.Roles) > 0 {
-		allRoles, err := GetBizRoles(role.Owner, role.AppName)
-		if err != nil {
-			return newBizError("Failed to load roles for validation: %s", err.Error())
-		}
-		roleSet := make(map[string]bool, len(allRoles))
-		for _, r := range allRoles {
-			roleSet[r.Name] = true
-		}
-		if !isUpdate {
-			roleSet[role.Name] = true
-		}
-
-		for _, subRole := range role.Roles {
-			if !roleSet[subRole] {
-				return newBizError("Sub-role \"%s\" does not exist in app %s/%s", subRole, role.Owner, role.AppName)
-			}
-		}
-
-		adj := make(map[string][]string, len(allRoles)+1)
-		for _, r := range allRoles {
-			if r.Name == role.Name {
-				adj[r.Name] = role.Roles
-			} else {
-				adj[r.Name] = r.Roles
-			}
-		}
-		if _, ok := adj[role.Name]; !ok {
-			adj[role.Name] = role.Roles
-		}
-
-		if cycle := detectCycle(adj, role.Name); cycle != "" {
-			return newBizError("Circular role inheritance detected: %s", cycle)
-		}
-
-		depth := computeMaxDepth(adj, role.Name)
-		if depth > maxRoleInheritanceDepth {
-			return newBizError("Role inheritance depth exceeds limit (%d), current depth: %d", maxRoleInheritanceDepth, depth)
-		}
 	}
 
 	if role.Properties != "" {
@@ -115,7 +70,11 @@ func validateBizRole(role *BizRole, isUpdate bool) error {
 	return nil
 }
 
-// validateBizPermission validates a BizPermission before add or update.
+// validateBizPermission validates a BizPermission row before add or update.
+//
+// Grantees (users/roles) moved to the biz_permission_grantee table and are
+// validated at that table's add path. This function only checks the row's
+// own shape (identity, resources/actions, effect, approval state).
 func validateBizPermission(perm *BizPermission) error {
 	if strings.TrimSpace(perm.Owner) == "" || strings.TrimSpace(perm.AppName) == "" {
 		return newBizError("Permission owner and appName cannot be empty")
@@ -124,35 +83,14 @@ func validateBizPermission(perm *BizPermission) error {
 		return newBizError("Permission name cannot be empty")
 	}
 
-	perm.Users = dedup(perm.Users)
-	perm.Roles = dedup(perm.Roles)
 	perm.Resources = dedup(perm.Resources)
 	perm.Actions = dedup(perm.Actions)
 
-	if len(perm.Users) == 0 && len(perm.Roles) == 0 {
-		return newBizError("Permission must have at least one subject (user or role)")
-	}
 	if len(perm.Resources) == 0 {
 		return newBizError("Permission must have at least one resource")
 	}
 	if len(perm.Actions) == 0 {
 		return newBizError("Permission must have at least one action")
-	}
-
-	if len(perm.Roles) > 0 {
-		allRoles, err := GetBizRoles(perm.Owner, perm.AppName)
-		if err != nil {
-			return newBizError("Failed to load roles for validation: %s", err.Error())
-		}
-		roleSet := make(map[string]bool, len(allRoles))
-		for _, r := range allRoles {
-			roleSet[r.Name] = true
-		}
-		for _, roleName := range perm.Roles {
-			if !roleSet[roleName] {
-				return newBizError("Role \"%s\" does not exist in app %s/%s", roleName, perm.Owner, perm.AppName)
-			}
-		}
 	}
 
 	if perm.Effect != EffectAllow && perm.Effect != EffectDeny {
@@ -166,39 +104,17 @@ func validateBizPermission(perm *BizPermission) error {
 	return nil
 }
 
-// validateBizRoleDelete checks if a role can be safely deleted.
-// Blocks deletion only when OTHER entities reference this role (strong constraints).
+// validateBizRoleDelete is a row-level pre-check before deleting a role.
+//
+// The meaningful cross-entity checks (roles inheriting this role, permissions
+// granted to this role) now live in the relational tables
+// biz_role_inheritance and biz_permission_grantee; their own delete paths
+// cascade or block as appropriate. This function is intentionally a no-op
+// placeholder that callers may keep invoking without behavioural change.
 func validateBizRoleDelete(role *BizRole) error {
-	allRoles, err := GetBizRoles(role.Owner, role.AppName)
-	if err != nil {
-		return err
+	if role == nil {
+		return newBizError("Role is nil")
 	}
-
-	// Block: other roles inherit this role
-	for _, r := range allRoles {
-		if r.Name == role.Name {
-			continue
-		}
-		for _, sub := range r.Roles {
-			if sub == role.Name {
-				return newBizError("Cannot delete role \"%s\": it is inherited by role \"%s\"", role.Name, r.Name)
-			}
-		}
-	}
-
-	// Block: permissions reference this role
-	allPerms, err := GetBizPermissions(role.Owner, role.AppName)
-	if err != nil {
-		return err
-	}
-	for _, p := range allPerms {
-		for _, r := range p.Roles {
-			if r == role.Name {
-				return newBizError("Cannot delete role \"%s\": it is referenced by permission \"%s\"", role.Name, p.Name)
-			}
-		}
-	}
-
 	return nil
 }
 
