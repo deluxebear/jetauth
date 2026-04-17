@@ -9,141 +9,155 @@
 package object
 
 import (
-	"github.com/beego/beego/v2/core/logs"
+	"fmt"
+
 	"github.com/deluxebear/casdoor/util"
-	"github.com/xorm-io/core"
+)
+
+const (
+	BizRoleScopeOrg = "org"
+	BizRoleScopeApp = "app"
 )
 
 type BizRole struct {
-	Owner       string   `xorm:"varchar(100) notnull pk" json:"owner"`
-	AppName     string   `xorm:"varchar(100) notnull pk" json:"appName"`
-	Name        string   `xorm:"varchar(100) notnull pk" json:"name"`
-	CreatedTime string   `xorm:"varchar(100)" json:"createdTime"`
-	DisplayName string   `xorm:"varchar(100)" json:"displayName"`
-	Description string   `xorm:"varchar(500)" json:"description"`
-	Users       []string `xorm:"mediumtext" json:"users"`
-	Groups      []string `xorm:"mediumtext" json:"groups"`
-	Roles       []string `xorm:"mediumtext" json:"roles"` // sub-roles within same app
-	Properties  string   `xorm:"mediumtext" json:"properties"`
-	IsEnabled   bool     `json:"isEnabled"`
+	Id           int64  `xorm:"pk autoincr" json:"id"`
+	Organization string `xorm:"varchar(100) notnull index(ux_biz_role_app) index(ux_biz_role_org)" json:"organization"`
+	AppName      string `xorm:"varchar(100) notnull default '' index(ux_biz_role_app)" json:"appName"`
+	Name         string `xorm:"varchar(100) notnull index(ux_biz_role_app) index(ux_biz_role_org)" json:"name"`
+	ScopeKind    string `xorm:"varchar(10) notnull default 'app'" json:"scopeKind"` // BizRoleScopeOrg | BizRoleScopeApp
+	DisplayName  string `xorm:"varchar(200)" json:"displayName"`
+	Description  string `xorm:"varchar(500)" json:"description"`
+	Properties   string `xorm:"mediumtext" json:"properties"`
+	IsEnabled    bool   `xorm:"notnull default true" json:"isEnabled"`
+	CreatedTime  string `xorm:"varchar(100)" json:"createdTime"`
 }
 
-func (r *BizRole) GetId() string {
-	return util.GetSessionId(r.Owner, r.Name, r.AppName)
+func (r *BizRole) IsOrgScope() bool {
+	return r.ScopeKind == BizRoleScopeOrg
 }
 
-func GetBizRoles(owner, appName string) ([]*BizRole, error) {
-	roles := []*BizRole{}
-	err := ormer.Engine.Desc("created_time").Find(&roles, &BizRole{Owner: owner, AppName: appName})
-	if err != nil {
-		return nil, err
-	}
-	return roles, nil
+func (r *BizRole) GetCompositeKey() string {
+	return util.GetSessionId(r.Organization, r.AppName, r.Name)
 }
 
-func getBizRole(owner, appName, name string) (*BizRole, error) {
-	if util.IsStringsEmpty(owner, appName, name) {
-		return nil, nil
+func validateBizRoleScope(role *BizRole) error {
+	switch role.ScopeKind {
+	case BizRoleScopeOrg:
+		if role.AppName != "" {
+			return fmt.Errorf("org-scope role must have empty app_name, got %q", role.AppName)
+		}
+	case BizRoleScopeApp:
+		if role.AppName == "" {
+			return fmt.Errorf("app-scope role must have non-empty app_name")
+		}
+	default:
+		return fmt.Errorf("invalid scope_kind %q (expected 'org' or 'app')", role.ScopeKind)
 	}
-	role := BizRole{Owner: owner, AppName: appName, Name: name}
-	existed, err := ormer.Engine.Get(&role)
-	if err != nil {
-		return nil, err
+	if role.Organization == "" || role.Name == "" {
+		return fmt.Errorf("organization and name are required")
 	}
-	if existed {
-		return &role, nil
-	}
-	return nil, nil
-}
-
-func GetBizRole(owner, appName, name string) (*BizRole, error) {
-	return getBizRole(owner, appName, name)
+	return nil
 }
 
 func AddBizRole(role *BizRole) (bool, error) {
-	if err := validateBizRole(role, false); err != nil {
+	if err := validateBizRoleScope(role); err != nil {
 		return false, err
 	}
-
+	if role.CreatedTime == "" {
+		role.CreatedTime = util.GetCurrentTime()
+	}
 	affected, err := ormer.Engine.Insert(role)
+	return affected != 0, err
+}
+
+func UpdateBizRole(id int64, role *BizRole) (bool, error) {
+	if err := validateBizRoleScope(role); err != nil {
+		return false, err
+	}
+	role.Id = id
+	affected, err := ormer.Engine.ID(id).AllCols().Update(role)
 	if err != nil {
 		return false, err
 	}
-
 	if affected != 0 {
-		SyncAfterRoleAdd(role)
+		SyncAfterRoleUpdated(role.Organization, role.AppName, id)
 	}
-
 	return affected != 0, nil
 }
 
-func UpdateBizRole(owner, appName, name string, role *BizRole) (bool, error) {
-	if err := validateBizRole(role, true); err != nil {
+func DeleteBizRole(id int64) (bool, error) {
+	role, err := getBizRoleById(id)
+	if err != nil || role == nil {
 		return false, err
 	}
 
-	// Read old state before update (needed for incremental diff)
-	oldRole, err := getBizRole(owner, appName, name)
-	if err != nil {
-		logs.Warning("failed to read old role for incremental sync: %v", err)
-	}
-
-	affected, err := ormer.Engine.ID(core.PK{owner, appName, name}).AllCols().Update(role)
+	// Protect against deletion with active children
+	hasChildren, err := HasChildrenOfRole(id)
 	if err != nil {
 		return false, err
 	}
+	if hasChildren {
+		return false, fmt.Errorf("cannot delete role %s: it is inherited by other roles", role.Name)
+	}
 
+	// Cascade members + inheritance edges
+	if _, err := ormer.Engine.Where("role_id = ?", id).Delete(&BizRoleMember{}); err != nil {
+		return false, err
+	}
+	if _, err := ormer.Engine.Where("parent_role_id = ? OR child_role_id = ?", id, id).Delete(&BizRoleInheritance{}); err != nil {
+		return false, err
+	}
+	affected, err := ormer.Engine.ID(id).Delete(&BizRole{})
+	if err != nil {
+		return false, err
+	}
 	if affected != 0 {
-		SyncAfterRoleUpdate(oldRole, role)
+		SyncAfterRoleDeleted(role.Organization, role.AppName, id)
 	}
-
 	return affected != 0, nil
 }
 
-func DeleteBizRole(role *BizRole) (bool, error) {
-	if err := validateBizRoleDelete(role); err != nil {
-		return false, err
-	}
-
-	// Read full state before delete (needed for incremental diff)
-	fullRole, err := getBizRole(role.Owner, role.AppName, role.Name)
-	if err != nil {
-		logs.Warning("failed to read role for incremental sync: %v", err)
-	}
-	if fullRole == nil {
-		fullRole = role
-	}
-
-	affected, err := ormer.Engine.ID(core.PK{role.Owner, role.AppName, role.Name}).Delete(&BizRole{})
-	if err != nil {
-		return false, err
-	}
-
-	if affected != 0 {
-		SyncAfterRoleDelete(fullRole)
-	}
-
-	return affected != 0, nil
-}
-
-// GetBizRolesByUser returns all roles a user belongs to in a given app.
-func GetBizRolesByUser(owner, appName, userId string) ([]*BizRole, error) {
-	allRoles, err := GetBizRoles(owner, appName)
-	if err != nil {
+func getBizRoleById(id int64) (*BizRole, error) {
+	r := BizRole{Id: id}
+	existed, err := ormer.Engine.Get(&r)
+	if err != nil || !existed {
 		return nil, err
 	}
+	return &r, nil
+}
 
-	var result []*BizRole
-	for _, role := range allRoles {
-		if !role.IsEnabled {
-			continue
-		}
-		for _, u := range role.Users {
-			if u == userId || u == "*" {
-				result = append(result, role)
-				break
-			}
-		}
+// GetBizRoleByName looks up by (org, app_name, name). For app-level lookup with
+// org fallback, use ResolveScopedRoles instead.
+func GetBizRoleByName(org, appName, name string) (*BizRole, error) {
+	r := BizRole{Organization: org, AppName: appName, Name: name}
+	existed, err := ormer.Engine.Get(&r)
+	if err != nil || !existed {
+		return nil, err
 	}
-	return result, nil
+	return &r, nil
+}
+
+// ResolveScopedRoles returns all roles matching the given name visible from
+// (org, appName): the app-local one (if any) plus the org-scope one (if any).
+// Both contribute — union semantics, never one shadows the other.
+func ResolveScopedRoles(org, appName, name string) ([]*BizRole, error) {
+	roles := []*BizRole{}
+	err := ormer.Engine.Where(
+		"organization = ? AND name = ? AND (app_name = ? OR app_name = '')",
+		org, name, appName,
+	).Find(&roles)
+	return roles, err
+}
+
+func GetBizRoles(org, appName string) ([]*BizRole, error) {
+	roles := []*BizRole{}
+	// appName == "" means caller wants ORG-scope roles only
+	// appName != "" means app-scope roles + org-scope roles (union visible)
+	var err error
+	if appName == "" {
+		err = ormer.Engine.Where("organization = ? AND app_name = ''", org).Find(&roles)
+	} else {
+		err = ormer.Engine.Where("organization = ? AND (app_name = ? OR app_name = '')", org, appName).Find(&roles)
+	}
+	return roles, err
 }

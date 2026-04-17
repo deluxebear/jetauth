@@ -392,6 +392,16 @@ func (a *Ormer) createTable() {
 		panic(err)
 	}
 
+	err = a.Engine.Sync2(new(BizRoleMember))
+	if err != nil {
+		panic(err)
+	}
+
+	err = a.Engine.Sync2(new(BizRoleInheritance))
+	if err != nil {
+		panic(err)
+	}
+
 	err = a.Engine.Sync2(new(BizPermission))
 	if err != nil {
 		panic(err)
