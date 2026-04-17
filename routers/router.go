@@ -239,6 +239,7 @@ func InitAPI() {
 	web.Router("/api/biz-add-role", &controllers.ApiController{}, "POST:AddBizRole")
 	web.Router("/api/biz-update-role", &controllers.ApiController{}, "POST:UpdateBizRole")
 	web.Router("/api/biz-delete-role", &controllers.ApiController{}, "POST:DeleteBizRole")
+	web.Router("/api/biz-bulk-delete-role", &controllers.ApiController{}, "POST:BulkDeleteBizRoles")
 
 	web.Router("/api/biz-list-role-members", &controllers.ApiController{}, "GET:ListBizRoleMembers")
 	web.Router("/api/biz-add-role-member", &controllers.ApiController{}, "POST:AddBizRoleMember")
@@ -255,6 +256,7 @@ func InitAPI() {
 	web.Router("/api/biz-add-permission", &controllers.ApiController{}, "POST:AddBizPermission")
 	web.Router("/api/biz-update-permission", &controllers.ApiController{}, "POST:UpdateBizPermission")
 	web.Router("/api/biz-delete-permission", &controllers.ApiController{}, "POST:DeleteBizPermission")
+	web.Router("/api/biz-bulk-delete-permission", &controllers.ApiController{}, "POST:BulkDeleteBizPermissions")
 
 	web.Router("/api/biz-list-permission-grantees", &controllers.ApiController{}, "GET:ListBizPermissionGrantees")
 	web.Router("/api/biz-add-permission-grantee", &controllers.ApiController{}, "POST:AddBizPermissionGrantee")

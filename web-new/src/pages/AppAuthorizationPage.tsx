@@ -13,6 +13,34 @@ import { pickAppIcon } from "../utils/appIcon";
 
 type TabKey = "overview" | "roles" | "permissions" | "test" | "integration";
 
+// Shared helper for RolesTab + PermissionsTab: turns a bulk-delete API
+// response into the appropriate toast (all-success / all-failed / partial).
+// The first failure's translated error is surfaced so the admin sees the
+// concrete reason (e.g. "inherited by role X") without hunting.
+function showBulkDeleteToast(
+  modal: { toast: (msg: string, type?: "success" | "error" | "info") => void },
+  t: (k: any) => string,
+  res: { status: string; msg?: string; data?: { succeeded: number; failed: number; results: { ok: boolean; error?: string }[] } | null },
+) {
+  if (res.status !== "ok" || !res.data) {
+    modal.toast(res.msg || t("common.error"), "error");
+    return;
+  }
+  const { succeeded, failed, results } = res.data;
+  const deleted = t("common.bulk.deleted" as any) || "deleted";
+  if (failed === 0) {
+    modal.toast(`${succeeded} ${deleted}`, "success");
+    return;
+  }
+  const firstErr = results.find((r) => !r.ok)?.error || t("common.error");
+  if (succeeded === 0) {
+    modal.toast(firstErr, "error");
+    return;
+  }
+  const failedLabel = t("common.failed" as any) || "failed";
+  modal.toast(`${succeeded} ${deleted}, ${failed} ${failedLabel} — ${firstErr}`, "error");
+}
+
 const VALID_TABS: TabKey[] = ["overview", "roles", "permissions", "test", "integration"];
 
 // Local relative-time helper — mirrors the one in AuthorizationPage. Kept
@@ -608,14 +636,14 @@ function RolesTab({ roles, onRefresh, appOwner, appName, t, modal, navigate }: {
     navigate(`/authorization/${appOwner}/${appName}/roles/new`, { state: { mode: "add" } });
   };
 
-  const handleDeleteRole = (role: BizRole) => {
+  const handleDeleteRole = useCallback((role: BizRole) => {
     if (!role.id) return;
     modal.showConfirm(`${t("common.confirmDelete")} [${role.displayName || role.name}]`, async () => {
       const res = await BizBackend.deleteBizRole(role.id!);
       if (res.status === "ok") onRefresh();
       else modal.toast(res.msg || t("common.deleteFailed" as any), "error");
     });
-  };
+  }, [modal, t, onRefresh]);
 
   const bulkSetEnabled = async (targets: BizRole[], enabled: boolean, clear: () => void) => {
     if (targets.length === 0) return;
@@ -626,24 +654,20 @@ function RolesTab({ roles, onRefresh, appOwner, appName, t, modal, navigate }: {
     if (failed.length > 0) {
       modal.toast(`${failed.length} / ${targets.length} ${t("common.failed" as any) || "failed"}`, "error");
     } else {
-      modal.toast(`${targets.length} ${t("authz.roles.bulk.updated" as any) || "updated"}`, "success");
+      modal.toast(`${targets.length} ${t("common.bulk.updated" as any) || "updated"}`, "success");
     }
     clear();
     onRefresh();
   };
 
   const bulkDelete = (targets: BizRole[], clear: () => void) => {
-    if (targets.length === 0) return;
+    const ids = targets.map((r) => r.id).filter((id): id is number => typeof id === "number");
+    if (ids.length === 0) return;
     modal.showConfirm(
-      `${t("common.confirmDelete")} ${targets.length} ${t("authz.roles.bulk.roles" as any) || "roles"}?`,
+      `${t("common.confirmDelete")} ${ids.length} ${t("authz.roles.bulk.roles" as any) || "roles"}?`,
       async () => {
-        const results = await Promise.all(targets.map((r) => BizBackend.deleteBizRole(r.id!)));
-        const failed = results.filter((r) => r.status !== "ok");
-        if (failed.length > 0) {
-          modal.toast(`${failed.length} / ${targets.length} ${t("common.failed" as any) || "failed"}`, "error");
-        } else {
-          modal.toast(`${targets.length} ${t("authz.roles.bulk.deleted" as any) || "deleted"}`, "success");
-        }
+        const res = await BizBackend.bulkDeleteBizRoles(ids);
+        showBulkDeleteToast(modal, t, res);
         clear();
         onRefresh();
       },
@@ -692,10 +716,10 @@ function RolesTab({ roles, onRefresh, appOwner, appName, t, modal, navigate }: {
       width: "240px",
       sortFn: (a, b) => (a.displayName || a.name).localeCompare(b.displayName || b.name),
       render: (_, r) => (
-        <div className="flex flex-col">
-          <span className="font-semibold text-text-primary">{r.displayName || r.name}</span>
+        <Link to={editUrl(r.name)} className="flex flex-col group/link" onClick={(e) => e.stopPropagation()}>
+          <span className="font-semibold text-text-primary group-hover/link:text-accent transition-colors">{r.displayName || r.name}</span>
           <span className="font-mono text-[11px] text-text-muted">{r.name}</span>
-        </div>
+        </Link>
       ),
     },
     {
@@ -883,7 +907,6 @@ function RolesTab({ roles, onRefresh, appOwner, appName, t, modal, navigate }: {
         data={filteredRoles}
         rowKey={(r) => r.name}
         emptyText={t("common.noData")}
-        onRowClick={(r) => navigate(editUrl(r.name))}
         selectable
         clientSort
         clientPagination
@@ -902,13 +925,13 @@ function RolesTab({ roles, onRefresh, appOwner, appName, t, modal, navigate }: {
         bulkActions={({ selected, clear }) => (
           <div className="flex items-center gap-2">
             <span className="text-[12px] font-medium text-text-primary">
-              {selected.length} {t("authz.roles.bulk.selected" as any) || "已选"}
+              {selected.length} {t("common.bulk.selected" as any) || "已选"}
             </span>
             <button onClick={() => bulkSetEnabled(selected, true, clear)} className="rounded-lg border border-border bg-surface-1 px-2.5 py-1 text-[11px] font-medium text-text-secondary hover:bg-surface-2 transition-colors">
-              {t("authz.roles.bulk.enable" as any) || "启用"}
+              {t("common.bulk.enable" as any) || "启用"}
             </button>
             <button onClick={() => bulkSetEnabled(selected, false, clear)} className="rounded-lg border border-border bg-surface-1 px-2.5 py-1 text-[11px] font-medium text-text-secondary hover:bg-surface-2 transition-colors">
-              {t("authz.roles.bulk.disable" as any) || "停用"}
+              {t("common.bulk.disable" as any) || "停用"}
             </button>
             <button onClick={() => bulkDelete(selected, clear)} className="rounded-lg border border-danger/30 bg-danger/5 px-2.5 py-1 text-[11px] font-medium text-danger hover:bg-danger/10 transition-colors">
               {t("common.delete")}
@@ -946,53 +969,114 @@ function PermissionsTab({ permissions, onRefresh, appOwner, appName, supportsDen
   supportsDeny: boolean;
   t: (key: any) => string; modal: any; navigate: any;
 }) {
+  const [effectSel, setEffectSel] = useState<Set<"Allow" | "Deny">>(new Set());
+  const [stateSel, setStateSel] = useState<"all" | "Approved" | "Pending" | "Rejected">("all");
+  const [statusSel, setStatusSel] = useState<"all" | "enabled" | "disabled">("all");
+  const [nameFilter, setNameFilter] = useState("");
+
+  const tablePrefs = useTablePrefs({
+    persistKey: `biz-permission-table:${appOwner}/${appName}`,
+    defaultSort: { field: "updatedTime", order: "descend" },
+  });
+
   const handleAddPermission = () => {
     navigate(`/authorization/${appOwner}/${appName}/permissions/new`, { state: { mode: "add" } });
   };
 
-  const handleDeletePermission = (perm: BizPermission, e: React.MouseEvent) => {
-    e.stopPropagation();
+  const handleDeletePermission = useCallback((perm: BizPermission) => {
     if (!perm.id) return;
-    modal.showConfirm(`${t("common.confirmDelete")} [${perm.name}]`, async () => {
+    modal.showConfirm(`${t("common.confirmDelete")} [${perm.displayName || perm.name}]`, async () => {
       const res = await BizBackend.deleteBizPermission(perm.id!);
       if (res.status === "ok") onRefresh();
       else modal.toast(res.msg || t("common.deleteFailed" as any), "error");
     });
+  }, [modal, t, onRefresh]);
+
+  const bulkSetEnabled = async (targets: BizPermission[], enabled: boolean, clear: () => void) => {
+    if (targets.length === 0) return;
+    const results = await Promise.all(
+      targets.map((p) => BizBackend.updateBizPermission(p.id!, { ...p, isEnabled: enabled })),
+    );
+    const failed = results.filter((r) => r.status !== "ok");
+    if (failed.length > 0) {
+      modal.toast(`${failed.length} / ${targets.length} ${t("common.failed" as any) || "failed"}`, "error");
+    } else {
+      modal.toast(`${targets.length} ${t("common.bulk.updated" as any) || "updated"}`, "success");
+    }
+    clear();
+    onRefresh();
   };
 
-  const columns: Column<BizPermission>[] = [
+  const bulkDelete = (targets: BizPermission[], clear: () => void) => {
+    const ids = targets.map((p) => p.id).filter((id): id is number => typeof id === "number");
+    if (ids.length === 0) return;
+    modal.showConfirm(
+      `${t("common.confirmDelete")} ${ids.length} ${t("authz.perms.bulk.permissions" as any) || "permissions"}?`,
+      async () => {
+        const res = await BizBackend.bulkDeleteBizPermissions(ids);
+        showBulkDeleteToast(modal, t, res);
+        clear();
+        onRefresh();
+      },
+    );
+  };
+
+  const allowCount = permissions.filter((p) => p.effect === "Allow").length;
+  const denyCount = permissions.filter((p) => p.effect === "Deny").length;
+
+  const filteredPermissions = useMemo(() => {
+    const q = nameFilter.trim().toLowerCase();
+    return permissions.filter((p) => {
+      if (effectSel.size > 0 && !effectSel.has(p.effect)) return false;
+      if (stateSel !== "all" && (p.state || "Approved") !== stateSel) return false;
+      if (statusSel === "enabled" && !p.isEnabled) return false;
+      if (statusSel === "disabled" && p.isEnabled) return false;
+      if (q) {
+        const hay = `${p.displayName || ""} ${p.name || ""}`.toLowerCase();
+        if (!hay.includes(q)) return false;
+      }
+      return true;
+    });
+  }, [permissions, effectSel, stateSel, statusSel, nameFilter]);
+
+  const toggleEffect = (e: "Allow" | "Deny") => {
+    setEffectSel((prev) => {
+      const next = new Set(prev);
+      if (next.has(e)) next.delete(e); else next.add(e);
+      return next;
+    });
+  };
+
+  const editUrl = useCallback(
+    (name: string) => `/authorization/${appOwner}/${appName}/permissions/${encodeURIComponent(name)}`,
+    [appOwner, appName],
+  );
+
+  const columns = useMemo<Column<BizPermission>[]>(() => [
     {
-      key: "name", title: t("authz.perms.col.name"), sortable: true, filterable: true, fixed: "left" as const, width: "160px",
-      render: (_, p) => <Link to={`/authorization/${appOwner}/${appName}/permissions/${encodeURIComponent(p.name)}`} className="font-mono font-medium text-accent hover:underline" onClick={(e) => e.stopPropagation()}>{p.name}</Link>,
-    },
-    {
-      key: "displayName", title: t("authz.roles.col.displayName" as any), sortable: true, filterable: true, width: "140px",
-      render: (_, p) => <span className="text-[12px] text-text-secondary">{p.displayName || "\u2014"}</span>,
-    },
-    // Grantees no longer live on the permission row (they're in biz_permission_grantee)
-    // so the "Subject" column was dropped. The edit page's grantee table surfaces them.
-    {
-      key: "resources", title: t("authz.perms.col.resources"), width: "260px",
-      render: (_, p) => <span className="font-mono text-[11px] text-text-secondary">{p.resources?.join(", ") || "\u2014"}</span>,
-    },
-    {
-      key: "actions", title: t("authz.perms.col.actions"), width: "150px",
+      key: "permission",
+      title: t("authz.perms.col.name"),
+      sortable: true,
+      filterable: true,
+      hideable: false,
+      width: "240px",
+      sortFn: (a, b) => (a.displayName || a.name).localeCompare(b.displayName || b.name),
       render: (_, p) => (
-        <div className="flex flex-wrap gap-1">
-          {p.actions?.map((a) => <span key={a} className="inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold bg-cyan-500/10 text-cyan-400">{a}</span>)}
-        </div>
+        <Link to={editUrl(p.name)} className="flex flex-col group/link" onClick={(e) => e.stopPropagation()}>
+          <span className="font-semibold text-text-primary group-hover/link:text-accent transition-colors">{p.displayName || p.name}</span>
+          <span className="font-mono text-[11px] text-text-muted">{p.name}</span>
+        </Link>
       ),
     },
     {
-      key: "effect", title: t("authz.perms.col.effect"), sortable: true, filterable: true, width: "110px",
-      filterOptions: [
-        { label: t("permissions.effectAllow" as any), value: "Allow" },
-        { label: t("permissions.effectDeny" as any), value: "Deny" },
-      ],
+      key: "effect",
+      title: t("authz.perms.col.effect"),
+      sortable: true,
+      width: "110px",
+      sortFn: (a, b) => (a.effect || "").localeCompare(b.effect || ""),
       render: (_, p) => {
-        // A Deny row whose app model doesn't actually honor deny is a
-        // silent no-op at enforce time — flag it so admins notice without
-        // having to open each permission.
+        // Deny on a model that doesn't honor it is a silent no-op at
+        // enforce time — flag with a warning chip + tooltip.
         const denyInert = p.effect === "Deny" && !supportsDeny;
         return (
           <span
@@ -1010,12 +1094,51 @@ function PermissionsTab({ permissions, onRefresh, appOwner, appName, supportsDen
       },
     },
     {
-      key: "state", title: t("authz.perms.col.approval" as any), sortable: true, filterable: true, width: "100px",
-      filterOptions: [
-        { label: t("authz.perms.state.Approved" as any), value: "Approved" },
-        { label: t("authz.perms.state.Pending" as any), value: "Pending" },
-        { label: t("authz.perms.state.Rejected" as any), value: "Rejected" },
-      ],
+      key: "resources",
+      title: t("authz.perms.col.resources"),
+      width: "240px",
+      render: (_, p) => (
+        <span className="font-mono text-[11px] text-text-secondary line-clamp-2 break-all">
+          {p.resources?.join(", ") || "—"}
+        </span>
+      ),
+    },
+    {
+      key: "actions",
+      title: t("authz.perms.col.actions"),
+      width: "160px",
+      render: (_, p) => (
+        <div className="flex flex-wrap gap-1">
+          {p.actions?.length
+            ? p.actions.map((a) => <span key={a} className="inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold bg-cyan-500/10 text-cyan-400">{a}</span>)
+            : <span className="text-text-muted">—</span>}
+        </div>
+      ),
+    },
+    {
+      key: "granteeCount",
+      title: t("authz.perms.col.grantees" as any) || "授权对象",
+      sortable: true,
+      width: "100px",
+      sortFn: (a, b) => (a.granteeCount || 0) - (b.granteeCount || 0),
+      render: (_, p) => (
+        <button
+          onClick={(e) => { e.stopPropagation(); navigate(`${editUrl(p.name)}#grantees`); }}
+          title={t("authz.perms.col.grantees" as any) || "授权对象"}
+          className={`inline-flex items-center justify-center rounded-md px-2 py-0.5 text-[12px] font-semibold tabular-nums transition-colors ${
+            (p.granteeCount || 0) > 0 ? "bg-indigo-500/10 text-indigo-500 hover:bg-indigo-500/20" : "bg-surface-2 text-text-muted hover:bg-surface-3"
+          }`}
+        >
+          {p.granteeCount || 0}
+        </button>
+      ),
+    },
+    {
+      key: "state",
+      title: t("authz.perms.col.approval" as any),
+      sortable: true,
+      width: "110px",
+      sortFn: (a, b) => (a.state || "").localeCompare(b.state || ""),
       render: (_, p) => {
         const state = p.state || "Approved";
         const styles: Record<string, string> = {
@@ -1031,7 +1154,11 @@ function PermissionsTab({ permissions, onRefresh, appOwner, appName, supportsDen
       },
     },
     {
-      key: "isEnabled", title: t("authz.roles.col.status" as any), sortable: true, width: "90px",
+      key: "isEnabled",
+      title: t("authz.roles.col.status" as any),
+      sortable: true,
+      width: "100px",
+      sortFn: (a, b) => Number(a.isEnabled) - Number(b.isEnabled),
       render: (_, p) => (
         <span className={`inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold ${p.isEnabled ? "bg-success/10 text-success" : "bg-warning/10 text-warning"}`}>
           {p.isEnabled ? t("common.enabled" as any) : t("common.disabled" as any)}
@@ -1039,25 +1166,141 @@ function PermissionsTab({ permissions, onRefresh, appOwner, appName, supportsDen
       ),
     },
     {
-      key: "__actions", title: t("common.action" as any), fixed: "right" as const, width: "100px",
+      key: "updatedTime",
+      title: t("authz.roles.col.updated" as any) || "最后修改",
+      sortable: true,
+      width: "130px",
+      sortFn: (a, b) => {
+        const ta = a.updatedTime || a.createdTime || "";
+        const tb = b.updatedTime || b.createdTime || "";
+        return ta.localeCompare(tb);
+      },
       render: (_, p) => (
-        <div className="flex items-center gap-1">
-          <Link to={`/authorization/${appOwner}/${appName}/permissions/${encodeURIComponent(p.name)}`} className="rounded p-1.5 text-text-muted hover:text-warning hover:bg-warning/10 transition-colors" title={t("common.edit")} onClick={(e) => e.stopPropagation()}><Pencil size={14} /></Link>
-          <button onClick={(e) => handleDeletePermission(p, e)} className="rounded p-1.5 text-text-muted hover:text-danger hover:bg-danger/10 transition-colors" title={t("common.delete")}><Trash2 size={14} /></button>
+        <span className="text-[12px] text-text-muted tabular-nums">
+          {formatRelativeTimeLocal(p.updatedTime || p.createdTime || "", t) || "—"}
+        </span>
+      ),
+    },
+    {
+      key: "__actions",
+      title: t("common.action" as any),
+      fixed: "right" as const,
+      hideable: false,
+      width: "100px",
+      render: (_, p) => (
+        <div className="flex items-center justify-end gap-0.5">
+          <Link
+            to={editUrl(p.name)}
+            className="rounded p-1.5 text-text-muted hover:text-warning hover:bg-warning/10 transition-colors"
+            title={t("common.edit")}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <Pencil size={14} />
+          </Link>
+          <button
+            onClick={(e) => { e.stopPropagation(); handleDeletePermission(p); }}
+            className="rounded p-1.5 text-text-muted hover:text-danger hover:bg-danger/10 transition-colors"
+            title={t("common.delete")}
+          >
+            <Trash2 size={14} />
+          </button>
         </div>
       ),
     },
-  ];
+  ], [t, editUrl, navigate, handleDeletePermission, supportsDeny]);
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h3 className="text-[14px] font-semibold text-text-primary">{t("authz.perms.title")}</h3>
-        <button onClick={handleAddPermission} className="flex items-center gap-1.5 rounded-lg bg-accent px-3 py-2 text-[12px] font-semibold text-white hover:bg-accent-hover transition-colors">
-          <Plus size={14} /> {t("authz.perms.add")}
-        </button>
+      <div className="flex items-center justify-between gap-4 flex-wrap">
+        <div className="flex items-center gap-3 flex-wrap">
+          <h3 className="text-[14px] font-semibold text-text-primary">{t("authz.perms.title")}</h3>
+          <span className="text-[11px] text-text-muted">({permissions.length})</span>
+          <div className="flex items-center gap-1.5">
+            <span className="text-[11px] text-text-muted">{t("authz.perms.col.effect")}:</span>
+            <FilterChip label={t("permissions.effectAllow" as any) || "Allow"} count={allowCount} active={effectSel.has("Allow")} onClick={() => toggleEffect("Allow")} />
+            <FilterChip label={t("permissions.effectDeny" as any) || "Deny"} count={denyCount} active={effectSel.has("Deny")} onClick={() => toggleEffect("Deny")} />
+          </div>
+          <div className="flex items-center gap-1">
+            <span className="text-[11px] text-text-muted">{t("authz.perms.col.approval" as any)}:</span>
+            {(["all", "Approved", "Pending", "Rejected"] as const).map((s) => (
+              <button
+                key={s}
+                onClick={() => setStateSel(s)}
+                className={`rounded-full px-2 py-0.5 text-[11px] font-medium transition-colors ${
+                  stateSel === s ? "bg-accent/15 text-accent" : "bg-surface-2 text-text-muted hover:text-text-secondary"
+                }`}
+              >
+                {s === "all" ? (t("bizRole.filter.all") || "全部") : (t(`authz.perms.state.${s}` as any) || s)}
+              </button>
+            ))}
+          </div>
+          <div className="flex items-center gap-1">
+            <span className="text-[11px] text-text-muted">{t("authz.roles.col.status" as any)}:</span>
+            {(["all", "enabled", "disabled"] as const).map((s) => (
+              <button
+                key={s}
+                onClick={() => setStatusSel(s)}
+                className={`rounded-full px-2 py-0.5 text-[11px] font-medium transition-colors ${
+                  statusSel === s ? "bg-accent/15 text-accent" : "bg-surface-2 text-text-muted hover:text-text-secondary"
+                }`}
+              >
+                {s === "all" ? (t("bizRole.filter.all") || "全部") : s === "enabled" ? (t("common.enabled" as any)) : (t("common.disabled" as any))}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <ColumnsMenu
+            columns={columns}
+            hidden={tablePrefs.hidden}
+            onToggle={tablePrefs.toggleHidden}
+            onResetWidths={tablePrefs.resetWidths}
+          />
+          <button onClick={handleAddPermission} className="flex items-center gap-1.5 rounded-lg bg-accent px-3 py-2 text-[12px] font-semibold text-white hover:bg-accent-hover transition-colors">
+            <Plus size={14} /> {t("authz.perms.add")}
+          </button>
+        </div>
       </div>
-      <DataTable columns={columns} data={permissions} rowKey={(p) => p.name} emptyText={t("common.noData")} />
+
+      <DataTable
+        columns={columns}
+        data={filteredPermissions}
+        rowKey={(p) => p.name}
+        emptyText={t("common.noData")}
+        selectable
+        clientSort
+        clientPagination
+        pageSize={tablePrefs.pageSize}
+        onPageSizeChange={tablePrefs.setPageSize}
+        sort={tablePrefs.sort}
+        onSortChange={tablePrefs.setSort}
+        hidden={tablePrefs.hidden}
+        resizable
+        widths={tablePrefs.widths}
+        onWidthChange={tablePrefs.setWidth}
+        onFilter={(f) => {
+          if (f.field === "permission") setNameFilter(f.value);
+        }}
+        bulkActions={({ selected, clear }) => (
+          <div className="flex items-center gap-2">
+            <span className="text-[12px] font-medium text-text-primary">
+              {selected.length} {t("common.bulk.selected" as any) || "已选"}
+            </span>
+            <button onClick={() => bulkSetEnabled(selected, true, clear)} className="rounded-lg border border-border bg-surface-1 px-2.5 py-1 text-[11px] font-medium text-text-secondary hover:bg-surface-2 transition-colors">
+              {t("common.bulk.enable" as any) || "启用"}
+            </button>
+            <button onClick={() => bulkSetEnabled(selected, false, clear)} className="rounded-lg border border-border bg-surface-1 px-2.5 py-1 text-[11px] font-medium text-text-secondary hover:bg-surface-2 transition-colors">
+              {t("common.bulk.disable" as any) || "停用"}
+            </button>
+            <button onClick={() => bulkDelete(selected, clear)} className="rounded-lg border border-danger/30 bg-danger/5 px-2.5 py-1 text-[11px] font-medium text-danger hover:bg-danger/10 transition-colors">
+              {t("common.delete")}
+            </button>
+            <button onClick={clear} className="text-[11px] text-text-muted hover:text-text-secondary ml-1">
+              {t("common.cancel")}
+            </button>
+          </div>
+        )}
+      />
     </div>
   );
 }

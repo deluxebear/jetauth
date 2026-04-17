@@ -149,11 +149,6 @@ func ListChildRoles(parentRoleId int64) ([]*BizRole, error) {
 	return roles, err
 }
 
-func HasChildrenOfRole(roleId int64) (bool, error) {
-	count, err := ormer.Engine.Where("parent_role_id = ?", roleId).Count(&BizRoleInheritance{})
-	return count > 0, err
-}
-
 // detectInheritanceCycle walks upward from the proposed parent. If it ever sees
 // the proposed child, a cycle would form. Also returns max depth reached so
 // caller can enforce MaxBizRoleInheritanceDepth.

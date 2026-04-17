@@ -141,6 +141,104 @@
                 },
                 "type": "object"
             },
+            "controllers.BizPermissionBulkDeleteRequest": {
+                "properties": {
+                    "ids": {
+                        "items": {
+                            "type": "integer"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
+                    }
+                },
+                "type": "object"
+            },
+            "controllers.BizPermissionBulkDeleteResponse": {
+                "properties": {
+                    "data": {
+                        "$ref": "#/components/schemas/controllers.BizPermissionBulkDeleteResponseData"
+                    },
+                    "msg": {
+                        "example": "",
+                        "type": "string"
+                    },
+                    "status": {
+                        "example": "ok",
+                        "type": "string"
+                    }
+                },
+                "type": "object"
+            },
+            "controllers.BizPermissionBulkDeleteResponseData": {
+                "properties": {
+                    "failed": {
+                        "example": 1,
+                        "type": "integer"
+                    },
+                    "results": {
+                        "items": {
+                            "$ref": "#/components/schemas/controllers.BizPermissionBulkDeleteResultItem"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
+                    },
+                    "succeeded": {
+                        "example": 2,
+                        "type": "integer"
+                    },
+                    "total": {
+                        "example": 3,
+                        "type": "integer"
+                    }
+                },
+                "type": "object"
+            },
+            "controllers.BizPermissionBulkDeleteResultItem": {
+                "properties": {
+                    "error": {
+                        "example": "",
+                        "type": "string"
+                    },
+                    "id": {
+                        "example": 1,
+                        "type": "integer"
+                    },
+                    "ok": {
+                        "example": true,
+                        "type": "boolean"
+                    }
+                },
+                "type": "object"
+            },
+            "controllers.BizPermissionGranteeListResponse": {
+                "properties": {
+                    "data": {
+                        "properties": {
+                            "grantees": {
+                                "items": {
+                                    "$ref": "#/components/schemas/object.BizPermissionGrantee"
+                                },
+                                "type": "array",
+                                "uniqueItems": false
+                            },
+                            "total": {
+                                "example": 0,
+                                "type": "integer"
+                            }
+                        },
+                        "type": "object"
+                    },
+                    "msg": {
+                        "example": "",
+                        "type": "string"
+                    },
+                    "status": {
+                        "example": "ok",
+                        "type": "string"
+                    }
+                },
+                "type": "object"
+            },
             "controllers.BizPermissionListResponse": {
                 "properties": {
                     "data": {
@@ -221,6 +319,75 @@
                 },
                 "type": "object"
             },
+            "controllers.BizRoleBulkDeleteRequest": {
+                "properties": {
+                    "ids": {
+                        "items": {
+                            "type": "integer"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
+                    }
+                },
+                "type": "object"
+            },
+            "controllers.BizRoleBulkDeleteResponse": {
+                "properties": {
+                    "data": {
+                        "$ref": "#/components/schemas/controllers.BizRoleBulkDeleteResponseData"
+                    },
+                    "msg": {
+                        "example": "",
+                        "type": "string"
+                    },
+                    "status": {
+                        "example": "ok",
+                        "type": "string"
+                    }
+                },
+                "type": "object"
+            },
+            "controllers.BizRoleBulkDeleteResponseData": {
+                "properties": {
+                    "failed": {
+                        "example": 1,
+                        "type": "integer"
+                    },
+                    "results": {
+                        "items": {
+                            "$ref": "#/components/schemas/controllers.BizRoleBulkDeleteResultItem"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
+                    },
+                    "succeeded": {
+                        "example": 2,
+                        "type": "integer"
+                    },
+                    "total": {
+                        "example": 3,
+                        "type": "integer"
+                    }
+                },
+                "type": "object"
+            },
+            "controllers.BizRoleBulkDeleteResultItem": {
+                "properties": {
+                    "error": {
+                        "example": "",
+                        "type": "string"
+                    },
+                    "id": {
+                        "example": 1,
+                        "type": "integer"
+                    },
+                    "ok": {
+                        "example": true,
+                        "type": "boolean"
+                    }
+                },
+                "type": "object"
+            },
             "controllers.BizRoleListResponse": {
                 "properties": {
                     "data": {
@@ -229,6 +396,35 @@
                         },
                         "type": "array",
                         "uniqueItems": false
+                    },
+                    "msg": {
+                        "example": "",
+                        "type": "string"
+                    },
+                    "status": {
+                        "example": "ok",
+                        "type": "string"
+                    }
+                },
+                "type": "object"
+            },
+            "controllers.BizRoleMemberListResponse": {
+                "properties": {
+                    "data": {
+                        "properties": {
+                            "members": {
+                                "items": {
+                                    "$ref": "#/components/schemas/object.BizRoleMember"
+                                },
+                                "type": "array",
+                                "uniqueItems": false
+                            },
+                            "total": {
+                                "example": 0,
+                                "type": "integer"
+                            }
+                        },
+                        "type": "object"
                     },
                     "msg": {
                         "example": "",
@@ -760,6 +956,17 @@
                     "status": {
                         "example": "ok",
                         "type": "string"
+                    }
+                },
+                "type": "object"
+            },
+            "controllers.roleInheritanceEdge": {
+                "properties": {
+                    "childRoleId": {
+                        "type": "integer"
+                    },
+                    "parentRoleId": {
+                        "type": "integer"
                     }
                 },
                 "type": "object"
@@ -1482,6 +1689,10 @@
                     "policyTable": {
                         "type": "string"
                     },
+                    "supportsDeny": {
+                        "description": "SupportsDeny is a computed field (not persisted) that reports whether\nthe current ModelText has both a p_eft field and a policy_effect that\nreferences p.eft == deny. The frontend uses this to hide or disable\nthe Deny option in permission edit UIs so admins can't save a\npermission whose Effect will never fire.",
+                        "type": "boolean"
+                    },
                     "updatedTime": {
                         "type": "string"
                     }
@@ -1519,6 +1730,13 @@
                         "description": "Allow / Deny",
                         "type": "string"
                     },
+                    "granteeCount": {
+                        "description": "Derived stats populated by enrichBizPermissions for list responses.",
+                        "type": "integer"
+                    },
+                    "id": {
+                        "type": "integer"
+                    },
                     "isEnabled": {
                         "type": "boolean"
                     },
@@ -1535,28 +1753,36 @@
                         "type": "array",
                         "uniqueItems": false
                     },
-                    "roles": {
-                        "description": "references BizRole.Name in same app",
-                        "items": {
-                            "type": "string"
-                        },
-                        "type": "array",
-                        "uniqueItems": false
-                    },
                     "state": {
                         "description": "Approved / Pending / Rejected",
                         "type": "string"
                     },
                     "submitter": {
-                        "description": "Approval",
+                        "description": "Approval workflow",
                         "type": "string"
                     },
-                    "users": {
-                        "items": {
-                            "type": "string"
-                        },
-                        "type": "array",
-                        "uniqueItems": false
+                    "updatedTime": {
+                        "type": "string"
+                    }
+                },
+                "type": "object"
+            },
+            "object.BizPermissionGrantee": {
+                "properties": {
+                    "addedBy": {
+                        "type": "string"
+                    },
+                    "addedTime": {
+                        "type": "string"
+                    },
+                    "permissionId": {
+                        "type": "integer"
+                    },
+                    "subjectId": {
+                        "type": "string"
+                    },
+                    "subjectType": {
+                        "type": "string"
                     }
                 },
                 "type": "object"
@@ -1575,39 +1801,61 @@
                     "displayName": {
                         "type": "string"
                     },
-                    "groups": {
-                        "items": {
-                            "type": "string"
-                        },
-                        "type": "array",
-                        "uniqueItems": false
+                    "id": {
+                        "type": "integer"
                     },
                     "isEnabled": {
                         "type": "boolean"
                     },
+                    "memberCount": {
+                        "description": "Derived stats populated by enrichBizRoles for list responses. Not stored.",
+                        "type": "integer"
+                    },
                     "name": {
                         "type": "string"
                     },
-                    "owner": {
+                    "organization": {
                         "type": "string"
+                    },
+                    "parentNames": {
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
+                    },
+                    "permissionCount": {
+                        "type": "integer"
                     },
                     "properties": {
                         "type": "string"
                     },
-                    "roles": {
-                        "description": "sub-roles within same app",
-                        "items": {
-                            "type": "string"
-                        },
-                        "type": "array",
-                        "uniqueItems": false
+                    "scopeKind": {
+                        "description": "BizRoleScopeOrg | BizRoleScopeApp",
+                        "type": "string"
                     },
-                    "users": {
-                        "items": {
-                            "type": "string"
-                        },
-                        "type": "array",
-                        "uniqueItems": false
+                    "updatedTime": {
+                        "type": "string"
+                    }
+                },
+                "type": "object"
+            },
+            "object.BizRoleMember": {
+                "properties": {
+                    "addedBy": {
+                        "type": "string"
+                    },
+                    "addedTime": {
+                        "type": "string"
+                    },
+                    "roleId": {
+                        "type": "integer"
+                    },
+                    "subjectId": {
+                        "type": "string"
+                    },
+                    "subjectType": {
+                        "type": "string"
                     }
                 },
                 "type": "object"
@@ -1852,6 +2100,35 @@
                     },
                     "tos_uri": {
                         "type": "string"
+                    }
+                },
+                "type": "object"
+            },
+            "object.EnforceTraceResult": {
+                "properties": {
+                    "allowed": {
+                        "description": "Allowed is the final enforcement decision.",
+                        "type": "boolean"
+                    },
+                    "matchedPolicy": {
+                        "description": "MatchedPolicy is the p-rule that caused Allowed to be true (or the\ndeny rule that caused it to be false, on deny-honoring models).\nEmpty slice when no rule matched.",
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
+                    },
+                    "reason": {
+                        "description": "Reason is a short human-readable summary aimed at admins. Localized\nvia the project's i18n.Translate using the caller-supplied language.",
+                        "type": "string"
+                    },
+                    "subjectRoles": {
+                        "description": "SubjectRoles is the transitive role closure of the subject in this\nenforcer's grouping graph — useful to see \"why didn't alice match\nthis policy granted to role X?\".",
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
                     }
                 },
                 "type": "object"
@@ -7946,18 +8223,17 @@
         },
         "/biz-add-permission": {
             "post": {
-                "description": "Create a new business permission rule",
                 "requestBody": {
                     "content": {
                         "application/json": {
                             "schema": {
                                 "$ref": "#/components/schemas/object.BizPermission",
                                 "summary": "body",
-                                "description": "The details of the permission"
+                                "description": "The permission (must include owner, appName, name)"
                             }
                         }
                     },
-                    "description": "The details of the permission",
+                    "description": "The permission (must include owner, appName, name)",
                     "required": true
                 },
                 "responses": {
@@ -7972,7 +8248,40 @@
                         "description": "Action result"
                     }
                 },
-                "summary": "Add business permission",
+                "summary": "Add a business permission",
+                "tags": [
+                    "Business Permission API"
+                ]
+            }
+        },
+        "/biz-add-permission-grantee": {
+            "post": {
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/object.BizPermissionGrantee",
+                                "summary": "body",
+                                "description": "{permissionId, subjectType, subjectId}"
+                            }
+                        }
+                    },
+                    "description": "{permissionId, subjectType, subjectId}",
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/controllers.ActionResponse"
+                                }
+                            }
+                        },
+                        "description": "Action result"
+                    }
+                },
+                "summary": "Grant a permission to a subject (user/group/role)",
                 "tags": [
                     "Business Permission API"
                 ]
@@ -7980,18 +8289,17 @@
         },
         "/biz-add-role": {
             "post": {
-                "description": "Create a new business role",
                 "requestBody": {
                     "content": {
                         "application/json": {
                             "schema": {
                                 "$ref": "#/components/schemas/object.BizRole",
                                 "summary": "body",
-                                "description": "The details of the role"
+                                "description": "The role (must include organization, scopeKind, name)"
                             }
                         }
                     },
-                    "description": "The details of the role",
+                    "description": "The role (must include organization, scopeKind, name)",
                     "required": true
                 },
                 "responses": {
@@ -8006,7 +8314,74 @@
                         "description": "Action result"
                     }
                 },
-                "summary": "Add business role",
+                "summary": "Add a business role",
+                "tags": [
+                    "Business Permission API"
+                ]
+            }
+        },
+        "/biz-add-role-inheritance": {
+            "post": {
+                "description": "Cycle, depth, and cross-scope rules are enforced at the object-layer.",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/controllers.roleInheritanceEdge",
+                                "summary": "body",
+                                "description": "{parentRoleId, childRoleId}"
+                            }
+                        }
+                    },
+                    "description": "{parentRoleId, childRoleId}",
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/controllers.ActionResponse"
+                                }
+                            }
+                        },
+                        "description": "Action result"
+                    }
+                },
+                "summary": "Add a role inheritance edge (child inherits from parent)",
+                "tags": [
+                    "Business Permission API"
+                ]
+            }
+        },
+        "/biz-add-role-member": {
+            "post": {
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/object.BizRoleMember",
+                                "summary": "body",
+                                "description": "{roleId, subjectType, subjectId}"
+                            }
+                        }
+                    },
+                    "description": "{roleId, subjectType, subjectId}",
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/controllers.ActionResponse"
+                                }
+                            }
+                        },
+                        "description": "Action result"
+                    }
+                },
+                "summary": "Add a member (user/group) to a role",
                 "tags": [
                     "Business Permission API"
                 ]
@@ -8062,6 +8437,74 @@
                 ]
             }
         },
+        "/biz-bulk-delete-permission": {
+            "post": {
+                "description": "Deletes permissions by id. Validates all ids share the same (Owner, AppName) scope before deleting so an org admin cannot inject cross-scope ids. Per-id outcomes let the UI highlight partial failures.",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/controllers.BizPermissionBulkDeleteRequest",
+                                "summary": "body",
+                                "description": "{ids: [int64, ...]}"
+                            }
+                        }
+                    },
+                    "description": "{ids: [int64, ...]}",
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/controllers.BizPermissionBulkDeleteResponse"
+                                }
+                            }
+                        },
+                        "description": "Per-id outcomes + aggregate counts"
+                    }
+                },
+                "summary": "Delete multiple business permissions in one call",
+                "tags": [
+                    "Business Permission API"
+                ]
+            }
+        },
+        "/biz-bulk-delete-role": {
+            "post": {
+                "description": "Deletes roles by id with topological retry — a role blocked by a child inheritance edge is retried once the child (if in the selection) is deleted. Response is per-id so the admin UI can show which rows survived and why.",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/controllers.BizRoleBulkDeleteRequest",
+                                "summary": "body",
+                                "description": "{ids: [int64, ...]}"
+                            }
+                        }
+                    },
+                    "description": "{ids: [int64, ...]}",
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/controllers.BizRoleBulkDeleteResponse"
+                                }
+                            }
+                        },
+                        "description": "Per-id outcomes + aggregate counts"
+                    }
+                },
+                "summary": "Delete multiple business roles in one call",
+                "tags": [
+                    "Business Permission API"
+                ]
+            }
+        },
         "/biz-delete-app-config": {
             "post": {
                 "description": "Delete a business permission app config",
@@ -8098,20 +8541,17 @@
         },
         "/biz-delete-permission": {
             "post": {
-                "description": "Delete a business permission rule",
-                "requestBody": {
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "$ref": "#/components/schemas/object.BizPermission",
-                                "summary": "body",
-                                "description": "The details of the permission"
-                            }
+                "parameters": [
+                    {
+                        "description": "The numeric permission id",
+                        "in": "query",
+                        "name": "id",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
                         }
-                    },
-                    "description": "The details of the permission",
-                    "required": true
-                },
+                    }
+                ],
                 "responses": {
                     "200": {
                         "content": {
@@ -8124,7 +8564,7 @@
                         "description": "Action result"
                     }
                 },
-                "summary": "Delete business permission",
+                "summary": "Delete a business permission by id",
                 "tags": [
                     "Business Permission API"
                 ]
@@ -8132,20 +8572,17 @@
         },
         "/biz-delete-role": {
             "post": {
-                "description": "Delete a business role",
-                "requestBody": {
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "$ref": "#/components/schemas/object.BizRole",
-                                "summary": "body",
-                                "description": "The details of the role"
-                            }
+                "parameters": [
+                    {
+                        "description": "The numeric role id",
+                        "in": "query",
+                        "name": "id",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
                         }
-                    },
-                    "description": "The details of the role",
-                    "required": true
-                },
+                    }
+                ],
                 "responses": {
                     "200": {
                         "content": {
@@ -8158,7 +8595,7 @@
                         "description": "Action result"
                     }
                 },
-                "summary": "Delete business role",
+                "summary": "Delete a business role by id",
                 "tags": [
                     "Business Permission API"
                 ]
@@ -8206,6 +8643,53 @@
                     }
                 },
                 "summary": "Enforce business permission",
+                "tags": [
+                    "Business Permission API"
+                ]
+            }
+        },
+        "/biz-enforce-ex": {
+            "post": {
+                "description": "Same as BizEnforce but also returns the matched policy and the",
+                "parameters": [
+                    {
+                        "description": "The app id (owner/appName)",
+                        "in": "query",
+                        "name": "appId",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "items": {
+                                    "type": "object"
+                                },
+                                "title": "body",
+                                "type": "array"
+                            }
+                        }
+                    },
+                    "description": "The Casbin request array",
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/object.EnforceTraceResult"
+                                }
+                            }
+                        },
+                        "description": "allowed + matched policy + role chain"
+                    }
+                },
+                "summary": "Enforce with explanation (for admin UI)",
                 "tags": [
                     "Business Permission API"
                 ]
@@ -8277,33 +8761,14 @@
         },
         "/biz-get-permission": {
             "get": {
-                "description": "Get a single business permission",
                 "parameters": [
                     {
-                        "description": "The owner (organization)",
+                        "description": "The numeric permission id",
                         "in": "query",
-                        "name": "owner",
+                        "name": "id",
                         "required": true,
                         "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "description": "The app name",
-                        "in": "query",
-                        "name": "app",
-                        "required": true,
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "description": "The permission name",
-                        "in": "query",
-                        "name": "name",
-                        "required": true,
-                        "schema": {
-                            "type": "string"
+                            "type": "integer"
                         }
                     }
                 ],
@@ -8319,7 +8784,7 @@
                         "description": "The Response object"
                     }
                 },
-                "summary": "Get business permission",
+                "summary": "Get a business permission by id",
                 "tags": [
                     "Business Permission API"
                 ]
@@ -8327,12 +8792,11 @@
         },
         "/biz-get-permissions": {
             "get": {
-                "description": "Get all business permissions for an app",
                 "parameters": [
                     {
-                        "description": "The owner (organization)",
+                        "description": "The organization (permission owner)",
                         "in": "query",
-                        "name": "owner",
+                        "name": "organization",
                         "required": true,
                         "schema": {
                             "type": "string"
@@ -8341,7 +8805,7 @@
                     {
                         "description": "The app name",
                         "in": "query",
-                        "name": "app",
+                        "name": "appName",
                         "required": true,
                         "schema": {
                             "type": "string"
@@ -8360,7 +8824,7 @@
                         "description": "The Response object"
                     }
                 },
-                "summary": "Get business permissions",
+                "summary": "Get business permissions in an app",
                 "tags": [
                     "Business Permission API"
                 ]
@@ -8400,33 +8864,14 @@
         },
         "/biz-get-role": {
             "get": {
-                "description": "Get a single business role",
                 "parameters": [
                     {
-                        "description": "The owner (organization)",
+                        "description": "The numeric role id",
                         "in": "query",
-                        "name": "owner",
+                        "name": "id",
                         "required": true,
                         "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "description": "The app name",
-                        "in": "query",
-                        "name": "app",
-                        "required": true,
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "description": "The role name",
-                        "in": "query",
-                        "name": "name",
-                        "required": true,
-                        "schema": {
-                            "type": "string"
+                            "type": "integer"
                         }
                     }
                 ],
@@ -8442,7 +8887,7 @@
                         "description": "The Response object"
                     }
                 },
-                "summary": "Get business role",
+                "summary": "Get a business role by id",
                 "tags": [
                     "Business Permission API"
                 ]
@@ -8450,22 +8895,21 @@
         },
         "/biz-get-roles": {
             "get": {
-                "description": "Get all business roles for an app",
+                "description": "Get all business roles visible in (organization, appName). If",
                 "parameters": [
                     {
-                        "description": "The owner (organization)",
+                        "description": "The organization",
                         "in": "query",
-                        "name": "owner",
+                        "name": "organization",
                         "required": true,
                         "schema": {
                             "type": "string"
                         }
                     },
                     {
-                        "description": "The app name",
+                        "description": "The app name ('' for org-scope only)",
                         "in": "query",
-                        "name": "app",
-                        "required": true,
+                        "name": "appName",
                         "schema": {
                             "type": "string"
                         }
@@ -8571,6 +9015,382 @@
                 ]
             }
         },
+        "/biz-list-permission-grantees": {
+            "get": {
+                "parameters": [
+                    {
+                        "description": "The permission id",
+                        "in": "query",
+                        "name": "permissionId",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "description": "Pagination offset (default 0)",
+                        "in": "query",
+                        "name": "offset",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "description": "Pagination page size (default 50)",
+                        "in": "query",
+                        "name": "limit",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/controllers.BizPermissionGranteeListResponse"
+                                }
+                            }
+                        },
+                        "description": "The Response object"
+                    }
+                },
+                "summary": "List grantees of a permission (paginated)",
+                "tags": [
+                    "Business Permission API"
+                ]
+            }
+        },
+        "/biz-list-permissions-by-role": {
+            "get": {
+                "parameters": [
+                    {
+                        "description": "The organization",
+                        "in": "query",
+                        "name": "organization",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "The role name",
+                        "in": "query",
+                        "name": "roleName",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/controllers.BizPermissionListResponse"
+                                }
+                            }
+                        },
+                        "description": "The Response object"
+                    }
+                },
+                "summary": "List permissions granted to a role within an organization",
+                "tags": [
+                    "Business Permission API"
+                ]
+            }
+        },
+        "/biz-list-permissions-by-user": {
+            "get": {
+                "description": "Returns only direct user grants. Effective permissions (via role",
+                "parameters": [
+                    {
+                        "description": "The organization",
+                        "in": "query",
+                        "name": "organization",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "The user id (typically org/username)",
+                        "in": "query",
+                        "name": "userId",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/controllers.BizPermissionListResponse"
+                                }
+                            }
+                        },
+                        "description": "The Response object"
+                    }
+                },
+                "summary": "List permissions directly granted to a user within an organization",
+                "tags": [
+                    "Business Permission API"
+                ]
+            }
+        },
+        "/biz-list-role-children": {
+            "get": {
+                "parameters": [
+                    {
+                        "description": "The parent role id",
+                        "in": "query",
+                        "name": "roleId",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/controllers.BizRoleListResponse"
+                                }
+                            }
+                        },
+                        "description": "The Response object"
+                    }
+                },
+                "summary": "List direct child roles (one level down) of a role",
+                "tags": [
+                    "Business Permission API"
+                ]
+            }
+        },
+        "/biz-list-role-members": {
+            "get": {
+                "parameters": [
+                    {
+                        "description": "The role id",
+                        "in": "query",
+                        "name": "roleId",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "description": "Pagination offset (default 0)",
+                        "in": "query",
+                        "name": "offset",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "description": "Pagination page size (default 50)",
+                        "in": "query",
+                        "name": "limit",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/controllers.BizRoleMemberListResponse"
+                                }
+                            }
+                        },
+                        "description": "The Response object"
+                    }
+                },
+                "summary": "List direct members of a role (paginated)",
+                "tags": [
+                    "Business Permission API"
+                ]
+            }
+        },
+        "/biz-list-role-parents": {
+            "get": {
+                "parameters": [
+                    {
+                        "description": "The child role id",
+                        "in": "query",
+                        "name": "roleId",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/controllers.BizRoleListResponse"
+                                }
+                            }
+                        },
+                        "description": "The Response object"
+                    }
+                },
+                "summary": "List direct parent roles (one level up) of a role",
+                "tags": [
+                    "Business Permission API"
+                ]
+            }
+        },
+        "/biz-list-user-roles": {
+            "get": {
+                "parameters": [
+                    {
+                        "description": "The organization",
+                        "in": "query",
+                        "name": "organization",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "The user id (typically org/username)",
+                        "in": "query",
+                        "name": "userId",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/controllers.BizRoleListResponse"
+                                }
+                            }
+                        },
+                        "description": "The Response object"
+                    }
+                },
+                "summary": "List all roles a user belongs to within an organization",
+                "tags": [
+                    "Business Permission API"
+                ]
+            }
+        },
+        "/biz-remove-permission-grantee": {
+            "post": {
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/object.BizPermissionGrantee",
+                                "summary": "body",
+                                "description": "{permissionId, subjectType, subjectId}"
+                            }
+                        }
+                    },
+                    "description": "{permissionId, subjectType, subjectId}",
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/controllers.ActionResponse"
+                                }
+                            }
+                        },
+                        "description": "Action result"
+                    }
+                },
+                "summary": "Revoke a permission grant from a subject",
+                "tags": [
+                    "Business Permission API"
+                ]
+            }
+        },
+        "/biz-remove-role-inheritance": {
+            "post": {
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/controllers.roleInheritanceEdge",
+                                "summary": "body",
+                                "description": "{parentRoleId, childRoleId}"
+                            }
+                        }
+                    },
+                    "description": "{parentRoleId, childRoleId}",
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/controllers.ActionResponse"
+                                }
+                            }
+                        },
+                        "description": "Action result"
+                    }
+                },
+                "summary": "Remove a role inheritance edge",
+                "tags": [
+                    "Business Permission API"
+                ]
+            }
+        },
+        "/biz-remove-role-member": {
+            "post": {
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/object.BizRoleMember",
+                                "summary": "body",
+                                "description": "{roleId, subjectType, subjectId}"
+                            }
+                        }
+                    },
+                    "description": "{roleId, subjectType, subjectId}",
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/controllers.ActionResponse"
+                                }
+                            }
+                        },
+                        "description": "Action result"
+                    }
+                },
+                "summary": "Remove a member from a role",
+                "tags": [
+                    "Business Permission API"
+                ]
+            }
+        },
         "/biz-sync-policies": {
             "post": {
                 "description": "Manually trigger a full policy rebuild for the given business app",
@@ -8650,33 +9470,14 @@
         },
         "/biz-update-permission": {
             "post": {
-                "description": "Update an existing business permission rule",
                 "parameters": [
                     {
-                        "description": "The owner (organization)",
+                        "description": "The numeric permission id",
                         "in": "query",
-                        "name": "owner",
+                        "name": "id",
                         "required": true,
                         "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "description": "The app name",
-                        "in": "query",
-                        "name": "app",
-                        "required": true,
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "description": "The permission name",
-                        "in": "query",
-                        "name": "name",
-                        "required": true,
-                        "schema": {
-                            "type": "string"
+                            "type": "integer"
                         }
                     }
                 ],
@@ -8686,11 +9487,11 @@
                             "schema": {
                                 "$ref": "#/components/schemas/object.BizPermission",
                                 "summary": "body",
-                                "description": "The details of the permission"
+                                "description": "The permission (owner and appName must match the existing row)"
                             }
                         }
                     },
-                    "description": "The details of the permission",
+                    "description": "The permission (owner and appName must match the existing row)",
                     "required": true
                 },
                 "responses": {
@@ -8705,7 +9506,7 @@
                         "description": "Action result"
                     }
                 },
-                "summary": "Update business permission",
+                "summary": "Update an existing business permission",
                 "tags": [
                     "Business Permission API"
                 ]
@@ -8713,33 +9514,14 @@
         },
         "/biz-update-role": {
             "post": {
-                "description": "Update an existing business role",
                 "parameters": [
                     {
-                        "description": "The owner (organization)",
+                        "description": "The numeric role id",
                         "in": "query",
-                        "name": "owner",
+                        "name": "id",
                         "required": true,
                         "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "description": "The app name",
-                        "in": "query",
-                        "name": "app",
-                        "required": true,
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "description": "The role name",
-                        "in": "query",
-                        "name": "name",
-                        "required": true,
-                        "schema": {
-                            "type": "string"
+                            "type": "integer"
                         }
                     }
                 ],
@@ -8749,11 +9531,11 @@
                             "schema": {
                                 "$ref": "#/components/schemas/object.BizRole",
                                 "summary": "body",
-                                "description": "The details of the role"
+                                "description": "The role (organization and scopeKind must match the existing row)"
                             }
                         }
                     },
-                    "description": "The details of the role",
+                    "description": "The role (organization and scopeKind must match the existing row)",
                     "required": true
                 },
                 "responses": {
@@ -8768,7 +9550,7 @@
                         "description": "Action result"
                     }
                 },
-                "summary": "Update business role",
+                "summary": "Update an existing business role",
                 "tags": [
                     "Business Permission API"
                 ]

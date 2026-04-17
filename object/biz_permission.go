@@ -209,3 +209,51 @@ func DeleteBizPermission(id int64) (bool, error) {
 	}
 	return affected != 0, nil
 }
+
+// BulkDeleteBizPermissions deletes multiple permissions in one call. Unlike
+// roles, permissions have no inheritance graph — no topological retry
+// needed; order doesn't matter. Scope consistency is enforced: all ids
+// must share (Owner, AppName) or the whole call aborts (defense against
+// cross-scope id injection past the filter-layer check on ids[0]).
+func BulkDeleteBizPermissions(ids []int64) ([]BulkDeleteResult, error) {
+	seen := make(map[int64]bool, len(ids))
+	out := make([]BulkDeleteResult, 0, len(ids))
+
+	// Pre-fetch scope validation pass.
+	var anchorOwner, anchorApp string
+	anchorSet := false
+	for _, id := range ids {
+		if seen[id] {
+			continue
+		}
+		seen[id] = true
+		perm, err := getBizPermissionById(id)
+		if err != nil {
+			return nil, err
+		}
+		if perm == nil {
+			continue
+		}
+		if !anchorSet {
+			anchorOwner, anchorApp = perm.Owner, perm.AppName
+			anchorSet = true
+			continue
+		}
+		if perm.Owner != anchorOwner || perm.AppName != anchorApp {
+			return nil, fmt.Errorf("bulk delete spans multiple (owner, app) scopes: %s/%s vs %s/%s",
+				anchorOwner, anchorApp, perm.Owner, perm.AppName)
+		}
+	}
+
+	// Delete pass — reset dedup set so we report every input id exactly once.
+	seen = make(map[int64]bool, len(ids))
+	for _, id := range ids {
+		if seen[id] {
+			continue
+		}
+		seen[id] = true
+		ok, err := DeleteBizPermission(id)
+		out = append(out, BulkDeleteResult{Id: id, Ok: ok && err == nil, Err: err})
+	}
+	return out, nil
+}

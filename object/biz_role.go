@@ -93,19 +93,26 @@ func UpdateBizRole(id int64, role *BizRole) (bool, error) {
 	return affected != 0, nil
 }
 
+// bizErrTemplateInheritedBy matches the i18n key in i18n/locales/*/data.json.
+// BulkDeleteBizRoles inspects this template via errors.As(*BizError{}) to
+// distinguish "defer, child may still be in selection" from permanent errors.
+const bizErrTemplateInheritedBy = `Cannot delete role "%s": it is inherited by role "%s"`
+
 func DeleteBizRole(id int64) (bool, error) {
 	role, err := getBizRoleById(id)
 	if err != nil || role == nil {
 		return false, err
 	}
 
-	// Protect against deletion with active children
-	hasChildren, err := HasChildrenOfRole(id)
+	// Protect against deletion with active children. Surface the first
+	// child's name so the admin can trace the blocker without opening the
+	// role's detail page.
+	children, err := ListChildRoles(id)
 	if err != nil {
 		return false, err
 	}
-	if hasChildren {
-		return false, fmt.Errorf("cannot delete role %s: it is inherited by other roles", role.Name)
+	if len(children) > 0 {
+		return false, newBizError(bizErrTemplateInheritedBy, role.Name, children[0].Name)
 	}
 
 	// Snapshot the identity fields BEFORE we delete the row — post-delete
@@ -128,6 +135,118 @@ func DeleteBizRole(id int64) (bool, error) {
 		SyncAfterRoleDeleted(snapOrg, snapApp, snapName, snapScope)
 	}
 	return affected != 0, nil
+}
+
+// BulkDeleteResult reports the outcome of deleting a single role inside a
+// bulk call. Ok=true means the row is gone; Ok=false means it couldn't be
+// deleted and Err carries the reason. Err may be a *BizError (translatable
+// by the controller layer) or a plain error (verbatim to client).
+type BulkDeleteResult struct {
+	Id  int64
+	Ok  bool
+	Err error
+}
+
+// BulkDeleteBizRoles deletes multiple roles, deferring ones whose only
+// blocker is a child that is ALSO in the selection until that child is
+// deleted. This lets an admin select a parent + all its children in one
+// click without having to manually order the delete. Roles whose children
+// are outside the selection fail with the "inherited by" BizError and the
+// caller shows the blocker's name to the admin.
+//
+// Scope consistency is enforced internally: all ids must share the same
+// (Organization, AppName). This guards a scoped admin from injecting
+// cross-org/cross-app ids after the filter-layer check on ids[0]. A scope
+// mismatch aborts the whole call with an error and NO rows are deleted.
+//
+// Semantics: best-effort per-id for the delete pass — a partial-success
+// response is normal. Caller inspects each result; no overall error is
+// returned when the error is nil.
+func BulkDeleteBizRoles(ids []int64) ([]BulkDeleteResult, error) {
+	results := make(map[int64]*BulkDeleteResult, len(ids))
+	pending := make([]int64, 0, len(ids))
+	for _, id := range ids {
+		if _, dup := results[id]; dup {
+			continue
+		}
+		results[id] = &BulkDeleteResult{Id: id}
+		pending = append(pending, id)
+	}
+
+	// Pre-fetch all roles once to validate scope consistency. Roles that
+	// don't exist pass through — the delete loop below will surface
+	// "not found" as a per-id error.
+	var anchorOrg, anchorApp string
+	anchorSet := false
+	for _, id := range pending {
+		role, err := getBizRoleById(id)
+		if err != nil {
+			return nil, err
+		}
+		if role == nil {
+			continue
+		}
+		if !anchorSet {
+			anchorOrg, anchorApp = role.Organization, role.AppName
+			anchorSet = true
+			continue
+		}
+		if role.Organization != anchorOrg || role.AppName != anchorApp {
+			return nil, fmt.Errorf("bulk delete spans multiple (org, app) scopes: %s/%s vs %s/%s",
+				anchorOrg, anchorApp, role.Organization, role.AppName)
+		}
+	}
+
+	// Worst-case depth is a linear chain of length len(ids); +1 guards the
+	// off-by-one. Loop also stops early when a pass makes no progress.
+	maxPasses := len(pending) + 1
+	for pass := 0; pass < maxPasses && len(pending) > 0; pass++ {
+		retry := make([]int64, 0, len(pending))
+		for _, id := range pending {
+			ok, err := DeleteBizRole(id)
+			if err == nil && ok {
+				results[id].Ok = true
+				results[id].Err = nil
+				continue
+			}
+			if isInheritedByOtherError(err) {
+				// Defer — a child may be in pending and will unblock us
+				// on a later pass.
+				results[id].Err = err
+				retry = append(retry, id)
+				continue
+			}
+			// Non-retryable (not found, DB error, validation, etc.)
+			results[id].Err = err
+		}
+		if len(retry) == len(pending) {
+			break // no progress — blockers are outside the selection
+		}
+		pending = retry
+	}
+
+	// Preserve input order; deduped slice if caller passed duplicates.
+	out := make([]BulkDeleteResult, 0, len(results))
+	seen := make(map[int64]bool, len(results))
+	for _, id := range ids {
+		if seen[id] {
+			continue
+		}
+		seen[id] = true
+		out = append(out, *results[id])
+	}
+	return out, nil
+}
+
+func isInheritedByOtherError(err error) bool {
+	if err == nil {
+		return false
+	}
+	bizErr, ok := err.(*BizError)
+	if !ok {
+		return false
+	}
+	return bizErr.Template == bizErrTemplateInheritedBy
 }
 
 func getBizRoleById(id int64) (*BizRole, error) {

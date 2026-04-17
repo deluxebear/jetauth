@@ -240,12 +240,13 @@ func getObject(ctx *context.Context) (string, string, error) {
 // identify the target object. All fields are optional; unmarshal failures and
 // zero values simply fall through to the next resolution strategy.
 type bizAuthzBody struct {
-	Organization string `json:"organization"`
-	Owner        string `json:"owner"`
-	Name         string `json:"name"`
-	RoleId       int64  `json:"roleId"`
-	PermissionId int64  `json:"permissionId"`
-	ParentRoleId int64  `json:"parentRoleId"`
+	Organization string  `json:"organization"`
+	Owner        string  `json:"owner"`
+	Name         string  `json:"name"`
+	RoleId       int64   `json:"roleId"`
+	PermissionId int64   `json:"permissionId"`
+	ParentRoleId int64   `json:"parentRoleId"`
+	Ids          []int64 `json:"ids"` // bulk endpoints (e.g. biz-bulk-delete-role)
 }
 
 // getBizAuthzTarget resolves (objOwner, objName) for the biz-* POST endpoints.
@@ -292,7 +293,29 @@ func getBizAuthzTarget(ctx *context.Context, path string) (string, string, error
 		return "", "", nil
 	}
 
-	// 2. Body roleId / parentRoleId — member / inheritance operations.
+	// 2. Bulk body.ids — resolve from the first id's role/permission to
+	// get a conservative authz check at the filter level. The controller
+	// is still responsible for per-id scope validation so an org admin
+	// can't inject ids from other orgs into the selection.
+	if len(b.Ids) > 0 {
+		if strings.Contains(path, "-role") &&
+			!strings.Contains(path, "-role-member") &&
+			!strings.Contains(path, "-role-inheritance") {
+			if role, err := object.GetBizRoleById(b.Ids[0]); err == nil && role != nil {
+				return role.Organization, role.Name, nil
+			}
+			return "", "", nil
+		}
+		if strings.Contains(path, "-permission") &&
+			!strings.Contains(path, "-permission-grantee") {
+			if perm, err := object.GetBizPermissionById(b.Ids[0]); err == nil && perm != nil {
+				return perm.Owner, perm.Name, nil
+			}
+			return "", "", nil
+		}
+	}
+
+	// 3. Body roleId / parentRoleId — member / inheritance operations.
 	if b.RoleId != 0 {
 		if role, err := object.GetBizRoleById(b.RoleId); err == nil && role != nil {
 			return role.Organization, role.Name, nil

@@ -16,7 +16,7 @@
 | 1 | **显示名为主，ID 为辅** | 主列第一行加粗显示 `displayName`；下一行 `mono` 小灰字显示 `name` / raw id。用户认名字不认 slug。 |
 | 2 | **关键度量数字化 + 可点** | 成员数、关联权限数、引用次数等关键度量单独成列；非零时用高饱和色徽章，零时灰。**点击数字跳到对应视图**（不是详情页首屏），例如 `#members`、`#permissions` 锚点。 |
 | 3 | **关系可视化** | 继承自 / 归属于 / 依赖于 这类外链用 chip 展示，点击跳目标详情。不要只显示"有"/"无"的布尔值。 |
-| 4 | **整行可点 + 操作按钮常显** | 行主体点击 → 详情页。行末操作按钮（编辑、删除）**始终可见**，低饱和色；鼠标 hover 时变亮。**不要做 hover-reveal**——触控板/触屏不可靠。 |
+| 4 | **主列 displayName 是 Link + 操作按钮常显** | 只有主列的 displayName/name 文字是 `<Link>`（hover 时 text-accent），**不做整行点击**——空白区域应该允许用户自由选文字、复制。行末操作按钮（编辑、删除）**始终可见**，低饱和色；鼠标 hover 时变亮。**不要做 hover-reveal**——触控板/触屏不可靠。 |
 | 5 | **批量操作** | 首列 checkbox，表头支持 select-all + indeterminate。有选中时顶部浮现操作条（启用/停用/删除/取消）。破坏性批量操作必须二次确认。 |
 | 6 | **多维筛选组合** | 多选维度（作用域、标签、类型…）用 chip 多选；单选维度（启用状态、审批状态）用 radio chip。筛选 chip 放在表**外**，列级精确搜索用 `FilterPopover`（列标题旁的漏斗）。 |
 | 7 | **最后修改时间** | 相对时间（"3 min ago" / "2 d ago"），`tabular-nums` 避免抖动。后端必须提供 `updatedTime`。 |
@@ -110,7 +110,7 @@ function MyListTab({ rows, owner, app }: Props) {
   const editUrl = (name: string) => `/.../:${encodeURIComponent(name)}`;
 
   const columns: Column<Row>[] = [
-    // #1 主从字段对调 + 列级文本搜索
+    // #1 主从字段对调 + 列级文本搜索 + displayName 是 Link
     {
       key: "identity",
       title: t("col.name"),
@@ -120,10 +120,10 @@ function MyListTab({ rows, owner, app }: Props) {
       width: "240px",
       sortFn: (a, b) => (a.displayName || a.name).localeCompare(b.displayName || b.name),
       render: (_, r) => (
-        <div className="flex flex-col">
-          <span className="font-semibold text-text-primary">{r.displayName || r.name}</span>
+        <Link to={editUrl(r.name)} className="flex flex-col group/link" onClick={(e) => e.stopPropagation()}>
+          <span className="font-semibold text-text-primary group-hover/link:text-accent transition-colors">{r.displayName || r.name}</span>
           <span className="font-mono text-[11px] text-text-muted">{r.name}</span>
-        </div>
+        </Link>
       ),
     },
     // #2 数字化度量 + 可点
@@ -224,7 +224,6 @@ function MyListTab({ rows, owner, app }: Props) {
         columns={columns}
         data={filtered}
         rowKey={(r) => r.name}
-        onRowClick={(r) => navigate(editUrl(r.name))}  // #4 行点击
         selectable                                      // #5 批量选择
         clientSort                                      // 小数据量前端排序
         clientPagination                                // 小数据量前端分页（含页大小选择器）
@@ -356,6 +355,7 @@ useEffect(() => {
 ## 五、反模式（避免）
 
 ❌ **Hover-reveal 操作按钮**——触控板/触屏不可靠。常显低饱和，hover 变亮。
+❌ **整行点击跳详情**——空白区域（时间、chip、数值等等）都会响应，用户想选文字/复制 id 会误触发。用**主列 displayName 是 `<Link>`** 替代。
 ❌ **同一列混用点击目的**——"点击角色名去详情 + 点击成员数去成员页"是 ✅，但"点击整行有时进详情有时触发选择"是 ❌。
 ❌ **操作列不固定右侧**——大宽表时操作按钮跑到屏幕外。始终 `fixed: "right"`。
 ❌ **关键度量不返回到列表接口**——别让前端每行再发一次请求查成员数。用聚合查询一次给全。
@@ -372,11 +372,11 @@ useEffect(() => {
 
 - [ ] 后端列表 API 含 `UpdatedTime` 字段；Add/Update 都会写入
 - [ ] 后端 List 函数一次聚合查询填衍生度量（见"数据契约"）
-- [ ] 前端第一列显示 displayName（粗）+ name（mono 灰字）
+- [ ] 前端第一列：displayName（粗）+ name（mono 灰字），**整块包在 `<Link>`** 里跳详情页（不是整行点击）
 - [ ] 成员数/关联数等关键度量为独立列，可点击深链接
 - [ ] 关系字段用 chip，点击跳目标详情
 - [ ] 操作列 `fixed: "right"`，图标常显
-- [ ] 行 `onRowClick` 跳详情；可点数字/chip 的单元格自己 `e.stopPropagation()`
+- [ ] **不要用 `onRowClick`**；可点数字/chip 的单元格自己 `e.stopPropagation()` 以免冒泡到 Link 父节点
 - [ ] `selectable` + `bulkActions` 已开启（破坏性操作二次确认）
 - [ ] `clientSort` + `defaultSort`（列表 < ~200 行时）
 - [ ] 跨列筛选用表外 FilterChip；列内用 FilterPopover（`column.filterable: true` + `onFilter`）

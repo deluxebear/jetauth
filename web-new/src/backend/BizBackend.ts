@@ -154,6 +154,25 @@ export function deleteBizRole(id: number) {
   return request("POST", `/api/biz-delete-role?id=${id}`);
 }
 
+// Per-id outcome of a bulk delete. `ok=false` means the row is still there
+// and `error` holds a localized explanation (e.g. "inherited by …").
+export interface BizRoleBulkDeleteItem {
+  id: number;
+  ok: boolean;
+  error?: string;
+}
+
+export interface BizRoleBulkDeleteResult {
+  results: BizRoleBulkDeleteItem[];
+  succeeded: number;
+  failed: number;
+  total: number;
+}
+
+export function bulkDeleteBizRoles(ids: number[]) {
+  return request<BizRoleBulkDeleteResult>("POST", "/api/biz-bulk-delete-role", { ids });
+}
+
 // ── BizRole membership ──
 
 export interface BizRoleMemberListResponse {
@@ -224,6 +243,23 @@ export function updateBizPermission(id: number, perm: BizPermission) {
 
 export function deleteBizPermission(id: number) {
   return request("POST", `/api/biz-delete-permission?id=${id}`);
+}
+
+export interface BizPermissionBulkDeleteItem {
+  id: number;
+  ok: boolean;
+  error?: string;
+}
+
+export interface BizPermissionBulkDeleteResult {
+  results: BizPermissionBulkDeleteItem[];
+  succeeded: number;
+  failed: number;
+  total: number;
+}
+
+export function bulkDeleteBizPermissions(ids: number[]) {
+  return request<BizPermissionBulkDeleteResult>("POST", "/api/biz-bulk-delete-permission", { ids });
 }
 
 // ── BizPermission grantees ──

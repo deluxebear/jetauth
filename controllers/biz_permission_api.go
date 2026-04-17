@@ -17,17 +17,25 @@ import (
 	"github.com/deluxebear/casdoor/util"
 )
 
+// translateBizError returns a user-facing string for any error, applying
+// i18n template translation when the error is a *object.BizError. Callers
+// pass a nil-safe error and get back "" for no error.
+func (c *ApiController) translateBizError(err error) string {
+	if err == nil {
+		return ""
+	}
+	if bizErr, ok := err.(*object.BizError); ok {
+		translated := c.T(bizErr.Namespace + ":" + bizErr.Template)
+		return fmt.Sprintf(translated, bizErr.Args...)
+	}
+	return err.Error()
+}
+
 // wrapBizActionResponse wraps a CRUD action result, translating BizError
 // templates via c.T() so the response language matches the user's locale.
 func (c *ApiController) wrapBizActionResponse(affected bool, e ...error) *Response {
 	if len(e) != 0 && e[0] != nil {
-		if bizErr, ok := e[0].(*object.BizError); ok {
-			// Translate the template, then format with args
-			translated := c.T(bizErr.Namespace + ":" + bizErr.Template)
-			msg := fmt.Sprintf(translated, bizErr.Args...)
-			return &Response{Status: "error", Msg: msg}
-		}
-		return &Response{Status: "error", Msg: e[0].Error()}
+		return &Response{Status: "error", Msg: c.translateBizError(e[0])}
 	} else if affected {
 		return &Response{Status: "ok", Msg: "", Data: "Affected"}
 	} else {
@@ -90,6 +98,63 @@ type BizRoleMemberListResponse struct {
 		Members []object.BizRoleMember `json:"members"`
 		Total   int64                  `json:"total" example:"0"`
 	} `json:"data"`
+}
+
+// BizRoleBulkDeleteRequest is the request body for POST /biz-bulk-delete-role.
+type BizRoleBulkDeleteRequest struct {
+	Ids []int64 `json:"ids"`
+}
+
+// BizRoleBulkDeleteResultItem is one row of the bulk-delete response. Per-id
+// outcomes let the UI mark which roles failed (e.g. a child reference outside
+// the selection kept them alive) vs which succeeded.
+type BizRoleBulkDeleteResultItem struct {
+	Id    int64  `json:"id" example:"1"`
+	Ok    bool   `json:"ok" example:"true"`
+	Error string `json:"error,omitempty" example:""`
+}
+
+// BizRoleBulkDeleteResponseData aggregates the per-id results plus a summary.
+type BizRoleBulkDeleteResponseData struct {
+	Results    []BizRoleBulkDeleteResultItem `json:"results"`
+	Succeeded  int                           `json:"succeeded" example:"2"`
+	Failed     int                           `json:"failed" example:"1"`
+	Total      int                           `json:"total" example:"3"`
+}
+
+// BizRoleBulkDeleteResponse is the envelope returned by /biz-bulk-delete-role.
+type BizRoleBulkDeleteResponse struct {
+	Status string                        `json:"status" example:"ok"`
+	Msg    string                        `json:"msg" example:""`
+	Data   BizRoleBulkDeleteResponseData `json:"data"`
+}
+
+// BizPermissionBulkDeleteRequest is the request body for POST /biz-bulk-delete-permission.
+type BizPermissionBulkDeleteRequest struct {
+	Ids []int64 `json:"ids"`
+}
+
+// BizPermissionBulkDeleteResultItem is one row of the permission bulk-delete
+// response. Mirrors the role variant so the admin UI can share handling code.
+type BizPermissionBulkDeleteResultItem struct {
+	Id    int64  `json:"id" example:"1"`
+	Ok    bool   `json:"ok" example:"true"`
+	Error string `json:"error,omitempty" example:""`
+}
+
+// BizPermissionBulkDeleteResponseData aggregates per-id results plus summary counts.
+type BizPermissionBulkDeleteResponseData struct {
+	Results   []BizPermissionBulkDeleteResultItem `json:"results"`
+	Succeeded int                                 `json:"succeeded" example:"2"`
+	Failed    int                                 `json:"failed" example:"1"`
+	Total     int                                 `json:"total" example:"3"`
+}
+
+// BizPermissionBulkDeleteResponse is the envelope returned by /biz-bulk-delete-permission.
+type BizPermissionBulkDeleteResponse struct {
+	Status string                              `json:"status" example:"ok"`
+	Msg    string                              `json:"msg" example:""`
+	Data   BizPermissionBulkDeleteResponseData `json:"data"`
 }
 
 // BizPermissionListResponse represents the response for biz permission list APIs
@@ -400,6 +465,54 @@ func (c *ApiController) DeleteBizRole() {
 	}
 
 	c.Data["json"] = c.wrapBizActionResponse(object.DeleteBizRole(id))
+	c.ServeJSON()
+}
+
+// BulkDeleteBizRoles
+// @Summary Delete multiple business roles in one call
+// @Tags Business Permission API
+// @Description Deletes roles by id with topological retry — a role blocked by a child inheritance edge is retried once the child (if in the selection) is deleted. Response is per-id so the admin UI can show which rows survived and why.
+// @Param   body    body     BizRoleBulkDeleteRequest  true  "{ids: [int64, ...]}"
+// @Success 200 {object} BizRoleBulkDeleteResponse "Per-id outcomes + aggregate counts"
+// @Router /biz-bulk-delete-role [post]
+func (c *ApiController) BulkDeleteBizRoles() {
+	var req BizRoleBulkDeleteRequest
+	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &req); err != nil {
+		c.ResponseError(err.Error())
+		return
+	}
+	if len(req.Ids) == 0 {
+		c.ResponseError("ids must not be empty")
+		return
+	}
+
+	raw, err := object.BulkDeleteBizRoles(req.Ids)
+	if err != nil {
+		c.ResponseError(err.Error())
+		return
+	}
+	items := make([]BizRoleBulkDeleteResultItem, 0, len(raw))
+	succeeded, failed := 0, 0
+	for _, r := range raw {
+		item := BizRoleBulkDeleteResultItem{Id: r.Id, Ok: r.Ok}
+		if r.Ok {
+			succeeded++
+		} else {
+			failed++
+			item.Error = c.translateBizError(r.Err)
+		}
+		items = append(items, item)
+	}
+
+	c.Data["json"] = &Response{
+		Status: "ok",
+		Data: BizRoleBulkDeleteResponseData{
+			Results:   items,
+			Succeeded: succeeded,
+			Failed:    failed,
+			Total:     len(items),
+		},
+	}
 	c.ServeJSON()
 }
 
@@ -727,6 +840,54 @@ func (c *ApiController) DeleteBizPermission() {
 	}
 
 	c.Data["json"] = c.wrapBizActionResponse(object.DeleteBizPermission(id))
+	c.ServeJSON()
+}
+
+// BulkDeleteBizPermissions
+// @Summary Delete multiple business permissions in one call
+// @Tags Business Permission API
+// @Description Deletes permissions by id. Validates all ids share the same (Owner, AppName) scope before deleting so an org admin cannot inject cross-scope ids. Per-id outcomes let the UI highlight partial failures.
+// @Param   body    body     BizPermissionBulkDeleteRequest  true  "{ids: [int64, ...]}"
+// @Success 200 {object} BizPermissionBulkDeleteResponse "Per-id outcomes + aggregate counts"
+// @Router /biz-bulk-delete-permission [post]
+func (c *ApiController) BulkDeleteBizPermissions() {
+	var req BizPermissionBulkDeleteRequest
+	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &req); err != nil {
+		c.ResponseError(err.Error())
+		return
+	}
+	if len(req.Ids) == 0 {
+		c.ResponseError("ids must not be empty")
+		return
+	}
+
+	raw, err := object.BulkDeleteBizPermissions(req.Ids)
+	if err != nil {
+		c.ResponseError(err.Error())
+		return
+	}
+	items := make([]BizPermissionBulkDeleteResultItem, 0, len(raw))
+	succeeded, failed := 0, 0
+	for _, r := range raw {
+		item := BizPermissionBulkDeleteResultItem{Id: r.Id, Ok: r.Ok}
+		if r.Ok {
+			succeeded++
+		} else {
+			failed++
+			item.Error = c.translateBizError(r.Err)
+		}
+		items = append(items, item)
+	}
+
+	c.Data["json"] = &Response{
+		Status: "ok",
+		Data: BizPermissionBulkDeleteResponseData{
+			Results:   items,
+			Succeeded: succeeded,
+			Failed:    failed,
+			Total:     len(items),
+		},
+	}
 	c.ServeJSON()
 }
 

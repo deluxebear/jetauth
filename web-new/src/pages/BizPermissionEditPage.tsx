@@ -13,6 +13,7 @@ import { useModal } from "../components/Modal";
 import * as BizBackend from "../backend/BizBackend";
 import type { BizPermission } from "../backend/BizBackend";
 import BizPermissionGranteeTable from "../components/BizPermissionGranteeTable";
+import { useHashScroll } from "../hooks/useHashScroll";
 import { friendlyError } from "../utils/errorHelper";
 
 // The route is /authorization/:owner/:appName/permissions/:name.
@@ -35,6 +36,8 @@ export default function BizPermissionEditPage() {
   const [customAction, setCustomAction] = useState("");
 
   useEffect(() => { if (saved) { const timer = setTimeout(() => setSaved(false), 1500); return () => clearTimeout(timer); } }, [saved]);
+
+  useHashScroll(perm?.id);
 
   // App config — shared cache with AppAuthorizationPage. We derive supportsDeny
   // so the Deny button can be accurately gated without a separate fetch.
@@ -307,8 +310,11 @@ export default function BizPermissionEditPage() {
       </FormSection>
 
       {/* ── Grantees ── */}
+      {/* id="grantees" — deep-link target from permissions list "授权对象" count click */}
       {!(isAddMode && isNew) && perm.id && (
-        <BizPermissionGranteeTable permissionId={perm.id} organization={perm.owner} appName={perm.appName} />
+        <div id="grantees" className="scroll-mt-24">
+          <BizPermissionGranteeTable permissionId={perm.id} organization={perm.owner} appName={perm.appName} />
+        </div>
       )}
     </motion.div>
   );

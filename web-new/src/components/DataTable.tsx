@@ -635,13 +635,19 @@ export default function DataTable<T extends Record<string, unknown>>({
                     )}
                   </div>
                   {canResize && (
+                    // Hit zone: 10px straddling the column's right edge
+                    // (half inside, half past) so the user doesn't need
+                    // pixel-perfect aim. Visible affordance: a subtle
+                    // static bar that brightens to accent on hover/drag.
                     <div
                       onMouseDown={(e) => startResize(col, e)}
                       onDoubleClick={(e) => { e.stopPropagation(); autoFitColumn(col); }}
                       onClick={(e) => e.stopPropagation()}
-                      title="拖拽调整列宽；双击自动适配"
-                      className="absolute right-0 top-0 bottom-0 w-1.5 -mr-0.5 cursor-col-resize select-none z-30 hover:bg-accent/40 active:bg-accent/60 transition-colors"
-                    />
+                      title={t("common.resizeColumnHint") || "Drag to resize · double-click to auto-fit"}
+                      className="group/resizer absolute top-0 bottom-0 right-0 w-2.5 translate-x-1/2 cursor-col-resize select-none z-30"
+                    >
+                      <div className="pointer-events-none absolute inset-y-1.5 left-1/2 -translate-x-1/2 w-[2px] rounded-full bg-border/60 group-hover/resizer:bg-accent group-hover/resizer:w-[3px] group-active/resizer:bg-accent group-active/resizer:w-[3px] transition-all" />
+                    </div>
                   )}
                 </th>
               );})}

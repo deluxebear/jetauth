@@ -15,6 +15,7 @@ import { useModal } from "../components/Modal";
 import * as BizBackend from "../backend/BizBackend";
 import type { BizRole, BizPermission, BizRoleScopeKind } from "../backend/BizBackend";
 import BizRoleMemberTable from "../components/BizRoleMemberTable";
+import { useHashScroll } from "../hooks/useHashScroll";
 import BizRoleInheritancePicker from "../components/BizRoleInheritancePicker";
 import { friendlyError } from "../utils/errorHelper";
 
@@ -54,19 +55,7 @@ export default function BizRoleEditPage() {
 
   useEffect(() => { if (saved) { const timer = setTimeout(() => setSaved(false), 1500); return () => clearTimeout(timer); } }, [saved]);
 
-  // Deep-link hash anchors (#members, #permissions) from the roles list page.
-  // Wait one paint after role data settles so target nodes exist, then scroll
-  // smoothly. Re-run whenever the hash changes so clicking the same anchor
-  // from list → already-open edit page still moves focus.
-  useEffect(() => {
-    if (!location.hash) return;
-    if (!role?.id) return; // target nodes are gated on role.id
-    const id = location.hash.slice(1);
-    const raf = requestAnimationFrame(() => {
-      document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
-    });
-    return () => cancelAnimationFrame(raf);
-  }, [location.hash, role?.id]);
+  useHashScroll(role?.id);
 
   const initPropsEntries = (props: string) => {
     if (!props) { setPropsEntries([]); return; }
