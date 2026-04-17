@@ -381,6 +381,7 @@ func InitAPI() {
 	web.Router("/api/set-password", &controllers.ApiController{}, "POST:SetPassword")
 	web.Router("/api/check-user-password", &controllers.ApiController{}, "POST:CheckUserPassword")
 	web.Router("/api/get-email-and-phone", &controllers.ApiController{}, "GET:GetEmailAndPhone")
+	web.Router("/api/get-http-email-presets", &controllers.ApiController{}, "GET:GetHttpEmailPresets")
 	web.Router("/api/send-verification-code", &controllers.ApiController{}, "POST:SendVerificationCode")
 	web.Router("/api/verify-code", &controllers.ApiController{}, "POST:VerifyCode")
 	web.Router("/api/verify-captcha", &controllers.ApiController{}, "POST:VerifyCaptcha")
