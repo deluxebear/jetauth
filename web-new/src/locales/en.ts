@@ -2631,6 +2631,112 @@ const en = {
   // Nav
   "nav.authzManagement": "Authorization Mgmt",
   "nav.authzGlobalConfig": "Global Config",
+
+  // Common - Pagination
+  "common.paging.rangeTotal": "Page {page} of {total}",
+
+  // Biz Role - Edit page & shared
+  "bizRole.editTitle": "Edit Business Role",
+  "bizRole.notFound": "Role not found",
+  "bizRole.disabledBanner": "This role is disabled — it will not be evaluated at enforce time.",
+  "bizRole.enabledHelp": "Disabled roles are ignored during enforcement.",
+  "bizRole.section.basic": "Basic Info",
+  "bizRole.section.properties": "Custom Properties",
+
+  // Biz Role - Scope
+  "bizRole.scope.label": "Scope",
+  "bizRole.scope.app": "App",
+  "bizRole.scope.org": "Org",
+  "bizRole.scope.appTitle": "This app only",
+  "bizRole.scope.appHint": "Visible only within this app.",
+  "bizRole.scope.orgTitle": "Org-shared — reusable across all apps in this org",
+  "bizRole.scope.orgHint": "Granted to any app that references this role.",
+  "bizRole.scope.immutable": "Scope cannot be changed after creation.",
+
+  // Biz Role - Filter & list columns
+  "bizRole.filter.all": "All",
+  "bizRole.filter.app": "This app",
+  "bizRole.filter.org": "Organization-shared",
+  "bizRole.col.scope": "Scope",
+
+  // Biz Role - Inheritance
+  "bizRole.inheritance.title": "Inherits from",
+  "bizRole.inheritance.add": "Add parent role",
+  "bizRole.inheritance.empty": "No inheritance",
+  "bizRole.inheritance.pickerTitle": "Select parent role",
+  "bizRole.inheritance.confirmRemove": "Remove this inheritance?",
+
+  // Biz Role - Inherited by (reverse lookup)
+  "bizRole.inheritedBy.title": "Inherited by",
+  "bizRole.inheritedBy.empty": "No other role inherits from this one",
+  "bizRole.inheritedBy.hint": "Read-only. Edit the child role to change its inheritance.",
+
+  // Biz Role - Granted permissions (reverse lookup)
+  "bizRole.grantedPerms.title": "Permissions granted to this role",
+  "bizRole.grantedPerms.empty": "This role is not referenced by any permission",
+
+  // Biz Role - Properties editor
+  "bizRole.properties.visual": "Visual",
+  "bizRole.properties.json": "JSON",
+  "bizRole.properties.key": "Key",
+  "bizRole.properties.value": "Value",
+  "bizRole.properties.addEntry": "Add entry",
+  "bizRole.properties.empty": "No custom properties",
+  "bizRole.properties.parseError": "Invalid JSON — cannot parse",
+
+  // Biz Role - Members
+  "bizRole.member.sectionTitle": "Members",
+  "bizRole.member.add": "Add member",
+  "bizRole.member.addPartial": "Added {ok} / {n}, {err} failed",
+  "bizRole.member.empty": "No members",
+  "bizRole.member.pickerTitle": "Select members",
+  "bizRole.member.confirmRemove": "Remove this member?",
+  "bizRole.member.col.type": "Type",
+  "bizRole.member.col.subjectId": "Subject",
+  "bizRole.member.col.addedBy": "Added by",
+  "bizRole.member.col.addedTime": "Added at",
+  "bizRole.member.tab.user": "User",
+  "bizRole.member.tab.group": "Group",
+  "bizRole.member.subjectType.user": "User",
+  "bizRole.member.subjectType.group": "Group",
+  "bizRole.member.subjectType.userset": "Userset",
+
+  // Biz Permission - Edit page
+  "bizPerm.editTitle": "Edit Business Permission",
+  "bizPerm.notFound": "Permission not found",
+  "bizPerm.section.basic": "Basic Info",
+  "bizPerm.section.resourcesActions": "Resources & Actions",
+  "bizPerm.resources": "Resources",
+  "bizPerm.resourceHint": "One per line. Wildcards: * all, :id param.",
+  "bizPerm.actions": "Actions",
+  "bizPerm.actionHint": "Actions are matched as regex against request.act.",
+  "bizPerm.customAction": "Custom…",
+  "bizPerm.effect": "Effect",
+  "bizPerm.effectAllow": "Allow",
+  "bizPerm.effectDeny": "Deny",
+
+  // Biz Permission - Grantees
+  "bizPerm.grantee.sectionTitle": "Granted to",
+  "bizPerm.grantee.add": "Add",
+  "bizPerm.grantee.addPartial": "Added {ok} / {n}, {err} failed",
+  "bizPerm.grantee.empty": "No grantees",
+  "bizPerm.grantee.pickerTitle": "Select grantees",
+  "bizPerm.grantee.confirmRemove": "Remove this grantee?",
+  "bizPerm.grantee.col.type": "Type",
+  "bizPerm.grantee.col.subjectId": "Subject",
+  "bizPerm.grantee.col.addedBy": "Added by",
+  "bizPerm.grantee.col.addedTime": "Added at",
+  "bizPerm.grantee.filter.all": "All",
+  "bizPerm.grantee.filter.user": "User",
+  "bizPerm.grantee.filter.group": "Group",
+  "bizPerm.grantee.filter.role": "Role",
+  "bizPerm.grantee.tab.user": "User",
+  "bizPerm.grantee.tab.group": "Group",
+  "bizPerm.grantee.tab.role": "Role",
+  "bizPerm.grantee.subjectType.user": "User",
+  "bizPerm.grantee.subjectType.group": "Group",
+  "bizPerm.grantee.subjectType.role": "Role",
+  "bizPerm.grantee.subjectType.userset": "Userset",
 };
 
 export default en;

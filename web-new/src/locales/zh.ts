@@ -2702,6 +2702,112 @@ const zh: Record<string, string> = {
 
   "nav.authzManagement": "授权管理",
   "nav.authzGlobalConfig": "全局配置",
+
+  // Common - Pagination
+  "common.paging.rangeTotal": "第 {page} / {total} 页",
+
+  // Biz Role - Edit page & shared
+  "bizRole.editTitle": "编辑业务角色",
+  "bizRole.notFound": "角色不存在",
+  "bizRole.disabledBanner": "该角色已禁用 —— 鉴权时将被忽略",
+  "bizRole.enabledHelp": "禁用后该角色在鉴权时不会被评估",
+  "bizRole.section.basic": "基本信息",
+  "bizRole.section.properties": "自定义属性",
+
+  // Biz Role - Scope
+  "bizRole.scope.label": "作用域",
+  "bizRole.scope.app": "本应用",
+  "bizRole.scope.org": "组织共享",
+  "bizRole.scope.appTitle": "仅本应用",
+  "bizRole.scope.appHint": "仅在当前应用内可见和使用。",
+  "bizRole.scope.orgTitle": "组织共享 —— 可在组织下所有应用间复用",
+  "bizRole.scope.orgHint": "授予任何引用此角色的应用。",
+  "bizRole.scope.immutable": "作用域在创建后无法修改。",
+
+  // Biz Role - Filter & list columns
+  "bizRole.filter.all": "全部",
+  "bizRole.filter.app": "本应用",
+  "bizRole.filter.org": "组织共享",
+  "bizRole.col.scope": "作用域",
+
+  // Biz Role - Inheritance
+  "bizRole.inheritance.title": "继承自",
+  "bizRole.inheritance.add": "添加父角色",
+  "bizRole.inheritance.empty": "暂无继承关系",
+  "bizRole.inheritance.pickerTitle": "选择父角色",
+  "bizRole.inheritance.confirmRemove": "确定要移除此继承关系吗？",
+
+  // Biz Role - Inherited by (reverse lookup)
+  "bizRole.inheritedBy.title": "被继承",
+  "bizRole.inheritedBy.empty": "暂无其他角色继承此角色",
+  "bizRole.inheritedBy.hint": "只读。若需修改，请编辑对应的子角色。",
+
+  // Biz Role - Granted permissions (reverse lookup)
+  "bizRole.grantedPerms.title": "此角色授予的权限",
+  "bizRole.grantedPerms.empty": "该角色目前未被任何权限引用",
+
+  // Biz Role - Properties editor
+  "bizRole.properties.visual": "可视化",
+  "bizRole.properties.json": "JSON",
+  "bizRole.properties.key": "键",
+  "bizRole.properties.value": "值",
+  "bizRole.properties.addEntry": "添加条目",
+  "bizRole.properties.empty": "暂无自定义属性",
+  "bizRole.properties.parseError": "JSON 格式错误,无法解析",
+
+  // Biz Role - Members
+  "bizRole.member.sectionTitle": "成员",
+  "bizRole.member.add": "添加成员",
+  "bizRole.member.addPartial": "成功添加 {ok} / {n},失败 {err}",
+  "bizRole.member.empty": "暂无成员",
+  "bizRole.member.pickerTitle": "选择成员",
+  "bizRole.member.confirmRemove": "确定要移除此成员吗？",
+  "bizRole.member.col.type": "类型",
+  "bizRole.member.col.subjectId": "主体",
+  "bizRole.member.col.addedBy": "添加人",
+  "bizRole.member.col.addedTime": "添加时间",
+  "bizRole.member.tab.user": "用户",
+  "bizRole.member.tab.group": "组",
+  "bizRole.member.subjectType.user": "用户",
+  "bizRole.member.subjectType.group": "组",
+  "bizRole.member.subjectType.userset": "用户集",
+
+  // Biz Permission - Edit page
+  "bizPerm.editTitle": "编辑业务权限",
+  "bizPerm.notFound": "权限不存在",
+  "bizPerm.section.basic": "基本信息",
+  "bizPerm.section.resourcesActions": "资源与操作",
+  "bizPerm.resources": "资源",
+  "bizPerm.resourceHint": "每行一个资源路径。通配符：* 匹配全部,:id 匹配参数。",
+  "bizPerm.actions": "操作",
+  "bizPerm.actionHint": "操作以正则方式匹配 request.act。",
+  "bizPerm.customAction": "自定义…",
+  "bizPerm.effect": "效果",
+  "bizPerm.effectAllow": "允许",
+  "bizPerm.effectDeny": "拒绝",
+
+  // Biz Permission - Grantees
+  "bizPerm.grantee.sectionTitle": "授予给",
+  "bizPerm.grantee.add": "添加",
+  "bizPerm.grantee.addPartial": "成功添加 {ok} / {n},失败 {err}",
+  "bizPerm.grantee.empty": "暂无授予对象",
+  "bizPerm.grantee.pickerTitle": "选择授予对象",
+  "bizPerm.grantee.confirmRemove": "确定要移除此授予对象吗？",
+  "bizPerm.grantee.col.type": "类型",
+  "bizPerm.grantee.col.subjectId": "主体",
+  "bizPerm.grantee.col.addedBy": "添加人",
+  "bizPerm.grantee.col.addedTime": "添加时间",
+  "bizPerm.grantee.filter.all": "全部",
+  "bizPerm.grantee.filter.user": "用户",
+  "bizPerm.grantee.filter.group": "组",
+  "bizPerm.grantee.filter.role": "角色",
+  "bizPerm.grantee.tab.user": "用户",
+  "bizPerm.grantee.tab.group": "组",
+  "bizPerm.grantee.tab.role": "角色",
+  "bizPerm.grantee.subjectType.user": "用户",
+  "bizPerm.grantee.subjectType.group": "组",
+  "bizPerm.grantee.subjectType.role": "角色",
+  "bizPerm.grantee.subjectType.userset": "用户集",
 };
 
 export default zh;
