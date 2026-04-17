@@ -7,6 +7,8 @@ import StickyEditHeader from "../components/StickyEditHeader";
 import { FormField, FormSection, Switch, inputClass, monoInputClass } from "../components/FormSection";
 import SimpleSelect from "../components/SimpleSelect";
 import SingleSearchSelect from "../components/SingleSearchSelect";
+import { BodyTemplateEditor } from "../components/BodyTemplateEditor";
+import { PresetPicker } from "../components/PresetPicker";
 import { useTranslation } from "../i18n";
 import { useModal } from "../components/Modal";
 import { useOrganization } from "../OrganizationContext";
@@ -991,16 +993,39 @@ export default function ProviderEditPage() {
         <>
           <FormSection title={t("providers.section.emailConfig" as any)}>
             {renderGuide()}
+            <FormField label="" span="full">
+              <PresetPicker onPick={(p) => {
+                set("endpoint", p.endpointExample);
+                set("method", p.method);
+                set("contentType", p.contentType);
+                set("httpHeaders", p.httpHeaders);
+                set("bodyTemplate", p.bodyTemplate);
+              }} />
+            </FormField>
             <FormField label={t("providers.field.endpoint")} span="full">
-              <input value={String(prov.endpoint ?? "")} onChange={(e) => set("endpoint", e.target.value)} className={inputClass} placeholder="https://example.com/send-email" />
+              <input value={String(prov.endpoint ?? "")} onChange={(e) => set("endpoint", e.target.value)} className={inputClass} placeholder="https://api.example.com/send" />
             </FormField>
             <FormField label={t("providers.field.method" as any)}>
-              <SimpleSelect value={String(prov.method ?? "POST")} options={[{ value: "GET", label: "GET" }, { value: "POST", label: "POST" }]} onChange={(v) => set("method", v)} />
+              <SimpleSelect value={String(prov.method ?? "POST")} options={[
+                { value: "GET", label: "GET" },
+                { value: "POST", label: "POST" },
+                { value: "PUT", label: "PUT" },
+                { value: "PATCH", label: "PATCH" },
+                { value: "DELETE", label: "DELETE" },
+              ]} onChange={(v) => set("method", v)} />
+            </FormField>
+            <FormField label={t("providers.httpEmail.contentType" as any)}>
+              <SimpleSelect value={String(prov.contentType ?? "application/json")} options={[
+                { value: "application/json", label: "application/json" },
+                { value: "application/x-www-form-urlencoded", label: "application/x-www-form-urlencoded" },
+                { value: "text/plain", label: "text/plain" },
+              ]} onChange={(v) => set("contentType", v)} />
             </FormField>
             <FormField label={t("providers.field.enableProxy" as any)}>
               <Switch checked={!!prov.enableProxy} onChange={(v) => set("enableProxy", v)} />
             </FormField>
           </FormSection>
+
           <FormSection title={t("providers.section.httpHeaders" as any)}>
             <FormField label="" span="full">
               <HttpHeadersEditor
@@ -1009,17 +1034,24 @@ export default function ProviderEditPage() {
               />
             </FormField>
           </FormSection>
-          <FormSection title={t("providers.section.emailMapping" as any)}>
-            {["fromName", "fromAddress", "toAddress", "subject", "content"].map((field) => (
-              <FormField key={field} label={t(`providers.emailMapping.${field}` as any)}>
-                <input
-                  value={String((prov.userMapping as any)?.[field] ?? "")}
-                  onChange={(e) => set("userMapping", { ...(prov.userMapping as any ?? {}), [field]: e.target.value })}
-                  className={monoInputClass}
-                  placeholder={field}
-                />
-              </FormField>
-            ))}
+
+          <FormSection title={t("providers.httpEmail.bodyTemplate" as any)}>
+            <FormField label="" span="full">
+              <BodyTemplateEditor
+                value={String(prov.bodyTemplate ?? "")}
+                onChange={(v) => set("bodyTemplate", v)}
+                contentType={String(prov.contentType ?? "application/json")}
+              />
+            </FormField>
+          </FormSection>
+
+          <FormSection title={t("providers.httpEmail.senderIdentity" as any)}>
+            <FormField label={t("providers.field.fromAddress" as any)}>
+              <input value={String(prov.clientId2 ?? "")} onChange={(e) => set("clientId2", e.target.value)} className={inputClass} placeholder="noreply@yourdomain.com" />
+            </FormField>
+            <FormField label={t("providers.field.fromName" as any)}>
+              <input value={String(prov.clientSecret2 ?? "")} onChange={(e) => set("clientSecret2", e.target.value)} className={inputClass} placeholder="JetAuth" />
+            </FormField>
           </FormSection>
         </>
       ) : (

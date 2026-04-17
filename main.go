@@ -53,6 +53,7 @@ func main() {
 	object.CreateTables()
 
 	object.InitDb()
+	object.InitCustomHttpEmailMigration()
 
 	// Handle export command
 	if object.ShouldExportData() {

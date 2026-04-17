@@ -16,7 +16,13 @@
 
 package object
 
-import "github.com/deluxebear/casdoor/email"
+import (
+	"fmt"
+	"strings"
+
+	"github.com/deluxebear/casdoor/conf"
+	"github.com/deluxebear/casdoor/email"
+)
 
 // TestSmtpServer Test the SMTP server
 func TestSmtpServer(provider *Provider) error {
@@ -33,19 +39,60 @@ func TestSmtpServer(provider *Provider) error {
 
 func SendEmail(provider *Provider, title string, content string, dest []string, sender string) error {
 	sslMode := getSslMode(provider)
-	emailProvider := email.GetEmailProvider(provider.Type, provider.ClientId, provider.ClientSecret, provider.Host, provider.Port, sslMode, provider.Endpoint, provider.Method, provider.HttpHeaders, provider.UserMapping, provider.IssuerUrl, provider.EnableProxy)
+
+	opts := email.EmailOptions{
+		ClientId:     provider.ClientId,
+		ClientSecret: provider.ClientSecret,
+		Host:         provider.Host,
+		Port:         provider.Port,
+		SslMode:      sslMode,
+		EnableProxy:  provider.EnableProxy,
+		Endpoint:     provider.Endpoint,
+	}
+
+	if provider.Type == "Custom HTTP Email" {
+		opts.Http = &email.HttpEmailOptions{
+			Endpoint:     provider.Endpoint,
+			Method:       provider.Method,
+			ContentType:  provider.ContentType,
+			HttpHeaders:  provider.HttpHeaders,
+			BodyMapping:  provider.BodyMapping,
+			BodyTemplate: provider.BodyTemplate,
+			EnableProxy:  provider.EnableProxy,
+			Allowlist:    getSsrfAllowlist(),
+		}
+	}
+
+	emailProvider := email.GetEmailProvider(provider.Type, opts)
+	if emailProvider == nil {
+		return fmt.Errorf("SendEmail: provider %q is not configured", provider.Name)
+	}
 
 	fromAddress := provider.ClientId2
 	if fromAddress == "" {
 		fromAddress = provider.ClientId
 	}
-
 	fromName := provider.ClientSecret2
 	if fromName == "" {
 		fromName = sender
 	}
-
 	return emailProvider.Send(fromAddress, fromName, dest, title, content)
+}
+
+// getSsrfAllowlist reads comma-separated CIDRs from `ssrfAllowedHosts` conf key.
+func getSsrfAllowlist() []string {
+	raw := conf.GetConfigString("ssrfAllowedHosts")
+	if raw == "" {
+		return nil
+	}
+	parts := strings.Split(raw, ",")
+	out := make([]string, 0, len(parts))
+	for _, p := range parts {
+		if s := strings.TrimSpace(p); s != "" {
+			out = append(out, s)
+		}
+	}
+	return out
 }
 
 // getSslMode returns the SSL mode for the provider, with backward compatibility for DisableSsl

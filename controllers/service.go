@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/deluxebear/casdoor/email"
 	"github.com/deluxebear/casdoor/object"
 	"github.com/deluxebear/casdoor/util"
 )
@@ -222,4 +223,13 @@ func (c *ApiController) SendNotification() {
 	}
 
 	c.ResponseOk()
+}
+
+// @Title GetHttpEmailPresets
+// @Tag Service API
+// @Description Return built-in Custom HTTP Email presets.
+// @Success 200 {array} email.Preset
+// @router /get-http-email-presets [get]
+func (c *ApiController) GetHttpEmailPresets() {
+	c.ResponseOk(email.AllPresets())
 }

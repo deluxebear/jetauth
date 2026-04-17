@@ -55,6 +55,9 @@ type Provider struct {
 	Scopes            string            `xorm:"varchar(100)" json:"scopes"`
 	UserMapping       map[string]string `xorm:"varchar(500)" json:"userMapping"`
 	HttpHeaders       map[string]string `xorm:"varchar(500)" json:"httpHeaders"`
+	BodyMapping       map[string]string `xorm:"varchar(1000)" json:"bodyMapping"`
+	ContentType       string            `xorm:"varchar(100)" json:"contentType"`
+	BodyTemplate      string            `xorm:"text" json:"bodyTemplate"`
 
 	Host       string `xorm:"varchar(100)" json:"host"`
 	Port       int    `json:"port"`

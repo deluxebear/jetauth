@@ -18,17 +18,55 @@ type EmailProvider interface {
 	Send(fromAddress string, fromName string, toAddress []string, subject string, content string) error
 }
 
-func GetEmailProvider(typ string, clientId string, clientSecret string, host string, port int, sslMode string, endpoint string, method string, httpHeaders map[string]string, bodyMapping map[string]string, contentType string, enableProxy bool) EmailProvider {
+// HttpEmailOptions collects every custom-http-email-specific config so the
+// top-level GetEmailProvider signature stays maintainable.
+type HttpEmailOptions struct {
+	Endpoint     string
+	Method       string
+	ContentType  string
+	HttpHeaders  map[string]string
+	BodyMapping  map[string]string
+	BodyTemplate string
+	EnableProxy  bool
+	Allowlist    []string
+}
+
+type EmailOptions struct {
+	ClientId     string
+	ClientSecret string
+	Host         string
+	Port         int
+	SslMode      string
+	EnableProxy  bool
+	// Used only by SendGrid to set the REST endpoint override.
+	Endpoint string
+	// Populated only when Type == "Custom HTTP Email".
+	Http *HttpEmailOptions
+}
+
+func GetEmailProvider(typ string, o EmailOptions) EmailProvider {
 	switch typ {
 	case "Azure ACS":
-		return NewAzureACSEmailProvider(clientSecret, host)
+		return NewAzureACSEmailProvider(o.ClientSecret, o.Host)
 	case "Custom HTTP Email":
-		return NewHttpEmailProvider(endpoint, method, httpHeaders, bodyMapping, contentType)
+		if o.Http == nil {
+			return nil
+		}
+		return &HttpEmailSender{
+			Endpoint:     o.Http.Endpoint,
+			Method:       o.Http.Method,
+			ContentType:  o.Http.ContentType,
+			HttpHeaders:  o.Http.HttpHeaders,
+			BodyMapping:  o.Http.BodyMapping,
+			BodyTemplate: o.Http.BodyTemplate,
+			EnableProxy:  o.Http.EnableProxy,
+			Allowlist:    o.Http.Allowlist,
+		}
 	case "SendGrid":
-		return NewSendgridEmailProvider(clientSecret, host, endpoint)
+		return NewSendgridEmailProvider(o.ClientSecret, o.Host, o.Endpoint)
 	case "Resend":
-		return NewResendEmailProvider(clientSecret)
+		return NewResendEmailProvider(o.ClientSecret)
 	default:
-		return NewSmtpEmailProvider(clientId, clientSecret, host, port, typ, sslMode, enableProxy)
+		return NewSmtpEmailProvider(o.ClientId, o.ClientSecret, o.Host, o.Port, typ, o.SslMode, o.EnableProxy)
 	}
 }
