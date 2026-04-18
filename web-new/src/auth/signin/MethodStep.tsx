@@ -1,0 +1,154 @@
+import { useState, type ReactNode } from "react";
+import { ChevronDown } from "lucide-react";
+import { useTranslation } from "../../i18n";
+import PasswordForm from "./PasswordForm";
+import CodeForm from "./CodeForm";
+import WebAuthnForm from "./WebAuthnForm";
+import FaceForm from "./FaceForm";
+import type { SigninMethodInfo } from "../api/types";
+
+type MethodName = "Password" | "Verification code" | "WebAuthn" | "Face ID";
+
+interface MethodStepProps {
+  identifier: string;
+  userHint?: string;
+  application: string;
+  organization: string;
+  methods: SigninMethodInfo[];
+  recommended: string;
+  forgotPasswordHref?: string;
+  onPasswordSubmit: (password: string) => Promise<void>;
+  onCodeSubmit: (code: string) => Promise<void>;
+  onWebAuthnSuccess: () => void;
+  onFaceSuccess: () => void;
+  onBack: () => void;
+  error?: string;
+}
+
+/**
+ * Renders the active method's form and lets the user switch between
+ * methods when more than one is available. The parent orchestrator
+ * (SigninPage) owns the actual POST /api/login calls for Password and
+ * Code; WebAuthn and Face forms handle their own network flow and
+ * signal back via onWebAuthnSuccess / onFaceSuccess.
+ */
+export default function MethodStep({
+  identifier,
+  userHint,
+  application,
+  organization,
+  methods,
+  recommended,
+  forgotPasswordHref,
+  onPasswordSubmit,
+  onCodeSubmit,
+  onWebAuthnSuccess,
+  onFaceSuccess,
+  onBack,
+  error,
+}: MethodStepProps) {
+  const { t } = useTranslation();
+  const initial =
+    (methods.find((m) => m.name === recommended)?.name as MethodName | undefined) ??
+    (methods[0]?.name as MethodName | undefined) ??
+    "Password";
+  const [active, setActive] = useState<MethodName>(initial);
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  const showSwitcher = methods.length > 1;
+  // destType / destValue for CodeForm: prefer email; fall back to phone.
+  const inferDestType = (): "email" | "phone" =>
+    userHint && userHint.includes("@") ? "email" : "phone";
+
+  let body: ReactNode = null;
+  if (active === "Password") {
+    body = (
+      <PasswordForm
+        identifier={identifier}
+        userHint={userHint}
+        onSubmit={onPasswordSubmit}
+        onBack={onBack}
+        error={error}
+        forgotPasswordHref={forgotPasswordHref}
+      />
+    );
+  } else if (active === "Verification code") {
+    body = (
+      <CodeForm
+        identifier={identifier}
+        destType={inferDestType()}
+        destValue={identifier}
+        application={application}
+        organization={organization}
+        onSubmit={onCodeSubmit}
+        onBack={onBack}
+        error={error}
+      />
+    );
+  } else if (active === "WebAuthn") {
+    body = (
+      <WebAuthnForm
+        identifier={identifier}
+        userHint={userHint}
+        application={application}
+        organization={organization}
+        onSuccess={onWebAuthnSuccess}
+        onBack={onBack}
+        error={error}
+      />
+    );
+  } else if (active === "Face ID") {
+    body = (
+      <FaceForm
+        identifier={identifier}
+        userHint={userHint}
+        application={application}
+        organization={organization}
+        onSuccess={onFaceSuccess}
+        onBack={onBack}
+        error={error}
+      />
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      {body}
+
+      {showSwitcher && (
+        <div className="relative">
+          <button
+            type="button"
+            onClick={() => setMenuOpen(!menuOpen)}
+            className="w-full flex items-center justify-center gap-1 text-[12px] text-text-muted hover:text-text-secondary transition-colors"
+          >
+            {t("auth.method.switchLabel")}
+            <ChevronDown size={12} className={menuOpen ? "rotate-180 transition-transform" : "transition-transform"} />
+          </button>
+          {menuOpen && (
+            <div className="absolute left-0 right-0 mt-1 rounded-lg border border-border bg-surface-1 p-1 shadow-[var(--shadow-elevated)] z-10">
+              {methods.map((m) => {
+                const isActive = m.name === active;
+                return (
+                  <button
+                    key={m.name}
+                    type="button"
+                    onClick={() => {
+                      setActive(m.name as MethodName);
+                      setMenuOpen(false);
+                    }}
+                    className={`flex w-full items-center gap-2 rounded-md px-3 py-1.5 text-left text-[13px] transition-colors ${
+                      isActive ? "text-accent bg-accent-subtle" : "text-text-secondary hover:bg-surface-2"
+                    }`}
+                  >
+                    {m.displayName}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}

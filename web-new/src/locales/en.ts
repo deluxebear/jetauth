@@ -17,6 +17,8 @@ const en = {
   "auth.signin.brandingSubtitle": "Sign in to continue",
   "auth.signin.noMethodError": "No sign-in method is available for this account",
   "auth.signin.methodNotReady": "Only password sign-in is available in this preview; other methods arrive in W2b",
+  "auth.method.switchLabel": "Change method",
+  "auth.method.submitCode": "Sign in with code",
   "auth.providers.divider": "Or sign in with",
   "auth.providers.continueWith": "Continue with {name}",
   "auth.providers.moreMenu": "More options",

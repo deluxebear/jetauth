@@ -1,13 +1,12 @@
 import { useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { ShieldCheck } from "lucide-react";
 import { useTheme } from "../../theme";
 import { useTranslation } from "../../i18n";
 import { api } from "../../api/client";
 import BrandingLayer from "../shell/BrandingLayer";
 import TopBar from "../shell/TopBar";
 import IdentifierStep from "./IdentifierStep";
-import PasswordForm from "./PasswordForm";
+import MethodStep from "./MethodStep";
 import ProvidersRow from "./ProvidersRow";
 import { resolveSigninMethods } from "../api/resolveSigninMethods";
 import type {
@@ -25,9 +24,8 @@ interface SigninPageProps {
 
 /**
  * Identifier-first signin orchestrator. Composes BrandingLayer + TopBar
- * with the step components. W2a only wires the Password method; W2b
- * extends the "method" step with CodeForm, WebAuthnForm, FaceForm,
- * ProvidersRow.
+ * with the step components. W2b wires all four method forms (Password,
+ * Code, WebAuthn, Face ID) through MethodStep.
  */
 export default function SigninPage({ application, providers }: SigninPageProps) {
   const { theme } = useTheme();
@@ -62,6 +60,20 @@ export default function SigninPage({ application, providers }: SigninPageProps) 
     }
   };
 
+  const reloadHome = () => {
+    window.location.href = "/";
+  };
+
+  const handleOAuthRedirect = (data: string): boolean => {
+    const redirectUri = searchParams.get("redirect_uri");
+    if (redirectUri && data) {
+      const joiner = redirectUri.includes("?") ? "&" : "?";
+      window.location.href = `${redirectUri}${joiner}code=${encodeURIComponent(data)}&state=${encodeURIComponent(searchParams.get("state") ?? "")}`;
+      return true;
+    }
+    return false;
+  };
+
   const handlePasswordSubmit = async (password: string) => {
     setError("");
     // Construct the same AuthForm shape the legacy Login.tsx used — the
@@ -86,18 +98,39 @@ export default function SigninPage({ application, providers }: SigninPageProps) 
         setError(res.msg ?? t("auth.signin.noMethodError"));
         return;
       }
-      const redirectUri = searchParams.get("redirect_uri");
-      if (redirectUri && res.data) {
-        const joiner = redirectUri.includes("?") ? "&" : "?";
-        window.location.href = `${redirectUri}${joiner}code=${encodeURIComponent(res.data)}&state=${encodeURIComponent(searchParams.get("state") ?? "")}`;
-        return;
-      }
+      if (res.data && handleOAuthRedirect(res.data)) return;
       // Full page reload so App.tsx re-bootstraps its `user` state via
       // /api/get-account; a plain navigate("/") would bounce back to
       // /login because the top-level state still thinks we're anon.
       // The backend also routes the user to the right landing page based
       // on role (admin → Dashboard, non-admin → UserHomePage).
-      window.location.href = "/";
+      reloadHome();
+    } catch (e: unknown) {
+      setError((e as Error).message ?? "network error");
+    }
+  };
+
+  const handleCodeSubmit = async (code: string) => {
+    setError("");
+    const body = {
+      application: application.name,
+      organization: orgName,
+      username: identifier,
+      code,
+      type: searchParams.get("type") ?? "login",
+      signinMethod: "Verification code",
+      clientId: application.name,
+      redirectUri: searchParams.get("redirect_uri") ?? "",
+      state: searchParams.get("state") ?? "",
+    };
+    try {
+      const res = await api.post<{ status: string; msg?: string; data?: string }>("/api/login", body);
+      if (res.status !== "ok") {
+        setError(res.msg ?? t("auth.signin.noMethodError"));
+        return;
+      }
+      if (res.data && handleOAuthRedirect(res.data)) return;
+      reloadHome();
     } catch (e: unknown) {
       setError((e as Error).message ?? "network error");
     }
@@ -108,7 +141,6 @@ export default function SigninPage({ application, providers }: SigninPageProps) 
     setError("");
   };
 
-  const selectedMethod = recommended || methods[0]?.name || "Password";
   const orgLogo =
     theme === "dark" && application.organizationObj?.logoDark
       ? application.organizationObj.logoDark
@@ -153,28 +185,22 @@ export default function SigninPage({ application, providers }: SigninPageProps) 
             </>
           )}
 
-          {step === "method" && selectedMethod === "Password" && (
-            <PasswordForm
+          {step === "method" && (
+            <MethodStep
               identifier={identifier}
               userHint={userHint}
-              onSubmit={handlePasswordSubmit}
+              application={application.name}
+              organization={orgName}
+              methods={methods}
+              recommended={recommended}
+              forgotPasswordHref={`/forget/${application.name}`}
+              onPasswordSubmit={handlePasswordSubmit}
+              onCodeSubmit={handleCodeSubmit}
+              onWebAuthnSuccess={reloadHome}
+              onFaceSuccess={reloadHome}
               onBack={handleBack}
               error={error}
-              forgotPasswordHref={`/forget/${application.name}`}
             />
-          )}
-
-          {step === "method" && selectedMethod !== "Password" && (
-            <div className="rounded-lg border border-border bg-surface-2 p-4 text-[13px] text-text-secondary">
-              <ShieldCheck size={16} className="inline-block mr-1 text-accent" />
-              {t("auth.signin.methodNotReady")}
-              <button
-                onClick={handleBack}
-                className="mt-3 block text-[12px] text-accent hover:underline"
-              >
-                {t("auth.password.backButton")}
-              </button>
-            </div>
           )}
         </div>
       </div>
