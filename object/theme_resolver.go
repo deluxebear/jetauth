@@ -1,5 +1,8 @@
 package object
 
+// boolPtr returns a pointer to the given bool value.
+func boolPtr(b bool) *bool { return &b }
+
 // systemDefaultTheme is the baseline every resolved theme starts from.
 // Chosen for WCAG AA contrast and professional SaaS aesthetic.
 var systemDefaultTheme = ThemeData{
@@ -9,8 +12,9 @@ var systemDefaultTheme = ThemeData{
 	ColorSuccess:   "#16A34A",
 	ColorDanger:    "#DC2626",
 	ColorWarning:   "#D97706",
+	DarkBackground: "#0F1117",
 	BorderRadius:   8,
-	IsCompact:      false,
+	IsCompact:      boolPtr(false),
 	IsEnabled:      true,
 	FontFamily:     "Inter, system-ui, sans-serif",
 	FontFamilyMono: "JetBrains Mono, ui-monospace, monospace",
@@ -19,21 +23,24 @@ var systemDefaultTheme = ThemeData{
 
 // ResolveTheme merges (system → org → app → preview) layers, with each layer's
 // non-zero fields overriding the one beneath. A layer whose IsEnabled == false
-// is skipped entirely (legacy Casdoor semantics). DarkColorPrimary is auto-
-// derived from ColorPrimary when unset.
+// is skipped entirely (legacy Casdoor semantics). Preview is always applied
+// when non-nil — it is ephemeral admin input, not a persisted layer with
+// lifecycle semantics. DarkColorPrimary is auto-derived from ColorPrimary when unset.
 func ResolveTheme(org, app, preview *ThemeData) ThemeData {
 	out := systemDefaultTheme
-	for _, layer := range []*ThemeData{org, app, preview} {
+	for _, layer := range []*ThemeData{org, app} {
 		if layer == nil || !layer.IsEnabled {
 			continue
 		}
 		out = mergeThemeLayer(out, *layer)
 	}
+	// Preview is always applied when present — it is ephemeral admin input,
+	// not a persisted layer with lifecycle semantics.
+	if preview != nil {
+		out = mergeThemeLayer(out, *preview)
+	}
 	if out.DarkColorPrimary == "" {
 		out.DarkColorPrimary = deriveDarkColor(out.ColorPrimary)
-	}
-	if out.DarkBackground == "" {
-		out.DarkBackground = "#0F1117"
 	}
 	return out
 }
@@ -79,11 +86,11 @@ func mergeThemeLayer(base, over ThemeData) ThemeData {
 	if over.SpacingScale != 0 {
 		out.SpacingScale = over.SpacingScale
 	}
-	// IsCompact is a bool — any explicit value on `over` wins. There is no way
-	// in Go to distinguish false-unset from false-explicit without a pointer,
-	// but since IsCompact also affects SpacingScale, callers expressing
-	// compactness should set both. Keeping this simple here.
-	out.IsCompact = over.IsCompact
+	// IsCompact is *bool — nil means "inherit from lower layer"; non-nil means
+	// the caller explicitly set a value (including false).
+	if over.IsCompact != nil {
+		out.IsCompact = over.IsCompact
+	}
 	out.IsEnabled = true
 	return out
 }

@@ -2,6 +2,7 @@ package object
 
 import (
 	"encoding/json"
+	"strings"
 	"testing"
 )
 
@@ -16,6 +17,9 @@ func TestThemeData_BackwardCompatibleJSON(t *testing.T) {
 	}
 	if td.ColorCTA != "" || td.FontFamily != "" || td.SpacingScale != 0 {
 		t.Fatalf("new fields should zero-default: %+v", td)
+	}
+	if td.IsCompact == nil || *td.IsCompact != false {
+		t.Fatalf("isCompact=false in JSON should unmarshal to &false: %+v", td)
 	}
 }
 
@@ -34,21 +38,12 @@ func TestThemeData_NewFieldsSerialize(t *testing.T) {
 	}
 	out := string(b)
 	for _, want := range []string{`"colorCTA":"#F97316"`, `"darkColorPrimary":"#60A5FA"`, `"fontFamily":"Inter"`, `"spacingScale":0.875`} {
-		if !testContains(out, want) {
+		if !strings.Contains(out, want) {
 			t.Errorf("serialized output missing %s: %s", want, out)
 		}
 	}
 }
 
-func testContains(s, sub string) bool { return len(s) >= len(sub) && testIndexOf(s, sub) >= 0 }
-func testIndexOf(s, sub string) int {
-	for i := 0; i+len(sub) <= len(s); i++ {
-		if s[i:i+len(sub)] == sub {
-			return i
-		}
-	}
-	return -1
-}
 
 func TestResolveTheme_SystemOnly(t *testing.T) {
 	got := ResolveTheme(nil, nil, nil)
@@ -103,5 +98,17 @@ func TestResolveTheme_DarkDerivedWhenUnset(t *testing.T) {
 	}
 	if got.DarkColorPrimary == got.ColorPrimary {
 		t.Errorf("DarkColorPrimary should differ from light ColorPrimary")
+	}
+}
+
+func TestResolveTheme_PreviewAppliesEvenWithIsEnabledUnset(t *testing.T) {
+	// Admin live-preview typically constructs a partial ThemeData from form state
+	// and doesn't bother to set IsEnabled. Preview must still override.
+	org := &ThemeData{ColorPrimary: "#FF0000", IsEnabled: true}
+	app := &ThemeData{ColorPrimary: "#00FF00", IsEnabled: true}
+	preview := &ThemeData{ColorPrimary: "#0000FF"} // note: IsEnabled=false (zero value)
+	got := ResolveTheme(org, app, preview)
+	if got.ColorPrimary != "#0000FF" {
+		t.Errorf("preview ColorPrimary must win even when IsEnabled=false; got %s", got.ColorPrimary)
 	}
 }

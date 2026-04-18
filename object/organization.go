@@ -40,7 +40,7 @@ type ThemeData struct {
 	ThemeType    string `xorm:"varchar(30)" json:"themeType"`
 	ColorPrimary string `xorm:"varchar(10)" json:"colorPrimary"`
 	BorderRadius int    `xorm:"int" json:"borderRadius"`
-	IsCompact    bool   `xorm:"bool" json:"isCompact"`
+	IsCompact    *bool  `xorm:"bool" json:"isCompact,omitempty"`
 	IsEnabled    bool   `xorm:"bool" json:"isEnabled"`
 
 	// Extended semantic colors (empty string = inherit from lower layer).
