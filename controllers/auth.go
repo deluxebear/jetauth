@@ -42,9 +42,10 @@ import (
 
 // ApplicationLoginResponse is the response for GetApplicationLogin API.
 type ApplicationLoginResponse struct {
-	Status string             `json:"status" example:"ok"`
-	Msg    string             `json:"msg" example:""`
-	Data   object.Application `json:"data"`
+	Status            string                    `json:"status" example:"ok"`
+	Msg               string                    `json:"msg" example:""`
+	Data              object.Application        `json:"data"`
+	ProvidersResolved []object.ResolvedProvider `json:"providersResolved,omitempty"`
 }
 
 // BoolResponse is the response for APIs that return a boolean value.
@@ -389,16 +390,26 @@ func (c *ApiController) GetApplicationLogin() {
 			c.ResponseError(err.Error())
 			return
 		}
+		if application == nil {
+			c.ResponseError(fmt.Sprintf(c.T("auth:The application: %s does not exist"), deviceAuthCacheCast.ApplicationId))
+			return
+		}
 	}
 
 	clientIp := util.GetClientIpFromRequest(c.Ctx.Request)
 	object.CheckEntryIp(clientIp, nil, application, nil, c.GetAcceptLanguage())
 
 	application = object.GetMaskedApplication(application, "")
+	resolvedProviders := object.ResolveProviders(application)
 	if msg != "" {
 		c.ResponseError(msg, application)
 	} else {
-		c.ResponseOk(application)
+		c.Data["json"] = ApplicationLoginResponse{
+			Status:            "ok",
+			Data:              *application,
+			ProvidersResolved: resolvedProviders,
+		}
+		c.ServeJSON()
 	}
 }
 
