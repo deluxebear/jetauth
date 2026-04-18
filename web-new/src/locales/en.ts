@@ -7,6 +7,13 @@ const en = {
   "auth.identifier.placeholder": "Email, phone, or username",
   "auth.identifier.continueButton": "Continue",
   "auth.identifier.errorRequired": "Please enter your email, phone, or username",
+  "auth.password.label": "Password",
+  "auth.password.placeholder": "••••••••",
+  "auth.password.submitButton": "Sign in",
+  "auth.password.forgotLink": "Forgot password?",
+  "auth.password.backButton": "Back",
+  "auth.password.showPassword": "Show password",
+  "auth.password.hidePassword": "Hide password",
   // Common
   "common.search": "Search...",
   "common.signOut": "Sign out",

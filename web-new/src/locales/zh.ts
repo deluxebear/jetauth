@@ -7,6 +7,13 @@ const zh: Record<string, string> = {
   "auth.identifier.placeholder": "邮箱、手机号或用户名",
   "auth.identifier.continueButton": "继续",
   "auth.identifier.errorRequired": "请输入邮箱、手机号或用户名",
+  "auth.password.label": "密码",
+  "auth.password.placeholder": "••••••••",
+  "auth.password.submitButton": "登录",
+  "auth.password.forgotLink": "忘记密码？",
+  "auth.password.backButton": "返回",
+  "auth.password.showPassword": "显示密码",
+  "auth.password.hidePassword": "隐藏密码",
   // Common
   "common.search": "搜索...",
   "common.signOut": "退出登录",
