@@ -14,7 +14,7 @@ interface FaceFormProps {
   application: string;
   organization: string;
   onSuccess: () => void;
-  onBack: () => void;
+  onBack?: () => void;
   error?: string;
 }
 
@@ -158,10 +158,12 @@ export default function FaceForm({
       .catch(() => setState("cameraDenied"));
   };
 
-  const handleBack = () => {
-    stopStream();
-    onBack();
-  };
+  const handleBack = onBack
+    ? () => {
+        stopStream();
+        onBack();
+      }
+    : undefined;
 
   const displayError = externalError || flowError;
 
@@ -169,16 +171,20 @@ export default function FaceForm({
     <div className="space-y-4">
       {/* Back chip + identifier */}
       <div className="flex items-center gap-2 rounded-lg border border-border bg-surface-1 px-3 py-2">
-        <button
-          type="button"
-          onClick={handleBack}
-          aria-label={t("auth.password.backButton")}
-          className="flex items-center gap-1 text-[12px] text-text-muted hover:text-text-secondary transition-colors"
-        >
-          <ArrowLeft size={14} />
-          {t("auth.password.backButton")}
-        </button>
-        <span className="h-4 w-px bg-border" />
+        {handleBack && (
+          <>
+            <button
+              type="button"
+              onClick={handleBack}
+              aria-label={t("auth.password.backButton")}
+              className="flex items-center gap-1 text-[12px] text-text-muted hover:text-text-secondary transition-colors"
+            >
+              <ArrowLeft size={14} />
+              {t("auth.password.backButton")}
+            </button>
+            <span className="h-4 w-px bg-border" />
+          </>
+        )}
         <span className="truncate text-[13px] text-text-secondary">{display}</span>
       </div>
 

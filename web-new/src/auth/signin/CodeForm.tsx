@@ -12,7 +12,7 @@ interface CodeFormProps {
   application: string;
   organization: string;
   onSubmit: (code: string) => Promise<void>;
-  onBack: () => void;
+  onBack?: () => void;
   error?: string;
 }
 
@@ -89,16 +89,20 @@ export default function CodeForm({
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="flex items-center gap-2 rounded-lg border border-border bg-surface-1 px-3 py-2">
-        <button
-          type="button"
-          onClick={onBack}
-          aria-label={t("auth.password.backButton")}
-          className="flex items-center gap-1 text-[12px] text-text-muted hover:text-text-secondary transition-colors"
-        >
-          <ArrowLeft size={14} />
-          {t("auth.password.backButton")}
-        </button>
-        <span className="h-4 w-px bg-border" />
+        {onBack && (
+          <>
+            <button
+              type="button"
+              onClick={onBack}
+              aria-label={t("auth.password.backButton")}
+              className="flex items-center gap-1 text-[12px] text-text-muted hover:text-text-secondary transition-colors"
+            >
+              <ArrowLeft size={14} />
+              {t("auth.password.backButton")}
+            </button>
+            <span className="h-4 w-px bg-border" />
+          </>
+        )}
         <span className="truncate text-[13px] text-text-secondary">{destValue}</span>
       </div>
 

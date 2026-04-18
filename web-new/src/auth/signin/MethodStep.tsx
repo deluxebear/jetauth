@@ -21,7 +21,7 @@ interface MethodStepProps {
   onCodeSubmit: (code: string) => Promise<void>;
   onWebAuthnSuccess: () => void;
   onFaceSuccess: () => void;
-  onBack: () => void;
+  onBack?: () => void;
   error?: string;
 }
 

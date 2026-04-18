@@ -9,6 +9,8 @@ import IdentifierStep from "./IdentifierStep";
 import MethodStep from "./MethodStep";
 import ProvidersRow from "./ProvidersRow";
 import { resolveSigninMethods } from "../api/resolveSigninMethods";
+import { useSigninItemVisibility } from "../items/useSigninItemVisibility";
+import CustomTextItems from "../items/CustomTextItems";
 import type {
   AuthApplication,
   ResolvedProvider,
@@ -38,6 +40,8 @@ export default function SigninPage({ application, providers }: SigninPageProps) 
   const [recommended, setRecommended] = useState<string>("");
   const [userHint, setUserHint] = useState<string>("");
   const [error, setError] = useState<string>("");
+
+  const signinItemVis = useSigninItemVisibility(application.signinItems);
 
   const orgName =
     application.organizationObj?.name ?? application.organization ?? "built-in";
@@ -152,7 +156,7 @@ export default function SigninPage({ application, providers }: SigninPageProps) 
 
   return (
     <div className="min-h-screen flex relative">
-      <TopBar />
+      <TopBar hideLanguage={!signinItemVis.isVisible("Languages")} />
 
       <div className="w-full flex items-center justify-center p-6 lg:p-12">
         <div className="w-full max-w-sm">
@@ -176,31 +180,46 @@ export default function SigninPage({ application, providers }: SigninPageProps) 
           {step === "identifier" && (
             <>
               <IdentifierStep onSubmit={handleIdentifierSubmit} error={error} />
-              <ProvidersRow
-                application={application}
-                providers={providers}
-                redirectUri={searchParams.get("redirect_uri") ?? undefined}
-                state={searchParams.get("state") ?? undefined}
-              />
+              {signinItemVis.isVisible("Providers") && (
+                <ProvidersRow
+                  application={application}
+                  providers={providers}
+                  redirectUri={searchParams.get("redirect_uri") ?? undefined}
+                  state={searchParams.get("state") ?? undefined}
+                />
+              )}
+              <CustomTextItems items={signinItemVis.customItems} />
+              {signinItemVis.isVisible("Signup link") && application.enableSignUp && (
+                <p className="mt-6 text-center text-[12px] text-text-muted">
+                  {t("auth.signup.haveAccount")}{" — "}
+                  <a href={`/signup/${application.name}`} className="text-accent hover:underline">
+                    {signinItemVis.labelOf("Signup link") ?? t("auth.signup.signinLink")}
+                  </a>
+                </p>
+              )}
             </>
           )}
 
           {step === "method" && (
-            <MethodStep
-              identifier={identifier}
-              userHint={userHint}
-              application={application.name}
-              organization={orgName}
-              methods={methods}
-              recommended={recommended}
-              forgotPasswordHref={`/forget/${application.name}`}
-              onPasswordSubmit={handlePasswordSubmit}
-              onCodeSubmit={handleCodeSubmit}
-              onWebAuthnSuccess={reloadHome}
-              onFaceSuccess={reloadHome}
-              onBack={handleBack}
-              error={error}
-            />
+            <>
+              <MethodStep
+                identifier={identifier}
+                userHint={userHint}
+                application={application.name}
+                organization={orgName}
+                methods={methods}
+                recommended={recommended}
+                forgotPasswordHref={`/forget/${application.name}`}
+                onPasswordSubmit={handlePasswordSubmit}
+                onCodeSubmit={handleCodeSubmit}
+                onWebAuthnSuccess={reloadHome}
+                onFaceSuccess={reloadHome}
+                onBack={signinItemVis.isVisible("Back button") ? handleBack : undefined}
+                error={error}
+              />
+
+              <CustomTextItems items={signinItemVis.customItems} />
+            </>
           )}
         </div>
       </div>
