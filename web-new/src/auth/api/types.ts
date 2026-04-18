@@ -49,6 +49,10 @@ export interface SignupItem {
   options: string[];
   regex: string;
   rule: string;
+  helper?: string;
+  group?: string;
+  validationMessage?: Record<string, string>;
+  step?: number;
 }
 
 export interface SigninItem {
