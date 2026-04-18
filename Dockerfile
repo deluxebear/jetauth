@@ -1,13 +1,13 @@
 FROM --platform=$BUILDPLATFORM node:20.20.1 AS FRONT
-WORKDIR /web
+WORKDIR /web-new
 
 # Copy only dependency files first for better caching
-COPY ./web/package.json ./web/yarn.lock ./
-RUN yarn install --frozen-lockfile --network-timeout 1000000
+COPY ./web-new/package.json ./web-new/package-lock.json ./
+RUN npm ci --no-audit --no-fund
 
 # Copy source files and build
-COPY ./web .
-RUN NODE_OPTIONS="--max-old-space-size=4096" yarn run build
+COPY ./web-new .
+RUN NODE_OPTIONS="--max-old-space-size=4096" npm run build
 
 FROM --platform=$BUILDPLATFORM golang:1.25.8 AS BACK
 WORKDIR /go/src/jetauth
@@ -46,7 +46,7 @@ WORKDIR /
 COPY --from=BACK --chown=$USER:$USER /go/src/jetauth/server_${BUILDX_ARCH} ./server
 COPY --from=BACK --chown=$USER:$USER /go/src/jetauth/swagger ./swagger
 COPY --from=BACK --chown=$USER:$USER /go/src/jetauth/conf/app.conf ./conf/app.conf
-COPY --from=FRONT --chown=$USER:$USER /web/build ./web/build
+COPY --from=FRONT --chown=$USER:$USER /web-new/build ./web-new/build
 
 ENTRYPOINT ["/server"]
 
@@ -65,7 +65,7 @@ COPY --from=BACK /go/src/jetauth/server_${BUILDX_ARCH} ./server
 COPY --from=BACK /go/src/jetauth/swagger ./swagger
 COPY --from=BACK /go/src/jetauth/docker-entrypoint.sh /docker-entrypoint.sh
 COPY --from=BACK /go/src/jetauth/conf/app.conf ./conf/app.conf
-COPY --from=FRONT /web/build ./web/build
+COPY --from=FRONT /web-new/build ./web-new/build
 
 ENTRYPOINT ["/bin/bash"]
 CMD ["/docker-entrypoint.sh"]

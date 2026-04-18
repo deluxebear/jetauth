@@ -43,7 +43,7 @@ func getLightweightAuthScriptPath(scriptName string) string {
 		)
 	}
 
-	candidates = append(candidates, filepath.Join("web", "public", scriptName))
+	candidates = append(candidates, filepath.Join("web-new", "public", scriptName))
 
 	for _, candidate := range candidates {
 		if util.FileExist(candidate) {

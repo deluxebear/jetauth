@@ -84,7 +84,6 @@ func main() {
 	util.SafeGoroutine(func() { controllers.InitCLIDownloader() })
 
 	// web.DelStaticPath("/static")
-	// web.SetStaticPath("/static", "web/build/static")
 
 	web.BConfig.WebConfig.DirectoryIndex = true
 	web.SetStaticPath("/swagger", "swagger")

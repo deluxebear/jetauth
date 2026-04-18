@@ -40,7 +40,7 @@ var (
 )
 
 func getWebBuildFolder() string {
-	path := "web/build"
+	path := "web-new/build"
 	if util.FileExist(filepath.Join(path, "index.html")) || frontendBaseDir == "" {
 		return path
 	}
@@ -49,7 +49,7 @@ func getWebBuildFolder() string {
 		return frontendBaseDir
 	}
 
-	path = filepath.Join(frontendBaseDir, "web/build")
+	path = filepath.Join(frontendBaseDir, "web-new/build")
 	return path
 }
 

@@ -51,8 +51,10 @@ func deployStaticFiles(provider *object.Provider) {
 	updateHtml(provider.Domain)
 }
 
+// TODO(auth-revamp W6): relative paths assume binary runs from a directory whose parent holds web-new/build.
+// Pre-existing issue carried over from web/ migration; replace with an absolute path or config var before production use.
 func uploadFolder(storageProvider oss.StorageInterface, folder string) {
-	path := fmt.Sprintf("../web/build/static/%s/", folder)
+	path := fmt.Sprintf("../web-new/build/static/%s/", folder)
 	filenames := util.ListFiles(path)
 
 	for _, filename := range filenames {
@@ -76,7 +78,7 @@ func uploadFolder(storageProvider oss.StorageInterface, folder string) {
 }
 
 func updateHtml(domainPath string) {
-	htmlPath := "../web/build/index.html"
+	htmlPath := "../web-new/build/index.html"
 	html := util.ReadStringFromPath(htmlPath)
 	html = strings.Replace(html, "\"/static/", fmt.Sprintf("\"%s", domainPath), -1)
 	util.WriteStringToPath(html, htmlPath)
