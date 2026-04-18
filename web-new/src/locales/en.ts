@@ -3110,6 +3110,14 @@ const en = {
   "userField.type": "User Type",
   "userField.updated_time": "Updated Time",
   "userField.webauthnCredentials": "WebAuthn Credentials",
+
+  // Admin preview toolbar
+  "adminPreview.mode.signin": "Signin",
+  "adminPreview.mode.signup": "Signup",
+  "adminPreview.mode.forget": "Reset",
+  "adminPreview.device.desktop": "Desktop",
+  "adminPreview.device.mobile": "Mobile",
+  "adminPreview.theme.label": "Theme",
 };
 
 export default en;

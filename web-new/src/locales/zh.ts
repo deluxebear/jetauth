@@ -3101,6 +3101,14 @@ const zh: Record<string, string> = {
   "bizPerm.testMatch.noMatch": "未命中",
   "bizPerm.testMatch.resourceChecks": "资源检查",
   "bizPerm.testMatch.actionChecks": "动作检查",
+
+  // Admin preview toolbar
+  "adminPreview.mode.signin": "登录",
+  "adminPreview.mode.signup": "注册",
+  "adminPreview.mode.forget": "重置密码",
+  "adminPreview.device.desktop": "桌面",
+  "adminPreview.device.mobile": "移动",
+  "adminPreview.theme.label": "主题",
 };
 
 export default zh;
