@@ -49,3 +49,59 @@ func testIndexOf(s, sub string) int {
 	}
 	return -1
 }
+
+func TestResolveTheme_SystemOnly(t *testing.T) {
+	got := ResolveTheme(nil, nil, nil)
+	if got.ColorPrimary == "" || got.FontFamily == "" {
+		t.Fatalf("system defaults should always populate core tokens: %+v", got)
+	}
+}
+
+func TestResolveTheme_OrgOverridesSystem(t *testing.T) {
+	org := &ThemeData{ColorPrimary: "#FF0000", IsEnabled: true}
+	got := ResolveTheme(org, nil, nil)
+	if got.ColorPrimary != "#FF0000" {
+		t.Errorf("org ColorPrimary should win; got %s", got.ColorPrimary)
+	}
+}
+
+func TestResolveTheme_OrgNotEnabledIsIgnored(t *testing.T) {
+	org := &ThemeData{ColorPrimary: "#FF0000", IsEnabled: false}
+	got := ResolveTheme(org, nil, nil)
+	if got.ColorPrimary == "#FF0000" {
+		t.Errorf("org with IsEnabled=false should be ignored")
+	}
+}
+
+func TestResolveTheme_AppOverridesOrg(t *testing.T) {
+	org := &ThemeData{ColorPrimary: "#FF0000", FontFamily: "Roboto", IsEnabled: true}
+	app := &ThemeData{ColorPrimary: "#00FF00", IsEnabled: true}
+	got := ResolveTheme(org, app, nil)
+	if got.ColorPrimary != "#00FF00" {
+		t.Errorf("app ColorPrimary should win; got %s", got.ColorPrimary)
+	}
+	if got.FontFamily != "Roboto" {
+		t.Errorf("org FontFamily should fall through when app didn't set it; got %s", got.FontFamily)
+	}
+}
+
+func TestResolveTheme_PreviewOverridesAll(t *testing.T) {
+	org := &ThemeData{ColorPrimary: "#FF0000", IsEnabled: true}
+	app := &ThemeData{ColorPrimary: "#00FF00", IsEnabled: true}
+	preview := &ThemeData{ColorPrimary: "#0000FF", IsEnabled: true}
+	got := ResolveTheme(org, app, preview)
+	if got.ColorPrimary != "#0000FF" {
+		t.Errorf("preview ColorPrimary should win; got %s", got.ColorPrimary)
+	}
+}
+
+func TestResolveTheme_DarkDerivedWhenUnset(t *testing.T) {
+	org := &ThemeData{ColorPrimary: "#2563EB", IsEnabled: true}
+	got := ResolveTheme(org, nil, nil)
+	if got.DarkColorPrimary == "" {
+		t.Errorf("DarkColorPrimary should be auto-derived when unset")
+	}
+	if got.DarkColorPrimary == got.ColorPrimary {
+		t.Errorf("DarkColorPrimary should differ from light ColorPrimary")
+	}
+}
