@@ -28,6 +28,13 @@ const en = {
   "auth.code.codePlaceholder": "6-digit code",
   "auth.code.submit": "Sign in",
   "auth.code.sendError": "Failed to send code",
+
+  "auth.webauthn.prompt": "Use your passkey to sign in",
+  "auth.webauthn.button": "Sign in with passkey",
+  "auth.webauthn.failed": "Passkey sign-in failed",
+  "auth.webauthn.unsupported": "This browser does not support passkeys",
+  "auth.webauthn.trying": "Contacting authenticator...",
+
   "auth.forgot.title": "Reset your password",
   "auth.forgot.subtitle": "Enter your email or phone to receive a verification code",
   "auth.forgot.newPassword": "New password",

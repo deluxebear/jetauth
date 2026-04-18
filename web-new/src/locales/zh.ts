@@ -28,6 +28,13 @@ const zh: Record<string, string> = {
   "auth.code.codePlaceholder": "6 位数字",
   "auth.code.submit": "登录",
   "auth.code.sendError": "发送验证码失败",
+
+  "auth.webauthn.prompt": "使用通行密钥登录",
+  "auth.webauthn.button": "通行密钥登录",
+  "auth.webauthn.failed": "通行密钥登录失败",
+  "auth.webauthn.unsupported": "当前浏览器不支持通行密钥",
+  "auth.webauthn.trying": "正在连接认证器...",
+
   "auth.forgot.title": "重置密码",
   "auth.forgot.subtitle": "输入邮箱或手机号接收验证码",
   "auth.forgot.newPassword": "新密码",
