@@ -59,6 +59,18 @@ const en = {
   "auth.forgot.mismatch": "Passwords don't match",
   "auth.forgot.success": "Password reset successful — please sign in",
   "auth.forgot.backToSignin": "Back to sign in",
+
+  "auth.signup.title": "Create your account",
+  "auth.signup.subtitle": "Takes less than a minute",
+  "auth.signup.submitButton": "Create account",
+  "auth.signup.stepOf": "Step {current} of {total}",
+  "auth.signup.nextButton": "Next",
+  "auth.signup.backButton": "Back",
+  "auth.signup.haveAccount": "Already have an account?",
+  "auth.signup.signinLink": "Sign in",
+  "auth.signup.requiredError": "{label} is required",
+  "auth.signup.invalidError": "Invalid {label}",
+  "auth.signup.confirmMismatch": "Passwords don't match",
   // Common
   "common.search": "Search...",
   "common.signOut": "Sign out",

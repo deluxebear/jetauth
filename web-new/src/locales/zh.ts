@@ -59,6 +59,18 @@ const zh: Record<string, string> = {
   "auth.forgot.mismatch": "两次密码不一致",
   "auth.forgot.success": "密码重置成功 — 请重新登录",
   "auth.forgot.backToSignin": "返回登录",
+
+  "auth.signup.title": "创建账号",
+  "auth.signup.subtitle": "用时不到一分钟",
+  "auth.signup.submitButton": "创建账号",
+  "auth.signup.stepOf": "第 {current} 步 / 共 {total} 步",
+  "auth.signup.nextButton": "下一步",
+  "auth.signup.backButton": "上一步",
+  "auth.signup.haveAccount": "已有账号？",
+  "auth.signup.signinLink": "登录",
+  "auth.signup.requiredError": "请输入{label}",
+  "auth.signup.invalidError": "{label}格式错误",
+  "auth.signup.confirmMismatch": "两次密码不一致",
   // Common
   "common.search": "搜索...",
   "common.signOut": "退出登录",
