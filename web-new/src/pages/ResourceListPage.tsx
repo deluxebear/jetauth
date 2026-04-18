@@ -31,7 +31,7 @@ export default function ResourceListPage() {
     owner: "",
   });
   const prefs = useTablePrefs({ persistKey: "list:resources" });
-  const bulkDelete = useBulkDelete<Resource>((r) => ResourceBackend.deleteResource(r), list.refetch);
+  const bulkDelete = useBulkDelete<Resource>(ResourceBackend.deleteResource, list.refetch);
 
   const handleUpload = async (file: File) => {
     setUploading(true);

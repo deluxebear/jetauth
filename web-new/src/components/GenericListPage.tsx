@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Plus, RefreshCw, Trash2 } from "lucide-react";
@@ -76,7 +76,7 @@ export default function GenericListPage({
     fetchData();
   }, [fetchData]);
 
-  const handleDelete = async (record: Record<string, unknown>) => {
+  const handleDelete = useCallback(async (record: Record<string, unknown>) => {
     if (!confirm(t("common.confirmDelete"))) return;
     try {
       await api.post(`/api/delete-${entityType.replace(/s$/, "")}`, record);
@@ -84,7 +84,7 @@ export default function GenericListPage({
     } catch (e) {
       console.error(e);
     }
-  };
+  }, [t, entityType, fetchData]);
 
   const prefs = useTablePrefs({ persistKey: `list:${entityType}` });
   const bulkDelete = useBulkDelete<Record<string, unknown>>(
@@ -102,34 +102,29 @@ export default function GenericListPage({
     navigate(`/${entityType}/new`);
   };
 
-  // Translate column titles
-  const translatedColumns = columns.map((col) => ({
-    ...col,
-    title: t(col.title as any),
-  }));
-
-  // Append action column if deletable
-  const finalColumns: ListPageColumn[] = canDelete
-    ? [
-        ...translatedColumns,
-        {
-          key: "__action",
-          title: t("common.action"),
-          width: "80px",
-          render: (_: unknown, record: Record<string, unknown>) => (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                handleDelete(record);
-              }}
-              className="rounded p-1 text-text-muted hover:text-danger hover:bg-danger/10 transition-colors"
-            >
-              <Trash2 size={14} />
-            </button>
-          ),
-        },
-      ]
-    : translatedColumns;
+  const finalColumns: ListPageColumn[] = useMemo(() => {
+    const translated = columns.map((col) => ({ ...col, title: t(col.title as any) }));
+    if (!canDelete) return translated;
+    return [
+      ...translated,
+      {
+        key: "__action",
+        title: t("common.action"),
+        width: "80px",
+        render: (_: unknown, record: Record<string, unknown>) => (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              handleDelete(record);
+            }}
+            className="rounded p-1 text-text-muted hover:text-danger hover:bg-danger/10 transition-colors"
+          >
+            <Trash2 size={14} />
+          </button>
+        ),
+      },
+    ];
+  }, [columns, canDelete, t, handleDelete]);
 
   return (
     <div className="space-y-5">

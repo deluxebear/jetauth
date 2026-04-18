@@ -5,17 +5,13 @@ import { useModal } from "../components/Modal";
 type ApiLike = { status?: string; msg?: string } | unknown;
 
 /**
- * Shared bulk-delete handler for list pages.
+ * Bulk-delete handler for list pages whose backend exposes only a
+ * single-record delete endpoint. Fans out N parallel requests.
  *
- * Issues one `deleteFn` call per selected record in parallel, shows a
- * confirmation modal first, and reports aggregate success/failure via the
- * toast helper. Handlers should clear selection and trigger refetch once
- * the promise chain resolves.
- *
- * Each entity's delete endpoint follows the same `{ status: "ok" | "error" }`
- * contract, so `Promise.allSettled` + a failed-count summary works for
- * every caller. Callers that need custom error handling should write their
- * own handler instead of using this hook.
+ * For entities that have a server-side bulk endpoint returning an
+ * aggregate `{succeeded, failed, results}` response, use the
+ * `showBulkDeleteToast` helper in `AppAuthorizationPage.tsx` instead —
+ * the shapes are intentionally different.
  */
 export function useBulkDelete<T>(
   deleteFn: (item: T) => Promise<ApiLike>,

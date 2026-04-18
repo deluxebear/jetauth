@@ -170,6 +170,8 @@ function usePersistedPrefs(
   widths: Record<string, number>,
   pageSize: number,
 ) {
+  // Seed the dedup ref from disk on first run so a mount with no user
+  // interaction doesn't re-serialize the same blob back into localStorage.
   const lastPayloadRef = useRef<string | null>(null);
   useEffect(() => {
     if (!persistKey || !enabled) return;
@@ -179,6 +181,9 @@ function usePersistedPrefs(
       widths,
       pageSize,
     });
+    if (lastPayloadRef.current === null) {
+      try { lastPayloadRef.current = localStorage.getItem(persistKey); } catch { /* ignore */ }
+    }
     if (lastPayloadRef.current === payload) return;
     lastPayloadRef.current = payload;
     try { localStorage.setItem(persistKey, payload); } catch { /* quota — non-fatal */ }
@@ -238,10 +243,9 @@ export default function DataTable<T extends Record<string, unknown>>({
     [persistKey],
   );
 
-  // When sort flows externally (onSort callback), don't seed internal
-  // sort from localStorage — the parent's sort state starts empty, and a
-  // preseeded arrow would desync with unsorted row data. The parent can
-  // still opt into persisted sort via useTablePrefs() + controlled `sort`.
+  // When the page owns sort via onSort (e.g. useEntityList), skip
+  // persisted sort: its state starts empty and a seeded arrow would
+  // desync with unsorted rows.
   const sortExternallyOwned = !!onSort;
   const [sortInternal, setSortInternal] = useState<SortState>(
     sortExternallyOwned ? (defaultSort ?? { field: "", order: "" }) : initial.sort,
@@ -282,22 +286,6 @@ export default function DataTable<T extends Record<string, unknown>>({
     else onPageChange?.(1);
   };
 
-  // Persistence policy (with persistKey):
-  //   - hidden + widths: always persisted from the DataTable-owned state,
-  //     even when the page controls sort/pageSize externally (e.g. via
-  //     useEntityList). This is what lets the common server-paginated
-  //     pages get column-visibility + column-width persistence by passing
-  //     only `persistKey` + `columnsToggle` + `resizable`.
-  //   - sort + pageSize: only persisted when they are uncontrolled. Pages
-  //     that manage sort externally (useEntityList.handleSort) don't pipe
-  //     that sort back into the blob; persistence for those fields is
-  //     opt-in via useTablePrefs().
-  // All four fields are written into the same JSON blob, so readers on
-  // mount get a single atomic snapshot.
-  // Only persist sort when DataTable truly owns it (not controlled by a
-  // parent `sort` prop AND not flowing through an `onSort` callback to an
-  // external store like useEntityList). Otherwise mint a stable sentinel
-  // so the written blob doesn't surface stale sort on a later remount.
   const resolvedSort = (sortControlled || sortExternallyOwned)
     ? (defaultSort ?? { field: "", order: "" as const })
     : sortInternal;

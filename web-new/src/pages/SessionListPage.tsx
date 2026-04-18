@@ -88,7 +88,7 @@ export default function SessionListPage() {
     fetchFn: SessionBackend.getSessions,
   });
   const prefs = useTablePrefs({ persistKey: "list:sessions" });
-  const bulkDelete = useBulkDelete<Session>((s) => SessionBackend.deleteSession(s), list.refetch);
+  const bulkDelete = useBulkDelete<Session>(SessionBackend.deleteSession, list.refetch);
 
   const handleDeleteSession = (record: Session, e: React.MouseEvent) => {
     e.stopPropagation();
