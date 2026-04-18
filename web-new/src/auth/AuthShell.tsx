@@ -10,6 +10,7 @@ import SigninPage from "./signin/SigninPage";
 import ClassicSigninPage from "./signin/ClassicSigninPage";
 import ForgotPasswordPage from "./signin/ForgotPasswordPage";
 import SignupPage from "./signup/SignupPage";
+import LayoutRouter from "./layouts/LayoutRouter";
 
 type Mode = "signin" | "signup" | "forget";
 
@@ -77,17 +78,16 @@ function AuthShellInner({ lookup, mode }: { lookup: AuthLookup; mode: Mode }) {
     return <div className="min-h-screen flex items-center justify-center">{t("auth.loading")}</div>;
   }
 
-  if (mode === "signin") {
-    if (app.signinMethodMode === "classic") {
-      return <ClassicSigninPage application={app} providers={providers} />;
+  const pageContent = (() => {
+    if (mode === "signin") {
+      if (app.signinMethodMode === "classic") {
+        return <ClassicSigninPage application={app} providers={providers} />;
+      }
+      return <SigninPage application={app} providers={providers} />;
     }
-    return <SigninPage application={app} providers={providers} />;
-  }
+    if (mode === "forget") return <ForgotPasswordPage application={app} />;
+    return <SignupPage application={app} />;
+  })();
 
-  if (mode === "forget") {
-    return <ForgotPasswordPage application={app} />;
-  }
-
-  // mode === "signup"
-  return <SignupPage application={app} />;
+  return <LayoutRouter application={app}>{pageContent}</LayoutRouter>;
 }
