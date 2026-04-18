@@ -30,17 +30,23 @@ type SigninMethod struct {
 }
 
 type SignupItem struct {
-	Name        string   `json:"name"`
-	Visible     bool     `json:"visible"`
-	Required    bool     `json:"required"`
-	Prompted    bool     `json:"prompted"`
-	Type        string   `json:"type"`
-	CustomCss   string   `json:"customCss"`
-	Label       string   `json:"label"`
-	Placeholder string   `json:"placeholder"`
-	Options     []string `json:"options"`
-	Regex       string   `json:"regex"`
-	Rule        string   `json:"rule"`
+	Name        string            `json:"name"`
+	Visible     bool              `json:"visible"`
+	Required    bool              `json:"required"`
+	Prompted    bool              `json:"prompted"`
+	Type        string            `json:"type"`
+	CustomCss   string            `json:"customCss"`
+	Label       string            `json:"label"`
+	Placeholder string            `json:"placeholder"`
+	Options     []string          `json:"options"`
+	Regex       string            `json:"regex"`
+	Rule        string            `json:"rule"`
+
+	// W3 additions — all optional, zero-default means "use built-in behavior"
+	Helper            string            `json:"helper,omitempty"`
+	Group             string            `json:"group,omitempty"`
+	ValidationMessage map[string]string `json:"validationMessage,omitempty"`
+	Step              int               `json:"step,omitempty"`
 }
 
 type SigninItem struct {

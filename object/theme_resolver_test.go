@@ -123,3 +123,37 @@ func TestResolveTheme_PreviewAppliesEvenWithIsEnabledUnset(t *testing.T) {
 		t.Errorf("preview ColorPrimary must win even when IsEnabled=false; got %s", got.ColorPrimary)
 	}
 }
+
+func TestSignupItem_BackwardCompatibleJSON(t *testing.T) {
+	oldJSON := `{"name":"Email","visible":true,"required":true,"type":"text","label":"Email","placeholder":"email@example.com","regex":"^\\S+@\\S+$","rule":"All"}`
+	var si SignupItem
+	if err := json.Unmarshal([]byte(oldJSON), &si); err != nil {
+		t.Fatalf("unmarshal old JSON: %v", err)
+	}
+	if si.Name != "Email" || !si.Visible || !si.Required {
+		t.Fatalf("old fields not preserved: %+v", si)
+	}
+	if si.Helper != "" || si.Group != "" || si.Step != 0 || si.ValidationMessage != nil {
+		t.Fatalf("new fields should zero-default: %+v", si)
+	}
+}
+
+func TestSignupItem_NewFieldsSerialize(t *testing.T) {
+	si := SignupItem{
+		Name: "EmployeeId",
+		Helper: "Your assigned employee number",
+		Group: "work",
+		Step: 2,
+		ValidationMessage: map[string]string{"en": "Invalid format", "zh": "格式错误"},
+	}
+	b, err := json.Marshal(si)
+	if err != nil {
+		t.Fatal(err)
+	}
+	out := string(b)
+	for _, want := range []string{`"helper":"Your assigned employee number"`, `"group":"work"`, `"step":2`, `"validationMessage":`, `"en":"Invalid format"`} {
+		if !strings.Contains(out, want) {
+			t.Errorf("serialized output missing %s: %s", want, out)
+		}
+	}
+}
