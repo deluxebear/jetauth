@@ -1,8 +1,10 @@
 import { useState } from "react";
+import type { ReactNode } from "react";
 import { Plus, Trash2, ChevronUp, ChevronDown } from "lucide-react";
 import { inputClass } from "./FormSection";
 import SimpleSelect from "./SimpleSelect";
 import { useTranslation } from "../i18n";
+import SortableList from "./SortableList";
 
 export interface EditableColumn<T> {
   key: string;
@@ -29,7 +31,178 @@ interface EditableTableProps<T extends Record<string, unknown>> {
   maxRows?: number;
   disableAdd?: boolean;
   rowKey?: (row: T, index: number) => string;
+  /** Enable drag-to-reorder via @dnd-kit. Replaces up/down chevrons with a grip handle. */
+  sortable?: boolean;
 }
+
+// ── Internal RowContent ──────────────────────────────────────────────────────
+
+interface RowContentProps<T extends Record<string, unknown>> {
+  row: T;
+  index: number;
+  columns: EditableColumn<T>[];
+  rows: T[];
+  minRows: number;
+  hoveredRow: number | null;
+  setHoveredRow: (i: number | null) => void;
+  handleCellChange: (index: number, key: string, val: unknown) => void;
+  handleDelete: (index: number) => void;
+  handleSwap: ((a: number, b: number) => void) | undefined;
+  sortable: boolean;
+  dragHandle: ReactNode;
+}
+
+function RowContent<T extends Record<string, unknown>>({
+  row,
+  index: i,
+  columns,
+  rows,
+  minRows,
+  hoveredRow,
+  setHoveredRow,
+  handleCellChange,
+  handleDelete,
+  handleSwap,
+  sortable,
+  dragHandle,
+}: RowContentProps<T>) {
+  return (
+    <div
+      className="flex items-center gap-1 border-b border-border bg-surface-1 px-2 py-1.5 text-[12px] transition-colors hover:bg-surface-2/50 last:border-b-0"
+      onMouseEnter={() => setHoveredRow(i)}
+      onMouseLeave={() => setHoveredRow(null)}
+    >
+      {/* Drag handle gutter (sortable mode) */}
+      {sortable && (
+        <div className="w-[22px] flex-none flex items-center justify-center">
+          {dragHandle}
+        </div>
+      )}
+
+      {columns.map((col) => {
+        if (col.visible && !col.visible(row)) {
+          return (
+            <div
+              key={col.key}
+              style={{ width: col.width, minWidth: col.width }}
+              className={col.width ? "flex-none" : "flex-1"}
+            />
+          );
+        }
+        const isDisabled =
+          typeof col.disabled === "function" ? col.disabled(row) : col.disabled;
+        const cellOnChange = (key: string, val: unknown) =>
+          handleCellChange(i, key, val);
+
+        if (col.render) {
+          return (
+            <div
+              key={col.key}
+              style={{ width: col.width, minWidth: col.width }}
+              className={col.width ? "flex-none" : "flex-1"}
+            >
+              {col.render(row, i, cellOnChange)}
+            </div>
+          );
+        }
+
+        if (col.type === "select" && col.options) {
+          return (
+            <div
+              key={col.key}
+              style={{ width: col.width, minWidth: col.width }}
+              className={col.width ? "flex-none" : "flex-1"}
+            >
+              <SimpleSelect
+                value={String(row[col.key] ?? "")}
+                options={col.options}
+                onChange={(v) => handleCellChange(i, col.key, v)}
+                disabled={isDisabled}
+              />
+            </div>
+          );
+        }
+
+        if (col.type === "switch") {
+          return (
+            <div
+              key={col.key}
+              style={{ width: col.width, minWidth: col.width }}
+              className={col.width ? "flex-none" : "flex-1"}
+            >
+              <button
+                type="button"
+                onClick={() => handleCellChange(i, col.key, !row[col.key])}
+                disabled={!!isDisabled}
+                className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
+                  row[col.key] ? "bg-accent" : "bg-surface-3"
+                } ${isDisabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
+              >
+                <span
+                  className={`inline-block h-3.5 w-3.5 rounded-full bg-white shadow-sm transition-transform ${
+                    row[col.key] ? "translate-x-[18px]" : "translate-x-[3px]"
+                  }`}
+                />
+              </button>
+            </div>
+          );
+        }
+
+        // Default: text input
+        return (
+          <div
+            key={col.key}
+            style={{ width: col.width, minWidth: col.width }}
+            className={col.width ? "flex-none" : "flex-1"}
+          >
+            <input
+              value={String(row[col.key] ?? "")}
+              onChange={(e) => handleCellChange(i, col.key, e.target.value)}
+              disabled={!!isDisabled}
+              placeholder={col.placeholder}
+              className={`${inputClass} !py-1 !text-[12px]`}
+            />
+          </div>
+        );
+      })}
+
+      {/* Actions */}
+      <div
+        className={`w-[72px] flex-none flex items-center justify-end gap-0.5 transition-opacity ${
+          hoveredRow === i ? "opacity-100" : "opacity-40"
+        }`}
+      >
+        {sortable ? null : (
+          <>
+            <button
+              onClick={() => handleSwap!(i, i - 1)}
+              disabled={i === 0}
+              className="rounded p-0.5 text-text-muted hover:bg-surface-3 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+            >
+              <ChevronUp size={13} />
+            </button>
+            <button
+              onClick={() => handleSwap!(i, i + 1)}
+              disabled={i === rows.length - 1}
+              className="rounded p-0.5 text-text-muted hover:bg-surface-3 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+            >
+              <ChevronDown size={13} />
+            </button>
+          </>
+        )}
+        <button
+          onClick={() => handleDelete(i)}
+          disabled={rows.length <= minRows}
+          className="rounded p-0.5 text-text-muted hover:text-danger hover:bg-danger/10 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+        >
+          <Trash2 size={13} />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ── EditableTable ────────────────────────────────────────────────────────────
 
 export default function EditableTable<T extends Record<string, unknown>>({
   columns,
@@ -43,6 +216,7 @@ export default function EditableTable<T extends Record<string, unknown>>({
   minRows = 0,
   disableAdd,
   rowKey,
+  sortable = false,
 }: EditableTableProps<T>) {
   const { t } = useTranslation();
   const [hoveredRow, setHoveredRow] = useState<number | null>(null);
@@ -99,97 +273,63 @@ export default function EditableTable<T extends Record<string, unknown>>({
 
       {/* Column headers */}
       <div className="flex items-center gap-1 bg-surface-2/20 border-b border-border px-2 py-1.5 text-[11px] font-semibold text-text-muted uppercase tracking-wider">
+        {sortable && <div className="w-[22px] flex-none" />}
         {columns.map((col) => (
-          <div key={col.key} style={{ width: col.width, minWidth: col.width }} className={col.width ? "flex-none" : "flex-1"}>
+          <div
+            key={col.key}
+            style={{ width: col.width, minWidth: col.width }}
+            className={col.width ? "flex-none" : "flex-1"}
+          >
             {col.title}
           </div>
         ))}
         <div className="w-[72px] flex-none text-right">{t("common.action" as any)}</div>
       </div>
 
-      {/* Rows */}
-      {rows.map((row, i) => (
-        <div
-          key={rowKey ? rowKey(row, i) : i}
-          className="flex items-center gap-1 border-b border-border bg-surface-1 px-2 py-1.5 text-[12px] transition-colors hover:bg-surface-2/50 last:border-b-0"
-          onMouseEnter={() => setHoveredRow(i)}
-          onMouseLeave={() => setHoveredRow(null)}
-        >
-          {columns.map((col) => {
-            if (col.visible && !col.visible(row)) {
-              return <div key={col.key} style={{ width: col.width, minWidth: col.width }} className={col.width ? "flex-none" : "flex-1"} />;
-            }
-            const isDisabled = typeof col.disabled === "function" ? col.disabled(row) : col.disabled;
-            const cellOnChange = (key: string, val: unknown) => handleCellChange(i, key, val);
+      {/* Rows — SortableList for drag-sort, or plain map */}
+      {sortable ? (
+        <SortableList
+          items={rows}
+          getId={(row, i) => (rowKey ? rowKey(row, i) : String(i))}
+          onReorder={onChange}
+          renderItem={(row, i, dragHandle) => (
+            <RowContent
+              row={row}
+              index={i}
+              columns={columns}
+              rows={rows}
+              minRows={minRows}
+              hoveredRow={hoveredRow}
+              setHoveredRow={setHoveredRow}
+              handleCellChange={handleCellChange}
+              handleDelete={handleDelete}
+              handleSwap={undefined}
+              sortable
+              dragHandle={dragHandle}
+            />
+          )}
+        />
+      ) : (
+        rows.map((row, i) => (
+          <RowContent
+            key={rowKey ? rowKey(row, i) : i}
+            row={row}
+            index={i}
+            columns={columns}
+            rows={rows}
+            minRows={minRows}
+            hoveredRow={hoveredRow}
+            setHoveredRow={setHoveredRow}
+            handleCellChange={handleCellChange}
+            handleDelete={handleDelete}
+            handleSwap={handleSwap}
+            sortable={false}
+            dragHandle={null}
+          />
+        ))
+      )}
 
-            if (col.render) {
-              return (
-                <div key={col.key} style={{ width: col.width, minWidth: col.width }} className={col.width ? "flex-none" : "flex-1"}>
-                  {col.render(row, i, cellOnChange)}
-                </div>
-              );
-            }
-
-            if (col.type === "select" && col.options) {
-              return (
-                <div key={col.key} style={{ width: col.width, minWidth: col.width }} className={col.width ? "flex-none" : "flex-1"}>
-                  <SimpleSelect
-                    value={String(row[col.key] ?? "")}
-                    options={col.options}
-                    onChange={(v) => handleCellChange(i, col.key, v)}
-                    disabled={isDisabled}
-                  />
-                </div>
-              );
-            }
-
-            if (col.type === "switch") {
-              return (
-                <div key={col.key} style={{ width: col.width, minWidth: col.width }} className={col.width ? "flex-none" : "flex-1"}>
-                  <button
-                    type="button"
-                    onClick={() => handleCellChange(i, col.key, !row[col.key])}
-                    disabled={!!isDisabled}
-                    className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
-                      row[col.key] ? "bg-accent" : "bg-surface-3"
-                    } ${isDisabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
-                  >
-                    <span className={`inline-block h-3.5 w-3.5 rounded-full bg-white shadow-sm transition-transform ${row[col.key] ? "translate-x-[18px]" : "translate-x-[3px]"}`} />
-                  </button>
-                </div>
-              );
-            }
-
-            // Default: text input
-            return (
-              <div key={col.key} style={{ width: col.width, minWidth: col.width }} className={col.width ? "flex-none" : "flex-1"}>
-                <input
-                  value={String(row[col.key] ?? "")}
-                  onChange={(e) => handleCellChange(i, col.key, e.target.value)}
-                  disabled={!!isDisabled}
-                  placeholder={col.placeholder}
-                  className={`${inputClass} !py-1 !text-[12px]`}
-                />
-              </div>
-            );
-          })}
-
-          {/* Actions */}
-          <div className={`w-[72px] flex-none flex items-center justify-end gap-0.5 transition-opacity ${hoveredRow === i ? "opacity-100" : "opacity-40"}`}>
-            <button onClick={() => handleSwap(i, i - 1)} disabled={i === 0} className="rounded p-0.5 text-text-muted hover:bg-surface-3 disabled:opacity-30 disabled:cursor-not-allowed transition-colors">
-              <ChevronUp size={13} />
-            </button>
-            <button onClick={() => handleSwap(i, i + 1)} disabled={i === rows.length - 1} className="rounded p-0.5 text-text-muted hover:bg-surface-3 disabled:opacity-30 disabled:cursor-not-allowed transition-colors">
-              <ChevronDown size={13} />
-            </button>
-            <button onClick={() => handleDelete(i)} disabled={rows.length <= minRows} className="rounded p-0.5 text-text-muted hover:text-danger hover:bg-danger/10 disabled:opacity-30 disabled:cursor-not-allowed transition-colors">
-              <Trash2 size={13} />
-            </button>
-          </div>
-        </div>
-      ))}
-
-      {/* Empty */}
+      {/* Empty state */}
       {rows.length === 0 && (
         <div className="py-6 text-center text-[12px] text-text-muted">
           {t("common.noData")}

@@ -1023,6 +1023,7 @@ export default function ApplicationEditPage() {
             newRow={() => ({ name: "", displayName: "", rule: "None" })}
             minRows={1}
             disableAdd={availableSigninMethods.length === 0}
+            sortable
           />
         </div>
         <FormField label={t("apps.field.signupHtml" as any)} span="full">
@@ -1043,6 +1044,7 @@ export default function ApplicationEditPage() {
               set("signinItems", [...items, { name: `Text ${Date.now()}`, visible: true, isCustom: true }]);
             }}
             addCustomLabel={t("apps.ui.addCustom" as any)}
+            sortable
           />
         </div>
       </FormSection>
@@ -1054,6 +1056,7 @@ export default function ApplicationEditPage() {
           rows={(app.signupItems as Record<string, unknown>[]) ?? []}
           onChange={(rows) => set("signupItems", rows)}
           newRow={() => ({ name: "", visible: true, required: true, options: [], rule: "None", customCss: "" })}
+          sortable
         />
       )}
 
