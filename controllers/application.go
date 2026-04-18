@@ -23,6 +23,28 @@ import (
 	"github.com/deluxebear/jetauth/util"
 )
 
+// sanitizeApplicationForNonGlobalAdmin rejects edits to raw-HTML injection
+// fields unless the caller is a global admin. Mutates `incoming` in place,
+// restoring each protected field from `existing`. The 5 fields are the
+// unstructured HTML surfaces — headers, footers, custom signup/signin HTML,
+// and the side-panel HTML (for FormOffset=4 layouts).
+//
+// Per W1 master-spec decision Q4: raw HTML is a security surface and is
+// global-admin-only. Org admins use the visual block editor (W5) for 90% of
+// what would otherwise require raw HTML. All 5 fields are protected here;
+// any non-HTML customization (themeData, formCss, formBackgroundUrl, etc.)
+// remains editable by lower-privileged admins.
+func sanitizeApplicationForNonGlobalAdmin(incoming, existing *object.Application) {
+	if incoming == nil || existing == nil {
+		return
+	}
+	incoming.HeaderHtml = existing.HeaderHtml
+	incoming.FooterHtml = existing.FooterHtml
+	incoming.SignupHtml = existing.SignupHtml
+	incoming.SigninHtml = existing.SigninHtml
+	incoming.FormSideHtml = existing.FormSideHtml
+}
+
 // ApplicationListResponse represents the response for application list APIs
 type ApplicationListResponse struct {
 	Status string        `json:"status" example:"ok"`
@@ -253,6 +275,19 @@ func (c *ApiController) UpdateApplication() {
 	if err = object.CheckIpWhitelist(application.IpWhitelist, c.GetAcceptLanguage()); err != nil {
 		c.ResponseError(err.Error())
 		return
+	}
+
+	if !c.IsGlobalAdmin() {
+		existing, getErr := object.GetApplication(application.GetId())
+		if getErr != nil {
+			c.ResponseError(getErr.Error())
+			return
+		}
+		if existing == nil {
+			c.ResponseError(fmt.Sprintf(c.T("auth:The application: %s does not exist"), application.GetId()))
+			return
+		}
+		sanitizeApplicationForNonGlobalAdmin(&application, existing)
 	}
 
 	c.Data["json"] = wrapActionResponse(object.UpdateApplication(id, &application, c.IsGlobalAdmin(), c.GetAcceptLanguage()))
