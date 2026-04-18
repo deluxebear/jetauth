@@ -36,11 +36,29 @@ type AccountItem struct {
 }
 
 type ThemeData struct {
+	// Legacy fields (kept for backward compatibility with existing records).
 	ThemeType    string `xorm:"varchar(30)" json:"themeType"`
 	ColorPrimary string `xorm:"varchar(10)" json:"colorPrimary"`
 	BorderRadius int    `xorm:"int" json:"borderRadius"`
 	IsCompact    bool   `xorm:"bool" json:"isCompact"`
 	IsEnabled    bool   `xorm:"bool" json:"isEnabled"`
+
+	// Extended semantic colors (empty string = inherit from lower layer).
+	ColorCTA     string `xorm:"varchar(10)" json:"colorCTA,omitempty"`
+	ColorSuccess string `xorm:"varchar(10)" json:"colorSuccess,omitempty"`
+	ColorDanger  string `xorm:"varchar(10)" json:"colorDanger,omitempty"`
+	ColorWarning string `xorm:"varchar(10)" json:"colorWarning,omitempty"`
+
+	// Dark-mode overrides (empty string = auto-derive from light-mode colors).
+	DarkColorPrimary string `xorm:"varchar(10)" json:"darkColorPrimary,omitempty"`
+	DarkBackground   string `xorm:"varchar(10)" json:"darkBackground,omitempty"`
+
+	// Typography (empty = inherit).
+	FontFamily     string `xorm:"varchar(200)" json:"fontFamily,omitempty"`
+	FontFamilyMono string `xorm:"varchar(200)" json:"fontFamilyMono,omitempty"`
+
+	// Spacing multiplier; 0 = inherit, 0.875 = compact, 1.0 = normal, 1.125 = spacious.
+	SpacingScale float64 `xorm:"double" json:"spacingScale,omitempty"`
 }
 
 type MfaItem struct {
