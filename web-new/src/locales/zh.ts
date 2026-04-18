@@ -35,6 +35,14 @@ const zh: Record<string, string> = {
   "auth.webauthn.unsupported": "当前浏览器不支持通行密钥",
   "auth.webauthn.trying": "正在连接认证器...",
 
+  "auth.face.prompt": "请将人脸对准取景框",
+  "auth.face.button": "拍照并登录",
+  "auth.face.retry": "重试",
+  "auth.face.cameraError": "无法访问摄像头",
+  "auth.face.noFace": "未检测到人脸，请重试",
+  "auth.face.failed": "人脸识别失败",
+  "auth.face.processing": "处理中...",
+
   "auth.forgot.title": "重置密码",
   "auth.forgot.subtitle": "输入邮箱或手机号接收验证码",
   "auth.forgot.newPassword": "新密码",

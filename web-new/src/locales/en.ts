@@ -35,6 +35,14 @@ const en = {
   "auth.webauthn.unsupported": "This browser does not support passkeys",
   "auth.webauthn.trying": "Contacting authenticator...",
 
+  "auth.face.prompt": "Position your face in the frame",
+  "auth.face.button": "Capture & sign in",
+  "auth.face.retry": "Retry",
+  "auth.face.cameraError": "Unable to access camera",
+  "auth.face.noFace": "No face detected; please try again",
+  "auth.face.failed": "Face recognition failed",
+  "auth.face.processing": "Processing...",
+
   "auth.forgot.title": "Reset your password",
   "auth.forgot.subtitle": "Enter your email or phone to receive a verification code",
   "auth.forgot.newPassword": "New password",
