@@ -361,6 +361,10 @@ func (c *ApiController) GetApplicationLogin() {
 			c.ResponseError(err.Error())
 			return
 		}
+		if application == nil {
+			c.ResponseError(fmt.Sprintf(c.T("auth:The application: %s does not exist"), clientId))
+			return
+		}
 	} else if loginType == "cas" {
 		application, err = object.GetApplication(id)
 		if err != nil {
