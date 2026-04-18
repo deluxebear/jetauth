@@ -7,8 +7,7 @@ import { useSidebar } from "./SidebarContext";
 import { useOrganization } from "./OrganizationContext";
 import { useTheme } from "./theme";
 import * as OrgBackend from "./backend/OrganizationBackend";
-import Login from "./pages/Login";
-import Signup from "./pages/Signup";
+import AuthShell from "./auth/AuthShell";
 import MfaSetup from "./pages/MfaSetup";
 import MfaVerify from "./pages/MfaVerify";
 import EnableMfaNotification from "./components/EnableMfaNotification";
@@ -418,11 +417,13 @@ export default function App() {
   }
 
   if (!user) {
-    const loginElement = <Login onLogin={handleLogin} error={loginError} themeData={loginThemeData} orgBranding={loginOrgBranding} onOrganizationChange={fetchLoginTheme} />;
     return (
       <Routes>
-        <Route path="/login/:organizationName" element={loginElement} />
-        <Route path="/login" element={loginElement} />
+        <Route path="/login/:organizationName/:applicationName" element={<AuthShell mode="signin" />} />
+        <Route path="/login/:organizationName" element={<AuthShell mode="signin" />} />
+        <Route path="/login" element={<AuthShell mode="signin" />} />
+        <Route path="/signup/:applicationName" element={<AuthShell mode="signup" />} />
+        <Route path="/signup" element={<AuthShell mode="signup" />} />
         <Route path="/mfa/setup" element={
           mfaState?.type === "setup" ? (
             <MfaSetup
@@ -450,8 +451,6 @@ export default function App() {
             />
           ) : <Navigate to="/login" replace />
         } />
-        <Route path="/signup/:applicationName" element={<Signup />} />
-        <Route path="/signup" element={<Signup />} />
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
     );
