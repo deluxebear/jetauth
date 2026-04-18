@@ -4,14 +4,14 @@ package email
 // Preset is a shippable default that fills endpoint/method/headers/body so
 // admins only supply credentials and account ids.
 type Preset struct {
-	Key             string            // stable id
-	Name            string            // human-readable
-	EndpointExample string            // interpolatable URL hint (may contain {account_id} etc.)
-	Method          string
-	ContentType     string
-	HttpHeaders     map[string]string // Authorization value is a hint — admin fills secret
-	BodyTemplate    string
-	Docs            string // URL to upstream docs
+	Key             string            `json:"key"`             // stable id
+	Name            string            `json:"name"`            // human-readable
+	EndpointExample string            `json:"endpointExample"` // interpolatable URL hint (may contain {account_id} etc.)
+	Method          string            `json:"method"`
+	ContentType     string            `json:"contentType"`
+	HttpHeaders     map[string]string `json:"httpHeaders"` // Authorization value is a hint — admin fills secret
+	BodyTemplate    string            `json:"bodyTemplate"`
+	Docs            string            `json:"docs"` // URL to upstream docs
 }
 
 var presets = []Preset{

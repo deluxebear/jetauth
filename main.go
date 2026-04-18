@@ -27,7 +27,6 @@ import (
 	"github.com/deluxebear/jetauth/ldap"
 	"github.com/deluxebear/jetauth/object"
 	"github.com/deluxebear/jetauth/proxy"
-	"github.com/deluxebear/jetauth/radius"
 	"github.com/deluxebear/jetauth/routers"
 	"github.com/deluxebear/jetauth/service"
 	"github.com/deluxebear/jetauth/util"
@@ -132,7 +131,6 @@ func main() {
 	}
 
 	go ldap.StartLdapServer()
-	go radius.StartRadiusServer()
 	go object.ClearThroughputPerSecond()
 
 	// Start webhook delivery worker
