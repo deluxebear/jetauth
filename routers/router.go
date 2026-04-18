@@ -47,6 +47,10 @@ func InitAPI() {
 	// Anonymous endpoint — pre-auth surface consumed by the login/signup pages.
 	// Intentionally no auth filter; the merged theme contains no secrets.
 	web.Router("/api/get-resolved-theme", &controllers.ApiController{}, "GET:GetResolvedTheme")
+	// Anonymous endpoint — identifier-first signin UX asks "who are you"
+	// before "how do you want to log in". Response is scoped to avoid
+	// leaking existence of a user via method list.
+	web.Router("/api/resolve-signin-methods", &controllers.ApiController{}, "POST:ResolveSigninMethods")
 	web.Router("/api/get-dashboard", &controllers.ApiController{}, "GET:GetDashboard")
 	web.Router("/api/logout", &controllers.ApiController{}, "GET,POST:Logout")
 	web.Router("/api/sso-logout", &controllers.ApiController{}, "GET,POST:SsoLogout")
