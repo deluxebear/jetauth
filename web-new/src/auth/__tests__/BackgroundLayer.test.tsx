@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import BackgroundLayer from "../shell/BackgroundLayer";
 
 describe("BackgroundLayer", () => {
