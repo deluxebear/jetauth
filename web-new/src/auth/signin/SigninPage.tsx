@@ -8,6 +8,7 @@ import BrandingLayer from "../shell/BrandingLayer";
 import TopBar from "../shell/TopBar";
 import IdentifierStep from "./IdentifierStep";
 import PasswordForm from "./PasswordForm";
+import ProvidersRow from "./ProvidersRow";
 import { resolveSigninMethods } from "../api/resolveSigninMethods";
 import type {
   AuthApplication,
@@ -28,7 +29,7 @@ interface SigninPageProps {
  * extends the "method" step with CodeForm, WebAuthnForm, FaceForm,
  * ProvidersRow.
  */
-export default function SigninPage({ application, providers: _providers }: SigninPageProps) {
+export default function SigninPage({ application, providers }: SigninPageProps) {
   const { theme } = useTheme();
   const { t } = useTranslation();
   const [searchParams] = useSearchParams();
@@ -141,7 +142,15 @@ export default function SigninPage({ application, providers: _providers }: Signi
           </p>
 
           {step === "identifier" && (
-            <IdentifierStep onSubmit={handleIdentifierSubmit} error={error} />
+            <>
+              <IdentifierStep onSubmit={handleIdentifierSubmit} error={error} />
+              <ProvidersRow
+                application={application}
+                providers={providers}
+                redirectUri={searchParams.get("redirect_uri") ?? undefined}
+                state={searchParams.get("state") ?? undefined}
+              />
+            </>
           )}
 
           {step === "method" && selectedMethod === "Password" && (

@@ -17,6 +17,9 @@ const zh: Record<string, string> = {
   "auth.signin.brandingSubtitle": "登录以继续",
   "auth.signin.noMethodError": "此账号暂无可用的登录方式",
   "auth.signin.methodNotReady": "当前预览仅支持密码登录；其他方式将在 W2b 补齐",
+  "auth.providers.divider": "或使用以下方式登录",
+  "auth.providers.continueWith": "使用 {name} 继续",
+  "auth.providers.moreMenu": "更多选项",
   // Common
   "common.search": "搜索...",
   "common.signOut": "退出登录",
