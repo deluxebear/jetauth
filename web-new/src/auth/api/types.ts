@@ -109,3 +109,27 @@ export interface AppLoginResponse {
   data: AuthApplication;
   providersResolved: ResolvedProvider[];
 }
+
+export interface SigninMethodInfo {
+  name: string;        // "Password" | "Verification code" | "WebAuthn" | "Face ID" | "LDAP" | "WeChat"
+  displayName: string;
+  rule: string;
+}
+
+export interface ResolveSigninPayload {
+  methods: SigninMethodInfo[];
+  recommended: string; // method name, or "" when none
+  userHint: string;    // e.g. "a***@example.com" or ""
+}
+
+export interface ResolveSigninResponse {
+  status: "ok" | "error";
+  msg?: string;
+  data: ResolveSigninPayload;
+}
+
+export interface ResolveSigninRequest {
+  application: string;
+  organization?: string;
+  identifier: string;
+}
