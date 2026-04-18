@@ -5,7 +5,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { getResolvedTheme } from "./api/getResolvedTheme";
+import { getResolvedTheme, type AuthLookup } from "./api/getResolvedTheme";
 import type { ResolvedTheme } from "./api/types";
 
 const ThemeContext = createContext<ResolvedTheme | null>(null);
@@ -15,7 +15,7 @@ export function useAuthTheme(): ResolvedTheme | null {
 }
 
 interface ThemeProviderProps {
-  appId: string;
+  lookup: AuthLookup;
   children: ReactNode;
 }
 
@@ -28,12 +28,14 @@ interface ThemeProviderProps {
  * defaults so the auth surface stays usable even if the theme endpoint is
  * down.
  */
-export function ThemeProvider({ appId, children }: ThemeProviderProps) {
+export function ThemeProvider({ lookup, children }: ThemeProviderProps) {
   const [theme, setTheme] = useState<ResolvedTheme | null>(null);
+  // Serialize the lookup for the effect dependency array.
+  const key = lookup.kind === "app" ? `app:${lookup.appId}` : `org:${lookup.orgName}`;
 
   useEffect(() => {
     let cancelled = false;
-    getResolvedTheme(appId)
+    getResolvedTheme(lookup)
       .then((payload) => {
         if (cancelled) return;
         setTheme(payload.theme);
@@ -52,7 +54,8 @@ export function ThemeProvider({ appId, children }: ThemeProviderProps) {
     return () => {
       cancelled = true;
     };
-  }, [appId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key]);
 
   return <ThemeContext.Provider value={theme}>{children}</ThemeContext.Provider>;
 }

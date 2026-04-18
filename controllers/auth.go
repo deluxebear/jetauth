@@ -411,10 +411,20 @@ func (c *ApiController) GetApplicationLogin() {
 			c.ResponseError(fmt.Sprintf(c.T("auth:The application: %s does not exist"), id))
 			return
 		}
+	} else if orgParam := c.Ctx.Input.Query("organization"); orgParam != "" {
+		// Org-level login (e.g. /login/jetems) — resolve to the org's
+		// default application, falling back to admin/app-built-in (the IAM
+		// control-plane app) when the org hasn't configured one. The app
+		// object carries the org's theme + branding via OrganizationObj.
+		application, err = resolveOrgDefaultApplication(orgParam)
+		if err != nil {
+			c.ResponseError(err.Error())
+			return
+		}
 	}
 
 	if application == nil {
-		c.ResponseError("missing application identifier: provide 'type' or 'id'")
+		c.ResponseError("missing application identifier: provide 'type', 'id', or 'organization'")
 		return
 	}
 

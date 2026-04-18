@@ -30,19 +30,30 @@ type ResolvedThemeResponse struct {
 // @Router /get-resolved-theme [get]
 func (c *ApiController) GetResolvedTheme() {
 	appID := c.Ctx.Input.Query("app")
-	if appID == "" {
-		c.ResponseError("missing required query param: app")
+	orgParam := c.Ctx.Input.Query("organization")
+	if appID == "" && orgParam == "" {
+		c.ResponseError("missing required query param: provide 'app' or 'organization'")
 		return
 	}
 
-	app, err := object.GetApplication(appID)
-	if err != nil {
-		c.ResponseError(err.Error())
-		return
-	}
-	if app == nil {
-		c.ResponseError(fmt.Sprintf("application %s does not exist", appID))
-		return
+	var app *object.Application
+	var err error
+	if appID != "" {
+		app, err = object.GetApplication(appID)
+		if err != nil {
+			c.ResponseError(err.Error())
+			return
+		}
+		if app == nil {
+			c.ResponseError(fmt.Sprintf("application %s does not exist", appID))
+			return
+		}
+	} else {
+		app, err = resolveOrgDefaultApplication(orgParam)
+		if err != nil {
+			c.ResponseError(err.Error())
+			return
+		}
 	}
 
 	var orgTheme *object.ThemeData

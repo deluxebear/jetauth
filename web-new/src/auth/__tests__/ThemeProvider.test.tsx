@@ -32,7 +32,7 @@ function ProbeTheme() {
 describe("ThemeProvider", () => {
   it("loads resolved theme and exposes it via useAuthTheme", async () => {
     render(
-      <ThemeProvider appId="admin/app-test">
+      <ThemeProvider lookup={{ kind: "app", appId: "admin/app-test" }}>
         <ProbeTheme />
       </ThemeProvider>
     );
@@ -44,7 +44,7 @@ describe("ThemeProvider", () => {
 
   it("injects a <style> tag with the CSS payload", async () => {
     render(
-      <ThemeProvider appId="admin/app-test">
+      <ThemeProvider lookup={{ kind: "app", appId: "admin/app-test" }}>
         <div />
       </ThemeProvider>
     );
@@ -59,7 +59,7 @@ describe("ThemeProvider", () => {
     vi.mocked(getResolvedTheme).mockRejectedValueOnce(new Error("network down"));
 
     render(
-      <ThemeProvider appId="admin/app-test">
+      <ThemeProvider lookup={{ kind: "app", appId: "admin/app-test" }}>
         <ProbeTheme />
       </ThemeProvider>
     );
