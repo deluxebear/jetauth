@@ -1,6 +1,6 @@
 version: '3.1'
 services:
-  casdoor:
+  jetauth:
     restart: always
     build:
       context: ./

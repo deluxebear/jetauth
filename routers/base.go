@@ -104,7 +104,7 @@ func denyMcpRequest(ctx *context.Context) {
 		scheme = "http"
 	}
 	resourceMetadataUrl := fmt.Sprintf("%s://%s/.well-known/oauth-protected-resource", scheme, host)
-	ctx.Output.Header("WWW-Authenticate", fmt.Sprintf("Bearer realm=\"casdoor\", resource_metadata=\"%s\"", resourceMetadataUrl))
+	ctx.Output.Header("WWW-Authenticate", fmt.Sprintf("Bearer realm=\"jetauth\", resource_metadata=\"%s\"", resourceMetadataUrl))
 
 	ctx.Output.SetStatus(http.StatusUnauthorized)
 	_ = ctx.Output.JSON(resp, true, false)
@@ -127,7 +127,7 @@ func getUsernameByClientIdSecret(ctx *context.Context) (string, error) {
 	}
 	if application == nil {
 		if fromBasicAuth {
-			// The Basic Auth credentials may come from a reverse proxy protecting Casdoor with
+			// The Basic Auth credentials may come from a reverse proxy protecting JetAuth with
 			// HTTP Basic Auth. In that case, the username is not an OAuth client ID, so we
 			// silently ignore it instead of returning an error that would break the whole system.
 			return "", nil

@@ -2335,7 +2335,7 @@ const en = {
   "sysinfo.requestCount": "Requests",
   "sysinfo.avgLatency": "Avg Latency",
   "sysinfo.throughput": "Throughput",
-  "sysinfo.aboutCasdoor": "About JetAuth",
+  "sysinfo.aboutJetauth": "About JetAuth",
   "sysinfo.description": "An Identity and Access Management (IAM) / Single-Sign-On (SSO) platform with web UI supporting OAuth 2.0, OIDC, SAML and CAS",
   "sysinfo.version": "Version",
   "sysinfo.unknownVersion": "Unknown version",

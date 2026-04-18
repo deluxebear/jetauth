@@ -14,13 +14,10 @@
 
 // Package routers
 // @APIVersion 1.503.0
-// @Title Casdoor RESTful API
-// @Description Swagger Docs of Casdoor Backend API
-// @Contact casbin@googlegroups.com
+// @Title JetAuth RESTful API
+// @Description Swagger Docs of JetAuth Backend API
 // @SecurityDefinition AccessToken apiKey Authorization header
 // @Schemes https,http
-// @ExternalDocs Find out more about Casdoor
-// @ExternalDocsUrl https://casdoor.org/
 package routers
 
 import (

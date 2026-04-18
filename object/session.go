@@ -25,8 +25,8 @@ import (
 )
 
 var (
-	CasdoorApplication  = "app-built-in"
-	CasdoorOrganization = "built-in"
+	BuiltInApplication  = "app-built-in"
+	BuiltInOrganization = "built-in"
 )
 
 type Session struct {
@@ -169,7 +169,7 @@ func AddSession(session *Session) (bool, error) {
 
 func DeleteSession(id, curSessionId string) (bool, error) {
 	owner, name, application := util.GetOwnerAndNameAndOtherFromId(id)
-	if owner == CasdoorOrganization && application == CasdoorApplication {
+	if owner == BuiltInOrganization && application == BuiltInApplication {
 		session, err := GetSingleSession(id)
 		if err != nil {
 			return false, err
@@ -215,7 +215,7 @@ func DeleteSessionId(id string, sessionId string) (bool, error) {
 	}
 
 	owner, _, application := util.GetOwnerAndNameAndOtherFromId(id)
-	if owner == CasdoorOrganization && application == CasdoorApplication {
+	if owner == BuiltInOrganization && application == BuiltInApplication {
 		DeleteBeegoSession([]string{sessionId})
 	}
 

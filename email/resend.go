@@ -26,7 +26,7 @@ type ResendEmailProvider struct {
 
 func NewResendEmailProvider(apiKey string) *ResendEmailProvider {
 	client := resend.NewClient(apiKey)
-	client.UserAgent += " Casdoor"
+	client.UserAgent += " JetAuth"
 	return &ResendEmailProvider{Client: client}
 }
 

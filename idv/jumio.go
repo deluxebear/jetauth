@@ -97,7 +97,7 @@ func (provider *JumioIdvProvider) VerifyIdentity(idCardType string, idCard strin
 
 	// Set authentication headers
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("User-Agent", "Casdoor/1.0")
+	req.Header.Set("User-Agent", "JetAuth/1.0")
 	req.SetBasicAuth(provider.ClientId, provider.ClientSecret)
 
 	// Send request

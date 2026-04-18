@@ -76,7 +76,7 @@ func getMemoryUsage() (uint64, uint64, error) {
 	return memInfo.RSS, virtualMem.Total, nil
 }
 
-// getDiskUsage gets disk usage for Casdoor's data directory
+// getDiskUsage gets disk usage for the JetAuth data directory.
 func getDiskUsage() (uint64, uint64, error) {
 	_, filename, _, _ := runtime.Caller(0)
 	rootPath := path.Dir(path.Dir(filename))
@@ -107,7 +107,7 @@ func getDiskUsage() (uint64, uint64, error) {
 	return size, diskStat.Total, nil
 }
 
-// getNetworkUsage gets Casdoor process's own I/O usage
+// getNetworkUsage gets the JetAuth process's own I/O usage.
 func getNetworkUsage() (uint64, uint64, uint64, error) {
 	proc, err := process.NewProcess(int32(os.Getpid()))
 	if err != nil {

@@ -2416,7 +2416,7 @@ const zh: Record<string, string> = {
   "sysinfo.requestCount": "请求数",
   "sysinfo.avgLatency": "平均延迟",
   "sysinfo.throughput": "吞吐量",
-  "sysinfo.aboutCasdoor": "关于 JetAuth",
+  "sysinfo.aboutJetauth": "关于 JetAuth",
   "sysinfo.description": "一个支持 OAuth 2.0、OIDC、SAML 和 CAS 的身份和访问管理 (IAM) / 单点登录 (SSO) 平台",
   "sysinfo.version": "版本",
   "sysinfo.unknownVersion": "未知版本",

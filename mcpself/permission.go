@@ -18,7 +18,7 @@ import (
 	"github.com/deluxebear/jetauth/object"
 )
 
-// BuiltinScopes defines the default scope-to-tool mappings for Casdoor's MCP server
+// BuiltinScopes defines the default scope-to-tool mappings for the JetAuth MCP server.
 var BuiltinScopes = []*object.ScopeItem{
 	{
 		Name:        "application:read",

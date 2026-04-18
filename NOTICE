@@ -1,12 +1,27 @@
 JetAuth
-Copyright 2025 JetAuth Contributors
+Copyright 2025-2026 JetAuth Contributors
 
-This product is based on Casdoor (https://github.com/casdoor/casdoor),
-originally developed by the Casdoor Authors, licensed under the Apache License 2.0.
+This product includes software originally developed by the Casdoor Authors
+(https://github.com/casdoor/casdoor), licensed under the Apache License,
+Version 2.0. A copy of that license is included in the LICENSE file.
 
-Major modifications from the original Casdoor project:
-- Rebranded as JetAuth - Unified Auth for the AI Era
-- Go module path changed to github.com/deluxebear/casdoor
-- New frontend (web-new) built with React, Vite, and Tailwind CSS
-- Enhanced multi-organization access control
-- Security fix: prevent owner field tampering in entity update APIs
+Significant modifications by the JetAuth Contributors include, but are not
+limited to:
+
+  - Go module path renamed to github.com/deluxebear/jetauth.
+  - Rebranded as JetAuth.
+  - New frontend in web-new/ built with React, Vite, Tailwind CSS v4, and
+    TanStack Query, replacing the upstream Ant Design frontend.
+  - Business-permission (ReBAC) subsystem, including per-application Casbin
+    policy tables, role inheritance propagation, and a resource catalog
+    with OpenAPI/CSV/YAML/JSON/paste import.
+  - Built-in RADIUS server removed (upstream module had latent correctness
+    bugs and PAP-only support).
+  - Security fix: entity update APIs prevent owner-field tampering across
+    organization boundaries.
+  - SQLite driver upgraded to modernc.org/sqlite v1.48.2 (SQLite 3.51, JSONB).
+  - Additional hardening, observability, and admin-UX changes documented in
+    docs/ and the project CHANGELOG.
+
+Use of the JetAuth name and associated marks is not granted by the Apache
+License. See the LICENSE file for the full terms of that license.

@@ -80,7 +80,7 @@ export default function AuthorizationPage() {
       const configs = configsRes.status === "ok" && configsRes.data ? configsRes.data : [];
 
       // Build appName → favicon/logo map from Applications. We deliberately
-      // DON'T strip the Casdoor default favicon — if an admin hasn't set a
+      // don't strip the built-in default favicon — if an admin hasn't set a
       // custom one, the default image is still a legitimate visual anchor
       // that reads better than a letter avatar.
       const apps = appsRes.status === "ok" && appsRes.data ? appsRes.data : [];

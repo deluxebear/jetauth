@@ -500,7 +500,7 @@ func (c *ApiController) SsoLogout() {
 	}
 
 	currentSessionId := c.Ctx.Input.CruSession.SessionID(context.Background())
-	_, err = object.DeleteSessionId(util.GetSessionId(owner, username, object.CasdoorApplication), currentSessionId)
+	_, err = object.DeleteSessionId(util.GetSessionId(owner, username, object.BuiltInApplication), currentSessionId)
 	if err != nil {
 		c.ResponseError(err.Error())
 		return
@@ -807,7 +807,7 @@ func (c *ApiController) deleteUserSession(user string) error {
 	}
 
 	// Casdoor session ID derived from owner, username, and application
-	sessionId := util.GetSessionId(owner, username, object.CasdoorApplication)
+	sessionId := util.GetSessionId(owner, username, object.BuiltInApplication)
 
 	// Explicitly get the Beego session ID from the context
 	beegoSessionId := c.Ctx.Input.CruSession.SessionID(context.Background())

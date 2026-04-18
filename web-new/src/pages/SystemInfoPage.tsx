@@ -233,7 +233,7 @@ export default function SystemInfoPage() {
 
           {/* About JetAuth */}
           <motion.div variants={fadeUp} initial="hidden" animate="show" className="rounded-xl border border-border bg-surface-1 p-5">
-            <h2 className="text-sm font-semibold mb-4">{t("sysinfo.aboutCasdoor" as any)}</h2>
+            <h2 className="text-sm font-semibold mb-4">{t("sysinfo.aboutJetauth" as any)}</h2>
             <p className="text-[13px] text-text-secondary mb-4">{t("sysinfo.description" as any)}</p>
             <div className="space-y-2 text-[13px]">
               <div className="flex items-center gap-2">

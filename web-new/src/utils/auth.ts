@@ -1,4 +1,4 @@
-// Permission helpers matching original Casdoor backend logic
+// Permission helpers that mirror the backend's authorization checks.
 
 export interface Account {
   owner: string;

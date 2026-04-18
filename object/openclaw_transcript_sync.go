@@ -533,7 +533,7 @@ func newOpenClawTranscriptEntry(provider *Provider, sessionID string, entryKind 
 	}
 
 	return &Entry{
-		Owner:       CasdoorOrganization,
+		Owner:       BuiltInOrganization,
 		Name:        fmt.Sprintf("oc_%s", util.GetMd5Hash(nameSource)),
 		CreatedTime: createdTime,
 		UpdatedTime: createdTime,

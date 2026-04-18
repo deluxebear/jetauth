@@ -248,7 +248,7 @@ func (c *McpController) handleInitialize(req McpRequest) {
 			},
 		},
 		ServerInfo: McpImplementation{
-			Name:    "Casdoor MCP Server",
+			Name:    "JetAuth MCP Server",
 			Version: "1.0.0",
 		},
 	}

@@ -1,10 +1,10 @@
 
 # Image URL to use all building/pushing image targets
-REGISTRY ?= casbin
-IMG ?= casdoor
+REGISTRY ?= your-registry
+IMG ?= jetauth
 IMG_TAG ?=$(shell git --no-pager log -1 --format="%ad" --date=format:"%Y%m%d")-$(shell git describe --tags --always --dirty --abbrev=6)
-NAMESPACE ?= casdoor
-APP ?= casdoor
+NAMESPACE ?= jetauth
+APP ?= jetauth
 HOST ?= test.com
 
 
@@ -101,13 +101,13 @@ lint: vendor ## Run golangci-lint
 
 .PHONY: deploy
 deploy:  ## Deploy controller to the K8s cluster specified in ~/.kube/config.
-	helm upgrade --install ${APP} manifests/casdoor --create-namespace --set ingress.enabled=true \
+	helm upgrade --install ${APP} manifests/jetauth --create-namespace --set ingress.enabled=true \
 	--set "ingress.hosts[0].host=${HOST},ingress.hosts[0].paths[0].path=/,ingress.hosts[0].paths[0].pathType=ImplementationSpecific" \
 	--set image.tag=${IMG_TAG} --set image.repository=${REGISTRY} --set image.name=${IMG} --version ${IMG_TAG} -n ${NAMESPACE}
 
 .PHONY: dry-run
 dry-run: ## Dry run for helm install
-	helm upgrade --install ${APP} manifests/casdoor --set ingress.enabled=true \
+	helm upgrade --install ${APP} manifests/jetauth --set ingress.enabled=true \
 	--set "ingress.hosts[0].host=${HOST},ingress.hosts[0].paths[0].path=/,ingress.hosts[0].paths[0].pathType=ImplementationSpecific" \
 	--set image.tag=${IMG_TAG} --set image.repository=${REGISTRY} --set image.name=${IMG} --version ${IMG_TAG} -n ${NAMESPACE} --dry-run
 

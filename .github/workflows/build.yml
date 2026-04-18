@@ -17,7 +17,7 @@ jobs:
       mysql:
         image: mysql:5.7
         env:
-          MYSQL_DATABASE: casdoor
+          MYSQL_DATABASE: jetauth
           MYSQL_ROOT_PASSWORD: 123456
         ports:
           - 3306:3306
@@ -47,7 +47,7 @@ jobs:
       - run: yarn install && CI=false yarn run build
         working-directory: ./web
       - name: Upload build artifacts
-        if: github.repository == 'casdoor/casdoor' && github.event_name == 'push'
+        if: github.repository == 'deluxebear/jetauth' && github.event_name == 'push'
         uses: actions/upload-artifact@v4
         with:
           name: frontend-build-${{ github.run_id }}
@@ -98,7 +98,7 @@ jobs:
       mysql:
         image: mysql:5.7
         env:
-          MYSQL_DATABASE: casdoor
+          MYSQL_DATABASE: jetauth
           MYSQL_ROOT_PASSWORD: 123456
         ports:
           - 3306:3306
@@ -161,7 +161,7 @@ jobs:
     permissions:
       contents: write
       issues: write
-    if: github.repository == 'casdoor/casdoor' && github.event_name == 'push'
+    if: github.repository == 'deluxebear/jetauth' && github.event_name == 'push'
     needs: [frontend, backend, linter, e2e]
     outputs:
       new-release-published: ${{ steps.semantic.outputs.new_release_published }}
@@ -182,7 +182,7 @@ jobs:
     permissions:
       contents: write
       issues: write
-    if: github.repository == 'casdoor/casdoor' && github.event_name == 'push' && needs.tag-release.outputs.new-release-published == 'true'
+    if: github.repository == 'deluxebear/jetauth' && github.event_name == 'push' && needs.tag-release.outputs.new-release-published == 'true'
     needs: [tag-release]
     steps:
       - name: Checkout
@@ -232,7 +232,7 @@ jobs:
     permissions:
       contents: write
       issues: write
-    if: github.repository == 'casdoor/casdoor' && github.event_name == 'push' && needs.tag-release.outputs.new-release-published == 'true'
+    if: github.repository == 'deluxebear/jetauth' && github.event_name == 'push' && needs.tag-release.outputs.new-release-published == 'true'
     needs: [tag-release]
     steps:
       - name: Checkout
@@ -274,30 +274,30 @@ jobs:
 
       - name: Log in to Docker Hub
         uses: docker/login-action@v1
-        if: github.repository == 'casdoor/casdoor' && github.event_name == 'push' && steps.should_push.outputs.push=='true'
+        if: github.repository == 'deluxebear/jetauth' && github.event_name == 'push' && steps.should_push.outputs.push=='true'
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_PASSWORD }}
 
       - name: Push to Docker Hub
         uses: docker/build-push-action@v3
-        if: github.repository == 'casdoor/casdoor' && github.event_name == 'push' && steps.should_push.outputs.push=='true'
+        if: github.repository == 'deluxebear/jetauth' && github.event_name == 'push' && steps.should_push.outputs.push=='true'
         with:
           context: .
           target: STANDARD
           platforms: linux/amd64,linux/arm64
           push: true
-          tags: casbin/casdoor:${{ needs.tag-release.outputs.new-release-version }},casbin/casdoor:latest
+          tags: your-registry/jetauth:${{ needs.tag-release.outputs.new-release-version }},your-registry/jetauth:latest
 
       - name: Push All In One Version to Docker Hub
         uses: docker/build-push-action@v3
-        if: github.repository == 'casdoor/casdoor' && github.event_name == 'push' && steps.should_push.outputs.push=='true'
+        if: github.repository == 'deluxebear/jetauth' && github.event_name == 'push' && steps.should_push.outputs.push=='true'
         with:
           context: .
           target: ALLINONE
           platforms: linux/amd64,linux/arm64
           push: true
-          tags: casbin/casdoor-all-in-one:${{ needs.tag-release.outputs.new-release-version }},casbin/casdoor-all-in-one:latest
+          tags: your-registry/jetauth-all-in-one:${{ needs.tag-release.outputs.new-release-version }},your-registry/jetauth-all-in-one:latest
 
       - uses: actions/checkout@v3
         if: steps.should_push.outputs.push=='true'

@@ -8,7 +8,7 @@ import { useModal } from "../components/Modal";
 import { useEntityList } from "../hooks/useEntityList";
 import { useOrganization } from "../OrganizationContext";
 import * as RecordBackend from "../backend/RecordBackend";
-import type { Record as CasdoorRecord } from "../backend/RecordBackend";
+import type { Record as AuditRecord } from "../backend/RecordBackend";
 
 function formatJson(str: string): string {
   try {
@@ -93,19 +93,19 @@ export default function RecordListPage() {
   const { t } = useTranslation();
   const modal = useModal();
   const { selectedOrg } = useOrganization();
-  const [detailRecord, setDetailRecord] = useState<CasdoorRecord | null>(null);
+  const [detailRecord, setDetailRecord] = useState<AuditRecord | null>(null);
 
   // Records API uses organizationName param — expects "" for global, not "admin"
   const recordOwner = selectedOrg === "All" ? "" : selectedOrg;
 
-  const list = useEntityList<CasdoorRecord>({
+  const list = useEntityList<AuditRecord>({
     queryKey: "records",
     fetchFn: RecordBackend.getRecords,
     owner: recordOwner,
     pageSize: 20,
   });
 
-  const columns: Column<CasdoorRecord>[] = [
+  const columns: Column<AuditRecord>[] = [
     {
       key: "id",
       title: "ID",

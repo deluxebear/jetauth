@@ -137,7 +137,7 @@ func GetScimServer() scim.Server {
 			ID:          optional.NewString("User"),
 			Name:        "User",
 			Endpoint:    "/Users",
-			Description: optional.NewString("User Account in Casdoor"),
+			Description: optional.NewString("User Account in JetAuth"),
 			Schema:      userSchema,
 			SchemaExtensions: []scim.SchemaExtension{
 				{Schema: extension},

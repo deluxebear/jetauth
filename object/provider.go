@@ -655,7 +655,7 @@ func GetLogProviderFromProvider(provider *Provider) (log.LogProvider, error) {
 				UpdatedTime: createdTime,
 				DisplayName: name,
 				Provider:    providerName,
-				Application: CasdoorApplication,
+				Application: BuiltInApplication,
 				Message:     message,
 			}
 			_, err := AddEntry(entry)
@@ -674,7 +674,7 @@ func GetLogProviderFromProvider(provider *Provider) (log.LogProvider, error) {
 			name := log.GenerateEntryName()
 			currentTime := util.GetCurrentTime()
 			entry := &Entry{
-				Owner:       CasdoorOrganization,
+				Owner:       BuiltInOrganization,
 				Name:        name,
 				CreatedTime: currentTime,
 				UpdatedTime: currentTime,

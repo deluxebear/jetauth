@@ -64,7 +64,7 @@ func GetLogProvider(typ string, _ string, _ int, title string) (LogProvider, err
 	case "System Log":
 		tag := title
 		if tag == "" {
-			tag = "casdoor"
+			tag = "jetauth"
 		}
 		return NewSystemLogProvider(tag)
 	case "SELinux Log":
