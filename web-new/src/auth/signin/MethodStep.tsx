@@ -120,7 +120,7 @@ export default function MethodStep({
           <button
             type="button"
             onClick={() => setMenuOpen(!menuOpen)}
-            className="w-full flex items-center justify-center gap-1 text-[12px] text-text-muted hover:text-text-secondary transition-colors"
+            className="w-full flex items-center justify-center gap-1 py-2 text-[12px] text-text-muted hover:text-text-secondary transition-colors"
           >
             {t("auth.method.switchLabel")}
             <ChevronDown size={12} className={menuOpen ? "rotate-180 transition-transform" : "transition-transform"} />

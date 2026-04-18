@@ -328,7 +328,7 @@ function CodeBody({
             type="button"
             onClick={sendCode}
             disabled={countdown > 0 || sending}
-            className="w-full text-center text-[12px] text-text-muted hover:text-text-secondary disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="w-full py-2 text-center text-[12px] text-text-muted hover:text-text-secondary disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             {countdown > 0
               ? t("auth.code.resend").replace("{seconds}", String(countdown))

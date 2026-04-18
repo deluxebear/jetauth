@@ -33,20 +33,20 @@ export default function TopBar({ hideLanguage = false }: TopBarProps = {}) {
             className="flex items-center gap-1 rounded-lg p-2 text-text-muted hover:text-text-secondary hover:bg-surface-2 transition-colors"
           >
             <Globe size={17} />
-            <span className="text-[11px] font-mono font-medium uppercase">{locale}</span>
+            <span className="text-[12px] font-mono font-medium uppercase">{locale}</span>
           </button>
-          <div className="invisible group-hover:visible absolute right-0 top-full mt-1 w-36 rounded-lg border border-border bg-surface-2 py-1 shadow-[var(--shadow-elevated)]">
+          <div className="invisible group-hover:visible group-focus-within:visible absolute right-0 top-full mt-1 w-36 rounded-lg border border-border bg-surface-2 py-1 shadow-[var(--shadow-elevated)]">
             {locales.map((l) => (
               <button
                 key={l.value}
                 onClick={() => setLocale(l.value)}
-                className={`flex w-full items-center gap-2 px-3 py-1.5 text-[13px] transition-colors ${
+                className={`flex w-full items-center gap-2 px-3 py-2 text-[13px] transition-colors ${
                   locale === l.value
                     ? "text-accent bg-accent-subtle"
                     : "text-text-secondary hover:bg-surface-3"
                 }`}
               >
-                <span className="font-mono text-[11px] font-bold uppercase w-5">{l.value}</span>
+                <span className="font-mono text-[12px] font-bold uppercase w-5">{l.value}</span>
                 {l.label}
               </button>
             ))}

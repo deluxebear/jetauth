@@ -62,7 +62,7 @@ export default function ProvidersRow({
             type="button"
             onClick={() => go(p)}
             title={t("auth.providers.continueWith").replace("{name}", p.displayName)}
-            className="flex items-center justify-center gap-1.5 rounded-lg border border-border bg-surface-1 py-2 text-[12px] font-medium text-text-secondary hover:bg-surface-2 hover:text-text-primary transition-colors"
+            className="flex items-center justify-center gap-1.5 rounded-lg border border-border bg-surface-1 py-2.5 text-[12px] font-medium text-text-secondary hover:bg-surface-2 hover:text-text-primary transition-colors"
           >
             <img src={p.logoUrl} alt={p.displayName} className="h-4 w-4" />
             <span className="truncate">{p.displayName}</span>
