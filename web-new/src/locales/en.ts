@@ -4,6 +4,9 @@ const en = {
   "auth.signinTitle": "Sign in",
   "auth.signupTitle": "Create account",
   "auth.skeletonNote": "W1 skeleton — real auth flow arrives in W2.",
+  "auth.identifier.placeholder": "Email, phone, or username",
+  "auth.identifier.continueButton": "Continue",
+  "auth.identifier.errorRequired": "Please enter your email, phone, or username",
   // Common
   "common.search": "Search...",
   "common.signOut": "Sign out",

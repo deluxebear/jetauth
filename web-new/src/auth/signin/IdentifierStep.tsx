@@ -1,0 +1,70 @@
+import { useState, type FormEvent } from "react";
+import { ArrowRight } from "lucide-react";
+import { useTranslation } from "../../i18n";
+
+interface IdentifierStepProps {
+  onSubmit: (identifier: string) => Promise<void>;
+  error?: string;
+}
+
+/**
+ * Step 1 of identifier-first signin. Collects a single identifier
+ * (username / email / phone), trims it, and hands off to the parent.
+ */
+export default function IdentifierStep({ onSubmit, error }: IdentifierStepProps) {
+  const { t } = useTranslation();
+  const [identifier, setIdentifier] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const trimmed = identifier.trim();
+  const canSubmit = trimmed.length > 0 && !loading;
+
+  const handleSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!canSubmit) return;
+    setLoading(true);
+    try {
+      await onSubmit(trimmed);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      {error && (
+        <div className="rounded-lg border border-danger/30 bg-danger/10 px-4 py-2.5 text-[13px] text-danger">
+          {error}
+        </div>
+      )}
+      <div>
+        <input
+          type="text"
+          value={identifier}
+          onChange={(e) => setIdentifier(e.target.value)}
+          autoComplete="username"
+          autoFocus
+          placeholder={t("auth.identifier.placeholder")}
+          className="w-full rounded-lg border border-border bg-surface-1 px-3.5 py-2.5 text-[14px] text-text-primary placeholder:text-text-muted focus:border-accent focus:ring-1 focus:ring-accent/30 outline-none transition-all"
+        />
+      </div>
+      <button
+        type="submit"
+        disabled={!canSubmit}
+        className="group w-full flex items-center justify-center gap-2 rounded-lg bg-accent py-2.5 text-[14px] font-semibold text-white hover:bg-accent-hover disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+      >
+        {loading ? (
+          <>
+            <div className="h-4 w-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+            {t("auth.identifier.continueButton")}
+          </>
+        ) : (
+          <>
+            {t("auth.identifier.continueButton")}
+            <ArrowRight size={16} className="transition-transform group-hover:translate-x-0.5" />
+          </>
+        )}
+      </button>
+    </form>
+  );
+}

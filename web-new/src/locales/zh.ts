@@ -4,6 +4,9 @@ const zh: Record<string, string> = {
   "auth.signinTitle": "登录",
   "auth.signupTitle": "创建账号",
   "auth.skeletonNote": "W1 骨架 — W2 将补齐真正的登录流程。",
+  "auth.identifier.placeholder": "邮箱、手机号或用户名",
+  "auth.identifier.continueButton": "继续",
+  "auth.identifier.errorRequired": "请输入邮箱、手机号或用户名",
   // Common
   "common.search": "搜索...",
   "common.signOut": "退出登录",
