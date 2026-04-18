@@ -14,6 +14,9 @@ const en = {
   "auth.password.backButton": "Back",
   "auth.password.showPassword": "Show password",
   "auth.password.hidePassword": "Hide password",
+  "auth.signin.brandingSubtitle": "Sign in to continue",
+  "auth.signin.noMethodError": "No sign-in method is available for this account",
+  "auth.signin.methodNotReady": "Only password sign-in is available in this preview; other methods arrive in W2b",
   // Common
   "common.search": "Search...",
   "common.signOut": "Sign out",

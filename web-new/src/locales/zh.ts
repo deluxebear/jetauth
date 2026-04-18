@@ -14,6 +14,9 @@ const zh: Record<string, string> = {
   "auth.password.backButton": "返回",
   "auth.password.showPassword": "显示密码",
   "auth.password.hidePassword": "隐藏密码",
+  "auth.signin.brandingSubtitle": "登录以继续",
+  "auth.signin.noMethodError": "此账号暂无可用的登录方式",
+  "auth.signin.methodNotReady": "当前预览仅支持密码登录；其他方式将在 W2b 补齐",
   // Common
   "common.search": "搜索...",
   "common.signOut": "退出登录",
