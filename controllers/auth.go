@@ -398,6 +398,24 @@ func (c *ApiController) GetApplicationLogin() {
 			c.ResponseError(fmt.Sprintf(c.T("auth:The application: %s does not exist"), deviceAuthCacheCast.ApplicationId))
 			return
 		}
+	} else if id != "" {
+		// Direct id lookup — used by the identifier-first auth UI to fetch
+		// application metadata (theme, signinMethods, providers) without
+		// specifying an OAuth loginType. Introduced in W2a.
+		application, err = object.GetApplication(id)
+		if err != nil {
+			c.ResponseError(err.Error())
+			return
+		}
+		if application == nil {
+			c.ResponseError(fmt.Sprintf(c.T("auth:The application: %s does not exist"), id))
+			return
+		}
+	}
+
+	if application == nil {
+		c.ResponseError("missing application identifier: provide 'type' or 'id'")
+		return
 	}
 
 	clientIp := util.GetClientIpFromRequest(c.Ctx.Request)
