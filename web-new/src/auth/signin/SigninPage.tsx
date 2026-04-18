@@ -4,6 +4,7 @@ import { useTheme } from "../../theme";
 import { useTranslation } from "../../i18n";
 import { api } from "../../api/client";
 import BrandingLayer from "../shell/BrandingLayer";
+import OrgChoiceWidget from "../shell/OrgChoiceWidget";
 import TopBar from "../shell/TopBar";
 import IdentifierStep from "./IdentifierStep";
 import MethodStep from "./MethodStep";
@@ -169,6 +170,8 @@ export default function SigninPage({ application, providers }: SigninPageProps) 
               theme={theme}
             />
           </div>
+
+          <OrgChoiceWidget mode={application.orgChoiceMode} currentOrg={orgName} />
 
           <h1 className="text-2xl font-bold tracking-tight text-text-primary mb-1">
             {orgDisplay}
