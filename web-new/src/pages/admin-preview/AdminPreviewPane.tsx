@@ -67,11 +67,10 @@ export default function AdminPreviewPane({
       />
       <div className="flex-1 p-4 bg-surface-1 overflow-auto">
         <iframe
-          key={src}  // re-create on src change — no stale state
+          key={src}
           src={src}
           title="admin preview"
           className={iframeClass}
-          sandbox="allow-scripts allow-forms allow-same-origin"
         />
       </div>
     </div>
