@@ -44,6 +44,7 @@ func InitAPI() {
 	web.Router("/api/signup", &controllers.ApiController{}, "POST:Signup")
 	web.Router("/api/login", &controllers.ApiController{}, "POST:Login")
 	web.Router("/api/get-app-login", &controllers.ApiController{}, "GET:GetApplicationLogin")
+	web.Router("/api/get-resolved-theme", &controllers.ApiController{}, "GET:GetResolvedTheme")
 	web.Router("/api/get-dashboard", &controllers.ApiController{}, "GET:GetDashboard")
 	web.Router("/api/logout", &controllers.ApiController{}, "GET,POST:Logout")
 	web.Router("/api/sso-logout", &controllers.ApiController{}, "GET,POST:SsoLogout")
