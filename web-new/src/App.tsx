@@ -223,14 +223,28 @@ export default function App() {
     return true;
   }, []);
 
+  // Admin live-preview mode: when the URL carries ?previewConfig=, the page
+  // is being rendered inside the admin preview iframe. In that case we
+  // explicitly skip auth bootstrap so the existing admin session cookie
+  // doesn't redirect us away from the /login/:org/:app route we want to
+  // preview. The AuthShell renders as anonymous, exactly like a real
+  // end-user would see it.
+  const isPreviewMode =
+    typeof window !== "undefined" &&
+    new URLSearchParams(window.location.search).has("previewConfig");
+
   useEffect(() => {
+    if (isPreviewMode) {
+      setLoading(false);
+      return;
+    }
     getAccount()
       .then((res: any) => { applyAccountData(res); })
       .catch(() => {})
       .finally(() => setLoading(false));
 
     // Theme is fetched by Login component via onOrganizationChange callback
-  }, []);
+  }, [isPreviewMode]);
 
   const handleLogout = async () => {
     const userOrg = user?.owner;
