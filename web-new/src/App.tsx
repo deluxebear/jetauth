@@ -231,7 +231,8 @@ export default function App() {
   // end-user would see it.
   const isPreviewMode =
     typeof window !== "undefined" &&
-    new URLSearchParams(window.location.search).has("previewConfig");
+    (new URLSearchParams(window.location.search).has("preview") ||
+      new URLSearchParams(window.location.search).has("previewConfig"));
 
   useEffect(() => {
     if (isPreviewMode) {

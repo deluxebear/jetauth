@@ -49,6 +49,9 @@ export default function AuthShell({ mode }: AuthShellProps) {
   );
 }
 
+const PREVIEW_MESSAGE_TYPE = "jetauth.preview.config" as const;
+const PREVIEW_READY_TYPE = "jetauth.preview.ready" as const;
+
 function AuthShellInner({ lookup, mode }: { lookup: AuthLookup; mode: Mode }) {
   const { t } = useTranslation();
   const [app, setApp] = useState<AuthApplication | null>(null);
@@ -56,40 +59,56 @@ function AuthShellInner({ lookup, mode }: { lookup: AuthLookup; mode: Mode }) {
   const [error, setError] = useState("");
 
   const key = lookup.kind === "app" ? `app:${lookup.appId}` : `org:${lookup.orgName}`;
+  const isPreviewMode = typeof window !== "undefined" &&
+    new URLSearchParams(window.location.search).has("preview");
 
   useEffect(() => {
     getAppLogin(lookup)
       .then(({ application, providers }) => {
-        // Check for preview override in URL
-        const search = new URLSearchParams(window.location.search);
-        const previewRaw = search.get("previewConfig");
-        let merged = application;
-        if (previewRaw) {
-          try {
-            const b64 = previewRaw.replace(/-/g, "+").replace(/_/g, "/");
-            const decoded = decodeURIComponent(escape(atob(b64)));
-            const overrides = JSON.parse(decoded) as Partial<AuthApplication>;
-            merged = {
-              ...application,
-              ...overrides,
-              organizationObj:
-                overrides.organizationObj === undefined
-                  ? application.organizationObj
-                  : {
-                      ...(application.organizationObj ?? {}),
-                      ...overrides.organizationObj,
-                    },
-            } as AuthApplication;
-          } catch (e) {
-            console.warn("[AuthShell] invalid previewConfig:", e);
-          }
-        }
-        setApp(merged);
+        setApp(application);
         setProviders(providers);
+
+        // In preview mode, signal readiness to the parent window so it
+        // can postMessage the actual config. Kept after setApp so the
+        // first config message has a base to merge over.
+        if (isPreviewMode && window.parent && window.parent !== window) {
+          window.parent.postMessage(
+            { type: PREVIEW_READY_TYPE },
+            window.location.origin
+          );
+        }
       })
       .catch((e: Error) => setError(e.message ?? "failed to load"));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key]);
+
+  // Preview message listener: admin UI posts application overrides that
+  // get merged over the fetched app. Runs only in preview mode.
+  useEffect(() => {
+    if (!isPreviewMode) return;
+    const handler = (e: MessageEvent) => {
+      if (e.origin !== window.location.origin) return;
+      if (e.data?.type !== PREVIEW_MESSAGE_TYPE) return;
+      const overrides = e.data.payload as Partial<AuthApplication> | undefined;
+      if (!overrides) return;
+      setApp((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          ...overrides,
+          organizationObj:
+            overrides.organizationObj === undefined
+              ? prev.organizationObj
+              : {
+                  ...(prev.organizationObj ?? {}),
+                  ...overrides.organizationObj,
+                },
+        } as AuthApplication;
+      });
+    };
+    window.addEventListener("message", handler);
+    return () => window.removeEventListener("message", handler);
+  }, [isPreviewMode]);
 
   if (error) {
     return (

@@ -24,12 +24,15 @@ function mockApp(partial: Partial<AuthApplication>): AuthApplication {
 }
 
 describe("AdminPreviewPane", () => {
-  it("renders the iframe with previewConfig in src", () => {
+  it("renders the iframe with short preview=1 src", () => {
     const app = mockApp({ displayName: "Test" });
     const { container } = render(<AdminPreviewPane application={app} />);
     const iframe = container.querySelector("iframe");
     expect(iframe).not.toBeNull();
-    expect(iframe!.getAttribute("src")).toContain("previewConfig=");
+    const src = iframe!.getAttribute("src")!;
+    // Short URL — config goes over postMessage, not the URL
+    expect(src).toContain("preview=1");
+    expect(src).not.toContain("previewConfig=");
   });
 
   it("changes src when mode toggle clicked", () => {
