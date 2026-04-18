@@ -53,7 +53,11 @@ export default function WebAuthnForm({
       );
 
       // Step 2: hand off to the browser authenticator
-      const assertion = await startAuthentication({ optionsJSON: options as Parameters<typeof startAuthentication>[0]["optionsJSON"] });
+      // Cast via `unknown` since the backend response is typed as opaque JSON
+      // and `PublicKeyCredentialRequestOptionsJSON` has a stricter contract.
+      const assertion = await startAuthentication({
+        optionsJSON: options as unknown as Parameters<typeof startAuthentication>[0]["optionsJSON"],
+      });
 
       // Step 3: finish — send assertion to server
       await api.post("/api/webauthn/signin/finish", assertion);
