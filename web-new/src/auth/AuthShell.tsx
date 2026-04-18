@@ -7,8 +7,9 @@ import type { AuthLookup } from "./api/getResolvedTheme";
 import type { AuthApplication, ResolvedProvider } from "./api/types";
 import { useTranslation } from "../i18n";
 import SigninPage from "./signin/SigninPage";
+import ForgotPasswordPage from "./signin/ForgotPasswordPage";
 
-type Mode = "signin" | "signup";
+type Mode = "signin" | "signup" | "forget";
 
 interface AuthShellProps {
   mode: Mode;
@@ -76,6 +77,10 @@ function AuthShellInner({ lookup, mode }: { lookup: AuthLookup; mode: Mode }) {
 
   if (mode === "signin") {
     return <SigninPage application={app} providers={providers} />;
+  }
+
+  if (mode === "forget") {
+    return <ForgotPasswordPage application={app} />;
   }
 
   // mode === "signup" — W1 placeholder stays for now; W3 replaces with SignupPage.

@@ -160,6 +160,7 @@ export default function SigninPage({ application, providers }: SigninPageProps) 
               onSubmit={handlePasswordSubmit}
               onBack={handleBack}
               error={error}
+              forgotPasswordHref={`/forget/${application.name}`}
             />
           )}
 

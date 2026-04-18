@@ -8,6 +8,7 @@ interface PasswordFormProps {
   onSubmit: (password: string) => Promise<void>;
   onBack: () => void;
   error?: string;
+  forgotPasswordHref?: string;
 }
 
 /**
@@ -21,6 +22,7 @@ export default function PasswordForm({
   onSubmit,
   onBack,
   error,
+  forgotPasswordHref,
 }: PasswordFormProps) {
   const { t } = useTranslation();
   const [password, setPassword] = useState("");
@@ -89,6 +91,14 @@ export default function PasswordForm({
           </button>
         </div>
       </div>
+
+      {forgotPasswordHref && (
+        <div className="text-right">
+          <a href={forgotPasswordHref} className="text-[12px] text-accent hover:underline">
+            {t("auth.password.forgotLink")}
+          </a>
+        </div>
+      )}
 
       <button
         type="submit"

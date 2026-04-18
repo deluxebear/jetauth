@@ -322,6 +322,8 @@ export default function App() {
         <Route path="/login" element={<AuthShell mode="signin" />} />
         <Route path="/signup/:applicationName" element={<AuthShell mode="signup" />} />
         <Route path="/signup" element={<AuthShell mode="signup" />} />
+        <Route path="/forget/:applicationName" element={<AuthShell mode="forget" />} />
+        <Route path="/forget" element={<AuthShell mode="forget" />} />
         <Route path="/mfa/setup" element={
           mfaState?.type === "setup" ? (
             <MfaSetup
