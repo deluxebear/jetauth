@@ -6,6 +6,24 @@ import SimpleSelect from "./SimpleSelect";
 import { useTranslation } from "../i18n";
 import SortableList from "./SortableList";
 
+// ── Grid template helper ─────────────────────────────────────────────────────
+
+function buildGridTemplate<T>(columns: EditableColumn<T>[], sortable: boolean): string {
+  const parts: string[] = [];
+  if (sortable) parts.push("32px");
+  for (const col of columns) {
+    if (col.width) {
+      const w = typeof col.width === "number" ? `${col.width}px` : col.width;
+      parts.push(`minmax(80px, ${w})`);
+    } else {
+      parts.push("minmax(120px, 1fr)");
+    }
+  }
+  // sortable: only trash → 56px; non-sortable: up/down + trash → 80px
+  parts.push(sortable ? "56px" : "80px");
+  return parts.join(" ");
+}
+
 export interface EditableColumn<T> {
   key: string;
   title: string;
@@ -66,28 +84,24 @@ function RowContent<T extends Record<string, unknown>>({
   sortable,
   dragHandle,
 }: RowContentProps<T>) {
+  const gridTemplate = buildGridTemplate(columns, sortable);
   return (
     <div
-      className="flex items-center gap-1 border-b border-border bg-surface-1 px-2 py-1.5 text-[12px] transition-colors hover:bg-surface-2/50 last:border-b-0"
+      className="grid items-center gap-2 border-b border-border bg-surface-1 px-3 py-2 text-[12px] transition-colors hover:bg-surface-2/50 last:border-b-0"
+      style={{ gridTemplateColumns: gridTemplate }}
       onMouseEnter={() => setHoveredRow(i)}
       onMouseLeave={() => setHoveredRow(null)}
     >
       {/* Drag handle gutter (sortable mode) */}
       {sortable && (
-        <div className="w-[22px] flex-none flex items-center justify-center">
+        <div className="flex items-center justify-center">
           {dragHandle}
         </div>
       )}
 
       {columns.map((col) => {
         if (col.visible && !col.visible(row)) {
-          return (
-            <div
-              key={col.key}
-              style={{ width: col.width, minWidth: col.width }}
-              className={col.width ? "flex-none" : "flex-1"}
-            />
-          );
+          return <div key={col.key} />;
         }
         const isDisabled =
           typeof col.disabled === "function" ? col.disabled(row) : col.disabled;
@@ -95,24 +109,12 @@ function RowContent<T extends Record<string, unknown>>({
           handleCellChange(i, key, val);
 
         if (col.render) {
-          return (
-            <div
-              key={col.key}
-              style={{ width: col.width, minWidth: col.width }}
-              className={col.width ? "flex-none" : "flex-1"}
-            >
-              {col.render(row, i, cellOnChange)}
-            </div>
-          );
+          return <div key={col.key}>{col.render(row, i, cellOnChange)}</div>;
         }
 
         if (col.type === "select" && col.options) {
           return (
-            <div
-              key={col.key}
-              style={{ width: col.width, minWidth: col.width }}
-              className={col.width ? "flex-none" : "flex-1"}
-            >
+            <div key={col.key}>
               <SimpleSelect
                 value={String(row[col.key] ?? "")}
                 options={col.options}
@@ -125,11 +127,7 @@ function RowContent<T extends Record<string, unknown>>({
 
         if (col.type === "switch") {
           return (
-            <div
-              key={col.key}
-              style={{ width: col.width, minWidth: col.width }}
-              className={col.width ? "flex-none" : "flex-1"}
-            >
+            <div key={col.key}>
               <button
                 type="button"
                 onClick={() => handleCellChange(i, col.key, !row[col.key])}
@@ -150,11 +148,7 @@ function RowContent<T extends Record<string, unknown>>({
 
         // Default: text input
         return (
-          <div
-            key={col.key}
-            style={{ width: col.width, minWidth: col.width }}
-            className={col.width ? "flex-none" : "flex-1"}
-          >
+          <div key={col.key}>
             <input
               value={String(row[col.key] ?? "")}
               onChange={(e) => handleCellChange(i, col.key, e.target.value)}
@@ -168,7 +162,7 @@ function RowContent<T extends Record<string, unknown>>({
 
       {/* Actions */}
       <div
-        className={`w-[72px] flex-none flex items-center justify-end gap-0.5 transition-opacity ${
+        className={`flex items-center justify-end gap-0.5 transition-opacity ${
           hoveredRow === i ? "opacity-100" : "opacity-40"
         }`}
       >
@@ -272,18 +266,15 @@ export default function EditableTable<T extends Record<string, unknown>>({
       </div>
 
       {/* Column headers */}
-      <div className="flex items-center gap-1 bg-surface-2/20 border-b border-border px-2 py-1.5 text-[11px] font-semibold text-text-muted uppercase tracking-wider">
-        {sortable && <div className="w-[22px] flex-none" />}
+      <div
+        className="grid items-center gap-2 bg-surface-2/20 border-b border-border px-3 py-2 text-[11px] font-semibold text-text-muted uppercase tracking-wider"
+        style={{ gridTemplateColumns: buildGridTemplate(columns, sortable) }}
+      >
+        {sortable && <div />}
         {columns.map((col) => (
-          <div
-            key={col.key}
-            style={{ width: col.width, minWidth: col.width }}
-            className={col.width ? "flex-none" : "flex-1"}
-          >
-            {col.title}
-          </div>
+          <div key={col.key}>{col.title}</div>
         ))}
-        <div className="w-[72px] flex-none text-right">{t("common.action" as any)}</div>
+        <div className="text-right">{t("common.action" as any)}</div>
       </div>
 
       {/* Rows — SortableList for drag-sort, or plain map */}
