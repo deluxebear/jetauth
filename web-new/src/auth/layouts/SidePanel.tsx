@@ -14,7 +14,11 @@ interface Props {
 export default function SidePanel({ children, sideHtml }: Props) {
   const [open, setOpen] = useState(false);
   return (
-    <div className="min-h-screen flex flex-col lg:flex-row">
+    <div
+      className="min-h-screen flex flex-col lg:flex-row"
+      data-cfg-section="layout"
+      data-cfg-field="formOffset"
+    >
       {/* Mobile accordion */}
       {sideHtml && (
         <div className="lg:hidden border-b border-border">

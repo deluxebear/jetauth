@@ -1,0 +1,17 @@
+group,name,displayName,method,pattern,matchMode,description
+# JetAuth 业务应用资源目录 · CSV 模板
+# 字段说明:
+#   group        分组标签(可选),UI 折叠用,如"订单""客户"
+#   name         唯一标识(必填),API 命名风格,例:order_detail
+#   displayName  显示名称(必填)
+#   method       HTTP 方法(必填),多个用逗号分隔:"GET,POST"
+#   pattern      Casbin 匹配模式(必填),如 /api/orders/:id
+#   matchMode    可选,默认 keyMatch2,可选 keyMatch | keyMatch2 | regex
+#   description  可选描述
+# 删除本说明行后再上传。示例:
+订单,order_list,订单列表,GET,/api/orders,keyMatch2,分页查询订单
+订单,order_detail,订单详情,GET,/api/orders/:id,keyMatch2,获取单条订单
+订单,order_create,创建订单,POST,/api/orders,keyMatch2,新建订单
+订单,order_update,更新订单,PUT,/api/orders/:id,keyMatch2,
+订单,order_delete,删除订单,DELETE,/api/orders/:id,keyMatch2,
+客户,customer_search,搜索客户,"GET,HEAD",/api/customers,keyMatch2,多字段匹配

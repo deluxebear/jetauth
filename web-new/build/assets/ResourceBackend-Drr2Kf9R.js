@@ -1,0 +1,1 @@
+import{j as e}from"./index-BZ90980j.js";export{e as uploadResource};

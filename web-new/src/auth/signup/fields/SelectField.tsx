@@ -1,14 +1,17 @@
+import { useId } from "react";
 import type { FieldProps } from "../DynamicField";
 import { fieldWrapperClass, labelClass, helperClass, errorClass } from "./shared";
 
 export default function SelectField({ schema, value, onChange, error, disabled }: FieldProps) {
+  const selectId = useId();
   return (
     <div className={fieldWrapperClass}>
-      <label className={labelClass}>
+      <label htmlFor={selectId} className={labelClass}>
         {schema.label}
         {schema.required && <span className="text-danger ml-0.5">*</span>}
       </label>
       <select
+        id={selectId}
         value={String(value ?? "")}
         onChange={(e) => onChange(e.target.value)}
         disabled={disabled}

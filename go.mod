@@ -56,6 +56,7 @@ require (
 	github.com/likexian/whois-parser v1.24.9
 	github.com/lor00x/goldap v0.0.0-20180618054307-a546dffdd1a3
 	github.com/markbates/goth v1.82.0
+	github.com/microcosm-cc/bluemonday v1.0.27
 	github.com/microsoft/go-mssqldb v1.9.0
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/modelcontextprotocol/go-sdk v1.4.1
@@ -129,6 +130,7 @@ require (
 	github.com/apistd/uni-go-sdk v0.0.2 // indirect
 	github.com/atc0005/go-teams-notify/v2 v2.13.0 // indirect
 	github.com/aws/smithy-go v1.25.0 // indirect
+	github.com/aymerick/douceur v0.2.0 // indirect
 	github.com/baidubce/bce-sdk-go v0.9.156 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/blinkbean/dingtalk v1.1.3 // indirect
@@ -189,6 +191,7 @@ require (
 	github.com/google/s2a-go v0.1.8 // indirect
 	github.com/googleapis/enterprise-certificate-proxy v0.3.4 // indirect
 	github.com/googleapis/gax-go/v2 v2.14.1 // indirect
+	github.com/gorilla/css v1.0.1 // indirect
 	github.com/gorilla/websocket v1.5.3 // indirect
 	github.com/gregdel/pushover v1.3.1 // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.27.1 // indirect

@@ -5,6 +5,8 @@ interface BrandingLayerProps {
   logoDark?: string;
   favicon?: string;
   displayName?: string;
+  /** Application.title override — takes precedence over displayName for document.title */
+  title?: string;
   theme?: "light" | "dark";
   /** Size variant; default = "header" (~36px). "hero" = larger for hero banners. */
   size?: "header" | "hero";
@@ -20,10 +22,12 @@ export default function BrandingLayer({
   logoDark,
   favicon,
   displayName,
+  title,
   theme = "light",
   size = "header",
 }: BrandingLayerProps) {
   useEffect(() => {
+    const originalTitle = document.title;
     if (favicon) {
       let link = document.querySelector<HTMLLinkElement>("link[rel*='icon']");
       if (!link) {
@@ -33,10 +37,19 @@ export default function BrandingLayer({
       }
       link.href = favicon;
     }
-    if (displayName) {
-      document.title = displayName;
+    const nextTitle = title || displayName;
+    if (nextTitle) {
+      document.title = nextTitle;
     }
-  }, [favicon, displayName]);
+    return () => {
+      // Restore the title that was live when this BrandingLayer mounted
+      // so nav back to an unbranded page (/, admin dashboard, etc.)
+      // doesn't keep the app-specific title.
+      if (nextTitle) {
+        document.title = originalTitle;
+      }
+    };
+  }, [favicon, displayName, title]);
 
   const resolvedLogo = theme === "dark" && logoDark ? logoDark : logo;
   const heightClass = size === "hero" ? "h-16 max-w-[360px]" : "h-9 max-w-[200px]";
@@ -48,6 +61,8 @@ export default function BrandingLayer({
           src={resolvedLogo}
           alt={displayName ?? "Logo"}
           className={`${heightClass} object-contain`}
+          data-cfg-section="branding"
+          data-cfg-field="logo"
         />
       </div>
     );
@@ -61,6 +76,8 @@ export default function BrandingLayer({
             ? "text-3xl font-bold tracking-tight"
             : "text-base font-bold tracking-tight"
         }
+        data-cfg-section="branding"
+        data-cfg-field="displayName"
       >
         {displayName ?? "JetAuth"}
       </span>

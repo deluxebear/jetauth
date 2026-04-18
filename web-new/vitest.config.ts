@@ -6,6 +6,9 @@ export default defineConfig({
   test: {
     environment: "happy-dom",
     globals: true,
-    setupFiles: ["@testing-library/jest-dom/vitest"],
+    setupFiles: [
+      "@testing-library/jest-dom/vitest",
+      "./src/__tests__/setup-axe.ts",
+    ],
   },
 });

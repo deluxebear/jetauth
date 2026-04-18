@@ -67,4 +67,21 @@ describe("AdminPreviewPane", () => {
     fireEvent.click(screen.getByText("Show live preview"));
     expect(container.querySelector("iframe")).not.toBeNull();
   });
+
+  it("calls onInspect when an inspect message arrives from the iframe", () => {
+    const onInspect = vi.fn();
+    render(<AdminPreviewPane application={mockApp({})} onInspect={onInspect} />);
+
+    // Simulate the iframe posting an inspect message. The listener checks
+    // e.origin; happy-dom's default location.origin matches, so the event
+    // flows through.
+    const event = new MessageEvent("message", {
+      data: { type: "jetauth.preview.inspect", payload: { section: "branding", field: "logo" } },
+      origin: window.location.origin,
+    });
+    window.dispatchEvent(event);
+
+    expect(onInspect).toHaveBeenCalledTimes(1);
+    expect(onInspect).toHaveBeenCalledWith("branding", "logo");
+  });
 });

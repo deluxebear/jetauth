@@ -1,4 +1,4 @@
-import { Monitor, Smartphone, Sun, Moon } from "lucide-react";
+import { Monitor, Smartphone, Sun, Moon, ExternalLink } from "lucide-react";
 import { useTranslation } from "../../i18n";
 
 export type PreviewMode = "signin" | "signup" | "forget";
@@ -12,6 +12,7 @@ interface PreviewToolbarProps {
   onModeChange: (m: PreviewMode) => void;
   onDeviceChange: (d: PreviewDevice) => void;
   onThemeChange: (t: PreviewTheme) => void;
+  externalUrl?: string;
 }
 
 /**
@@ -25,7 +26,7 @@ interface PreviewToolbarProps {
  */
 export default function PreviewToolbar({
   mode, device, theme,
-  onModeChange, onDeviceChange, onThemeChange,
+  onModeChange, onDeviceChange, onThemeChange, externalUrl,
 }: PreviewToolbarProps) {
   const { t } = useTranslation();
 
@@ -108,6 +109,19 @@ export default function PreviewToolbar({
           <Moon size={14} />
         </button>
       </div>
+
+      {externalUrl && (
+        <a
+          href={externalUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="ml-auto inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface-1 px-3 py-1.5 text-[12px] font-medium text-text-secondary hover:bg-surface-2 transition-colors"
+          title={t("adminPreview.openInNewTab")}
+        >
+          <ExternalLink size={13} />
+          <span>{t("adminPreview.openInNewTab")}</span>
+        </a>
+      )}
     </div>
   );
 }

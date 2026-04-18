@@ -1,1 +1,0 @@
-import{C as e}from"./index-CsxzdP2W.js";export{e as friendlyError};

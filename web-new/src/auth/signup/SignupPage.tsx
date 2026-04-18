@@ -5,6 +5,7 @@ import { useTranslation } from "../../i18n";
 import { api } from "../../api/client";
 import BrandingLayer from "../shell/BrandingLayer";
 import TopBar from "../shell/TopBar";
+import SafeHtml from "../shell/SafeHtml";
 import DynamicField from "./DynamicField";
 import { buildSignupSchema, type FieldSchema } from "./useSignupSchema";
 import type { AuthApplication } from "../api/types";
@@ -164,6 +165,7 @@ export default function SignupPage({ application }: SignupPageProps) {
               logoDark={application.organizationObj?.logoDark}
               favicon={application.organizationObj?.favicon ?? application.favicon}
               displayName={orgDisplay}
+              title={application.title}
               theme={theme}
             />
           </div>
@@ -189,7 +191,12 @@ export default function SignupPage({ application }: SignupPageProps) {
             </div>
           )}
 
-          <form onSubmit={handleNext} className="space-y-4">
+          <form
+            onSubmit={handleNext}
+            className="space-y-4"
+            data-cfg-section="signup"
+            data-cfg-field="signupItems"
+          >
             {stepFields.map((field) => (
               <DynamicField
                 key={field.name}
@@ -240,6 +247,8 @@ export default function SignupPage({ application }: SignupPageProps) {
               {t("auth.signup.signinLink")}
             </a>
           </p>
+
+          <SafeHtml html={application.signupHtml ?? ""} className="auth-page-html" />
         </div>
       </div>
     </div>

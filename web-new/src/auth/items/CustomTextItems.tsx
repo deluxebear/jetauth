@@ -16,7 +16,12 @@ export default function CustomTextItems({ items, className }: Props) {
   return (
     <div className={className ?? "mt-4 space-y-2 text-[12px] text-text-muted"}>
       {items.map((it, idx) => (
-        <SideHtml key={`${it.name}-${idx}`} html={it.label ?? ""} />
+        <div
+          key={`${it.name}-${idx}`}
+          data-signinitem={String(it.name ?? "").replace(/\s+/g, "-").toLowerCase()}
+        >
+          <SideHtml html={it.label ?? ""} />
+        </div>
       ))}
     </div>
   );

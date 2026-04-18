@@ -11,6 +11,7 @@ import ClassicSigninPage from "./signin/ClassicSigninPage";
 import ForgotPasswordPage from "./signin/ForgotPasswordPage";
 import SignupPage from "./signup/SignupPage";
 import LayoutRouter from "./layouts/LayoutRouter";
+import SafeHtml from "./shell/SafeHtml";
 
 type Mode = "signin" | "signup" | "forget";
 
@@ -51,6 +52,26 @@ export default function AuthShell({ mode }: AuthShellProps) {
 
 const PREVIEW_MESSAGE_TYPE = "jetauth.preview.config" as const;
 const PREVIEW_READY_TYPE = "jetauth.preview.ready" as const;
+export const PREVIEW_INSPECT_TYPE = "jetauth.preview.inspect" as const;
+
+// Injected once (lazily) when any AuthShellInner mounts in preview mode.
+// Gives tagged elements a dashed outline on hover so admins can see
+// they're clickable.
+let previewInspectStyleInstalled = false;
+function ensurePreviewInspectStyle() {
+  if (previewInspectStyleInstalled || typeof document === "undefined") return;
+  previewInspectStyleInstalled = true;
+  const style = document.createElement("style");
+  style.setAttribute("data-preview-inspect", "");
+  style.textContent = `
+    [data-cfg-section] { cursor: pointer; transition: outline-color 120ms ease; }
+    [data-cfg-section]:hover {
+      outline: 2px dashed rgba(99, 102, 241, 0.5);
+      outline-offset: 2px;
+    }
+  `;
+  document.head.appendChild(style);
+}
 
 function AuthShellInner({ lookup, mode }: { lookup: AuthLookup; mode: Mode }) {
   const { t } = useTranslation();
@@ -137,6 +158,31 @@ function AuthShellInner({ lookup, mode }: { lookup: AuthLookup; mode: Mode }) {
     return () => window.removeEventListener("message", handler);
   }, [isPreviewMode]);
 
+  // Preview inspect: in preview mode, capture clicks on any element
+  // tagged with data-cfg-section and post the section/field up to the
+  // admin window so it can scroll to and highlight the matching card.
+  useEffect(() => {
+    if (!isPreviewMode) return;
+    ensurePreviewInspectStyle();
+    const onClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement | null;
+      const el = target?.closest("[data-cfg-section]") as HTMLElement | null;
+      if (!el) return;
+      e.preventDefault();
+      e.stopPropagation();
+      const section = el.dataset.cfgSection;
+      const field = el.dataset.cfgField;
+      if (window.parent && window.parent !== window) {
+        window.parent.postMessage(
+          { type: PREVIEW_INSPECT_TYPE, payload: { section, field } },
+          window.location.origin,
+        );
+      }
+    };
+    document.addEventListener("click", onClick, true);
+    return () => document.removeEventListener("click", onClick, true);
+  }, [isPreviewMode]);
+
   if (error) {
     return (
       <div className="min-h-screen flex items-center justify-center p-6">
@@ -159,5 +205,40 @@ function AuthShellInner({ lookup, mode }: { lookup: AuthLookup; mode: Mode }) {
     return <SignupPage application={app} />;
   })();
 
-  return <LayoutRouter application={app}>{pageContent}</LayoutRouter>;
+  // Per-item scoped CSS: admin can set customCss on any signinItem or
+  // signupItem; each item's rule is scoped to elements tagged with the
+  // matching data-signinitem / data-signupitem attribute (see SigninPage,
+  // ClassicSigninPage, ForgotPasswordPage, SignupPage / DynamicField).
+  const normalize = (n: string) => n.replace(/\s+/g, "-").toLowerCase();
+  const itemCss = (app.signinItems ?? [])
+    .filter((it) => it.customCss && it.name)
+    .map((it) => `[data-signinitem="${normalize(String(it.name))}"] { ${it.customCss} }`)
+    .join("\n");
+  const signupItemCss = (app.signupItems ?? [])
+    .filter((it) => it.customCss && it.name)
+    .map((it) => `[data-signupitem="${normalize(String(it.name))}"] { ${it.customCss} }`)
+    .join("\n");
+  const customCss = [
+    app.formCss ?? "",
+    app.formCssMobile ? `@media (max-width: 640px) { ${app.formCssMobile} }` : "",
+    itemCss,
+    signupItemCss,
+  ].filter(Boolean).join("\n");
+
+  return (
+    <>
+      {customCss && <style>{customCss}</style>}
+      {app.headerHtml ? (
+        <div data-cfg-section="layout" data-cfg-field="headerHtml">
+          <SafeHtml html={app.headerHtml} className="auth-header" />
+        </div>
+      ) : null}
+      <LayoutRouter application={app}>{pageContent}</LayoutRouter>
+      {app.footerHtml ? (
+        <div data-cfg-section="layout" data-cfg-field="footerHtml">
+          <SafeHtml html={app.footerHtml} className="auth-footer" />
+        </div>
+      ) : null}
+    </>
+  );
 }

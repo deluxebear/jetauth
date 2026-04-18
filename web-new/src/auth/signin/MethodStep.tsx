@@ -22,6 +22,13 @@ interface MethodStepProps {
   onWebAuthnSuccess: () => void;
   onFaceSuccess: () => void;
   onBack?: () => void;
+  /**
+   * Admin-configured order of method names (from application.signinMethods).
+   * If provided and non-empty, drives the display order of the method picker;
+   * methods missing from this list fall to the end in their server order.
+   * If empty/undefined, uses the server-provided order untouched.
+   */
+  orderedMethodNames?: string[];
   error?: string;
 }
 
@@ -45,17 +52,33 @@ export default function MethodStep({
   onWebAuthnSuccess,
   onFaceSuccess,
   onBack,
+  orderedMethodNames,
   error,
 }: MethodStepProps) {
   const { t } = useTranslation();
+
+  // Apply admin-configured ordering when present: items appear in the
+  // configured sequence; anything not configured is dropped from the
+  // picker (parity with the classic tab logic).
+  const orderedMethods = (() => {
+    if (!orderedMethodNames || orderedMethodNames.length === 0) return methods;
+    const byName = new Map(methods.map((m) => [m.name, m]));
+    const out: SigninMethodInfo[] = [];
+    for (const name of orderedMethodNames) {
+      const m = byName.get(name);
+      if (m) out.push(m);
+    }
+    return out.length > 0 ? out : methods;
+  })();
+
   const initial =
-    (methods.find((m) => m.name === recommended)?.name as MethodName | undefined) ??
-    (methods[0]?.name as MethodName | undefined) ??
+    (orderedMethods.find((m) => m.name === recommended)?.name as MethodName | undefined) ??
+    (orderedMethods[0]?.name as MethodName | undefined) ??
     "Password";
   const [active, setActive] = useState<MethodName>(initial);
   const [menuOpen, setMenuOpen] = useState(false);
 
-  const showSwitcher = methods.length > 1;
+  const showSwitcher = orderedMethods.length > 1;
   // destType / destValue for CodeForm: prefer email; fall back to phone.
   const inferDestType = (): "email" | "phone" =>
     userHint && userHint.includes("@") ? "email" : "phone";
@@ -116,7 +139,11 @@ export default function MethodStep({
       {body}
 
       {showSwitcher && (
-        <div className="relative">
+        <div
+          className="relative"
+          data-cfg-section="signin"
+          data-cfg-field="signinMethods"
+        >
           <button
             type="button"
             onClick={() => setMenuOpen(!menuOpen)}
@@ -127,7 +154,7 @@ export default function MethodStep({
           </button>
           {menuOpen && (
             <div className="absolute left-0 right-0 mt-1 rounded-lg border border-border bg-surface-1 p-1 shadow-[var(--shadow-elevated)] z-10">
-              {methods.map((m) => {
+              {orderedMethods.map((m) => {
                 const isActive = m.name === active;
                 return (
                   <button

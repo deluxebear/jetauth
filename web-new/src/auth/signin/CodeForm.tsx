@@ -117,6 +117,8 @@ export default function CodeForm({
           type="button"
           onClick={sendCode}
           disabled={sending}
+          data-cfg-section="branding"
+          data-cfg-field="colorPrimary"
           className="group w-full flex items-center justify-center gap-2 rounded-lg bg-accent py-2.5 text-[14px] font-semibold text-white hover:bg-accent-hover disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
         >
           {sending ? (
@@ -156,6 +158,8 @@ export default function CodeForm({
           <button
             type="submit"
             disabled={code.length !== 6 || submitting}
+            data-cfg-section="branding"
+            data-cfg-field="colorPrimary"
             className="group w-full flex items-center justify-center gap-2 rounded-lg bg-accent py-2.5 text-[14px] font-semibold text-white hover:bg-accent-hover disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
           >
             {submitting ? (

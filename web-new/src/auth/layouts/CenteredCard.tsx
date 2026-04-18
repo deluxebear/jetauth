@@ -13,8 +13,10 @@ interface Props {
  */
 export default function CenteredCard({ children, backgroundUrl, backgroundUrlMobile }: Props) {
   return (
-    <BackgroundLayer url={backgroundUrl} urlMobile={backgroundUrlMobile}>
-      {children}
-    </BackgroundLayer>
+    <div data-cfg-section="layout" data-cfg-field="formOffset">
+      <BackgroundLayer url={backgroundUrl} urlMobile={backgroundUrlMobile}>
+        {children}
+      </BackgroundLayer>
+    </div>
   );
 }

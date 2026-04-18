@@ -5,6 +5,8 @@ export interface SigninItemVisibility {
   isVisible: (name: string) => boolean;
   /** Returns the item's label if overridden, else undefined. */
   labelOf: (name: string) => string | undefined;
+  /** Returns the item's placeholder override, or undefined if none. */
+  placeholderOf: (name: string) => string | undefined;
   /** Custom (isCustom=true) items in declared order. */
   customItems: SigninItem[];
 }
@@ -42,6 +44,11 @@ export function useSigninItemVisibility(items: SigninItem[] | undefined | null):
       const it = map.get(name);
       if (!it) return undefined;
       return it.label && it.label.length > 0 ? it.label : undefined;
+    },
+    placeholderOf: (name: string) => {
+      const it = map.get(name);
+      if (!it) return undefined;
+      return it.placeholder && it.placeholder.length > 0 ? it.placeholder : undefined;
     },
     customItems: customs,
   };

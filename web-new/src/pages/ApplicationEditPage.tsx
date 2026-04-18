@@ -1,8 +1,8 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, lazy, Suspense } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Trash2, Copy, LogOut, Plus, Settings, KeyRound, Lock, FileKey2, Puzzle, Palette, ShieldCheck, Network } from "lucide-react";
+import { Trash2, Copy, LogOut, Plus, Settings, KeyRound, Lock, FileKey2, Puzzle, Palette, ShieldCheck, Network, LogIn, UserPlus, LayoutGrid, Eye, X, Sparkles } from "lucide-react";
 import StickyEditHeader from "../components/StickyEditHeader";
 import { FormField, FormSection, Switch, inputClass, monoInputClass } from "../components/FormSection";
 import { useTranslation } from "../i18n";
@@ -20,11 +20,20 @@ import SingleSearchSelect from "../components/SingleSearchSelect";
 import ImageUrlInput from "../components/ImageUrlInput";
 import SaveButton from "../components/SaveButton";
 import UnsavedBanner from "../components/UnsavedBanner";
+import FloatingSaveBar from "../components/FloatingSaveBar";
 import { useUnsavedWarning } from "../hooks/useUnsavedWarning";
 import EditableTable, { type EditableColumn } from "../components/EditableTable";
 import AdminPreviewPane from "./admin-preview/AdminPreviewPane";
+import TemplateGalleryModal from "./admin-preview/TemplateGalleryModal";
+import type { AuthTemplate } from "./admin-preview/templates";
 import type { AuthApplication } from "../auth/api/types";
 import ColorPicker from "../components/ColorPicker";
+import CollapsibleCard from "../components/CollapsibleCard";
+import SectionNavRail from "../components/SectionNavRail";
+const CssEditor = lazy(() => import("../components/CssEditor"));
+const CssEditorFallback = () => (
+  <div className="rounded-lg border border-border bg-surface-2 h-[140px] animate-pulse" />
+);
 
 type AppData = Partial<Application>;
 
@@ -113,13 +122,6 @@ const SIGNIN_ITEM_NAMES = [
   "Signup link", "Captcha", "Auto sign in", "Select organization",
 ];
 
-const SIGNIN_ITEM_RULES: Record<string, { value: string; label: string }[]> = {
-  "Providers": [{ value: "big", label: "Big" }, { value: "small", label: "Small" }],
-  "Captcha": [{ value: "pop up", label: "Pop up" }, { value: "inline", label: "Inline" }],
-  "Forgot password?": [{ value: "None", label: "Auto sign in - True" }, { value: "Auto sign in - False", label: "Auto sign in - False" }],
-  "Languages": [{ value: "None", label: "Default" }, { value: "Label", label: "Label" }],
-};
-
 export default function ApplicationEditPage() {
   const { owner: orgName, name } = useParams<{ owner: string; name: string }>();
   const isNew = !name || name === "new";
@@ -137,6 +139,60 @@ export default function ApplicationEditPage() {
   useEffect(() => { if (saved) { const t = setTimeout(() => setSaved(false), 1500); return () => clearTimeout(t); } }, [saved]);
   const [originalJson, setOriginalJson] = useState("");
   const [activeTab, setActiveTab] = useState("basic");
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [templateGalleryOpen, setTemplateGalleryOpen] = useState(false);
+  useEffect(() => {
+    if (!previewOpen) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setPreviewOpen(false); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [previewOpen]);
+  const applyTemplate = useCallback((tmpl: AuthTemplate) => {
+    setApp((prev) => {
+      const next = { ...prev } as Record<string, unknown>;
+      const cfg = tmpl.config;
+      // Merge themeData (preserve keys the template doesn't touch).
+      if (cfg.themeData) {
+        next.themeData = {
+          ...((prev.themeData as Record<string, unknown>) ?? {}),
+          ...cfg.themeData,
+          isEnabled: true,
+        };
+      }
+      // Scalar fields — overwrite only when the template specifies them.
+      const scalarKeys = [
+        "formOffset", "formBackgroundUrl", "formBackgroundUrlMobile",
+        "formSideHtml", "formCss", "formCssMobile",
+        "headerHtml", "footerHtml", "signinHtml", "signupHtml",
+      ] as const;
+      for (const k of scalarKeys) {
+        const v = (cfg as Record<string, unknown>)[k];
+        if (v !== undefined) next[k] = v;
+      }
+      return next as AppData;
+    });
+    setTemplateGalleryOpen(false);
+    modal.toast(`${tmpl.name} — ${t("apps.template.applied" as any)}`, "success");
+  }, [modal, t]);
+  // Preview → admin inspect link (P4): clicking an element in the iframe
+  // posts {section, field}; we close the modal, scroll to the matching
+  // CollapsibleCard, and briefly highlight it.
+  const [highlightedSection, setHighlightedSection] = useState<string | null>(null);
+  const handleInspect = useCallback((section: string, _field?: string) => {
+    setPreviewOpen(false);
+    // Defer scroll to next frame so the modal has a chance to unmount and
+    // the edit page reclaims the viewport.
+    requestAnimationFrame(() => {
+      document.getElementById(section)?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    });
+    setHighlightedSection(section);
+    window.setTimeout(() => {
+      setHighlightedSection((prev) => (prev === section ? null : prev));
+    }, 1500);
+  }, []);
   const [samlMetadata, setSamlMetadata] = useState("");
   const [loadingMetadata, setLoadingMetadata] = useState(false);
   const [groupOptions, setGroupOptions] = useState<{ value: string; label: string }[]>([]);
@@ -291,6 +347,36 @@ export default function ApplicationEditPage() {
 
   const isDirty = originalJson !== "" && JSON.stringify(app) !== originalJson;
   const showBanner = useUnsavedWarning({ isAddMode, isDirty });
+
+  const discardAll = useCallback(() => {
+    if (!originalJson) return;
+    try { setApp(JSON.parse(originalJson) as AppData); } catch {}
+  }, [originalJson]);
+
+  const UI_SECTION_FIELDS: Record<string, string[]> = {
+    branding: ["displayName", "logo", "favicon", "title", "themeData"],
+    signin: ["orgChoiceMode", "signinMethods", "signinItems", "signinHtml"],
+    signup: ["signupItems", "signupHtml"],
+    layout: ["formOffset", "formSideHtml", "formBackgroundUrl", "formBackgroundUrlMobile", "formCss", "formCssMobile", "headerHtml", "footerHtml"],
+  };
+
+  const isSectionModified = (keys: string[]) => {
+    if (!originalJson) return false;
+    let orig: Record<string, unknown> = {};
+    try { orig = JSON.parse(originalJson); } catch { return false; }
+    return keys.some((k) => JSON.stringify((app as Record<string, unknown>)[k]) !== JSON.stringify(orig[k]));
+  };
+
+  const resetSection = (keys: string[]) => {
+    if (!originalJson) return;
+    let orig: Record<string, unknown> = {};
+    try { orig = JSON.parse(originalJson); } catch { return; }
+    setApp((prev) => {
+      const next = { ...prev } as Record<string, unknown>;
+      keys.forEach((k) => { next[k] = orig[k]; });
+      return next as AppData;
+    });
+  };
 
   if (loading) {
     return (
@@ -940,7 +1026,7 @@ export default function ApplicationEditPage() {
 
   const signinItemColumns: EditableColumn<Record<string, unknown>>[] = [
     {
-      key: "name", title: t("col.name" as any), width: "25%",
+      key: "name", title: t("col.name" as any), width: "20%",
       render: (row, _i, onChange) => {
         if (row.isCustom) {
           return <input value={String(row.name ?? "")} disabled className={`${inputClass} !py-1 !text-[12px] opacity-60`} />;
@@ -951,30 +1037,21 @@ export default function ApplicationEditPage() {
           <SimpleSelect
             value={String(row.name ?? "")}
             options={available.map((n) => ({ value: n, label: n }))}
-            onChange={(v) => {
-              onChange("name", v);
-              if (v === "Captcha") onChange("rule", "pop up");
-            }}
+            onChange={(v) => onChange("name", v)}
           />
         );
       },
     },
     { key: "visible", title: t("apps.ui.visible" as any), width: "10%", type: "switch" },
     {
-      key: "label", title: t("apps.ui.label" as any), width: "20%",
+      key: "label", title: t("apps.ui.label" as any), width: "15%",
       visible: (row) => {
         const n = String(row.name);
         return !!row.isCustom || n.startsWith("Text ") || ["Username", "Password", "Verification code", "Signup link", "Forgot password?", "Login button"].includes(n);
       },
     },
-    {
-      key: "rule", title: t("apps.ui.rule" as any), width: "20%",
-      render: (row, _i, onChange) => {
-        const rules = SIGNIN_ITEM_RULES[String(row.name)] ?? [];
-        if (rules.length === 0) return <span className="text-[12px] text-text-muted">—</span>;
-        return <SimpleSelect value={String(row.rule ?? "None")} options={rules} onChange={(v) => onChange("rule", v)} />;
-      },
-    },
+    { key: "placeholder", title: t("apps.ui.placeholder" as any), width: "20%", placeholder: "e.g. you@example.com" },
+    { key: "customCss", title: "CSS", width: "20%", placeholder: ".this-row { ... }" },
   ];
 
   const signupItemColumns: EditableColumn<Record<string, unknown>>[] = [
@@ -1006,133 +1083,254 @@ export default function ApplicationEditPage() {
     { key: "customCss", title: "CSS", width: "20%", placeholder: ".signup-xxx {}" },
   ];
 
+  const uiNavItems = [
+    { id: "branding", label: t("apps.uiGroup.branding.title" as any), icon: <Palette size={14} /> },
+    { id: "signin", label: t("apps.uiGroup.signin.title" as any), icon: <LogIn size={14} /> },
+    { id: "signup", label: t("apps.uiGroup.signup.title" as any), icon: <UserPlus size={14} /> },
+    { id: "layout", label: t("apps.uiGroup.layout.title" as any), icon: <LayoutGrid size={14} /> },
+  ];
+
   const uiTab = (
-    <div className="flex flex-col xl:flex-row gap-4">
-      {/* Left: existing config sections */}
-      <div className="xl:w-[40%] xl:flex-shrink-0 space-y-4">
-    <div className="space-y-5">
-      <FormSection title={t("apps.section.signinUi" as any)}>
-        <FormField label={t("apps.field.orgChoiceMode" as any)}>
-          <SimpleSelect value={String(app.orgChoiceMode ?? "None")} options={[{ value: "None", label: "None" }, { value: "Select", label: "Select" }, { value: "Input", label: "Input" }]} onChange={(v) => set("orgChoiceMode", v)} />
-        </FormField>
-        <div className="col-span-2">
-          <EditableTable
-            title={t("apps.field.signinMethods" as any)}
-            columns={signinMethodColumns}
-            rows={(app.signinMethods as Record<string, unknown>[]) ?? []}
-            onChange={(rows) => set("signinMethods", rows)}
-            newRow={() => ({ name: "", displayName: "", rule: "None" })}
-            minRows={1}
-            disableAdd={availableSigninMethods.length === 0}
-            sortable
-          />
+    <div className="space-y-4">
+      <div className="flex items-center justify-between gap-3 rounded-xl border border-border bg-surface-1 px-4 py-2.5 sticky top-0 z-10 backdrop-blur-sm">
+        <p className="text-[13px] text-text-muted">{t("apps.uiGroup.hint" as any)}</p>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setTemplateGalleryOpen(true)}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface-0 px-3.5 py-1.5 text-[13px] font-semibold text-text-secondary hover:bg-surface-2 hover:text-text-primary transition-colors"
+          >
+            <Sparkles size={14} />
+            {t("apps.template.browse" as any)}
+          </button>
+          <button
+            type="button"
+            onClick={() => setPreviewOpen(true)}
+            className="inline-flex items-center gap-1.5 rounded-lg bg-accent px-3.5 py-1.5 text-[13px] font-semibold text-white hover:bg-accent-hover transition-colors"
+          >
+            <Eye size={14} />
+            {t("apps.uiGroup.openPreview" as any)}
+          </button>
         </div>
-        <FormField label={t("apps.field.signupHtml" as any)} span="full">
-          <textarea value={String(app.signupHtml ?? "")} onChange={(e) => set("signupHtml", e.target.value)} rows={3} className={`${inputClass} font-mono text-[12px]`} />
-        </FormField>
-        <FormField label={t("apps.field.signinHtml" as any)} span="full">
-          <textarea value={String(app.signinHtml ?? "")} onChange={(e) => set("signinHtml", e.target.value)} rows={3} className={`${inputClass} font-mono text-[12px]`} />
-        </FormField>
-        <div className="col-span-2">
-          <EditableTable
-            title={t("apps.field.signinItems" as any)}
-            columns={signinItemColumns}
-            rows={(app.signinItems as Record<string, unknown>[]) ?? []}
-            onChange={(rows) => set("signinItems", rows)}
-            newRow={() => ({ name: "", visible: true, required: true, rule: "None" })}
-            onAddCustom={() => {
-              const items = (app.signinItems as Record<string, unknown>[]) ?? [];
-              set("signinItems", [...items, { name: `Text ${Date.now()}`, visible: true, isCustom: true }]);
-            }}
-            addCustomLabel={t("apps.ui.addCustom" as any)}
-            sortable
-          />
+      </div>
+      <div className="flex gap-4">
+        <SectionNavRail items={uiNavItems} className="hidden lg:block" />
+        <div className="flex-1 min-w-0 space-y-4">
+          <CollapsibleCard
+            id="branding"
+            title={t("apps.uiGroup.branding.title" as any)}
+            subtitle={t("apps.uiGroup.branding.subtitle" as any)}
+            icon={<Palette size={16} />}
+            defaultOpen
+            modified={isSectionModified(UI_SECTION_FIELDS.branding)}
+            onReset={() => resetSection(UI_SECTION_FIELDS.branding)}
+            modifiedLabel={t("common.modifiedBadge" as any)}
+            resetLabel={t("common.resetSection" as any)}
+            highlight={highlightedSection === "branding"}
+          >
+            <div className="grid grid-cols-2 gap-x-6 gap-y-4">
+              <FormField label={t("field.displayName")} span="full">
+                <input value={String(app.displayName ?? "")} onChange={(e) => set("displayName", e.target.value)} className={inputClass} />
+              </FormField>
+              <FormField label={t("apps.field.logo" as any)} span="full">
+                <ImageUrlInput value={String(app.logo ?? "")} onChange={(v) => set("logo", v)} owner={String(app.organization ?? "")} tag="app-logo" outputWidth={500} outputHeight={250} />
+              </FormField>
+              <FormField label={t("apps.field.title" as any)}>
+                <input value={String(app.title ?? "")} onChange={(e) => set("title", e.target.value)} className={inputClass} />
+              </FormField>
+              <FormField label={t("apps.field.favicon" as any)}>
+                <ImageUrlInput value={String(app.favicon ?? "")} onChange={(v) => set("favicon", v)} owner={String(app.organization ?? "")} tag="app-favicon" outputWidth={64} outputHeight={64} accept="image/x-icon,image/png,image/svg+xml" />
+              </FormField>
+              <FormField label={t("apps.field.colorPrimary" as any)} span="full">
+                <ColorPicker
+                  value={(app.themeData as Record<string, string> | undefined)?.colorPrimary ?? "#2563EB"}
+                  onChange={(hex) => set("themeData", { ...(app.themeData as Record<string, unknown> ?? {}), colorPrimary: hex, isEnabled: true })}
+                />
+              </FormField>
+            </div>
+          </CollapsibleCard>
+
+          <CollapsibleCard
+            id="signin"
+            title={t("apps.uiGroup.signin.title" as any)}
+            subtitle={t("apps.uiGroup.signin.subtitle" as any)}
+            icon={<LogIn size={16} />}
+            modified={isSectionModified(UI_SECTION_FIELDS.signin)}
+            onReset={() => resetSection(UI_SECTION_FIELDS.signin)}
+            modifiedLabel={t("common.modifiedBadge" as any)}
+            resetLabel={t("common.resetSection" as any)}
+            highlight={highlightedSection === "signin"}
+          >
+            <div className="grid grid-cols-2 gap-x-6 gap-y-4">
+              <FormField label={t("apps.field.orgChoiceMode" as any)}>
+                <SimpleSelect value={String(app.orgChoiceMode ?? "None")} options={[{ value: "None", label: "None" }, { value: "Select", label: "Select" }, { value: "Input", label: "Input" }]} onChange={(v) => set("orgChoiceMode", v)} />
+              </FormField>
+              <div className="col-span-2">
+                <EditableTable
+                  title={t("apps.field.signinMethods" as any)}
+                  columns={signinMethodColumns}
+                  rows={(app.signinMethods as Record<string, unknown>[]) ?? []}
+                  onChange={(rows) => set("signinMethods", rows)}
+                  newRow={() => ({ name: "", displayName: "", rule: "None" })}
+                  minRows={1}
+                  disableAdd={availableSigninMethods.length === 0}
+                  sortable
+                />
+              </div>
+              <div className="col-span-2">
+                <EditableTable
+                  title={t("apps.field.signinItems" as any)}
+                  columns={signinItemColumns}
+                  rows={(app.signinItems as Record<string, unknown>[]) ?? []}
+                  onChange={(rows) => set("signinItems", rows)}
+                  newRow={() => ({ name: "", visible: true, required: true, placeholder: "", customCss: "" })}
+                  onAddCustom={() => {
+                    const items = (app.signinItems as Record<string, unknown>[]) ?? [];
+                    set("signinItems", [...items, { name: `Text ${Date.now()}`, visible: true, isCustom: true }]);
+                  }}
+                  addCustomLabel={t("apps.ui.addCustom" as any)}
+                  sortable
+                />
+              </div>
+              <FormField label={t("apps.field.signinHtml" as any)} span="full">
+                <textarea value={String(app.signinHtml ?? "")} onChange={(e) => set("signinHtml", e.target.value)} rows={3} className={`${inputClass} font-mono text-[12px]`} />
+              </FormField>
+            </div>
+          </CollapsibleCard>
+
+          <CollapsibleCard
+            id="signup"
+            title={t("apps.uiGroup.signup.title" as any)}
+            subtitle={t("apps.uiGroup.signup.subtitle" as any)}
+            icon={<UserPlus size={16} />}
+            modified={isSectionModified(UI_SECTION_FIELDS.signup)}
+            onReset={() => resetSection(UI_SECTION_FIELDS.signup)}
+            modifiedLabel={t("common.modifiedBadge" as any)}
+            resetLabel={t("common.resetSection" as any)}
+            highlight={highlightedSection === "signup"}
+          >
+            <div className="grid grid-cols-2 gap-x-6 gap-y-4">
+              {!!app.enableSignUp && (
+                <div className="col-span-2">
+                  <EditableTable
+                    title={t("apps.field.signupItems" as any)}
+                    columns={signupItemColumns}
+                    rows={(app.signupItems as Record<string, unknown>[]) ?? []}
+                    onChange={(rows) => set("signupItems", rows)}
+                    newRow={() => ({ name: "", visible: true, required: true, options: [], rule: "None", customCss: "" })}
+                    sortable
+                  />
+                </div>
+              )}
+              <FormField label={t("apps.field.signupHtml" as any)} span="full">
+                <textarea value={String(app.signupHtml ?? "")} onChange={(e) => set("signupHtml", e.target.value)} rows={3} className={`${inputClass} font-mono text-[12px]`} />
+              </FormField>
+            </div>
+          </CollapsibleCard>
+
+          <CollapsibleCard
+            id="layout"
+            title={t("apps.uiGroup.layout.title" as any)}
+            subtitle={t("apps.uiGroup.layout.subtitle" as any)}
+            icon={<LayoutGrid size={16} />}
+            modified={isSectionModified(UI_SECTION_FIELDS.layout)}
+            onReset={() => resetSection(UI_SECTION_FIELDS.layout)}
+            modifiedLabel={t("common.modifiedBadge" as any)}
+            resetLabel={t("common.resetSection" as any)}
+            highlight={highlightedSection === "layout"}
+          >
+            <div className="grid grid-cols-2 gap-x-6 gap-y-4">
+              <FormField label={t("apps.field.formPosition" as any)} span="full">
+                <div className="flex gap-2">
+                  {([
+                    { value: 1, label: t("apps.formPosition.left" as any) },
+                    { value: 2, label: t("apps.formPosition.center" as any) },
+                    { value: 3, label: t("apps.formPosition.right" as any) },
+                    { value: 4, label: t("apps.formPosition.sidePanel" as any) },
+                  ] as const).map((pos) => (
+                    <button
+                      key={pos.value}
+                      type="button"
+                      onClick={() => set("formOffset", pos.value)}
+                      className={`rounded-md border px-3 py-1.5 text-[12px] font-medium transition-colors ${
+                        app.formOffset === pos.value
+                          ? "border-accent bg-accent/15 text-accent"
+                          : "border-border bg-surface-2 text-text-muted hover:text-text-secondary"
+                      }`}
+                    >
+                      {pos.label}
+                    </button>
+                  ))}
+                </div>
+              </FormField>
+              {app.formOffset === 4 && (
+                <FormField label={t("apps.field.sidePanelHtml" as any)} span="full">
+                  <textarea value={String(app.formSideHtml ?? "")} onChange={(e) => set("formSideHtml", e.target.value)} rows={4} className={`${inputClass} font-mono text-[12px]`} />
+                </FormField>
+              )}
+              <FormField label={t("apps.field.backgroundUrl" as any)} span="full">
+                <div className="flex gap-3 items-start">
+                  <input value={String(app.formBackgroundUrl ?? "")} onChange={(e) => set("formBackgroundUrl", e.target.value)} className={`${inputClass} flex-1`} placeholder={t("help.placeholder.url" as any)} />
+                  {app.formBackgroundUrl && <img src={app.formBackgroundUrl as string} alt="" className="h-10 w-10 rounded-lg border border-border object-contain bg-surface-2" />}
+                </div>
+              </FormField>
+              <FormField label={t("apps.field.backgroundUrlMobile" as any)} span="full">
+                <div className="flex gap-3 items-start">
+                  <input value={String(app.formBackgroundUrlMobile ?? "")} onChange={(e) => set("formBackgroundUrlMobile", e.target.value)} className={`${inputClass} flex-1`} placeholder={t("help.placeholder.url" as any)} />
+                  {app.formBackgroundUrlMobile && <img src={app.formBackgroundUrlMobile as string} alt="" className="h-10 w-10 rounded-lg border border-border object-contain bg-surface-2" />}
+                </div>
+              </FormField>
+              <FormField label={t("apps.field.customCss" as any)} span="full">
+                <Suspense fallback={<CssEditorFallback />}>
+                  <CssEditor value={String(app.formCss ?? "")} onChange={(v) => set("formCss", v)} placeholder=".my-form { ... }" />
+                </Suspense>
+              </FormField>
+              <FormField label={t("apps.field.customCssMobile" as any)} span="full">
+                <Suspense fallback={<CssEditorFallback />}>
+                  <CssEditor value={String(app.formCssMobile ?? "")} onChange={(v) => set("formCssMobile", v)} placeholder=".my-form { ... }" />
+                </Suspense>
+              </FormField>
+              <FormField label={t("apps.field.headerHtml" as any)} span="full">
+                <textarea value={String(app.headerHtml ?? "")} onChange={(e) => set("headerHtml", e.target.value)} rows={3} className={`${inputClass} font-mono text-[12px]`} />
+              </FormField>
+              <FormField label={t("apps.field.footerHtml" as any)} span="full">
+                <textarea value={String(app.footerHtml ?? "")} onChange={(e) => set("footerHtml", e.target.value)} rows={3} className={`${inputClass} font-mono text-[12px]`} />
+              </FormField>
+            </div>
+          </CollapsibleCard>
         </div>
-      </FormSection>
-
-      {!!app.enableSignUp && (
-        <EditableTable
-          title={t("apps.field.signupItems" as any)}
-          columns={signupItemColumns}
-          rows={(app.signupItems as Record<string, unknown>[]) ?? []}
-          onChange={(rows) => set("signupItems", rows)}
-          newRow={() => ({ name: "", visible: true, required: true, options: [], rule: "None", customCss: "" })}
-          sortable
-        />
-      )}
-
-      <FormSection title={t("apps.section.formLayout" as any)}>
-        <FormField label={t("apps.field.colorPrimary" as any)} span="full">
-          <ColorPicker
-            value={(app.themeData as Record<string, string> | undefined)?.colorPrimary ?? "#2563EB"}
-            onChange={(hex) => set("themeData", { ...(app.themeData as Record<string, unknown> ?? {}), colorPrimary: hex, isEnabled: true })}
-          />
-        </FormField>
-        <FormField label={t("apps.field.backgroundUrl" as any)} span="full">
-          <div className="flex gap-3 items-start">
-            <input value={String(app.formBackgroundUrl ?? "")} onChange={(e) => set("formBackgroundUrl", e.target.value)} className={`${inputClass} flex-1`} placeholder={t("help.placeholder.url" as any)} />
-            {app.formBackgroundUrl && <img src={app.formBackgroundUrl as string} alt="" className="h-10 w-10 rounded-lg border border-border object-contain bg-surface-2" />}
-          </div>
-        </FormField>
-        <FormField label={t("apps.field.backgroundUrlMobile" as any)} span="full">
-          <div className="flex gap-3 items-start">
-            <input value={String(app.formBackgroundUrlMobile ?? "")} onChange={(e) => set("formBackgroundUrlMobile", e.target.value)} className={`${inputClass} flex-1`} placeholder={t("help.placeholder.url" as any)} />
-            {app.formBackgroundUrlMobile && <img src={app.formBackgroundUrlMobile as string} alt="" className="h-10 w-10 rounded-lg border border-border object-contain bg-surface-2" />}
-          </div>
-        </FormField>
-        <FormField label={t("apps.field.customCss" as any)} span="full">
-          <textarea value={String(app.formCss ?? "")} onChange={(e) => set("formCss", e.target.value)} rows={3} className={`${inputClass} font-mono text-[12px]`} />
-        </FormField>
-        <FormField label={t("apps.field.customCssMobile" as any)} span="full">
-          <textarea value={String(app.formCssMobile ?? "")} onChange={(e) => set("formCssMobile", e.target.value)} rows={3} className={`${inputClass} font-mono text-[12px]`} />
-        </FormField>
-        <FormField label={t("apps.field.formPosition" as any)} span="full">
-          <div className="flex gap-2">
-            {([
-              { value: 1, label: t("apps.formPosition.left" as any) },
-              { value: 2, label: t("apps.formPosition.center" as any) },
-              { value: 3, label: t("apps.formPosition.right" as any) },
-              { value: 4, label: t("apps.formPosition.sidePanel" as any) },
-            ] as const).map((pos) => (
+      </div>
+      {previewOpen && (
+        <div className="fixed inset-0 z-[80] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={() => setPreviewOpen(false)}>
+          <div
+            className="w-[90vw] h-[90vh] max-w-[1600px] rounded-2xl border border-border bg-surface-0 shadow-[var(--shadow-elevated)] overflow-hidden flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between px-4 py-2 border-b border-border bg-surface-1">
+              <div className="flex items-center gap-2">
+                <Eye size={14} className="text-text-muted" />
+                <h3 className="text-[14px] font-semibold text-text-primary">{t("apps.uiGroup.previewTitle" as any)}</h3>
+              </div>
               <button
-                key={pos.value}
                 type="button"
-                onClick={() => set("formOffset", pos.value)}
-                className={`rounded-md border px-3 py-1.5 text-[12px] font-medium transition-colors ${
-                  app.formOffset === pos.value
-                    ? "border-accent bg-accent/15 text-accent"
-                    : "border-border bg-surface-2 text-text-muted hover:text-text-secondary"
-                }`}
+                onClick={() => setPreviewOpen(false)}
+                className="rounded-lg p-1.5 text-text-muted hover:bg-surface-2 transition-colors"
+                aria-label="Close preview"
               >
-                {pos.label}
+                <X size={16} />
               </button>
-            ))}
+            </div>
+            <div className="flex-1 overflow-hidden">
+              <AdminPreviewPane application={app as AuthApplication} onInspect={handleInspect} />
+            </div>
           </div>
-        </FormField>
-        {app.formOffset === 4 && (
-          <FormField label={t("apps.field.sidePanelHtml" as any)} span="full">
-            <textarea value={String(app.formSideHtml ?? "")} onChange={(e) => set("formSideHtml", e.target.value)} rows={4} className={`${inputClass} font-mono text-[12px]`} />
-          </FormField>
-        )}
-      </FormSection>
-
-      <FormSection title={t("apps.section.htmlCustom" as any)}>
-        <FormField label={t("apps.field.headerHtml" as any)} span="full">
-          <textarea value={String(app.headerHtml ?? "")} onChange={(e) => set("headerHtml", e.target.value)} rows={3} className={`${inputClass} font-mono text-[12px]`} />
-        </FormField>
-        <FormField label={t("apps.field.footerHtml" as any)} span="full">
-          <textarea value={String(app.footerHtml ?? "")} onChange={(e) => set("footerHtml", e.target.value)} rows={3} className={`${inputClass} font-mono text-[12px]`} />
-        </FormField>
-      </FormSection>
-    </div>
-      </div>
-      {/* Right: live preview */}
-      <div className="xl:w-[60%] xl:sticky xl:top-6 xl:self-start xl:max-h-[calc(100vh-3rem)]">
-        <AdminPreviewPane
-          application={app as AuthApplication}
-          initiallyCollapsed={typeof window !== "undefined" && window.innerWidth < 1280}
-        />
-      </div>
+        </div>
+      )}
+      <TemplateGalleryModal
+        open={templateGalleryOpen}
+        onClose={() => setTemplateGalleryOpen(false)}
+        onApply={applyTemplate}
+      />
     </div>
   );
 
@@ -1267,10 +1465,17 @@ export default function ApplicationEditPage() {
           </button>
       </StickyEditHeader>
 
-      {showBanner && <UnsavedBanner isAddMode={isAddMode} />}
+      {showBanner && isAddMode && <UnsavedBanner isAddMode />}
 
       {/* Tab Content */}
       <div>{tabContent[activeTab]}</div>
+
+      <FloatingSaveBar
+        visible={isDirty && !isAddMode}
+        saving={saving}
+        onDiscard={discardAll}
+        onSave={handleSave}
+      />
     </motion.div>
   );
 }

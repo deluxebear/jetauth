@@ -12,6 +12,7 @@ import ProvidersRow from "./ProvidersRow";
 import { resolveSigninMethods } from "../api/resolveSigninMethods";
 import { useSigninItemVisibility } from "../items/useSigninItemVisibility";
 import CustomTextItems from "../items/CustomTextItems";
+import SafeHtml from "../shell/SafeHtml";
 import type {
   AuthApplication,
   ResolvedProvider,
@@ -43,6 +44,12 @@ export default function SigninPage({ application, providers }: SigninPageProps) 
   const [error, setError] = useState<string>("");
 
   const signinItemVis = useSigninItemVisibility(application.signinItems);
+
+  // Admin-configured order for method picker. Empty/null → let MethodStep
+  // fall back to server-provided order (default-all behavior).
+  const signinMethodOrder = (application.signinMethods ?? [])
+    .map((m) => m.name)
+    .filter((n): n is string => !!n);
 
   const orgName =
     application.organizationObj?.name ?? application.organization ?? "built-in";
@@ -167,6 +174,7 @@ export default function SigninPage({ application, providers }: SigninPageProps) 
               logoDark={application.organizationObj?.logoDark}
               favicon={application.organizationObj?.favicon ?? application.favicon}
               displayName={orgDisplay}
+              title={application.title}
               theme={theme}
             />
           </div>
@@ -180,50 +188,66 @@ export default function SigninPage({ application, providers }: SigninPageProps) 
             {t("auth.signin.brandingSubtitle")}
           </p>
 
-          {step === "identifier" && (
-            <>
-              <IdentifierStep onSubmit={handleIdentifierSubmit} error={error} />
-              {signinItemVis.isVisible("Providers") && (
-                <ProvidersRow
-                  application={application}
-                  providers={providers}
-                  redirectUri={searchParams.get("redirect_uri") ?? undefined}
-                  state={searchParams.get("state") ?? undefined}
+          <div data-cfg-section="signin" data-cfg-field="signinItems">
+            {step === "identifier" && (
+              <>
+                <div data-signinitem="username">
+                  <IdentifierStep
+                    onSubmit={handleIdentifierSubmit}
+                    error={error}
+                    placeholder={signinItemVis.placeholderOf("Username")}
+                  />
+                </div>
+                {signinItemVis.isVisible("Providers") && (
+                  <div data-signinitem="providers">
+                    <ProvidersRow
+                      application={application}
+                      providers={providers}
+                      redirectUri={searchParams.get("redirect_uri") ?? undefined}
+                      state={searchParams.get("state") ?? undefined}
+                    />
+                  </div>
+                )}
+                <CustomTextItems items={signinItemVis.customItems} />
+                {signinItemVis.isVisible("Signup link") && application.enableSignUp && (
+                  <p
+                    className="mt-6 text-center text-[12px] text-text-muted"
+                    data-signinitem="signup-link"
+                  >
+                    {t("auth.signup.haveAccount")}{" — "}
+                    <a href={`/signup/${application.name}`} className="text-accent hover:underline">
+                      {signinItemVis.labelOf("Signup link") ?? t("auth.signup.signinLink")}
+                    </a>
+                  </p>
+                )}
+              </>
+            )}
+
+            {step === "method" && (
+              <>
+                <MethodStep
+                  identifier={identifier}
+                  userHint={userHint}
+                  application={application.name}
+                  organization={orgName}
+                  methods={methods}
+                  recommended={recommended}
+                  forgotPasswordHref={`/forget/${application.name}`}
+                  onPasswordSubmit={handlePasswordSubmit}
+                  onCodeSubmit={handleCodeSubmit}
+                  onWebAuthnSuccess={reloadHome}
+                  onFaceSuccess={reloadHome}
+                  onBack={signinItemVis.isVisible("Back button") ? handleBack : undefined}
+                  orderedMethodNames={signinMethodOrder}
+                  error={error}
                 />
-              )}
-              <CustomTextItems items={signinItemVis.customItems} />
-              {signinItemVis.isVisible("Signup link") && application.enableSignUp && (
-                <p className="mt-6 text-center text-[12px] text-text-muted">
-                  {t("auth.signup.haveAccount")}{" — "}
-                  <a href={`/signup/${application.name}`} className="text-accent hover:underline">
-                    {signinItemVis.labelOf("Signup link") ?? t("auth.signup.signinLink")}
-                  </a>
-                </p>
-              )}
-            </>
-          )}
 
-          {step === "method" && (
-            <>
-              <MethodStep
-                identifier={identifier}
-                userHint={userHint}
-                application={application.name}
-                organization={orgName}
-                methods={methods}
-                recommended={recommended}
-                forgotPasswordHref={`/forget/${application.name}`}
-                onPasswordSubmit={handlePasswordSubmit}
-                onCodeSubmit={handleCodeSubmit}
-                onWebAuthnSuccess={reloadHome}
-                onFaceSuccess={reloadHome}
-                onBack={signinItemVis.isVisible("Back button") ? handleBack : undefined}
-                error={error}
-              />
+                <CustomTextItems items={signinItemVis.customItems} />
+              </>
+            )}
+          </div>
 
-              <CustomTextItems items={signinItemVis.customItems} />
-            </>
-          )}
+          <SafeHtml html={application.signinHtml ?? ""} className="auth-page-html" />
         </div>
       </div>
     </div>

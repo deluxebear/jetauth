@@ -1,0 +1,35 @@
+{
+  "_comment": "JetAuth 业务应用资源目录 · JSON 模板。字段:group (可选) / name (必填) / displayName (必填) / method (必填,字符串或数组) / pattern (必填) / matchMode (可选,默认 keyMatch2) / description (可选)。删除 _comment 字段后再上传。",
+  "version": 1,
+  "resources": [
+    {
+      "group": "订单",
+      "name": "order_list",
+      "displayName": "订单列表",
+      "method": "GET",
+      "pattern": "/api/orders",
+      "description": "分页查询订单"
+    },
+    {
+      "group": "订单",
+      "name": "order_detail",
+      "displayName": "订单详情",
+      "method": "GET",
+      "pattern": "/api/orders/:id"
+    },
+    {
+      "group": "订单",
+      "name": "order_create",
+      "displayName": "创建订单",
+      "method": "POST",
+      "pattern": "/api/orders"
+    },
+    {
+      "group": "客户",
+      "name": "customer_search",
+      "displayName": "搜索客户",
+      "method": ["GET", "HEAD"],
+      "pattern": "/api/customers"
+    }
+  ]
+}

@@ -111,15 +111,38 @@ describe("ClassicSigninPage — tab rendering", () => {
     expect(hasButton ?? hasUnsupported).toBeTruthy();
   });
 
-  it("renders Face ID tab when signinMethods contains Face ID", () => {
+  it("renders tabs in signinMethods order when configured", () => {
+    // With admin-configured signinMethods, order wins over legacy flags.
+    // Here Face ID is explicit, so only it shows up (Password flag is ignored
+    // because the admin has taken control of the tab list).
     renderPage(
       makeApp({
         enablePassword: true,
         signinMethods: [{ name: "Face ID", displayName: "Face ID", rule: "All" }],
       }),
     );
-    expect(screen.getByRole("tablist")).toBeInTheDocument();
-    expect(screen.getByRole("tab", { name: "auth.classic.tabFace" })).toBeInTheDocument();
+    // Only one tab → no tablist rendered
+    expect(screen.queryByRole("tablist")).toBeNull();
+    // In JSDOM, the FaceBody renders the start-camera button when state is idle
+    expect(screen.getByRole("button", { name: "auth.face.button" })).toBeInTheDocument();
+  });
+
+  it("respects the order of signinMethods when multiple are configured", () => {
+    renderPage(
+      makeApp({
+        enablePassword: true,
+        enableCodeSignin: true,
+        signinMethods: [
+          { name: "Verification code", displayName: "Verification code", rule: "All" },
+          { name: "Password", displayName: "Password", rule: "All" },
+        ],
+      }),
+    );
+    const tabs = screen.getAllByRole("tab");
+    expect(tabs.map((t) => t.getAttribute("aria-selected") !== null)).toEqual([true, true]);
+    // First tab should be Verification code (per admin-configured order)
+    expect(tabs[0].textContent).toBe("auth.classic.tabCode");
+    expect(tabs[1].textContent).toBe("auth.classic.tabPassword");
   });
 });
 

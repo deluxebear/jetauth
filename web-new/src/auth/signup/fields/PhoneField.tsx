@@ -1,3 +1,4 @@
+import { useId } from "react";
 import { AsYouType } from "libphonenumber-js/max";
 import type { FieldProps } from "../DynamicField";
 import { fieldWrapperClass, inputClass, labelClass, helperClass, errorClass } from "./shared";
@@ -5,14 +6,16 @@ import { fieldWrapperClass, inputClass, labelClass, helperClass, errorClass } fr
 export default function PhoneField({ schema, value, onChange, error, disabled }: FieldProps) {
   const formatter = new AsYouType("US"); // default country; configurable later
   const formatted = formatter.input(String(value ?? ""));
+  const inputId = useId();
 
   return (
     <div className={fieldWrapperClass}>
-      <label className={labelClass}>
+      <label htmlFor={inputId} className={labelClass}>
         {schema.label}
         {schema.required && <span className="text-danger ml-0.5">*</span>}
       </label>
       <input
+        id={inputId}
         type="tel"
         value={formatted}
         onChange={(e) => onChange(e.target.value)}

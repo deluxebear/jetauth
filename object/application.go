@@ -380,6 +380,7 @@ func GetApplication(id string) (*Application, error) {
 }
 
 func UpdateApplication(id string, application *Application, isGlobalAdmin bool, lang string) (bool, error) {
+	sanitizeApplicationHtml(application)
 	owner, name, err := util.GetOwnerAndNameFromIdWithError(id)
 	if err != nil {
 		return false, err
@@ -444,6 +445,7 @@ func UpdateApplication(id string, application *Application, isGlobalAdmin bool, 
 }
 
 func AddApplication(application *Application) (bool, error) {
+	sanitizeApplicationHtml(application)
 	if application.Owner == "" {
 		application.Owner = "admin"
 	}

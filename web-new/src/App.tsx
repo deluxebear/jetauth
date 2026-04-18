@@ -223,16 +223,16 @@ export default function App() {
     return true;
   }, []);
 
-  // Admin live-preview mode: when the URL carries ?previewConfig=, the page
-  // is being rendered inside the admin preview iframe. In that case we
-  // explicitly skip auth bootstrap so the existing admin session cookie
-  // doesn't redirect us away from the /login/:org/:app route we want to
-  // preview. The AuthShell renders as anonymous, exactly like a real
-  // end-user would see it.
+  // Skip auth bootstrap when:
+  // - ?preview / ?previewConfig → rendered in the admin preview iframe
+  // - ?asGuest → admin opened the real login page in a new tab for a visual
+  //   smoke test; without this flag the existing admin session would redirect
+  //   "/login/:org/:app" to "/".
   const isPreviewMode =
     typeof window !== "undefined" &&
     (new URLSearchParams(window.location.search).has("preview") ||
-      new URLSearchParams(window.location.search).has("previewConfig"));
+      new URLSearchParams(window.location.search).has("previewConfig") ||
+      new URLSearchParams(window.location.search).has("asGuest"));
 
   useEffect(() => {
     if (isPreviewMode) {

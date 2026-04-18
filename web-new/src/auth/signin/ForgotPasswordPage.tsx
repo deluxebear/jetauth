@@ -5,6 +5,7 @@ import { useTranslation } from "../../i18n";
 import { api } from "../../api/client";
 import BrandingLayer from "../shell/BrandingLayer";
 import TopBar from "../shell/TopBar";
+import SafeHtml from "../shell/SafeHtml";
 import IdentifierStep from "./IdentifierStep";
 import { resolveSigninMethods } from "../api/resolveSigninMethods";
 import type { AuthApplication } from "../api/types";
@@ -126,6 +127,7 @@ export default function ForgotPasswordPage({ application }: Props) {
               logoDark={application.organizationObj?.logoDark}
               favicon={application.organizationObj?.favicon ?? application.favicon}
               displayName={orgDisplay}
+              title={application.title}
               theme={theme}
             />
           </div>
@@ -144,7 +146,14 @@ export default function ForgotPasswordPage({ application }: Props) {
           )}
 
           {phase === "identifier" && (
-            <IdentifierStep onSubmit={handleIdentifierSubmit} />
+            <div data-signinitem="username">
+              <IdentifierStep
+                onSubmit={handleIdentifierSubmit}
+                placeholder={(application.signinItems ?? []).find(
+                  (it) => it.name === "Username" && !it.isCustom,
+                )?.placeholder}
+              />
+            </div>
           )}
 
           {phase === "code" && (
@@ -158,6 +167,7 @@ export default function ForgotPasswordPage({ application }: Props) {
                 onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
                 autoFocus
                 autoComplete="one-time-code"
+                aria-label={t("auth.code.codePlaceholder")}
                 placeholder={t("auth.code.codePlaceholder")}
                 className="w-full rounded-lg border border-border bg-surface-1 px-3.5 py-2.5 text-[14px] tracking-[0.3em] text-center text-text-primary placeholder:text-text-muted focus:border-accent focus:ring-1 focus:ring-accent/30 outline-none transition-all"
               />
@@ -249,6 +259,8 @@ export default function ForgotPasswordPage({ application }: Props) {
               </a>
             </div>
           )}
+
+          <SafeHtml html={application.signinHtml ?? ""} className="auth-page-html" />
         </div>
       </div>
     </div>

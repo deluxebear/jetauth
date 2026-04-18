@@ -17,6 +17,7 @@ import { useTranslation } from "../../i18n";
 import { api } from "../../api/client";
 import BrandingLayer from "../shell/BrandingLayer";
 import TopBar from "../shell/TopBar";
+import SafeHtml from "../shell/SafeHtml";
 import ProvidersRow from "./ProvidersRow";
 import type { AuthApplication, ResolvedProvider } from "../api/types";
 
@@ -72,13 +73,15 @@ function UsernameField({
   value,
   onChange,
   label,
+  placeholder,
 }: {
   value: string;
   onChange: (v: string) => void;
   label: string;
+  placeholder?: string;
 }) {
   return (
-    <div>
+    <div data-signinitem="username">
       <label className="block text-[12px] font-medium text-text-secondary mb-1.5">
         {label}
       </label>
@@ -88,7 +91,7 @@ function UsernameField({
         autoFocus
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        placeholder={label}
+        placeholder={placeholder && placeholder.length > 0 ? placeholder : label}
         className="w-full rounded-lg border border-border bg-surface-1 px-3.5 py-2.5 text-[14px] text-text-primary placeholder:text-text-muted focus:border-accent focus:ring-1 focus:ring-accent/30 outline-none transition-all"
       />
     </div>
@@ -100,6 +103,7 @@ function PasswordBody({
   username,
   setUsername,
   usernameLabel,
+  usernamePlaceholder,
   onSubmit,
   error,
   forgotHref,
@@ -107,6 +111,7 @@ function PasswordBody({
   username: string;
   setUsername: (v: string) => void;
   usernameLabel: string;
+  usernamePlaceholder?: string;
   onSubmit: (pw: string) => Promise<void>;
   error: string;
   forgotHref?: string;
@@ -129,7 +134,7 @@ function PasswordBody({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <UsernameField value={username} onChange={setUsername} label={usernameLabel} />
+      <UsernameField value={username} onChange={setUsername} label={usernameLabel} placeholder={usernamePlaceholder} />
 
       <div>
         <label className="block text-[12px] font-medium text-text-secondary mb-1.5">
@@ -195,6 +200,7 @@ function CodeBody({
   username,
   setUsername,
   usernameLabel,
+  usernamePlaceholder,
   onSubmit,
   error,
   application,
@@ -203,6 +209,7 @@ function CodeBody({
   username: string;
   setUsername: (v: string) => void;
   usernameLabel: string;
+  usernamePlaceholder?: string;
   onSubmit: (code: string) => Promise<void>;
   error: string;
   application: string;
@@ -263,7 +270,7 @@ function CodeBody({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <UsernameField value={username} onChange={(v) => { setUsername(v); setPhase("send"); }} label={usernameLabel} />
+      <UsernameField value={username} onChange={(v) => { setUsername(v); setPhase("send"); }} label={usernameLabel} placeholder={usernamePlaceholder} />
 
       {(error || sendError) && (
         <div className="rounded-lg border border-danger/30 bg-danger/10 px-4 py-2.5 text-[13px] text-danger">
@@ -345,6 +352,7 @@ function WebAuthnBody({
   username,
   setUsername,
   usernameLabel,
+  usernamePlaceholder,
   onSuccess,
   error,
   orgName,
@@ -352,6 +360,7 @@ function WebAuthnBody({
   username: string;
   setUsername: (v: string) => void;
   usernameLabel: string;
+  usernamePlaceholder?: string;
   onSuccess: () => void;
   error: string;
   orgName: string;
@@ -384,7 +393,7 @@ function WebAuthnBody({
 
   return (
     <div className="space-y-4">
-      <UsernameField value={username} onChange={setUsername} label={usernameLabel} />
+      <UsernameField value={username} onChange={setUsername} label={usernameLabel} placeholder={usernamePlaceholder} />
 
       {displayError && (
         <div className="rounded-lg border border-danger/30 bg-danger/10 px-4 py-2.5 text-[13px] text-danger">
@@ -429,6 +438,7 @@ function FaceBody({
   username,
   setUsername,
   usernameLabel,
+  usernamePlaceholder,
   onSuccess,
   error,
   application,
@@ -437,6 +447,7 @@ function FaceBody({
   username: string;
   setUsername: (v: string) => void;
   usernameLabel: string;
+  usernamePlaceholder?: string;
   onSuccess: () => void;
   error: string;
   application: string;
@@ -525,7 +536,7 @@ function FaceBody({
 
   return (
     <div className="space-y-4">
-      <UsernameField value={username} onChange={(v) => { setUsername(v); stopStream(); setState("idle"); }} label={usernameLabel} />
+      <UsernameField value={username} onChange={(v) => { setUsername(v); stopStream(); setState("idle"); }} label={usernameLabel} placeholder={usernamePlaceholder} />
 
       {displayError && (
         <div className="rounded-lg border border-danger/30 bg-danger/10 px-4 py-2.5 text-[13px] text-danger">
@@ -612,12 +623,33 @@ export default function ClassicSigninPage({ application, providers }: Props) {
   const orgName =
     application.organizationObj?.name ?? application.organization ?? "built-in";
 
-  // Build the list of available tabs from application flags
-  const availableTabs: ClassicTab[] = [];
-  if (application.enablePassword) availableTabs.push("Password");
-  if (application.enableCodeSignin) availableTabs.push("Verification code");
-  if (application.enableWebAuthn) availableTabs.push("WebAuthn");
-  if (application.signinMethods?.some((m) => m.name === "Face ID")) availableTabs.push("Face ID");
+  // Known tab handlers in this file. Methods outside this set are skipped
+  // (e.g. LDAP / WeChat are handled elsewhere in classic mode).
+  const SUPPORTED_CLASSIC_TABS: readonly ClassicTab[] = [
+    "Password",
+    "Verification code",
+    "WebAuthn",
+    "Face ID",
+  ];
+
+  // Build the list of tabs. When signinMethods is non-empty, admin-configured
+  // order wins — iterate it and include only methods this file knows how to
+  // render. When it's empty/null, fall back to legacy default-all behavior
+  // driven by boolean flags (backward compat).
+  let availableTabs: ClassicTab[] = [];
+  const configuredMethods = application.signinMethods ?? [];
+  if (configuredMethods.length > 0) {
+    for (const m of configuredMethods) {
+      const name = m.name as ClassicTab;
+      if (SUPPORTED_CLASSIC_TABS.includes(name) && !availableTabs.includes(name)) {
+        availableTabs.push(name);
+      }
+    }
+  } else {
+    if (application.enablePassword) availableTabs.push("Password");
+    if (application.enableCodeSignin) availableTabs.push("Verification code");
+    if (application.enableWebAuthn) availableTabs.push("WebAuthn");
+  }
 
   const [tab, setTab] = useState<ClassicTab>(availableTabs[0] ?? "Password");
 
@@ -681,6 +713,12 @@ export default function ClassicSigninPage({ application, providers }: Props) {
 
   const usernameLabel = t("auth.classic.usernameLabel");
 
+  // Admin override for the username field placeholder, sourced from the
+  // signinItems[name="Username"].placeholder (if set). Used by every tab.
+  const usernamePlaceholder = (application.signinItems ?? []).find(
+    (it) => it.name === "Username" && !it.isCustom,
+  )?.placeholder;
+
   return (
     <div className="min-h-screen flex relative">
       <TopBar />
@@ -694,6 +732,7 @@ export default function ClassicSigninPage({ application, providers }: Props) {
               logoDark={application.organizationObj?.logoDark}
               favicon={application.organizationObj?.favicon ?? application.favicon}
               displayName={orgDisplay}
+              title={application.title}
               theme={theme}
             />
           </div>
@@ -710,6 +749,8 @@ export default function ClassicSigninPage({ application, providers }: Props) {
             <div
               role="tablist"
               aria-label="Sign-in method"
+              data-cfg-section="signin"
+              data-cfg-field="signinMethods"
               className="flex gap-1 rounded-lg border border-border bg-surface-1 p-1 mb-6"
             >
               {availableTabs.map((tabItem) => (
@@ -718,6 +759,7 @@ export default function ClassicSigninPage({ application, providers }: Props) {
                   role="tab"
                   aria-selected={activeTab === tabItem}
                   type="button"
+                  data-signinitem={tabItem.replace(/\s+/g, "-").toLowerCase()}
                   onClick={() => { setTab(tabItem); setError(""); }}
                   className={[
                     "flex-1 rounded-md px-2 py-1.5 text-[12px] font-medium transition-colors",
@@ -738,6 +780,7 @@ export default function ClassicSigninPage({ application, providers }: Props) {
               username={username}
               setUsername={setUsername}
               usernameLabel={usernameLabel}
+              usernamePlaceholder={usernamePlaceholder}
               onSubmit={handlePasswordSubmit}
               error={error}
               forgotHref={`/forget/${application.name}`}
@@ -749,6 +792,7 @@ export default function ClassicSigninPage({ application, providers }: Props) {
               username={username}
               setUsername={setUsername}
               usernameLabel={usernameLabel}
+              usernamePlaceholder={usernamePlaceholder}
               onSubmit={handleCodeSubmit}
               error={error}
               application={application.name}
@@ -761,6 +805,7 @@ export default function ClassicSigninPage({ application, providers }: Props) {
               username={username}
               setUsername={setUsername}
               usernameLabel={usernameLabel}
+              usernamePlaceholder={usernamePlaceholder}
               onSuccess={handleWebAuthnSuccess}
               error={error}
               orgName={orgName}
@@ -772,6 +817,7 @@ export default function ClassicSigninPage({ application, providers }: Props) {
               username={username}
               setUsername={setUsername}
               usernameLabel={usernameLabel}
+              usernamePlaceholder={usernamePlaceholder}
               onSuccess={handleFaceSuccess}
               error={error}
               application={application.name}
@@ -780,12 +826,16 @@ export default function ClassicSigninPage({ application, providers }: Props) {
           )}
 
           {/* Social providers */}
-          <ProvidersRow
-            application={application}
-            providers={providers}
-            redirectUri={searchParams.get("redirect_uri") ?? undefined}
-            state={searchParams.get("state") ?? undefined}
-          />
+          <div data-signinitem="providers">
+            <ProvidersRow
+              application={application}
+              providers={providers}
+              redirectUri={searchParams.get("redirect_uri") ?? undefined}
+              state={searchParams.get("state") ?? undefined}
+            />
+          </div>
+
+          <SafeHtml html={application.signinHtml ?? ""} className="auth-page-html" />
         </div>
       </div>
     </div>

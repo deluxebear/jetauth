@@ -1,14 +1,17 @@
+import { useId } from "react";
 import type { FieldProps } from "../DynamicField";
 import { fieldWrapperClass, inputClass, labelClass, helperClass, errorClass } from "./shared";
 
 export default function DateField({ schema, value, onChange, error, disabled }: FieldProps) {
+  const inputId = useId();
   return (
     <div className={fieldWrapperClass}>
-      <label className={labelClass}>
+      <label htmlFor={inputId} className={labelClass}>
         {schema.label}
         {schema.required && <span className="text-danger ml-0.5">*</span>}
       </label>
       <input
+        id={inputId}
         type="date"
         value={String(value ?? "")}
         onChange={(e) => onChange(e.target.value)}

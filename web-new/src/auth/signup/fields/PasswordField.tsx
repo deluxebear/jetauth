@@ -1,18 +1,20 @@
-import { useState } from "react";
+import { useId, useState } from "react";
 import type { FieldProps } from "../DynamicField";
 import { fieldWrapperClass, labelClass, helperClass, errorClass } from "./shared";
 
 export default function PasswordField({ schema, value, onChange, error, disabled }: FieldProps) {
   const [show, setShow] = useState(false);
+  const inputId = useId();
 
   return (
     <div className={fieldWrapperClass}>
-      <label className={labelClass}>
+      <label htmlFor={inputId} className={labelClass}>
         {schema.label}
         {schema.required && <span className="text-danger ml-0.5">*</span>}
       </label>
       <div className="relative">
         <input
+          id={inputId}
           type={show ? "text" : "password"}
           value={String(value ?? "")}
           onChange={(e) => onChange(e.target.value)}

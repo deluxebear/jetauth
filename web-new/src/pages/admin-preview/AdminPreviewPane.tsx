@@ -9,6 +9,12 @@ interface AdminPreviewPaneProps {
   application: AuthApplication;
   /** Collapsed on narrow viewports by default. */
   initiallyCollapsed?: boolean;
+  /**
+   * Called when a user clicks an element inside the preview iframe that has
+   * a `data-cfg-section` attribute. The admin page typically uses this to
+   * scroll to and briefly highlight the matching config card.
+   */
+  onInspect?: (section: string, field?: string) => void;
 }
 
 /**
@@ -23,9 +29,10 @@ interface AdminPreviewPaneProps {
  */
 export const PREVIEW_MESSAGE_TYPE = "jetauth.preview.config" as const;
 export const PREVIEW_READY_TYPE = "jetauth.preview.ready" as const;
+export const PREVIEW_INSPECT_TYPE = "jetauth.preview.inspect" as const;
 
 export default function AdminPreviewPane({
-  application, initiallyCollapsed = false,
+  application, initiallyCollapsed = false, onInspect,
 }: AdminPreviewPaneProps) {
   const [mode, setMode] = useState<PreviewMode>("signin");
   const [device, setDevice] = useState<PreviewDevice>("desktop");
@@ -38,26 +45,35 @@ export default function AdminPreviewPane({
     application.organizationObj?.name ?? application.organization ?? "built-in";
   const appName = application.name;
 
-  // Short URL — just enough for the iframe's AuthShell to pick the right app.
-  const src = useMemo(() => {
-    const path =
+  const externalPath = useMemo(() => {
+    const base =
       mode === "signin" ? `/login/${orgName}/${appName}` :
       mode === "signup" ? `/signup/${appName}` :
       `/forget/${appName}`;
-    return `${path}?preview=1&previewTheme=${theme}`;
-  }, [mode, theme, orgName, appName]);
+    return `${base}?asGuest=1`;
+  }, [mode, orgName, appName]);
 
-  // Listen for the iframe's "ready" signal.
+  const src = useMemo(() => `${externalPath}?preview=1&previewTheme=${theme}`, [externalPath, theme]);
+
+  // Listen for iframe messages: ready + inspect (bidirectional link for P4).
   useEffect(() => {
     const handler = (e: MessageEvent) => {
       if (e.origin !== window.location.origin) return;
       if (e.data?.type === PREVIEW_READY_TYPE) {
         setIframeReady(true);
+        return;
+      }
+      if (e.data?.type === PREVIEW_INSPECT_TYPE) {
+        const { section, field } = (e.data.payload ?? {}) as {
+          section?: string;
+          field?: string;
+        };
+        if (section && onInspect) onInspect(section, field);
       }
     };
     window.addEventListener("message", handler);
     return () => window.removeEventListener("message", handler);
-  }, []);
+  }, [onInspect]);
 
   // Reset ready state when src changes (iframe re-creates).
   useEffect(() => {
@@ -77,7 +93,7 @@ export default function AdminPreviewPane({
 
   const iframeClass = device === "mobile"
     ? "w-[375px] h-[720px] mx-auto border border-border rounded-2xl shadow-sm"
-    : "w-full h-[720px] border border-border rounded-lg";
+    : "w-full h-full min-h-[600px] border border-border rounded-lg";
 
   if (collapsed) {
     return (
@@ -94,10 +110,11 @@ export default function AdminPreviewPane({
   }
 
   return (
-    <div className="flex flex-col bg-surface-0">
+    <div className="flex flex-col bg-surface-0 h-full">
       <PreviewToolbar
         mode={mode} device={device} theme={theme}
         onModeChange={setMode} onDeviceChange={setDevice} onThemeChange={setTheme}
+        externalUrl={externalPath}
       />
       <div className="flex-1 p-4 bg-surface-1 overflow-auto">
         <iframe

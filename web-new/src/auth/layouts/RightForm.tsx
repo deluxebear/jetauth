@@ -8,7 +8,11 @@ interface Props {
 
 export default function RightForm({ children, backgroundUrl }: Props) {
   return (
-    <div className="min-h-screen flex">
+    <div
+      className="min-h-screen flex"
+      data-cfg-section="layout"
+      data-cfg-field="formOffset"
+    >
       <div
         className="hidden lg:block flex-1 relative"
         style={

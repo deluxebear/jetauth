@@ -14,7 +14,11 @@ interface Props {
  */
 export default function LeftForm({ children, backgroundUrl, backgroundUrlMobile: _backgroundUrlMobile }: Props) {
   return (
-    <div className="min-h-screen flex">
+    <div
+      className="min-h-screen flex"
+      data-cfg-section="layout"
+      data-cfg-field="formOffset"
+    >
       <div className="w-full lg:w-[420px] lg:flex-shrink-0 bg-surface-0 relative z-10">
         {children}
       </div>
