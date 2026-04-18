@@ -9,6 +9,7 @@ import { useTranslation } from "../i18n";
 import SigninPage from "./signin/SigninPage";
 import ClassicSigninPage from "./signin/ClassicSigninPage";
 import ForgotPasswordPage from "./signin/ForgotPasswordPage";
+import SignupPage from "./signup/SignupPage";
 
 type Mode = "signin" | "signup" | "forget";
 
@@ -87,26 +88,6 @@ function AuthShellInner({ lookup, mode }: { lookup: AuthLookup; mode: Mode }) {
     return <ForgotPasswordPage application={app} />;
   }
 
-  // mode === "signup" — W1 placeholder stays for now; W3 replaces with SignupPage.
-  return (
-    <div
-      className="min-h-screen flex flex-col items-center justify-center p-8"
-      style={{
-        backgroundColor: "var(--color-background, #f8fafc)",
-        fontFamily: "var(--font-sans, Inter)",
-      }}
-    >
-      <div
-        className="max-w-md w-full p-8 bg-white border border-gray-200 shadow-sm"
-        style={{ borderRadius: "var(--radius-lg, 12px)" }}
-      >
-        <h1 className="text-2xl font-bold mb-2" style={{ color: "var(--color-primary, #2563EB)" }}>
-          {t("auth.signupTitle")}
-        </h1>
-        <p className="text-sm text-gray-500">
-          {app.displayName || app.name} · {t("auth.skeletonNote")}
-        </p>
-      </div>
-    </div>
-  );
+  // mode === "signup"
+  return <SignupPage application={app} />;
 }
