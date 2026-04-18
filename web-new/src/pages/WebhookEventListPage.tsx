@@ -136,7 +136,7 @@ export default function WebhookEventListPage() {
           <motion.button whileHover={{ rotate: 180 }} transition={{ duration: 0.3 }} onClick={() => fetchData(page)} className="rounded-lg border border-border p-2 text-text-muted hover:bg-surface-2 transition-colors" title={t("common.refresh")}><RefreshCw size={15} /></motion.button>
         </div>
       </div>
-      <DataTable columns={columns} data={data} rowKey="name" loading={loading} page={page} pageSize={pageSize} total={total} onPageChange={(p) => fetchData(p)} onSort={(sort) => fetchData(1, statusFilter, sort.field, sort.order)} emptyText={t("common.noData")} />
+      <DataTable columns={columns} data={data} rowKey="name" loading={loading} page={page} pageSize={pageSize} total={total} onPageChange={(p) => fetchData(p)} onSort={(sort) => fetchData(1, statusFilter, sort.field, sort.order)} emptyText={t("common.noData")} persistKey="list:webhook-events" resizable columnsToggle />
 
       {/* Detail Drawer / Modal */}
       {detailRecord && (

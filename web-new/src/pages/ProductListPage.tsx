@@ -264,6 +264,9 @@ export default function ProductListPage() {
         onSort={list.handleSort}
         onFilter={list.handleFilter}
         emptyText={t("common.noData")}
+        persistKey="list:products"
+        resizable
+        columnsToggle
       />
     </div>
   );

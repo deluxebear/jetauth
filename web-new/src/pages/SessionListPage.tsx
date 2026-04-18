@@ -254,6 +254,9 @@ export default function SessionListPage() {
         onSort={list.handleSort}
         onFilter={list.handleFilter}
         emptyText={t("common.noData")}
+        persistKey="list:sessions"
+        resizable
+        columnsToggle
       />
 
       {/* Detail Drawer */}

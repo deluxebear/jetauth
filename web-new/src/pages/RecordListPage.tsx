@@ -362,6 +362,9 @@ export default function RecordListPage() {
         onSort={list.handleSort}
         onFilter={list.handleFilter}
         emptyText={t("common.noData")}
+        persistKey="list:records"
+        resizable
+        columnsToggle
       />
 
       {/* Detail Drawer */}

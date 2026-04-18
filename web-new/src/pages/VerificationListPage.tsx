@@ -266,6 +266,9 @@ export default function VerificationListPage() {
         onSort={list.handleSort}
         onFilter={list.handleFilter}
         emptyText={t("common.noData")}
+        persistKey="list:verifications"
+        resizable
+        columnsToggle
       />
 
       {/* Detail Drawer */}

@@ -101,6 +101,14 @@ interface DataTableProps<T> {
   widths?: Record<string, number>;           // controlled widths (px)
   onWidthChange?: (key: string, width: number) => void;
 
+  // ── Columns toggle ──────────────────────────────────────────────────
+  // When `columnsToggle` is on, DataTable renders a small toolbar above
+  // the grid with a <ColumnsMenu> driven by its internal hidden state.
+  // Combine with `persistKey` to persist visibility + widths across page
+  // reloads. For custom placement (e.g. next to a page-level CTA), keep
+  // `columnsToggle` off and render <ColumnsMenu> yourself via useTablePrefs.
+  columnsToggle?: boolean;
+
   // ── Pagination ──────────────────────────────────────────────────────
   // Server-side: caller passes `page`/`pageSize`/`total`/`onPageChange`;
   // DataTable renders what arrives and only handles chrome (UI + arrows +
@@ -210,6 +218,7 @@ export default function DataTable<T extends Record<string, unknown>>({
   resizable,
   widths: widthsControlled,
   onWidthChange,
+  columnsToggle,
   clientPagination,
   defaultPageSize,
   pageSizeOptions = DEFAULT_PAGE_SIZE_OPTIONS,
@@ -237,7 +246,14 @@ export default function DataTable<T extends Record<string, unknown>>({
     [persistKey],
   );
 
-  const [sortInternal, setSortInternal] = useState<SortState>(initial.sort);
+  // When sort flows externally (onSort callback), don't seed internal
+  // sort from localStorage — the parent's sort state starts empty, and a
+  // preseeded arrow would desync with unsorted row data. The parent can
+  // still opt into persisted sort via useTablePrefs() + controlled `sort`.
+  const sortExternallyOwned = !!onSort;
+  const [sortInternal, setSortInternal] = useState<SortState>(
+    sortExternallyOwned ? (defaultSort ?? { field: "", order: "" }) : initial.sort,
+  );
   const [hiddenInternal, setHiddenInternal] = useState<Set<string>>(initial.hidden);
   const [widthsInternal, setWidthsInternal] = useState<Record<string, number>>(initial.widths);
   const [pageSizeInternal, setPageSizeInternal] = useState<number>(initial.pageSize);
@@ -274,16 +290,33 @@ export default function DataTable<T extends Record<string, unknown>>({
     else onPageChange?.(1);
   };
 
-  // Internal persistence only runs when nothing is controlled. Partial
-  // control (e.g. only `sort` controlled) is all-or-nothing by design —
-  // when mixing, pass everything through useTablePrefs.
+  // Persistence policy (with persistKey):
+  //   - hidden + widths: always persisted from the DataTable-owned state,
+  //     even when the page controls sort/pageSize externally (e.g. via
+  //     useEntityList). This is what lets the common server-paginated
+  //     pages get column-visibility + column-width persistence by passing
+  //     only `persistKey` + `columnsToggle` + `resizable`.
+  //   - sort + pageSize: only persisted when they are uncontrolled. Pages
+  //     that manage sort externally (useEntityList.handleSort) don't pipe
+  //     that sort back into the blob; persistence for those fields is
+  //     opt-in via useTablePrefs().
+  // All four fields are written into the same JSON blob, so readers on
+  // mount get a single atomic snapshot.
+  // Only persist sort when DataTable truly owns it (not controlled by a
+  // parent `sort` prop AND not flowing through an `onSort` callback to an
+  // external store like useEntityList). Otherwise mint a stable sentinel
+  // so the written blob doesn't surface stale sort on a later remount.
+  const resolvedSort = (sortControlled || sortExternallyOwned)
+    ? (defaultSort ?? { field: "", order: "" as const })
+    : sortInternal;
+  const resolvedPageSize = pageSizeControlled ? (defaultPageSize ?? 20) : pageSizeInternal;
   usePersistedPrefs(
     persistKey,
-    !sortControlled && !hiddenControlled && !widthsControlled && !pageSizeControlled,
-    sortInternal,
+    !hiddenControlled && !widthsControlled,
+    resolvedSort,
     hiddenInternal,
     widthsInternal,
-    pageSizeInternal,
+    resolvedPageSize,
   );
 
   // Resolved column width for a given column (px). Falls back to the
@@ -573,11 +606,40 @@ export default function DataTable<T extends Record<string, unknown>>({
   // colspan used by loading skeleton + empty state
   const totalRenderedCols = visibleColumns.length + (selectable ? 1 : 0);
 
+  // Reset internal widths (used by the built-in columnsToggle menu's
+  // "reset widths" footer). Only relevant when widths are uncontrolled.
+  const resetWidthsInternal = useCallback(() => {
+    if (widthsControlled) return;
+    setWidthsInternal({});
+  }, [widthsControlled]);
+
+  // Internal columns-menu state (uncontrolled hidden). In controlled-hidden
+  // mode the caller should render <ColumnsMenu> themselves via useTablePrefs.
+  const toggleHiddenInternal = useCallback((key: string) => {
+    if (hiddenControlled) return;
+    setHiddenInternal((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key); else next.add(key);
+      return next;
+    });
+  }, [hiddenControlled]);
+
+  const showInlineColumnsMenu = columnsToggle && !hiddenControlled;
+
   return (
     <div className="rounded-xl border border-border bg-surface-1 overflow-hidden">
-      {/* Toolbar only renders when the bulk action bar has something to
-          show. The columns dropdown lives OUTSIDE the table — render
-          <ColumnsMenu> in your page header via useTablePrefs(). */}
+      {/* Inline columns-toggle toolbar (opt-in via `columnsToggle`). */}
+      {showInlineColumnsMenu && (
+        <div className="flex items-center justify-end border-b border-border-subtle bg-surface-2/40 px-2 py-1.5">
+          <ColumnsMenu
+            columns={columns}
+            hidden={hidden}
+            onToggle={toggleHiddenInternal}
+            onResetWidths={resizable && !widthsControlled ? resetWidthsInternal : undefined}
+          />
+        </div>
+      )}
+      {/* Bulk-action bar renders above the grid whenever selection is active. */}
       {bulkBarActive && (
         <div className="flex items-center gap-2 border-b border-border-subtle bg-accent/5 px-3 py-2">
           {bulkActions!({ selected: selectedRows, selectedKeys, clear: clearSelection })}

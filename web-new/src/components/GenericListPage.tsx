@@ -156,6 +156,9 @@ export default function GenericListPage({
         total={total}
         onPageChange={setPage}
         emptyText={t("common.noData")}
+        persistKey={`list:${entityType}`}
+        resizable
+        columnsToggle
       />
     </div>
   );

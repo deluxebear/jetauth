@@ -308,6 +308,9 @@ export default function OrganizationListPage() {
         onSort={list.handleSort}
         onFilter={list.handleFilter}
         emptyText={t("common.noData")}
+        persistKey="list:organizations"
+        resizable
+        columnsToggle
       />
     </div>
   );
