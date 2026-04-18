@@ -33,20 +33,51 @@ func resolveOrgDefaultApplication(orgName string) (*object.Application, error) {
 		return nil, fmt.Errorf("The organization: %s does not exist", orgName)
 	}
 
-	appID := org.DefaultApplication
-	if appID == "" {
-		appID = "app-built-in"
-	}
-	if len(appID) < 6 || appID[:6] != "admin/" {
-		appID = "admin/" + appID
-	}
-
-	app, err := object.GetApplication(appID)
-	if err != nil {
-		return nil, err
+	// Preference order for the app that backs /login/<org>:
+	//   1. org.DefaultApplication (admin's explicit choice)
+	//   2. ANY application owned by the org (lets at least one org-member
+	//      log in; their per-app permissions still gate the actual login)
+	//   3. admin/app-built-in as a last resort
+	//
+	// Falling back to app-built-in for a non-built-in org usually denies
+	// the login at CheckLoginPermission time because built-in's default
+	// permission only grants built-in users. Picking an org-owned app
+	// first avoids that trap for the common case.
+	var app *object.Application
+	if org.DefaultApplication != "" {
+		appID := org.DefaultApplication
+		if len(appID) < 6 || appID[:6] != "admin/" {
+			appID = "admin/" + appID
+		}
+		app, err = object.GetApplication(appID)
+		if err != nil {
+			return nil, err
+		}
 	}
 	if app == nil {
-		return nil, fmt.Errorf("The application: %s does not exist", appID)
+		orgApps, listErr := object.GetOrganizationApplications("admin", orgName)
+		if listErr != nil {
+			return nil, listErr
+		}
+		for _, candidate := range orgApps {
+			if candidate == nil || candidate.Organization != orgName {
+				// GetOrganizationApplications also returns shared apps; we
+				// want specifically an app owned by the org to keep the
+				// login gated correctly.
+				continue
+			}
+			app = candidate
+			break
+		}
+	}
+	if app == nil {
+		app, err = object.GetApplication("admin/app-built-in")
+		if err != nil {
+			return nil, err
+		}
+	}
+	if app == nil {
+		return nil, fmt.Errorf("no application found for organization %s", orgName)
 	}
 
 	// Make sure the org we resolved drives the branding — even when the

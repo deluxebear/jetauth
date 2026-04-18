@@ -130,7 +130,7 @@ export default function SigninPage({ application, providers: _providers }: Signi
           </div>
 
           <h1 className="text-2xl font-bold tracking-tight text-text-primary mb-1">
-            {application.displayName || application.name}
+            {orgDisplay}
           </h1>
           <p className="text-[13px] text-text-muted mb-8">
             {t("auth.signin.brandingSubtitle")}
