@@ -92,7 +92,12 @@ export default function SigninPage({ application, providers: _providers }: Signi
         window.location.href = `${redirectUri}${joiner}code=${encodeURIComponent(res.data)}&state=${encodeURIComponent(searchParams.get("state") ?? "")}`;
         return;
       }
-      navigate("/", { replace: true });
+      // Full page reload so App.tsx re-bootstraps its `user` state via
+      // /api/get-account; a plain navigate("/") would bounce back to
+      // /login because the top-level state still thinks we're anon.
+      // The backend also routes the user to the right landing page based
+      // on role (admin → Dashboard, non-admin → UserHomePage).
+      window.location.href = "/";
     } catch (e: unknown) {
       setError((e as Error).message ?? "network error");
     }
