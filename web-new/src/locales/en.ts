@@ -1025,6 +1025,7 @@ const en = {
   "apps.field.signinHtml": "Signin HTML",
   "apps.field.signinItems": "Signin Items",
   "apps.field.signupItems": "Signup Items",
+  "apps.field.colorPrimary": "Primary Color",
   "apps.field.backgroundUrl": "Background URL",
   "apps.field.backgroundUrlMobile": "Background URL (Mobile)",
   "apps.field.customCss": "Custom CSS",
@@ -3110,6 +3111,14 @@ const en = {
   "userField.type": "User Type",
   "userField.updated_time": "Updated Time",
   "userField.webauthnCredentials": "WebAuthn Credentials",
+
+  // ColorPicker
+  "colorPicker.paletteLabel": "Quick picks",
+  "colorPicker.hexLabel": "Hex",
+  "colorPicker.hueLabel": "Hue",
+  "colorPicker.saturationLabel": "Saturation",
+  "colorPicker.lightnessLabel": "Lightness",
+  "colorPicker.contrastLabel": "Contrast",
 
   // Admin preview toolbar
   "adminPreview.mode.signin": "Signin",

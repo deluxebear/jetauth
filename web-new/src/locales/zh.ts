@@ -1106,6 +1106,7 @@ const zh: Record<string, string> = {
   "apps.field.signinHtml": "登录 HTML",
   "apps.field.signinItems": "登录项",
   "apps.field.signupItems": "注册项",
+  "apps.field.colorPrimary": "主色调",
   "apps.field.backgroundUrl": "背景 URL",
   "apps.field.backgroundUrlMobile": "背景 URL（移动端）",
   "apps.field.customCss": "自定义 CSS",
@@ -3101,6 +3102,14 @@ const zh: Record<string, string> = {
   "bizPerm.testMatch.noMatch": "未命中",
   "bizPerm.testMatch.resourceChecks": "资源检查",
   "bizPerm.testMatch.actionChecks": "动作检查",
+
+  // ColorPicker
+  "colorPicker.paletteLabel": "常用色",
+  "colorPicker.hexLabel": "十六进制",
+  "colorPicker.hueLabel": "色相",
+  "colorPicker.saturationLabel": "饱和度",
+  "colorPicker.lightnessLabel": "明度",
+  "colorPicker.contrastLabel": "对比度",
 
   // Admin preview toolbar
   "adminPreview.mode.signin": "登录",

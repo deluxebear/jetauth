@@ -24,6 +24,7 @@ import { useUnsavedWarning } from "../hooks/useUnsavedWarning";
 import EditableTable, { type EditableColumn } from "../components/EditableTable";
 import AdminPreviewPane from "./admin-preview/AdminPreviewPane";
 import type { AuthApplication } from "../auth/api/types";
+import ColorPicker from "../components/ColorPicker";
 
 type AppData = Partial<Application>;
 
@@ -1061,6 +1062,12 @@ export default function ApplicationEditPage() {
       )}
 
       <FormSection title={t("apps.section.formLayout" as any)}>
+        <FormField label={t("apps.field.colorPrimary" as any)} span="full">
+          <ColorPicker
+            value={(app.themeData as Record<string, string> | undefined)?.colorPrimary ?? "#2563EB"}
+            onChange={(hex) => set("themeData", { ...(app.themeData as Record<string, unknown> ?? {}), colorPrimary: hex, isEnabled: true })}
+          />
+        </FormField>
         <FormField label={t("apps.field.backgroundUrl" as any)} span="full">
           <div className="flex gap-3 items-start">
             <input value={String(app.formBackgroundUrl ?? "")} onChange={(e) => set("formBackgroundUrl", e.target.value)} className={`${inputClass} flex-1`} placeholder={t("help.placeholder.url" as any)} />
