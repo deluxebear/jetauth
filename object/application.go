@@ -109,6 +109,7 @@ type Application struct {
 	EnableWebAuthn               bool            `json:"enableWebAuthn"`
 	EnableLinkWithEmail          bool            `json:"enableLinkWithEmail"`
 	OrgChoiceMode                string          `json:"orgChoiceMode"`
+	SigninMethodMode             string          `xorm:"varchar(30)" json:"signinMethodMode,omitempty"`
 	SamlReplyUrl                 string          `xorm:"varchar(500)" json:"samlReplyUrl"`
 	Providers                    []*ProviderItem `xorm:"mediumtext" json:"providers"`
 	SigninMethods                []*SigninMethod `xorm:"varchar(2000)" json:"signinMethods"`

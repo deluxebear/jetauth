@@ -43,6 +43,12 @@ const en = {
   "auth.face.failed": "Face recognition failed",
   "auth.face.processing": "Processing...",
 
+  "auth.classic.tabPassword": "Password",
+  "auth.classic.tabCode": "Code",
+  "auth.classic.tabWebAuthn": "Passkey",
+  "auth.classic.tabFace": "Face ID",
+  "auth.classic.usernameLabel": "Username, email, or phone",
+
   "auth.forgot.title": "Reset your password",
   "auth.forgot.subtitle": "Enter your email or phone to receive a verification code",
   "auth.forgot.newPassword": "New password",

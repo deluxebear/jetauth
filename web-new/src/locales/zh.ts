@@ -43,6 +43,12 @@ const zh: Record<string, string> = {
   "auth.face.failed": "人脸识别失败",
   "auth.face.processing": "处理中...",
 
+  "auth.classic.tabPassword": "密码",
+  "auth.classic.tabCode": "验证码",
+  "auth.classic.tabWebAuthn": "通行密钥",
+  "auth.classic.tabFace": "人脸",
+  "auth.classic.usernameLabel": "用户名、邮箱或手机号",
+
   "auth.forgot.title": "重置密码",
   "auth.forgot.subtitle": "输入邮箱或手机号接收验证码",
   "auth.forgot.newPassword": "新密码",

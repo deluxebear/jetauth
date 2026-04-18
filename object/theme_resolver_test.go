@@ -45,6 +45,17 @@ func TestThemeData_NewFieldsSerialize(t *testing.T) {
 }
 
 
+func TestApplication_SigninMethodMode_BackwardCompatibleJSON(t *testing.T) {
+	oldJSON := `{"owner":"admin","name":"app-test","orgChoiceMode":"None"}`
+	var app Application
+	if err := json.Unmarshal([]byte(oldJSON), &app); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	if app.SigninMethodMode != "" {
+		t.Errorf("SigninMethodMode should zero-default to empty, got %q", app.SigninMethodMode)
+	}
+}
+
 func TestResolveTheme_SystemOnly(t *testing.T) {
 	got := ResolveTheme(nil, nil, nil)
 	if got.ColorPrimary == "" || got.FontFamily == "" {

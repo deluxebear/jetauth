@@ -7,6 +7,7 @@ import type { AuthLookup } from "./api/getResolvedTheme";
 import type { AuthApplication, ResolvedProvider } from "./api/types";
 import { useTranslation } from "../i18n";
 import SigninPage from "./signin/SigninPage";
+import ClassicSigninPage from "./signin/ClassicSigninPage";
 import ForgotPasswordPage from "./signin/ForgotPasswordPage";
 
 type Mode = "signin" | "signup" | "forget";
@@ -76,6 +77,9 @@ function AuthShellInner({ lookup, mode }: { lookup: AuthLookup; mode: Mode }) {
   }
 
   if (mode === "signin") {
+    if (app.signinMethodMode === "classic") {
+      return <ClassicSigninPage application={app} providers={providers} />;
+    }
     return <SigninPage application={app} providers={providers} />;
   }
 

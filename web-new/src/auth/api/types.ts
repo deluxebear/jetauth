@@ -77,6 +77,7 @@ export interface AuthApplication {
   enableCodeSignin: boolean;
   enableWebAuthn: boolean;
   orgChoiceMode: string;
+  signinMethodMode?: string; // "" | "classic" — "" = identifier-first default
   formOffset: number;
   formBackgroundUrl: string;
   formBackgroundUrlMobile: string;
