@@ -91,6 +91,8 @@ type Organization struct {
 	Tags                   []string   `xorm:"mediumtext" json:"tags"`
 	Languages              []string   `xorm:"varchar(255)" json:"languages"`
 	ThemeData              *ThemeData `xorm:"json" json:"themeData"`
+	SigninMethods          []*SigninMethod `xorm:"varchar(2000)" json:"signinMethods,omitempty"`
+	SignupItems            []*SignupItem   `xorm:"varchar(3000)" json:"signupItems,omitempty"`
 	MasterPassword         string     `xorm:"varchar(200)" json:"masterPassword"`
 	DefaultPassword        string     `xorm:"varchar(200)" json:"defaultPassword"`
 	MasterVerificationCode string     `xorm:"varchar(100)" json:"masterVerificationCode"`

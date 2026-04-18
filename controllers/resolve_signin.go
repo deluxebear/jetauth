@@ -104,8 +104,9 @@ func filterMethodsForUser(app *object.Application, user *object.User) []SigninMe
 	if app == nil {
 		return []SigninMethodInfo{}
 	}
-	out := make([]SigninMethodInfo, 0, len(app.SigninMethods))
-	for _, m := range app.SigninMethods {
+	methods := object.MergeOrgAppSigninMethods(app.OrganizationObj, app)
+	out := make([]SigninMethodInfo, 0, len(methods))
+	for _, m := range methods {
 		if m == nil {
 			continue
 		}
