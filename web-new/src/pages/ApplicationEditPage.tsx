@@ -22,6 +22,8 @@ import SaveButton from "../components/SaveButton";
 import UnsavedBanner from "../components/UnsavedBanner";
 import { useUnsavedWarning } from "../hooks/useUnsavedWarning";
 import EditableTable, { type EditableColumn } from "../components/EditableTable";
+import AdminPreviewPane from "./admin-preview/AdminPreviewPane";
+import type { AuthApplication } from "../auth/api/types";
 
 type AppData = Partial<Application>;
 
@@ -1004,6 +1006,9 @@ export default function ApplicationEditPage() {
   ];
 
   const uiTab = (
+    <div className="flex flex-col xl:flex-row gap-4">
+      {/* Left: existing config sections */}
+      <div className="xl:w-[40%] xl:flex-shrink-0 space-y-4">
     <div className="space-y-5">
       <FormSection title={t("apps.section.signinUi" as any)}>
         <FormField label={t("apps.field.orgChoiceMode" as any)}>
@@ -1109,6 +1114,15 @@ export default function ApplicationEditPage() {
           <textarea value={String(app.footerHtml ?? "")} onChange={(e) => set("footerHtml", e.target.value)} rows={3} className={`${inputClass} font-mono text-[12px]`} />
         </FormField>
       </FormSection>
+    </div>
+      </div>
+      {/* Right: live preview */}
+      <div className="xl:w-[60%] xl:sticky xl:top-6 xl:self-start xl:max-h-[calc(100vh-3rem)]">
+        <AdminPreviewPane
+          application={app as AuthApplication}
+          initiallyCollapsed={typeof window !== "undefined" && window.innerWidth < 1280}
+        />
+      </div>
     </div>
   );
 
