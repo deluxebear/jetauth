@@ -44,6 +44,8 @@ p, *, *, POST, /api/signup, *, *
 p, *, *, GET, /api/get-email-and-phone, *, *
 p, *, *, POST, /api/login, *, *
 p, *, *, GET, /api/get-app-login, *, *
+p, *, *, GET, /api/get-resolved-theme, *, *
+p, *, *, POST, /api/resolve-signin-methods, *, *
 p, *, *, POST, /api/logout, *, *
 p, *, *, GET, /api/logout, *, *
 p, *, *, POST, /api/sso-logout, *, *
