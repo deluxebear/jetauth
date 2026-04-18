@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate, useLocation, Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Save, Trash2, User, Heart, Shield, Settings, ChevronDown, LogOut, Eye, EyeOff, Wallet, Search, Check, LockKeyhole, ShieldCheck } from "lucide-react";
+import { Trash2, User, Heart, Shield, Settings, ChevronDown, LogOut, Eye, EyeOff, Wallet, Search, Check, LockKeyhole, ShieldCheck } from "lucide-react";
 import StickyEditHeader from "../components/StickyEditHeader";
 import { FormField, FormSection, Switch, inputClass, monoInputClass } from "../components/FormSection";
 import { useTranslation } from "../i18n";
@@ -259,9 +259,6 @@ export default function UserEditPage() {
       else modal.toast(res.msg || t("common.deleteFailed" as any), "error");
     });
   };
-
-  const imgPreview = (url: string) =>
-    url ? <img src={url} alt="" className="h-10 w-10 rounded-full border border-border object-cover" referrerPolicy="no-referrer" onError={(e) => ((e.target as HTMLImageElement).style.display = "none")} /> : null;
 
   // Validate a field value against its regex pattern
   const validateField = (name: string, value: string) => {
@@ -580,7 +577,7 @@ export default function UserEditPage() {
         {dynBlock("Properties",
           <PropertyTable
             properties={user.properties ?? {}}
-            onChange={(v) => set("properties", v)}
+            onChange={(v) => set("properties", Object.fromEntries(Object.entries(v).map(([k, val]) => [k, String(val ?? "")])))}
             disabled={isFieldDisabled("Properties")}
             t={t}
             hideHeader
@@ -1194,7 +1191,7 @@ function WebAuthnTable({ items, onChange, isSelf, t, onRefresh }: {
         modal.toast(t("users.webauthn.registerSuccess" as any));
         onRefresh?.();
       } else {
-        modal.toast(friendlyError(res.msg, t) || t("users.webauthn.registerFailed" as any), "error");
+        modal.toast(friendlyError(res.msg ?? "", t) || t("users.webauthn.registerFailed" as any), "error");
       }
     } catch (e: any) {
       if (e.name === "NotAllowedError") {

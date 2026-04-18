@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useParams, useNavigate, useLocation, Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Save, Trash2, Settings, Shield, Menu, Palette, Wallet, Wrench, LogOut, Plus, ChevronUp, ChevronDown, RefreshCw, Pencil, X } from "lucide-react";
+import { Trash2, Settings, Shield, Menu, Palette, Wallet, Wrench, LogOut, Plus, ChevronUp, ChevronDown, RefreshCw, Pencil, X } from "lucide-react";
 import StickyEditHeader from "../components/StickyEditHeader";
 import Tabs, { TabBar } from "../components/Tabs";
 import { FormField, FormSection, Switch, inputClass, monoInputClass } from "../components/FormSection";

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
 import { ShieldCheck } from "lucide-react";
 import { useTheme } from "../../theme";
 import { useTranslation } from "../../i18n";
@@ -31,7 +31,6 @@ interface SigninPageProps {
 export default function SigninPage({ application, providers: _providers }: SigninPageProps) {
   const { theme } = useTheme();
   const { t } = useTranslation();
-  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
   const [step, setStep] = useState<Step>("identifier");

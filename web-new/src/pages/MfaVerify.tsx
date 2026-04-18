@@ -33,7 +33,7 @@ const METHOD_LABELS: Record<string, string> = {
   email: "mfa.verify.methodEmail",
 };
 
-export default function MfaVerify({ mfaProps, loginForm, themeData, orgBranding, onVerified, onError }: MfaVerifyProps) {
+export default function MfaVerify({ mfaProps, loginForm, themeData, orgBranding, onVerified, onError: _onError }: MfaVerifyProps) {
   const { t } = useTranslation();
   const { theme, applyOrgTheme, clearOrgTheme } = useTheme();
   const [selectedType, setSelectedType] = useState(mfaProps.find(p => p.isPreferred)?.mfaType || mfaProps[0]?.mfaType || "app");

@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { useQuery, useQueryClient, keepPreviousData } from "@tanstack/react-query";
 import { bizKeys } from "../backend/bizQueryKeys";
 import { useParams, useNavigate, useSearchParams, Link } from "react-router-dom";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { ArrowLeft, Plus, Play, Copy, Check, X, RefreshCw, RotateCcw, Pencil, Trash2, LayoutDashboard, Crown, ShieldCheck, FlaskConical, Code, Target } from "lucide-react";
 import DataTable, { type Column, useTablePrefs, ColumnsMenu } from "../components/DataTable";
 import BizAppResourceTab from "../components/BizAppResourceTab";
@@ -186,7 +186,6 @@ export default function AppAuthorizationPage() {
   // Stats — member counts now live in biz_role_member / biz_permission_grantee tables,
   // so we no longer aggregate users from role/permission rows. The unique-user count
   // would require a separate endpoint; show 0 here until that's wired up (non-blocking).
-  const userSet = new Set<string>();
   const allowCount = permissions.filter((p) => p.effect === "Allow").length;
   const denyCount = permissions.filter((p) => p.effect === "Deny").length;
 

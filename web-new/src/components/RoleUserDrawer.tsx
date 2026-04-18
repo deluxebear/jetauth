@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Plus, Search, ChevronLeft, ChevronRight } from "lucide-react";
+import { X, Plus, Search } from "lucide-react";
 import { useTranslation } from "../i18n";
 import { useModal } from "./Modal";
 import * as RoleBackend from "../backend/RoleBackend";

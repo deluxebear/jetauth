@@ -5,7 +5,7 @@ import { motion } from "framer-motion";
 import {
   AlertTriangle, Archive, ArrowRight, Calendar, Code, Eye, GitBranch,
   Info, Key, LogOut, Plus, Save, Shield,
-  Trash2, Users, X,
+  Users, X,
 } from "lucide-react";
 
 import { bizKeys } from "../backend/bizQueryKeys";

@@ -356,7 +356,7 @@ export default function Sidebar({ account }: { account?: Account | null }) {
                       : "text-text-secondary hover:text-text-primary hover:bg-surface-2"
                   } ${collapsed ? "justify-center" : ""}`}
                 >
-                  <span className="shrink-0">{iconMap[item.iconName] ?? <Globe size={18} />}</span>
+                  <span className="shrink-0">{iconMap[item.iconName] ?? <Globe2 size={18} />}</span>
                   {!collapsed && <span>{t(item.labelKey)}</span>}
                   {active && (
                     <motion.div

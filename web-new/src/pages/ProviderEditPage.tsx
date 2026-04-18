@@ -2,11 +2,10 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Save, Trash2, LogOut, ExternalLink, Copy, ChevronDown, ChevronRight, ShieldCheck, Bell, HardDrive, CreditCard, Wallet, MessageSquare, Smartphone, Key, Globe, Link, Settings, HelpCircle } from "lucide-react";
+import { Trash2, LogOut, ExternalLink, Copy, ChevronDown, ChevronRight, ShieldCheck, Bell, HardDrive, CreditCard, Wallet, MessageSquare, Smartphone, Key, Globe, Link, Settings, HelpCircle } from "lucide-react";
 import StickyEditHeader from "../components/StickyEditHeader";
 import { FormField, FormSection, Switch, inputClass, monoInputClass } from "../components/FormSection";
 import SimpleSelect from "../components/SimpleSelect";
-import SingleSearchSelect from "../components/SingleSearchSelect";
 import { BodyTemplateEditor } from "../components/BodyTemplateEditor";
 import { PresetPicker } from "../components/PresetPicker";
 import { useTranslation } from "../i18n";
@@ -254,7 +253,7 @@ const PROVIDER_URLS: Record<string, string> = {
   AzureAD: "https://portal.azure.com/#blade/Microsoft_AAD_RegisteredApps",
   AzureADB2C: "https://portal.azure.com/#blade/Microsoft_AAD_RegisteredApps",
   ADFS: "https://docs.microsoft.com/en-us/windows-server/identity/ad-fs/ad-fs-overview",
-  PayPal: "https://developer.paypal.com/developer/applications", Stripe: "https://dashboard.stripe.com/apikeys",
+  PayPal: "https://developer.paypal.com/developer/applications",
   Gitea: "https://gitea.com", Gitee: "https://gitee.com/oauth/applications",
   Bitbucket: "https://bitbucket.org/account/settings/app-passwords",
   Instagram: "https://developers.facebook.com/apps", Line: "https://developers.line.biz/console",
@@ -346,7 +345,7 @@ const PROVIDER_ICON_SLUGS: Record<string, string> = {
   // SAML
   "Aliyun IDaaS": "alibabacloud", Keycloak: "keycloak",
   // Payment
-  Alipay: "alipay", "WeChat Pay": "wechat",
+  "WeChat Pay": "wechat",
   // Notification
   "Microsoft Teams": "microsoftteams", Pushover: "pushover",
   "Google Chat": "googlechat", Matrix: "matrix", Reddit: "reddit",
@@ -741,7 +740,6 @@ export default function ProviderEditPage() {
   const showClientId2 = shouldShowClientId2(category, type);
   const showSubType = !!SUBTYPES[type];
   const appIdLabel = getAppIdLabel(category, type, t);
-  const isOAuthLike = category === "OAuth" || category === "Web3" || category === "SAML";
   const isCustomOAuth = category === "OAuth" && type === "Custom";
 
   // ── Category-specific fields ──
@@ -1489,7 +1487,7 @@ export default function ProviderEditPage() {
       setIsAddMode(false);
       invalidateList();
 
-      const res = await fetch(`/api/send-notification?provider=${encodeURIComponent(prov.name)}`, {
+      const res = await fetch(`/api/send-notification?provider=${encodeURIComponent(String(prov.name ?? ""))}`, {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
@@ -1765,7 +1763,7 @@ export default function ProviderEditPage() {
           <FormField label={t("providers.field.providerUrl")} help={t("providers.help.providerUrl" as any)} span="full">
             <div className="flex gap-2">
               <input value={String(prov.providerUrl ?? "")} onChange={(e) => set("providerUrl", e.target.value)} className={`${inputClass} flex-1`} />
-              {prov.providerUrl && (
+              {String(prov.providerUrl ?? "") && (
                 <a href={String(prov.providerUrl)} target="_blank" rel="noreferrer" className="rounded-lg border border-border p-2 text-text-muted hover:text-accent hover:bg-accent/10 transition-colors">
                   <ExternalLink size={14} />
                 </a>

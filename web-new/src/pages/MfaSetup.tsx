@@ -43,12 +43,12 @@ export default function MfaSetup({
   const [loading, setLoading] = useState(false);
 
   const [secret, setSecret] = useState("");
-  const [totpUrl, setTotpUrl] = useState("");
+  const [_totpUrl, setTotpUrl] = useState("");
   const [qrDataUrl, setQrDataUrl] = useState("");
   const [recoveryCodes, setRecoveryCodes] = useState<string[]>([]);
 
   const [passcode, setPasscode] = useState("");
-  const [codeSent, setCodeSent] = useState(false);
+  const [_codeSent, setCodeSent] = useState(false);
   const [countdown, setCountdown] = useState(0);
   const [copied, setCopied] = useState(false);
 

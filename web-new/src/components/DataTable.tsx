@@ -250,7 +250,7 @@ export default function DataTable<T extends Record<string, unknown>>({
   const [sortInternal, setSortInternal] = useState<SortState>(
     sortExternallyOwned ? (defaultSort ?? { field: "", order: "" }) : initial.sort,
   );
-  const [hiddenInternal, setHiddenInternal] = useState<Set<string>>(initial.hidden);
+  const [hiddenInternal] = useState<Set<string>>(initial.hidden);
   const [widthsInternal, setWidthsInternal] = useState<Record<string, number>>(initial.widths);
   const [pageSizeInternal, setPageSizeInternal] = useState<number>(initial.pageSize);
   const [pageInternal, setPageInternal] = useState<number>(1);

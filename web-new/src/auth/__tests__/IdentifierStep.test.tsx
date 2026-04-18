@@ -30,8 +30,8 @@ describe("IdentifierStep", () => {
   });
 
   it("shows loading state during async submit", async () => {
-    let resolver: (() => void) | null = null;
-    const onSubmit = vi.fn().mockReturnValue(new Promise<void>((r) => { resolver = r; }));
+    const resolverBox: { fn: (() => void) | null } = { fn: null };
+    const onSubmit = vi.fn().mockReturnValue(new Promise<void>((r) => { resolverBox.fn = r; }));
     render(<IdentifierStep onSubmit={onSubmit} />);
 
     const input = screen.getByPlaceholderText("auth.identifier.placeholder");
@@ -41,7 +41,7 @@ describe("IdentifierStep", () => {
     await waitFor(() => {
       expect(screen.getByRole("button").hasAttribute("disabled")).toBe(true);
     });
-    resolver?.();
+    resolverBox.fn?.();
   });
 
   it("displays error prop when provided", () => {

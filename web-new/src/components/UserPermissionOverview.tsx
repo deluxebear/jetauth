@@ -5,8 +5,6 @@ import * as ApplicationBackend from "../backend/ApplicationBackend";
 import * as PermissionBackend from "../backend/PermissionBackend";
 import * as RoleBackend from "../backend/RoleBackend";
 import type { Application } from "../backend/ApplicationBackend";
-import type { Permission } from "../backend/PermissionBackend";
-import type { Role } from "../backend/RoleBackend";
 
 // Color palette for app icons
 const ICON_GRADIENTS = [

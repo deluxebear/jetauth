@@ -9,7 +9,6 @@ import * as BizBackend from "../backend/BizBackend";
 import * as ApplicationBackend from "../backend/ApplicationBackend";
 import type { BizAppConfig } from "../backend/BizBackend";
 import { DEFAULT_RBAC_MODEL, MODEL_PRESETS } from "../backend/BizBackend";
-import type { ModelPreset } from "../backend/BizBackend";
 import type { Application } from "../backend/ApplicationBackend";
 import { pickAppIcon } from "../utils/appIcon";
 
@@ -60,8 +59,6 @@ function getInitial(config: BizAppConfig) {
 
 export default function AuthorizationPage() {
   const { t } = useTranslation();
-  const navigate = useNavigate();
-  const modal = useModal();
   const { getRequestOwner, selectedOrg, isAll } = useOrganization();
   const [loading, setLoading] = useState(true);
   const [cardData, setCardData] = useState<BizAppCardData[]>([]);

@@ -188,10 +188,10 @@ function Layout({
 export default function App() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const [loginError, setLoginError] = useState("");
+  const [_loginError, setLoginError] = useState("");
   const [justLoggedIn, setJustLoggedIn] = useState(false);
-  const [loginThemeData, setLoginThemeData] = useState<any>(null);
-  const [loginOrgBranding, setLoginOrgBranding] = useState<{ logo?: string; logoDark?: string; favicon?: string; displayName?: string } | null>(null);
+  const [loginThemeData] = useState<any>(null);
+  const [loginOrgBranding] = useState<{ logo?: string; logoDark?: string; favicon?: string; displayName?: string } | null>(null);
   const [mfaState, setMfaState] = useState<{
     type: "setup" | "verify";
     mfaType?: string;
@@ -231,108 +231,6 @@ export default function App() {
 
     // Theme is fetched by Login component via onOrganizationChange callback
   }, []);
-
-  const fetchLoginTheme = useCallback((organization: string) => {
-    fetch(`/api/get-default-application?id=admin/${organization}`, { credentials: "include" })
-      .then((r) => r.json())
-      .then((res: any) => {
-        if (res.status === "ok" && res.data) {
-          const org = res.data.organizationObj;
-          // Priority: app themeData (if enabled) > org themeData (if enabled) > null
-          const appTheme = res.data.themeData;
-          const orgTheme = org?.themeData;
-          if (appTheme?.isEnabled) {
-            setLoginThemeData(appTheme);
-          } else if (orgTheme?.isEnabled) {
-            setLoginThemeData(orgTheme);
-          } else {
-            setLoginThemeData(null);
-          }
-          // Extract org branding for login page
-          if (org) {
-            setLoginOrgBranding({
-              logo: org.logo || "",
-              logoDark: org.logoDark || "",
-              favicon: org.favicon || "",
-              displayName: org.displayName || "",
-            });
-          } else {
-            setLoginOrgBranding(null);
-          }
-        }
-      })
-      .catch(() => { /* theme fetch failed, use default */ });
-  }, []);
-
-  const handleLogin = async (username: string, password: string, organization = "built-in") => {
-    setLoginError("");
-    try {
-      let application = "app-built-in";
-      let obfuscatorType = "";
-      let obfuscatorKey = "";
-
-      // Fetch default application to get app name + org obfuscator config
-      try {
-        const res = await fetch(`/api/get-default-application?id=admin/${organization}`, { credentials: "include" }).then(r => r.json());
-        if (res.status === "ok" && res.data) {
-          if (res.data.name) application = res.data.name;
-          if (res.data.organizationObj) {
-            obfuscatorType = res.data.organizationObj.passwordObfuscatorType || "";
-            obfuscatorKey = res.data.organizationObj.passwordObfuscatorKey || "";
-          }
-        }
-      } catch { /* fallback to plain */ }
-
-      // Encrypt password if org uses AES/DES obfuscation
-      const { encryptPassword } = await import("./utils/obfuscator");
-      const encryptedPassword = encryptPassword(obfuscatorType, obfuscatorKey, password);
-
-      const res: any = await apiLogin({
-        application,
-        organization,
-        username,
-        password: encryptedPassword,
-        signinMethod: "Password",
-        type: "login",
-      });
-      if (res?.status === "ok") {
-        if (res.data === "RequiredMfa") {
-          // Determine which MFA type is required from org config
-          const orgRes: any = await fetch(`/api/get-default-application?id=admin/${organization}`, { credentials: "include" }).then(r => r.json());
-          const orgMfaItems = orgRes?.data?.organizationObj?.mfaItems || [];
-          const requiredItem = orgMfaItems.find((i: any) => i.rule === "Required");
-          const reqMfaType = requiredItem?.name || "app";
-
-          setMfaState({
-            type: "setup",
-            mfaType: reqMfaType,
-            loginForm: { application, organization, username, encryptedPassword },
-          });
-          navigate(`/mfa/setup?mfaType=${reqMfaType}`);
-          return;
-        }
-        if (res.data === "NextMfa") {
-          setMfaState({
-            type: "verify",
-            mfaProps: res.data2 || [],
-            loginForm: { application, organization, username, encryptedPassword },
-          });
-          navigate(`/mfa/verify?mfaType=${res.data2?.[0]?.mfaType || "app"}`);
-          return;
-        }
-
-        const acc: any = await getAccount();
-        if (applyAccountData(acc)) {
-          setJustLoggedIn(true);
-          navigate("/");
-        }
-      } else {
-        setLoginError(res?.msg || "Login failed");
-      }
-    } catch (e: any) {
-      setLoginError(e.message || "Network error");
-    }
-  };
 
   const handleLogout = async () => {
     const userOrg = user?.owner;
@@ -633,7 +531,11 @@ export default function App() {
     <Layout user={user} onLogout={handleLogout}>
       <EnableMfaNotification account={mfaAccount as any} justLoggedIn={justLoggedIn} onDismiss={() => setJustLoggedIn(false)} />
       <Routes>
-        <Route path="/" element={<Dashboard />} />
+        <Route path="/" element={
+          isGlobalAdmin(user)
+            ? <Dashboard />
+            : <Navigate to={`/users?owner=${encodeURIComponent(user.owner)}`} replace />
+        } />
         <Route path="/authorization" element={<AuthorizationPage />} />
         <Route path="/authorization/:owner/:appName" element={<AppAuthorizationPage />} />
         <Route path="/authorization/:owner/:appName/roles/new" element={<BizRoleEditPage />} />
