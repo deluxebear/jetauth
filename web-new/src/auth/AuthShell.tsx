@@ -84,6 +84,10 @@ function AuthShellInner({ lookup, mode }: { lookup: AuthLookup; mode: Mode }) {
 
   // Preview message listener: admin UI posts application overrides that
   // get merged over the fetched app. Runs only in preview mode.
+  //
+  // ThemeData overrides also directly patch the :root CSS variables
+  // that ThemeProvider injected, so color/radius/font changes render
+  // live without a full theme refetch.
   useEffect(() => {
     if (!isPreviewMode) return;
     const handler = (e: MessageEvent) => {
@@ -105,6 +109,29 @@ function AuthShellInner({ lookup, mode }: { lookup: AuthLookup; mode: Mode }) {
                 },
         } as AuthApplication;
       });
+
+      // Patch :root CSS vars directly so ThemeProvider's initial injection
+      // (which was based on the pre-edit resolved theme) doesn't keep
+      // winning. Takes effective values from the merged orgTheme then
+      // appTheme (app wins) — same precedence as the backend resolver.
+      const resolvedOrgTheme = overrides.organizationObj?.themeData;
+      const resolvedAppTheme = overrides.themeData;
+      const effective = resolvedAppTheme ?? resolvedOrgTheme;
+      if (effective && typeof document !== "undefined") {
+        const root = document.documentElement;
+        if (effective.colorPrimary) {
+          root.style.setProperty("--color-primary", effective.colorPrimary);
+          root.style.setProperty("--accent", effective.colorPrimary);
+          root.style.setProperty("--color-accent", effective.colorPrimary);
+        }
+        if (effective.borderRadius !== undefined && effective.borderRadius !== null) {
+          root.style.setProperty("--radius-md", `${effective.borderRadius}px`);
+          root.style.setProperty("--radius-lg", `${effective.borderRadius + 4}px`);
+        }
+        if (effective.fontFamily) {
+          root.style.setProperty("--font-sans", effective.fontFamily);
+        }
+      }
     };
     window.addEventListener("message", handler);
     return () => window.removeEventListener("message", handler);
