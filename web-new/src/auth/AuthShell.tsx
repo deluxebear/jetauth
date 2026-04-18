@@ -60,7 +60,31 @@ function AuthShellInner({ lookup, mode }: { lookup: AuthLookup; mode: Mode }) {
   useEffect(() => {
     getAppLogin(lookup)
       .then(({ application, providers }) => {
-        setApp(application);
+        // Check for preview override in URL
+        const search = new URLSearchParams(window.location.search);
+        const previewRaw = search.get("previewConfig");
+        let merged = application;
+        if (previewRaw) {
+          try {
+            const b64 = previewRaw.replace(/-/g, "+").replace(/_/g, "/");
+            const decoded = decodeURIComponent(escape(atob(b64)));
+            const overrides = JSON.parse(decoded) as Partial<AuthApplication>;
+            merged = {
+              ...application,
+              ...overrides,
+              organizationObj:
+                overrides.organizationObj === undefined
+                  ? application.organizationObj
+                  : {
+                      ...(application.organizationObj ?? {}),
+                      ...overrides.organizationObj,
+                    },
+            } as AuthApplication;
+          } catch (e) {
+            console.warn("[AuthShell] invalid previewConfig:", e);
+          }
+        }
+        setApp(merged);
         setProviders(providers);
       })
       .catch((e: Error) => setError(e.message ?? "failed to load"));
