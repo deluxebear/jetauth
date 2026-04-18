@@ -1,4 +1,9 @@
 const en = {
+  // Auth
+  "auth.loading": "Loading…",
+  "auth.signinTitle": "Sign in",
+  "auth.signupTitle": "Create account",
+  "auth.skeletonNote": "W1 skeleton — real auth flow arrives in W2.",
   // Common
   "common.search": "Search...",
   "common.signOut": "Sign out",

@@ -4,6 +4,7 @@ import { useParams } from "react-router-dom";
 import { ThemeProvider, useAuthTheme } from "./ThemeProvider";
 import { getAppLogin } from "./api/getAppLogin";
 import type { AuthApplication, ResolvedProvider } from "./api/types";
+import { useTranslation } from "../i18n";
 
 type Mode = "signin" | "signup";
 
@@ -29,6 +30,7 @@ export default function AuthShell({ mode }: AuthShellProps) {
 
 function AuthShellInner({ appId, mode }: { appId: string; mode: Mode }) {
   const theme = useAuthTheme();
+  const { t } = useTranslation();
   const [app, setApp] = useState<AuthApplication | null>(null);
   const [providers, setProviders] = useState<ResolvedProvider[]>([]);
   const [error, setError] = useState("");
@@ -50,7 +52,7 @@ function AuthShellInner({ appId, mode }: { appId: string; mode: Mode }) {
     );
   }
   if (!app) {
-    return <div className="min-h-screen flex items-center justify-center">loading…</div>;
+    return <div className="min-h-screen flex items-center justify-center">{t("auth.loading")}</div>;
   }
 
   // W1 placeholder surface — proves the theme pipeline works end-to-end.
@@ -74,10 +76,10 @@ function AuthShellInner({ appId, mode }: { appId: string; mode: Mode }) {
           className="text-2xl font-bold mb-2"
           style={{ color: "var(--color-primary, #2563EB)" }}
         >
-          {mode === "signin" ? "Sign in" : "Create account"}
+          {mode === "signin" ? t("auth.signinTitle") : t("auth.signupTitle")}
         </h1>
         <p className="text-sm text-gray-500 mb-6">
-          {app.displayName || app.name} · W1 skeleton — real auth flow arrives in W2.
+          {app.displayName || app.name} · {t("auth.skeletonNote")}
         </p>
 
         <div className="text-[12px] font-mono text-gray-400 p-3 bg-gray-50 rounded space-y-1">

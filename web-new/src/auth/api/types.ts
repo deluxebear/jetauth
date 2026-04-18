@@ -8,7 +8,7 @@ export interface ResolvedTheme {
   darkColorPrimary: string;
   darkBackground: string;
   borderRadius: number;
-  isCompact: boolean | null;
+  isCompact: boolean;
   isEnabled: boolean;
   fontFamily: string;
   fontFamilyMono: string;

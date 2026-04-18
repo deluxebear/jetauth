@@ -14,7 +14,7 @@ vi.mock("../api/getResolvedTheme", () => ({
       darkColorPrimary: "#88FFBB",
       darkBackground: "#0F1117",
       borderRadius: 10,
-      isCompact: null,
+      isCompact: false,
       isEnabled: true,
       fontFamily: "Inter",
       fontFamilyMono: "JetBrains Mono",

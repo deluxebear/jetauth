@@ -1,4 +1,9 @@
 const zh: Record<string, string> = {
+  // Auth
+  "auth.loading": "加载中…",
+  "auth.signinTitle": "登录",
+  "auth.signupTitle": "创建账号",
+  "auth.skeletonNote": "W1 骨架 — W2 将补齐真正的登录流程。",
   // Common
   "common.search": "搜索...",
   "common.signOut": "退出登录",
