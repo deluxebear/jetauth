@@ -2,7 +2,9 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { RefreshCw, Trash2, X, ChevronDown, ChevronUp } from "lucide-react";
-import DataTable, { type Column } from "../components/DataTable";
+import DataTable, { type Column, useTablePrefs, ColumnsMenu } from "../components/DataTable";
+import { BulkDeleteBar } from "../components/BulkDeleteBar";
+import { useBulkDelete } from "../hooks/useBulkDelete";
 import { useTranslation } from "../i18n";
 import { useModal } from "../components/Modal";
 import { useEntityList } from "../hooks/useEntityList";
@@ -85,6 +87,8 @@ export default function SessionListPage() {
     queryKey: "sessions",
     fetchFn: SessionBackend.getSessions,
   });
+  const prefs = useTablePrefs({ persistKey: "list:sessions" });
+  const bulkDelete = useBulkDelete<Session>((s) => SessionBackend.deleteSession(s), list.refetch);
 
   const handleDeleteSession = (record: Session, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -239,6 +243,7 @@ export default function SessionListPage() {
           >
             <RefreshCw size={15} />
           </motion.button>
+          <ColumnsMenu columns={columns} hidden={prefs.hidden} onToggle={prefs.toggleHidden} onResetWidths={prefs.resetWidths} />
         </div>
       </div>
 
@@ -254,9 +259,14 @@ export default function SessionListPage() {
         onSort={list.handleSort}
         onFilter={list.handleFilter}
         emptyText={t("common.noData")}
-        persistKey="list:sessions"
+        hidden={prefs.hidden}
+        widths={prefs.widths}
+        onWidthChange={prefs.setWidth}
         resizable
-        columnsToggle
+        selectable
+        bulkActions={({ selected, clear }) => (
+          <BulkDeleteBar selected={selected} clear={clear} onDelete={bulkDelete} />
+        )}
       />
 
       {/* Detail Drawer */}

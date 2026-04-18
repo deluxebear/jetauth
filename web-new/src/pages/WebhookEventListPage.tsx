@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { RefreshCw, Eye, RotateCcw } from "lucide-react";
-import DataTable, { type Column } from "../components/DataTable";
+import DataTable, { type Column, useTablePrefs, ColumnsMenu } from "../components/DataTable";
 import { useTranslation } from "../i18n";
 import { useModal } from "../components/Modal";
 import * as WebhookEventBackend from "../backend/WebhookEventBackend";
@@ -33,6 +33,7 @@ export default function WebhookEventListPage() {
   const [sortField, setSortField] = useState("");
   const [sortOrder, setSortOrder] = useState("");
   const [detailRecord, setDetailRecord] = useState<WebhookEvent | null>(null);
+  const prefs = useTablePrefs({ persistKey: "list:webhook-events" });
 
   const fetchData = useCallback(async (p = page, sf = statusFilter, sField = sortField, sOrder = sortOrder) => {
     setLoading(true);
@@ -134,9 +135,25 @@ export default function WebhookEventListPage() {
         </div>
         <div className="flex items-center gap-2">
           <motion.button whileHover={{ rotate: 180 }} transition={{ duration: 0.3 }} onClick={() => fetchData(page)} className="rounded-lg border border-border p-2 text-text-muted hover:bg-surface-2 transition-colors" title={t("common.refresh")}><RefreshCw size={15} /></motion.button>
+          <ColumnsMenu columns={columns} hidden={prefs.hidden} onToggle={prefs.toggleHidden} onResetWidths={prefs.resetWidths} />
         </div>
       </div>
-      <DataTable columns={columns} data={data} rowKey="name" loading={loading} page={page} pageSize={pageSize} total={total} onPageChange={(p) => fetchData(p)} onSort={(sort) => fetchData(1, statusFilter, sort.field, sort.order)} emptyText={t("common.noData")} persistKey="list:webhook-events" resizable columnsToggle />
+      <DataTable
+        columns={columns}
+        data={data}
+        rowKey="name"
+        loading={loading}
+        page={page}
+        pageSize={pageSize}
+        total={total}
+        onPageChange={(p) => fetchData(p)}
+        onSort={(sort) => fetchData(1, statusFilter, sort.field, sort.order)}
+        emptyText={t("common.noData")}
+        hidden={prefs.hidden}
+        widths={prefs.widths}
+        onWidthChange={prefs.setWidth}
+        resizable
+      />
 
       {/* Detail Drawer / Modal */}
       {detailRecord && (

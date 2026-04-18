@@ -1,7 +1,9 @@
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { RefreshCw, Trash2, Pencil } from "lucide-react";
-import DataTable, { type Column } from "../components/DataTable";
+import DataTable, { type Column, useTablePrefs, ColumnsMenu } from "../components/DataTable";
+import { BulkDeleteBar } from "../components/BulkDeleteBar";
+import { useBulkDelete } from "../hooks/useBulkDelete";
 import { useTranslation } from "../i18n";
 import { useModal } from "../components/Modal";
 import { useEntityList } from "../hooks/useEntityList";
@@ -16,6 +18,8 @@ export default function EntryListPage() {
     queryKey: "entries",
     fetchFn: EntryBackend.getEntries,
   });
+  const prefs = useTablePrefs({ persistKey: "list:entries" });
+  const bulkDelete = useBulkDelete<Entry>(EntryBackend.deleteEntry, list.refetch);
 
   const handleDelete = (record: Entry, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -84,9 +88,30 @@ export default function EntryListPage() {
         </div>
         <div className="flex items-center gap-2">
           <motion.button whileHover={{ rotate: 180 }} transition={{ duration: 0.3 }} onClick={list.refetch} className="rounded-lg border border-border p-2 text-text-muted hover:bg-surface-2 transition-colors" title={t("common.refresh")}><RefreshCw size={15} /></motion.button>
+          <ColumnsMenu columns={columns} hidden={prefs.hidden} onToggle={prefs.toggleHidden} onResetWidths={prefs.resetWidths} />
         </div>
       </div>
-      <DataTable columns={columns} data={list.items} rowKey="name" loading={list.loading} page={list.page} pageSize={list.pageSize} total={list.total} onPageChange={list.setPage} onSort={list.handleSort} onFilter={list.handleFilter} emptyText={t("common.noData")} persistKey="list:entries" resizable columnsToggle />
+      <DataTable
+        columns={columns}
+        data={list.items}
+        rowKey="name"
+        loading={list.loading}
+        page={list.page}
+        pageSize={list.pageSize}
+        total={list.total}
+        onPageChange={list.setPage}
+        onSort={list.handleSort}
+        onFilter={list.handleFilter}
+        emptyText={t("common.noData")}
+        hidden={prefs.hidden}
+        widths={prefs.widths}
+        onWidthChange={prefs.setWidth}
+        resizable
+        selectable
+        bulkActions={({ selected, clear }) => (
+          <BulkDeleteBar selected={selected} clear={clear} onDelete={bulkDelete} />
+        )}
+      />
     </div>
   );
 }

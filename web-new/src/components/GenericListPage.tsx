@@ -2,7 +2,9 @@ import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Plus, RefreshCw, Trash2 } from "lucide-react";
-import DataTable, { type Column } from "./DataTable";
+import DataTable, { type Column, useTablePrefs, ColumnsMenu } from "./DataTable";
+import { BulkDeleteBar } from "./BulkDeleteBar";
+import { useBulkDelete } from "../hooks/useBulkDelete";
 import { api } from "../api/client";
 import { useTranslation } from "../i18n";
 
@@ -84,6 +86,18 @@ export default function GenericListPage({
     }
   };
 
+  const prefs = useTablePrefs({ persistKey: `list:${entityType}` });
+  const bulkDelete = useBulkDelete<Record<string, unknown>>(
+    async (record) => {
+      const res = await api.post<{ status: string; msg?: string }>(
+        `/api/delete-${entityType.replace(/s$/, "")}`,
+        record,
+      );
+      return res ?? { status: "ok" };
+    },
+    fetchData,
+  );
+
   const handleAdd = () => {
     navigate(`/${entityType}/new`);
   };
@@ -134,6 +148,7 @@ export default function GenericListPage({
           >
             <RefreshCw size={15} />
           </motion.button>
+          <ColumnsMenu columns={finalColumns} hidden={prefs.hidden} onToggle={prefs.toggleHidden} onResetWidths={prefs.resetWidths} />
           {canAdd && addButtonKey && (
             <button
               onClick={handleAdd}
@@ -156,9 +171,14 @@ export default function GenericListPage({
         total={total}
         onPageChange={setPage}
         emptyText={t("common.noData")}
-        persistKey={`list:${entityType}`}
+        hidden={prefs.hidden}
+        widths={prefs.widths}
+        onWidthChange={prefs.setWidth}
         resizable
-        columnsToggle
+        selectable={canDelete}
+        bulkActions={canDelete ? ({ selected, clear }) => (
+          <BulkDeleteBar selected={selected} clear={clear} onDelete={bulkDelete} />
+        ) : undefined}
       />
     </div>
   );

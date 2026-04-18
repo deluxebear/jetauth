@@ -101,13 +101,6 @@ interface DataTableProps<T> {
   widths?: Record<string, number>;           // controlled widths (px)
   onWidthChange?: (key: string, width: number) => void;
 
-  // ── Columns toggle ──────────────────────────────────────────────────
-  // When `columnsToggle` is on, DataTable renders a small toolbar above
-  // the grid with a <ColumnsMenu> driven by its internal hidden state.
-  // Combine with `persistKey` to persist visibility + widths across page
-  // reloads. For custom placement (e.g. next to a page-level CTA), keep
-  // `columnsToggle` off and render <ColumnsMenu> yourself via useTablePrefs.
-  columnsToggle?: boolean;
 
   // ── Pagination ──────────────────────────────────────────────────────
   // Server-side: caller passes `page`/`pageSize`/`total`/`onPageChange`;
@@ -218,7 +211,6 @@ export default function DataTable<T extends Record<string, unknown>>({
   resizable,
   widths: widthsControlled,
   onWidthChange,
-  columnsToggle,
   clientPagination,
   defaultPageSize,
   pageSizeOptions = DEFAULT_PAGE_SIZE_OPTIONS,
@@ -606,40 +598,11 @@ export default function DataTable<T extends Record<string, unknown>>({
   // colspan used by loading skeleton + empty state
   const totalRenderedCols = visibleColumns.length + (selectable ? 1 : 0);
 
-  // Reset internal widths (used by the built-in columnsToggle menu's
-  // "reset widths" footer). Only relevant when widths are uncontrolled.
-  const resetWidthsInternal = useCallback(() => {
-    if (widthsControlled) return;
-    setWidthsInternal({});
-  }, [widthsControlled]);
-
-  // Internal columns-menu state (uncontrolled hidden). In controlled-hidden
-  // mode the caller should render <ColumnsMenu> themselves via useTablePrefs.
-  const toggleHiddenInternal = useCallback((key: string) => {
-    if (hiddenControlled) return;
-    setHiddenInternal((prev) => {
-      const next = new Set(prev);
-      if (next.has(key)) next.delete(key); else next.add(key);
-      return next;
-    });
-  }, [hiddenControlled]);
-
-  const showInlineColumnsMenu = columnsToggle && !hiddenControlled;
-
   return (
     <div className="rounded-xl border border-border bg-surface-1 overflow-hidden">
-      {/* Inline columns-toggle toolbar (opt-in via `columnsToggle`). */}
-      {showInlineColumnsMenu && (
-        <div className="flex items-center justify-end border-b border-border-subtle bg-surface-2/40 px-2 py-1.5">
-          <ColumnsMenu
-            columns={columns}
-            hidden={hidden}
-            onToggle={toggleHiddenInternal}
-            onResetWidths={resizable && !widthsControlled ? resetWidthsInternal : undefined}
-          />
-        </div>
-      )}
-      {/* Bulk-action bar renders above the grid whenever selection is active. */}
+      {/* Toolbar only renders when the bulk action bar has something to
+          show. The columns dropdown lives OUTSIDE the table — render
+          <ColumnsMenu> in your page header via useTablePrefs(). */}
       {bulkBarActive && (
         <div className="flex items-center gap-2 border-b border-border-subtle bg-accent/5 px-3 py-2">
           {bulkActions!({ selected: selectedRows, selectedKeys, clear: clearSelection })}

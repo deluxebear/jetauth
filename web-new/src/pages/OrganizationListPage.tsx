@@ -2,7 +2,9 @@ import { useCallback } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Plus, RefreshCw, Trash2, Users, Boxes, Pencil } from "lucide-react";
-import DataTable, { type Column } from "../components/DataTable";
+import DataTable, { type Column, useTablePrefs, ColumnsMenu } from "../components/DataTable";
+import { BulkDeleteBar } from "../components/BulkDeleteBar";
+import { useBulkDelete } from "../hooks/useBulkDelete";
 import StatusBadge from "../components/StatusBadge";
 import { useTranslation } from "../i18n";
 import { useModal } from "../components/Modal";
@@ -33,6 +35,8 @@ export default function OrganizationListPage() {
     owner: isGlobalAdmin ? "admin" : selectedOrg,
     extraKeys: [selectedOrg],
   });
+  const prefs = useTablePrefs({ persistKey: "list:organizations" });
+  const bulkDelete = useBulkDelete<Organization>(OrgBackend.deleteOrganization, list.refetch);
 
   const handleAdd = async () => {
     const rand = Math.random().toString(36).substring(2, 8);
@@ -284,6 +288,7 @@ export default function OrganizationListPage() {
           >
             <RefreshCw size={15} />
           </motion.button>
+          <ColumnsMenu columns={columns} hidden={prefs.hidden} onToggle={prefs.toggleHidden} onResetWidths={prefs.resetWidths} />
           {isGlobalAdmin && (
             <button
               onClick={handleAdd}
@@ -308,9 +313,14 @@ export default function OrganizationListPage() {
         onSort={list.handleSort}
         onFilter={list.handleFilter}
         emptyText={t("common.noData")}
-        persistKey="list:organizations"
+        hidden={prefs.hidden}
+        widths={prefs.widths}
+        onWidthChange={prefs.setWidth}
         resizable
-        columnsToggle
+        selectable
+        bulkActions={({ selected, clear }) => (
+          <BulkDeleteBar selected={selected} clear={clear} onDelete={bulkDelete} />
+        )}
       />
     </div>
   );

@@ -1,7 +1,9 @@
 import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Plus, RefreshCw, Trash2, Pencil } from "lucide-react";
-import DataTable, { type Column } from "../components/DataTable";
+import DataTable, { type Column, useTablePrefs, ColumnsMenu } from "../components/DataTable";
+import { BulkDeleteBar } from "../components/BulkDeleteBar";
+import { useBulkDelete } from "../hooks/useBulkDelete";
 import { useTranslation } from "../i18n";
 import { useModal } from "../components/Modal";
 import { useEntityList } from "../hooks/useEntityList";
@@ -21,6 +23,8 @@ export default function ProductListPage() {
     queryKey: "products",
     fetchFn: ProductBackend.getProducts,
   });
+  const prefs = useTablePrefs({ persistKey: "list:products" });
+  const bulkDelete = useBulkDelete<Product>(ProductBackend.deleteProduct, list.refetch);
 
   const handleAdd = async () => {
     const product = ProductBackend.newProduct(getNewEntityOwner());
@@ -244,6 +248,7 @@ export default function ProductListPage() {
           >
             <RefreshCw size={15} />
           </motion.button>
+          <ColumnsMenu columns={columns} hidden={prefs.hidden} onToggle={prefs.toggleHidden} onResetWidths={prefs.resetWidths} />
           <button
             onClick={handleAdd}
             className="flex items-center gap-1.5 rounded-lg bg-accent px-3 py-2 text-[13px] font-semibold text-white hover:bg-accent-hover transition-colors"
@@ -264,9 +269,14 @@ export default function ProductListPage() {
         onSort={list.handleSort}
         onFilter={list.handleFilter}
         emptyText={t("common.noData")}
-        persistKey="list:products"
+        hidden={prefs.hidden}
+        widths={prefs.widths}
+        onWidthChange={prefs.setWidth}
         resizable
-        columnsToggle
+        selectable
+        bulkActions={({ selected, clear }) => (
+          <BulkDeleteBar selected={selected} clear={clear} onDelete={bulkDelete} />
+        )}
       />
     </div>
   );

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { RefreshCw, X, Copy, Check } from "lucide-react";
-import DataTable, { type Column } from "../components/DataTable";
+import DataTable, { type Column, useTablePrefs, ColumnsMenu } from "../components/DataTable";
 import { useTranslation } from "../i18n";
 import { useModal } from "../components/Modal";
 import { useEntityList } from "../hooks/useEntityList";
@@ -104,6 +104,7 @@ export default function RecordListPage() {
     owner: recordOwner,
     pageSize: 20,
   });
+  const prefs = useTablePrefs({ persistKey: "list:records" });
 
   const columns: Column<AuditRecord>[] = [
     {
@@ -347,6 +348,7 @@ export default function RecordListPage() {
           >
             <RefreshCw size={15} />
           </motion.button>
+          <ColumnsMenu columns={columns} hidden={prefs.hidden} onToggle={prefs.toggleHidden} onResetWidths={prefs.resetWidths} />
         </div>
       </div>
 
@@ -362,9 +364,10 @@ export default function RecordListPage() {
         onSort={list.handleSort}
         onFilter={list.handleFilter}
         emptyText={t("common.noData")}
-        persistKey="list:records"
+        hidden={prefs.hidden}
+        widths={prefs.widths}
+        onWidthChange={prefs.setWidth}
         resizable
-        columnsToggle
       />
 
       {/* Detail Drawer */}

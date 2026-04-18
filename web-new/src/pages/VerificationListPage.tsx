@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { RefreshCw, X, Mail, Smartphone } from "lucide-react";
-import DataTable, { type Column } from "../components/DataTable";
+import DataTable, { type Column, useTablePrefs, ColumnsMenu } from "../components/DataTable";
 import { useTranslation } from "../i18n";
 import { useEntityList } from "../hooks/useEntityList";
 import * as VerificationBackend from "../backend/VerificationBackend";
@@ -53,6 +53,7 @@ export default function VerificationListPage() {
     queryKey: "verifications",
     fetchFn: VerificationBackend.getVerifications,
   });
+  const prefs = useTablePrefs({ persistKey: "list:verifications" });
 
   const columns: Column<Verification>[] = [
     {
@@ -251,6 +252,7 @@ export default function VerificationListPage() {
           >
             <RefreshCw size={15} />
           </motion.button>
+          <ColumnsMenu columns={columns} hidden={prefs.hidden} onToggle={prefs.toggleHidden} onResetWidths={prefs.resetWidths} />
         </div>
       </div>
 
@@ -266,9 +268,10 @@ export default function VerificationListPage() {
         onSort={list.handleSort}
         onFilter={list.handleFilter}
         emptyText={t("common.noData")}
-        persistKey="list:verifications"
+        hidden={prefs.hidden}
+        widths={prefs.widths}
+        onWidthChange={prefs.setWidth}
         resizable
-        columnsToggle
       />
 
       {/* Detail Drawer */}

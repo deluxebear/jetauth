@@ -2,7 +2,9 @@ import { useState, useRef } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { RefreshCw, Trash2, Upload, Copy, Image as ImageIcon, Film } from "lucide-react";
-import DataTable, { type Column } from "../components/DataTable";
+import DataTable, { type Column, useTablePrefs, ColumnsMenu } from "../components/DataTable";
+import { BulkDeleteBar } from "../components/BulkDeleteBar";
+import { useBulkDelete } from "../hooks/useBulkDelete";
 import { useTranslation } from "../i18n";
 import { useModal } from "../components/Modal";
 import { useEntityList } from "../hooks/useEntityList";
@@ -28,6 +30,8 @@ export default function ResourceListPage() {
     fetchFn: (params) => ResourceBackend.getResources({ ...params, user: "" }),
     owner: "",
   });
+  const prefs = useTablePrefs({ persistKey: "list:resources" });
+  const bulkDelete = useBulkDelete<Resource>((r) => ResourceBackend.deleteResource(r), list.refetch);
 
   const handleUpload = async (file: File) => {
     setUploading(true);
@@ -128,6 +132,7 @@ export default function ResourceListPage() {
         </div>
         <div className="flex items-center gap-2">
           <motion.button whileHover={{ rotate: 180 }} transition={{ duration: 0.3 }} onClick={list.refetch} className="rounded-lg border border-border p-2 text-text-muted hover:bg-surface-2 transition-colors" title={t("common.refresh")}><RefreshCw size={15} /></motion.button>
+          <ColumnsMenu columns={columns} hidden={prefs.hidden} onToggle={prefs.toggleHidden} onResetWidths={prefs.resetWidths} />
           <input ref={fileInputRef} type="file" className="hidden" onChange={(e) => { const file = e.target.files?.[0]; if (file) handleUpload(file); e.target.value = ""; }} />
           <button onClick={() => fileInputRef.current?.click()} disabled={uploading} className="flex items-center gap-1.5 rounded-lg bg-accent px-3 py-2 text-[13px] font-semibold text-white hover:bg-accent-hover disabled:opacity-50 transition-colors">
             {uploading ? <div className="h-3.5 w-3.5 rounded-full border-2 border-white/30 border-t-white animate-spin" /> : <Upload size={15} />}
@@ -135,7 +140,27 @@ export default function ResourceListPage() {
           </button>
         </div>
       </div>
-      <DataTable columns={columns} data={list.items} rowKey="name" loading={list.loading} page={list.page} pageSize={list.pageSize} total={list.total} onPageChange={list.setPage} onSort={list.handleSort} onFilter={list.handleFilter} emptyText={t("common.noData")} persistKey="list:resources" resizable columnsToggle />
+      <DataTable
+        columns={columns}
+        data={list.items}
+        rowKey="name"
+        loading={list.loading}
+        page={list.page}
+        pageSize={list.pageSize}
+        total={list.total}
+        onPageChange={list.setPage}
+        onSort={list.handleSort}
+        onFilter={list.handleFilter}
+        emptyText={t("common.noData")}
+        hidden={prefs.hidden}
+        widths={prefs.widths}
+        onWidthChange={prefs.setWidth}
+        resizable
+        selectable
+        bulkActions={({ selected, clear }) => (
+          <BulkDeleteBar selected={selected} clear={clear} onDelete={bulkDelete} />
+        )}
+      />
     </div>
   );
 }
