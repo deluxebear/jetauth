@@ -31,6 +31,17 @@ describe("buildPreviewConfig", () => {
     expect("organization" in cfg).toBe(false);
     expect("clientSecret" in (cfg as Record<string, unknown>)).toBe(false);
   });
+
+  it("forwards template id + options so preview reflects layout changes", () => {
+    const cfg = buildPreviewConfig(
+      mockApp({
+        template: "split-hero",
+        templateOptions: { heroImageUrl: "x.jpg", overlayOpacity: 0.4 },
+      }),
+    );
+    expect(cfg.template).toBe("split-hero");
+    expect(cfg.templateOptions).toEqual({ heroImageUrl: "x.jpg", overlayOpacity: 0.4 });
+  });
 });
 
 describe("encodePreviewConfig", () => {

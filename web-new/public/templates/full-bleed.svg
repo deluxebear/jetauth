@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 160" width="240" height="160" role="img" aria-label="Full-bleed layout thumbnail">
+  <defs>
+    <linearGradient id="fb-bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#8b5cf6"/>
+      <stop offset="100%" stop-color="#ec4899"/>
+    </linearGradient>
+  </defs>
+  <rect width="240" height="160" fill="url(#fb-bg)"/>
+  <rect width="240" height="160" fill="rgba(0,0,0,0.22)"/>
+  <circle cx="220" cy="14" r="3" fill="#ffffff" opacity="0.8"/>
+  <circle cx="210" cy="14" r="3" fill="#ffffff" opacity="0.8"/>
+  <rect x="72" y="22" width="96" height="116" rx="10" fill="rgba(255,255,255,0.18)" stroke="rgba(255,255,255,0.35)" stroke-width="1"/>
+  <g transform="translate(88, 34)">
+    <circle cx="32" cy="10" r="6" fill="#ffffff" opacity="0.9"/>
+    <rect x="12" y="22" width="40" height="3" rx="1.5" fill="#ffffff" opacity="0.85"/>
+    <rect x="0" y="42" width="64" height="9" rx="3" fill="rgba(255,255,255,0.22)" stroke="rgba(255,255,255,0.4)"/>
+    <rect x="0" y="54" width="64" height="9" rx="3" fill="rgba(255,255,255,0.22)" stroke="rgba(255,255,255,0.4)"/>
+    <rect x="0" y="72" width="64" height="11" rx="3" fill="#ffffff" opacity="0.95"/>
+  </g>
+</svg>

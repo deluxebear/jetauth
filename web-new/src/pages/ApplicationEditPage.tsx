@@ -1264,23 +1264,32 @@ export default function ApplicationEditPage() {
                     type="button"
                     onClick={() => set("template", tpl.id)}
                     className={[
-                      "relative rounded-lg border px-3.5 py-3 text-left transition-colors",
+                      "relative rounded-lg border overflow-hidden text-left transition-colors",
                       isActive
-                        ? "border-accent bg-accent-subtle"
-                        : "border-border bg-surface-1 hover:bg-surface-2",
+                        ? "border-accent ring-2 ring-accent/30 bg-accent-subtle"
+                        : "border-border bg-surface-1 hover:bg-surface-2 hover:border-text-muted/40",
                     ].join(" ")}
                   >
                     {isActive && (
-                      <span className="absolute top-2 right-2 inline-flex items-center gap-1 rounded-full bg-accent px-1.5 py-0.5 text-[10px] font-semibold text-white">
+                      <span className="absolute top-2 right-2 z-10 inline-flex items-center gap-1 rounded-full bg-accent px-1.5 py-0.5 text-[10px] font-semibold text-white shadow-sm">
                         <Check size={10} />
                         {t("apps.uiGroup.layoutTemplate.active" as any)}
                       </span>
                     )}
-                    <div className="text-[13px] font-semibold text-text-primary">
-                      {label}
+                    <div className="aspect-[3/2] w-full bg-surface-2 border-b border-border flex items-center justify-center">
+                      <img
+                        src={tpl.preview}
+                        alt=""
+                        aria-hidden="true"
+                        className="w-full h-full object-cover"
+                        loading="lazy"
+                      />
                     </div>
-                    <div className="mt-1 text-[11px] text-text-muted line-clamp-2">
-                      {desc}
+                    <div className="px-3 py-2.5">
+                      <div className="text-[13px] font-semibold text-text-primary">{label}</div>
+                      <div className="mt-0.5 text-[11px] text-text-muted line-clamp-2 leading-snug">
+                        {desc}
+                      </div>
                     </div>
                   </button>
                 );

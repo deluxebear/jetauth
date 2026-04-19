@@ -38,6 +38,8 @@ export type PreviewOverrides = Partial<
     | "enableSignUp"
     | "enableCodeSignin"
     | "enableWebAuthn"
+    | "template"
+    | "templateOptions"
   >
 >;
 
@@ -74,6 +76,8 @@ export function buildPreviewConfig(app: AuthApplication): PreviewOverrides {
     enableSignUp: app.enableSignUp,
     enableCodeSignin: app.enableCodeSignin,
     enableWebAuthn: app.enableWebAuthn,
+    template: app.template,
+    templateOptions: app.templateOptions,
   };
 }
 
