@@ -1242,7 +1242,7 @@ export default function ApplicationEditPage() {
 
   const uiTab = (
     <div className="space-y-4">
-      <div className="flex items-center justify-between gap-3 rounded-xl border border-border bg-surface-1 px-4 py-2.5 sticky top-0 z-10 backdrop-blur-sm">
+      <div className="flex items-center justify-between gap-3 rounded-xl border border-border bg-surface-1 px-4 py-2.5 sticky top-[96px] z-10 backdrop-blur-sm">
         <p className="text-[13px] text-text-muted">{t("apps.uiGroup.hint" as any)}</p>
         <div className="flex items-center gap-2">
           <button
@@ -1264,7 +1264,7 @@ export default function ApplicationEditPage() {
         </div>
       </div>
       <div className="flex gap-4">
-        <SectionNavRail items={uiNavItems} className="hidden lg:block" />
+        <SectionNavRail items={uiNavItems} className="hidden lg:block" topOffset={160} />
         <div className="flex-1 min-w-0 space-y-4">
           <CollapsibleCard
             id="theme"

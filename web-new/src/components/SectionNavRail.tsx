@@ -9,9 +9,15 @@ type Item = {
 type Props = {
   items: Item[];
   className?: string;
+  /**
+   * Pixels from the viewport top where the rail should pin. Pages with
+   * their own sticky chrome (the edit-page StickyEditHeader is ~110px)
+   * pass a matching offset so the rail sits just below, not under it.
+   */
+  topOffset?: number;
 };
 
-export default function SectionNavRail({ items, className = "" }: Props) {
+export default function SectionNavRail({ items, className = "", topOffset = 16 }: Props) {
   const [activeId, setActiveId] = useState<string>(items[0]?.id ?? "");
 
   useEffect(() => {
@@ -47,7 +53,8 @@ export default function SectionNavRail({ items, className = "" }: Props) {
 
   return (
     <nav
-      className={`sticky top-4 w-[180px] shrink-0 self-start ${className}`}
+      className={`sticky w-[180px] shrink-0 self-start ${className}`}
+      style={{ top: topOffset }}
       aria-label="Section navigation"
     >
       <ul className="flex flex-col gap-0.5">
