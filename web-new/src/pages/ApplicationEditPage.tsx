@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback, lazy, Suspense } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Trash2, Copy, LogOut, Plus, Settings, KeyRound, Lock, FileKey2, Puzzle, Palette, ShieldCheck, Network, LogIn, UserPlus, LayoutGrid, LayoutTemplate, Eye, X, Sparkles, Check, Image as ImageIcon, Type } from "lucide-react";
+import { Trash2, Copy, LogOut, Plus, Settings, KeyRound, Lock, FileKey2, Puzzle, Palette, ShieldCheck, Network, LogIn, UserPlus, LayoutGrid, LayoutTemplate, Eye, X, Sparkles, Check, Type } from "lucide-react";
 import HelpTooltip from "../components/HelpTooltip";
 import StickyEditHeader from "../components/StickyEditHeader";
 import { FormField, FormSection, Switch, inputClass, monoInputClass } from "../components/FormSection";
@@ -430,7 +430,6 @@ export default function ApplicationEditPage() {
   const UI_SECTION_FIELDS: Record<string, string[]> = {
     theme: ["themeData"],
     layoutTemplate: ["template", "templateOptions"],
-    branding: ["displayName", "logo", "favicon", "title", "themeData"],
     signin: ["orgChoiceMode", "signinMethodMode", "signinMethods", "signinItems", "signinHtml"],
     signup: ["signupItems", "signupHtml"],
     forget: ["forgetItems", "forgetHtml"],
@@ -1235,7 +1234,6 @@ export default function ApplicationEditPage() {
   const uiNavItems = [
     { id: "theme", label: t("apps.uiGroup.theme.title" as any), icon: <Palette size={14} /> },
     { id: "layout-template", label: t("apps.uiGroup.layoutTemplate.title" as any), icon: <LayoutTemplate size={14} /> },
-    { id: "branding", label: t("apps.uiGroup.branding.title" as any), icon: <ImageIcon size={14} /> },
     { id: "signin", label: t("apps.uiGroup.signin.title" as any), icon: <LogIn size={14} /> },
     { id: "signup", label: t("apps.uiGroup.signup.title" as any), icon: <UserPlus size={14} /> },
     { id: "forget", label: t("apps.uiGroup.forget.title" as any), icon: <KeyRound size={14} /> },
@@ -1442,40 +1440,6 @@ export default function ApplicationEditPage() {
               </span>
               <span className="shrink-0 text-[12px] font-semibold text-accent">→</span>
             </button>
-          </CollapsibleCard>
-
-          <CollapsibleCard
-            id="branding"
-            title={t("apps.uiGroup.branding.title" as any)}
-            subtitle={t("apps.uiGroup.branding.subtitle" as any)}
-            icon={<Palette size={16} />}
-            defaultOpen
-            modified={isSectionModified(UI_SECTION_FIELDS.branding)}
-            onReset={() => resetSection(UI_SECTION_FIELDS.branding)}
-            modifiedLabel={t("common.modifiedBadge" as any)}
-            resetLabel={t("common.resetSection" as any)}
-            highlight={highlightedSection === "branding"}
-          >
-            <div className="grid grid-cols-2 gap-x-6 gap-y-4">
-              <FormField label={t("field.displayName")} span="full">
-                <input value={String(app.displayName ?? "")} onChange={(e) => set("displayName", e.target.value)} className={inputClass} />
-              </FormField>
-              <FormField label={t("apps.field.logo" as any)} span="full">
-                <ImageUrlInput value={String(app.logo ?? "")} onChange={(v) => set("logo", v)} owner={String(app.organization ?? "")} tag="app-logo" outputWidth={500} outputHeight={250} />
-              </FormField>
-              <FormField label={t("apps.field.title" as any)}>
-                <input value={String(app.title ?? "")} onChange={(e) => set("title", e.target.value)} className={inputClass} />
-              </FormField>
-              <FormField label={t("apps.field.favicon" as any)}>
-                <ImageUrlInput value={String(app.favicon ?? "")} onChange={(v) => set("favicon", v)} owner={String(app.organization ?? "")} tag="app-favicon" outputWidth={64} outputHeight={64} accept="image/x-icon,image/png,image/svg+xml" />
-              </FormField>
-              <FormField label={t("apps.field.colorPrimary" as any)} span="full">
-                <ColorPicker
-                  value={(app.themeData as Record<string, string> | undefined)?.colorPrimary ?? "#2563EB"}
-                  onChange={(hex) => set("themeData", { ...(app.themeData as Record<string, unknown> ?? {}), colorPrimary: hex, isEnabled: true })}
-                />
-              </FormField>
-            </div>
           </CollapsibleCard>
 
           <CollapsibleCard
