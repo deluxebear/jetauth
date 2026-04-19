@@ -183,6 +183,7 @@ export default function MethodStep({
           className="relative"
           data-cfg-section="signin"
           data-cfg-field="signinMethods"
+          data-signinitem="signin-methods"
         >
           <button
             type="button"

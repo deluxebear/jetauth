@@ -144,6 +144,7 @@ export default function PasswordForm({
               type="button"
               onClick={onBack}
               aria-label={t("auth.password.backButton")}
+              data-signinitem="back-button"
               className="flex items-center gap-1 text-[12px] text-text-muted hover:text-text-secondary transition-colors"
             >
               <ArrowLeft size={14} />
@@ -161,7 +162,7 @@ export default function PasswordForm({
         </div>
       )}
 
-      <div>
+      <div data-signinitem="password">
         <label className="block text-[12px] font-medium text-text-secondary mb-1.5">
           {t("auth.password.label")}
         </label>

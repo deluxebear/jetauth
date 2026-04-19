@@ -284,6 +284,7 @@ export default function SignupPage({ application, providers }: SignupPageProps) 
               <button
                 type="submit"
                 disabled={submitting}
+                data-signupitem="signup-button"
                 className="group flex-1 flex items-center justify-center gap-2 rounded-lg bg-accent py-2.5 text-[14px] font-semibold text-white hover:bg-accent-hover disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
               >
                 {submitting ? (

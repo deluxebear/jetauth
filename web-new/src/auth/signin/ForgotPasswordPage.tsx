@@ -128,6 +128,16 @@ export default function ForgotPasswordPage({ application }: Props) {
   const resetPasswordButtonLabel = forgetItemVis.labelOf("Reset password button") || t("auth.forgot.submitButton");
   const successMessageLabel = forgetItemVis.labelOf("Success message") || t("auth.forgot.success");
   const signinLinkLabel = forgetItemVis.labelOf("Signin link") || t("auth.forgot.backToSignin");
+  const sendCodeButtonLabel = forgetItemVis.labelOf("Send code button") || t("auth.identifier.continueButton");
+  const backButtonLabel = forgetItemVis.labelOf("Back button") || t("auth.password.backButton");
+
+  // Forget flow has three forward phases (identifier → code → password).
+  // Back walks one step at a time so the user can correct an input.
+  const goBack = () => {
+    if (phase === "password") setPhase("code");
+    else if (phase === "code") setPhase("identifier");
+  };
+  const showBack = phase === "code" || phase === "password";
 
   return (
     <div className="min-h-screen flex relative">
@@ -165,8 +175,22 @@ export default function ForgotPasswordPage({ application }: Props) {
                 <IdentifierStep
                   onSubmit={handleIdentifierSubmit}
                   placeholder={forgetItemVis.placeholderOf("Username")}
+                  submitLabel={forgetItemVis.isVisible("Send code button") ? sendCodeButtonLabel : undefined}
+                  submitItemName={forgetItemVis.isVisible("Send code button") ? "send-code-button" : undefined}
                 />
               </div>
+            )}
+
+            {showBack && forgetItemVis.isVisible("Back button") && (
+              <button
+                type="button"
+                onClick={goBack}
+                data-signinitem="back-button"
+                className="mb-3 inline-flex items-center gap-1 text-[12px] text-text-muted hover:text-text-secondary transition-colors"
+              >
+                <ArrowLeft size={14} />
+                {backButtonLabel}
+              </button>
             )}
 
             {phase === "code" && forgetItemVis.isVisible("Verification code") && (

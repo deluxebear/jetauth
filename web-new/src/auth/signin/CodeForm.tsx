@@ -147,6 +147,7 @@ export default function CodeForm({
               type="button"
               onClick={onBack}
               aria-label={t("auth.password.backButton")}
+              data-signinitem="back-button"
               className="flex items-center gap-1 text-[12px] text-text-muted hover:text-text-secondary transition-colors"
             >
               <ArrowLeft size={14} />
@@ -171,6 +172,7 @@ export default function CodeForm({
           disabled={sending}
           data-cfg-section="branding"
           data-cfg-field="colorPrimary"
+          data-signinitem="send-code-button"
           className="group w-full flex items-center justify-center gap-2 rounded-lg bg-accent py-2.5 text-[14px] font-semibold text-white hover:bg-accent-hover disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
         >
           {sending ? (
@@ -189,7 +191,7 @@ export default function CodeForm({
 
       {phase === "verify" && (
         <>
-          <div>
+          <div data-signinitem="verification-code">
             <label className="block text-[12px] font-medium text-text-secondary mb-1.5">
               {t("auth.code.codeLabel")}
             </label>

@@ -63,7 +63,7 @@ export default function BrandingLayer({
 
   if (resolvedLogo && !hideLogo) {
     return (
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3" data-signinitem="logo">
         <img
           src={resolvedLogo}
           alt={displayName ?? "Logo"}

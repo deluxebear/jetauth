@@ -68,7 +68,7 @@ export default function OrgChoiceWidget({ mode, currentOrg }: OrgChoiceWidgetPro
 
   if (mode === "Select") {
     return (
-      <div className="mb-4">
+      <div className="mb-4" data-signinitem="select-organization">
         <label className="block text-[12px] font-medium text-text-secondary mb-1.5">
           {t("auth.org.selectLabel")}
         </label>
@@ -104,7 +104,7 @@ export default function OrgChoiceWidget({ mode, currentOrg }: OrgChoiceWidgetPro
 
   // mode === "Input"
   return (
-    <form onSubmit={handleSubmit} className="mb-4 space-y-2">
+    <form onSubmit={handleSubmit} className="mb-4 space-y-2" data-signinitem="select-organization">
       <label className="block text-[12px] font-medium text-text-secondary">
         {t("auth.org.inputLabel")}
       </label>

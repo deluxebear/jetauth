@@ -27,7 +27,7 @@ export default function TopBar({ hideLanguage = false }: TopBarProps = {}) {
         {theme === "dark" ? <Sun size={17} /> : <Moon size={17} />}
       </button>
       {!hideLanguage && (
-        <div className="relative group">
+        <div className="relative group" data-signinitem="languages" data-forgetitem="languages" data-signupitem="languages">
           <button
             aria-label="change language"
             className="flex items-center gap-1 rounded-lg p-2 text-text-muted hover:text-text-secondary hover:bg-surface-2 transition-colors"
