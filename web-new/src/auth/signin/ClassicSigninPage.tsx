@@ -12,6 +12,7 @@
 import { useState, useEffect, useRef, useCallback, type FormEvent } from "react";
 import { useSearchParams } from "react-router-dom";
 import { ArrowRight, Eye, EyeOff, Send, KeyRound, Camera } from "lucide-react";
+import QRBody from "./QRBody";
 import { useTheme } from "../../theme";
 import { useTranslation } from "../../i18n";
 import { api } from "../../api/client";
@@ -27,7 +28,7 @@ import type { AuthApplication, ResolvedProvider } from "../api/types";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
-type ClassicTab = "Password" | "Verification code" | "WebAuthn" | "Face ID";
+type ClassicTab = "Password" | "Verification code" | "WebAuthn" | "Face ID" | "QR";
 
 interface Props {
   application: AuthApplication;
@@ -736,6 +737,7 @@ export default function ClassicSigninPage({ application, providers }: Props) {
     "Verification code",
     "WebAuthn",
     "Face ID",
+    "QR",
   ];
 
   // Build the list of tabs. When signinMethods is non-empty, admin-configured
@@ -768,6 +770,7 @@ export default function ClassicSigninPage({ application, providers }: Props) {
     "Verification code": t("auth.classic.tabCode"),
     "WebAuthn": t("auth.classic.tabWebAuthn"),
     "Face ID": t("auth.classic.tabFace"),
+    "QR": t("auth.classic.tabQR"),
   };
 
   const orgLogo =
@@ -943,6 +946,13 @@ export default function ClassicSigninPage({ application, providers }: Props) {
               error={error}
               application={application.name}
               orgName={orgName}
+            />
+          )}
+
+          {activeTab === "QR" && (
+            <QRBody
+              providers={providers}
+              onScanned={() => handleRedirect({ status: "ok" }, searchParams)}
             />
           )}
 

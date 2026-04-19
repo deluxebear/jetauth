@@ -97,6 +97,7 @@ const SIGNIN_METHOD_OPTIONS = [
   { name: "Verification code", displayName: "Verification code", rule: "All" },
   { name: "WebAuthn", displayName: "WebAuthn", rule: "None" },
   { name: "Face ID", displayName: "Face ID", rule: "None" },
+  { name: "QR", displayName: "QR", rule: "None" },
 ];
 
 const SIGNIN_METHOD_RULES: Record<string, { value: string; label: string }[]> = {
