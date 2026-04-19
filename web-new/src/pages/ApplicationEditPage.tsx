@@ -30,6 +30,7 @@ import type { AuthTemplate } from "./admin-preview/templates";
 import type { AuthApplication, SigninItem, SigninItemProvider } from "../auth/api/types";
 import { templateList, DEFAULT_TEMPLATE_ID } from "../auth/templates";
 import TemplateOptions from "./ApplicationEditPage/TemplateOptions";
+import TemplatePreviewModal from "./ApplicationEditPage/TemplatePreviewModal";
 import SigninProvidersSubtable from "./ApplicationEditPage/SigninProvidersSubtable";
 import ColorPicker from "../components/ColorPicker";
 import CollapsibleCard from "../components/CollapsibleCard";
@@ -181,6 +182,7 @@ export default function ApplicationEditPage() {
   const [activeTab, setActiveTab] = useState("basic");
   const [previewOpen, setPreviewOpen] = useState(false);
   const [templateGalleryOpen, setTemplateGalleryOpen] = useState(false);
+  const [templatePreviewId, setTemplatePreviewId] = useState<string | null>(null);
   useEffect(() => {
     if (!previewOpen) return;
     const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setPreviewOpen(false); };
@@ -1258,13 +1260,21 @@ export default function ApplicationEditPage() {
                 const isActive = (String(app.template ?? "") || DEFAULT_TEMPLATE_ID) === tpl.id;
                 const label = locale === "zh" ? tpl.name.zh : tpl.name.en;
                 const desc = locale === "zh" ? tpl.description.zh : tpl.description.en;
+                const select = () => set("template", tpl.id);
                 return (
-                  <button
+                  <div
                     key={tpl.id}
-                    type="button"
-                    onClick={() => set("template", tpl.id)}
+                    role="button"
+                    tabIndex={0}
+                    onClick={select}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        select();
+                      }
+                    }}
                     className={[
-                      "relative rounded-lg border overflow-hidden text-left transition-colors",
+                      "relative group rounded-lg border overflow-hidden text-left cursor-pointer transition-colors",
                       isActive
                         ? "border-accent ring-2 ring-accent/30 bg-accent-subtle"
                         : "border-border bg-surface-1 hover:bg-surface-2 hover:border-text-muted/40",
@@ -1276,7 +1286,7 @@ export default function ApplicationEditPage() {
                         {t("apps.uiGroup.layoutTemplate.active" as any)}
                       </span>
                     )}
-                    <div className="aspect-[3/2] w-full bg-surface-2 border-b border-border flex items-center justify-center">
+                    <div className="aspect-[3/2] w-full bg-surface-2 border-b border-border relative">
                       <img
                         src={tpl.preview}
                         alt=""
@@ -1284,6 +1294,20 @@ export default function ApplicationEditPage() {
                         className="w-full h-full object-cover"
                         loading="lazy"
                       />
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setTemplatePreviewId(tpl.id);
+                        }}
+                        className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/35 opacity-0 group-hover:opacity-100 transition-all"
+                        aria-label={t("apps.uiGroup.layoutTemplate.preview" as any)}
+                      >
+                        <span className="inline-flex items-center gap-1.5 rounded-lg bg-white/95 px-3 py-1.5 text-[12px] font-semibold text-text-primary shadow-lg">
+                          <Eye size={13} />
+                          {t("apps.uiGroup.layoutTemplate.preview" as any)}
+                        </span>
+                      </button>
                     </div>
                     <div className="px-3 py-2.5">
                       <div className="text-[13px] font-semibold text-text-primary">{label}</div>
@@ -1291,7 +1315,7 @@ export default function ApplicationEditPage() {
                         {desc}
                       </div>
                     </div>
-                  </button>
+                  </div>
                 );
               })}
             </div>
@@ -1594,6 +1618,17 @@ export default function ApplicationEditPage() {
         open={templateGalleryOpen}
         onClose={() => setTemplateGalleryOpen(false)}
         onApply={applyTemplate}
+      />
+      <TemplatePreviewModal
+        open={templatePreviewId !== null}
+        onClose={() => setTemplatePreviewId(null)}
+        application={app as unknown as AuthApplication}
+        templateId={templatePreviewId ?? DEFAULT_TEMPLATE_ID}
+        templateLabel={(() => {
+          const tpl = templateList.find((x) => x.id === templatePreviewId);
+          if (!tpl) return "";
+          return locale === "zh" ? tpl.name.zh : tpl.name.en;
+        })()}
       />
     </div>
   );
