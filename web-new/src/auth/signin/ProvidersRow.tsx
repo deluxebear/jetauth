@@ -5,6 +5,7 @@ import type {
 } from "../api/types";
 import { useTranslation } from "../../i18n";
 import { useTheme } from "../../theme";
+import { getAuthUrl } from "../providerAuth";
 
 /**
  * Picks the right logo for the active theme. Falls back to the light URL
@@ -19,8 +20,6 @@ function logoFor(p: ResolvedProvider, theme: "light" | "dark"): string {
 interface ProvidersRowProps {
   application: AuthApplication;
   providers: ResolvedProvider[];
-  redirectUri?: string;
-  state?: string;
   /**
    * Per-provider display config from the app's signinItems[name="Providers"].
    * When undefined/empty, falls back to legacy behavior (all providers in
@@ -46,35 +45,29 @@ interface ProvidersRowProps {
  * - With admin config: only listed providers render; ordering, visibility,
  *   size (large / small), and grouping (primary / secondary) come from config.
  *
- * Each button navigates via window.location.assign to the application's
- * OAuth-authorize route (`/api/login/oauth/authorize/<providerName>?...`),
- * which the backend already handles.
+ * On click, builds the provider's own authorize URL (e.g. GitHub's
+ * https://github.com/login/oauth/authorize?...) via getAuthUrl, stashes a
+ * PKCE verifier keyed by the state param, and navigates there. The return
+ * leg lands on /callback where AuthCallback swaps code+state for a session.
  */
 export default function ProvidersRow({
   application,
   providers,
-  redirectUri,
-  state,
   config,
 }: ProvidersRowProps) {
   const { t } = useTranslation();
   const { theme } = useTheme();
   if (providers.length === 0) return null;
 
-  const buildAuthorizeUrl = (p: ResolvedProvider): string => {
-    const origin = typeof window !== "undefined" ? window.location.origin : "";
-    const params = new URLSearchParams({
-      client_id: p.clientId,
-      response_type: "code",
-      redirect_uri: redirectUri ?? `${origin}/callback`,
-      scope: "profile",
-      state: state ?? application.name,
-    });
-    return `/api/login/oauth/authorize/${encodeURIComponent(p.name)}?${params.toString()}`;
-  };
-
-  const go = (p: ResolvedProvider) => {
-    window.location.assign(buildAuthorizeUrl(p));
+  const go = async (p: ResolvedProvider) => {
+    // Both login and signup buttons send method="signup" — matches legacy
+    // Casdoor. The backend's /api/login "signup" branch already handles
+    // both cases (existing GitHub binding → log in, no binding + signup
+    // allowed → create user). The "signin" method is the ACCOUNT-LINKING
+    // flow (requires an active session) and 404s unauthenticated callers.
+    const url = await getAuthUrl(application, p, "signup");
+    if (!url) return;
+    window.location.assign(url);
   };
 
   // ─── Configured path ───────────────────────────────────────────────────────

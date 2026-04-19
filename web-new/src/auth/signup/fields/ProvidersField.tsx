@@ -1,6 +1,7 @@
 import type { FieldProps } from "../DynamicField";
 import type { ResolvedProvider } from "../../api/types";
 import { useTranslation } from "../../../i18n";
+import { getAuthUrl } from "../../providerAuth";
 
 /**
  * Renders the third-party provider list on the signup page.
@@ -44,26 +45,14 @@ function ProvidersFieldInner({
 }) {
   const { t } = useTranslation();
   const application = context?.application;
-  const redirectUri = context?.redirectUri;
-  const state = context?.state;
 
   const mode = schema.rule === "big" ? "big" : "small";
 
-  const buildAuthorizeUrl = (p: ResolvedProvider): string => {
-    const origin = typeof window !== "undefined" ? window.location.origin : "";
-    const appName = application?.name ?? "";
-    const params = new URLSearchParams({
-      client_id: p.clientId,
-      response_type: "code",
-      redirect_uri: redirectUri ?? `${origin}/callback`,
-      scope: "profile",
-      state: state ?? appName,
-    });
-    return `/api/login/oauth/authorize/${encodeURIComponent(p.name)}?${params.toString()}`;
-  };
-
-  const go = (p: ResolvedProvider) => {
-    window.location.assign(buildAuthorizeUrl(p));
+  const go = async (p: ResolvedProvider) => {
+    if (!application) return;
+    const url = await getAuthUrl(application, p, "signup");
+    if (!url) return;
+    window.location.assign(url);
   };
 
   return (

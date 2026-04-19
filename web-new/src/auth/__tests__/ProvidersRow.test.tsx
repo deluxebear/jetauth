@@ -51,14 +51,17 @@ describe("ProvidersRow", () => {
     expect(screen.getByText("go")).toBeInTheDocument();
   });
 
-  it("navigates to OAuth URL on click", () => {
+  it("navigates to the provider's own authorize URL on click", async () => {
     const p = makeProvider("gh", "GitHub");
     render(<ProvidersRow application={mockApp} providers={[p]} />);
     fireEvent.click(screen.getByRole("button", { name: /gh/i }));
+    // getAuthUrl is async (PKCE challenge uses crypto.subtle), so wait a tick.
+    await new Promise((r) => setTimeout(r, 0));
     expect(assignSpy).toHaveBeenCalledTimes(1);
     const url = assignSpy.mock.calls[0][0] as string;
-    expect(url).toContain("/api/login/oauth/authorize/gh");
+    expect(url).toContain("https://github.com/login/oauth/authorize");
     expect(url).toContain("client_id=client-gh");
+    expect(url).toContain("redirect_uri=http://localhost:7001/callback");
   });
 
   it("collapses providers beyond 3 into a More menu", () => {

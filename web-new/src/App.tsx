@@ -8,6 +8,7 @@ import { useOrganization } from "./OrganizationContext";
 import { useTheme } from "./theme";
 import * as OrgBackend from "./backend/OrganizationBackend";
 import AuthShell from "./auth/AuthShell";
+import AuthCallback from "./auth/AuthCallback";
 import MfaSetup from "./pages/MfaSetup";
 import MfaVerify from "./pages/MfaVerify";
 import EnableMfaNotification from "./components/EnableMfaNotification";
@@ -332,6 +333,7 @@ export default function App() {
   if (!user) {
     return (
       <Routes>
+        <Route path="/callback" element={<AuthCallback />} />
         <Route path="/login/:organizationName/:applicationName" element={<AuthShell mode="signin" />} />
         <Route path="/login/:organizationName" element={<AuthShell mode="signin" />} />
         <Route path="/login" element={<AuthShell mode="signin" />} />

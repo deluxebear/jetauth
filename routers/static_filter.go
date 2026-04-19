@@ -163,9 +163,12 @@ func StaticFilter(ctx *context.Context) {
 		}
 	}
 
-	if serveAuthCallbackPage(ctx) {
-		return
-	}
+	// Legacy /callback interceptor removed — the React SPA (web-new)
+	// now owns /callback via its own AuthCallback component, which calls
+	// /api/login directly. The old serveAuthCallbackPage served a template
+	// that loaded /AuthCallbackHandler.js (a file that no longer ships),
+	// so it just fell back to redirecting to "/" with no session, which
+	// landed unauthenticated users on /login.
 
 	webBuildFolder := getWebBuildFolder()
 	path := webBuildFolder

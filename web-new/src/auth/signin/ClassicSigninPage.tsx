@@ -961,8 +961,6 @@ export default function ClassicSigninPage({ application, providers }: Props) {
             <ProvidersRow
               application={application}
               providers={providers}
-              redirectUri={searchParams.get("redirect_uri") ?? undefined}
-              state={searchParams.get("state") ?? undefined}
               config={
                 (application.signinItems ?? []).find(
                   (it) => it.name === "Providers" && !it.isCustom,

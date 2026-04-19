@@ -174,11 +174,22 @@ func (c *ApiController) UpdateResource() {
 // @Success 200 {object} ActionResponse "Action result"
 // @Router /add-resource [post]
 func (c *ApiController) AddResource() {
+	adminOrg, ok := c.RequireAdmin()
+	if !ok {
+		return
+	}
+
 	var resource object.Resource
 	err := json.Unmarshal(c.Ctx.Input.RequestBody, &resource)
 	if err != nil {
 		c.ResponseError(err.Error())
 		return
+	}
+
+	// Org admins can only add to their own org — ignore whatever the client
+	// put in the body. Global admins pass adminOrg == "" and can add anywhere.
+	if adminOrg != "" {
+		resource.Owner = adminOrg
 	}
 
 	c.Data["json"] = wrapActionResponse(object.AddResource(&resource))
@@ -192,10 +203,23 @@ func (c *ApiController) AddResource() {
 // @Success 200 {object} ActionResponse "Action result"
 // @Router /delete-resource [post]
 func (c *ApiController) DeleteResource() {
+	adminOrg, ok := c.RequireAdmin()
+	if !ok {
+		return
+	}
+
 	var resource object.Resource
 	err := json.Unmarshal(c.Ctx.Input.RequestBody, &resource)
 	if err != nil {
 		c.ResponseError(err.Error())
+		return
+	}
+
+	// Org admins can only delete resources they own. Refuse rather than
+	// silently overwrite — the body carries the file name + provider, and
+	// we'd otherwise delete the wrong row (or the wrong file on disk).
+	if adminOrg != "" && resource.Owner != adminOrg {
+		c.ResponseError(c.T("general:this operation requires administrator to perform"))
 		return
 	}
 
@@ -242,6 +266,11 @@ func (c *ApiController) DeleteResource() {
 // @Success   200             {object}  object.Resource  	"FileUrl, objectKey"
 // @Router /upload-resource [post]
 func (c *ApiController) UploadResource() {
+	adminOrg, ok := c.RequireAdmin()
+	if !ok {
+		return
+	}
+
 	owner := c.Ctx.Input.Query("owner")
 	username := c.Ctx.Input.Query("user")
 	application := c.Ctx.Input.Query("application")
@@ -250,6 +279,12 @@ func (c *ApiController) UploadResource() {
 	fullFilePath := c.Ctx.Input.Query("fullFilePath")
 	createdTime := c.Ctx.Input.Query("createdTime")
 	description := c.Ctx.Input.Query("description")
+
+	// Org admins can only upload into their own org. Force the owner so a
+	// crafted ?owner=otherOrg request can't plant a file in another tenant.
+	if adminOrg != "" {
+		owner = adminOrg
+	}
 
 	file, header, err := c.GetFile("file")
 	if err != nil {
