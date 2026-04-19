@@ -1250,7 +1250,7 @@ export default function ApplicationEditPage() {
           <button
             type="button"
             onClick={() => setTemplateGalleryOpen(true)}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface-0 px-3.5 py-1.5 text-[13px] font-semibold text-text-secondary hover:bg-surface-2 hover:text-text-primary transition-colors"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-accent/40 bg-accent/10 px-3.5 py-1.5 text-[13px] font-semibold text-accent hover:bg-accent/15 hover:border-accent/60 transition-colors"
           >
             <Sparkles size={14} />
             {t("apps.template.browse" as any)}
@@ -1421,6 +1421,27 @@ export default function ApplicationEditPage() {
               options={templateOpts}
               onChange={setOption}
             />
+
+            <button
+              type="button"
+              onClick={() => setTemplateGalleryOpen(true)}
+              className="mt-5 w-full flex items-center justify-between gap-3 rounded-lg border border-dashed border-accent/40 bg-accent/5 px-4 py-3 text-left hover:bg-accent/10 hover:border-accent/60 transition-colors"
+            >
+              <span className="flex items-center gap-3 min-w-0">
+                <span className="shrink-0 rounded-lg bg-accent/15 p-2 text-accent">
+                  <Sparkles size={14} />
+                </span>
+                <span className="min-w-0">
+                  <span className="block text-[13px] font-semibold text-text-primary">
+                    {t("apps.template.browse" as any)}
+                  </span>
+                  <span className="block text-[11px] text-text-muted leading-snug">
+                    {t("apps.template.storeHint" as any)}
+                  </span>
+                </span>
+              </span>
+              <span className="shrink-0 text-[12px] font-semibold text-accent">→</span>
+            </button>
           </CollapsibleCard>
 
           <CollapsibleCard
