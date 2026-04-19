@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback, lazy, Suspense } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Trash2, Copy, LogOut, Plus, Settings, KeyRound, Lock, FileKey2, Puzzle, Palette, ShieldCheck, Network, LogIn, UserPlus, LayoutGrid, Eye, X, Sparkles } from "lucide-react";
+import { Trash2, Copy, LogOut, Plus, Settings, KeyRound, Lock, FileKey2, Puzzle, Palette, ShieldCheck, Network, LogIn, UserPlus, LayoutGrid, LayoutTemplate, Eye, X, Sparkles, Check } from "lucide-react";
 import HelpTooltip from "../components/HelpTooltip";
 import StickyEditHeader from "../components/StickyEditHeader";
 import { FormField, FormSection, Switch, inputClass, monoInputClass } from "../components/FormSection";
@@ -28,6 +28,7 @@ import AdminPreviewPane from "./admin-preview/AdminPreviewPane";
 import TemplateGalleryModal from "./admin-preview/TemplateGalleryModal";
 import type { AuthTemplate } from "./admin-preview/templates";
 import type { AuthApplication, SigninItem, SigninItemProvider } from "../auth/api/types";
+import { templateList, DEFAULT_TEMPLATE_ID } from "../auth/templates";
 import SigninProvidersSubtable from "./ApplicationEditPage/SigninProvidersSubtable";
 import ColorPicker from "../components/ColorPicker";
 import CollapsibleCard from "../components/CollapsibleCard";
@@ -166,7 +167,7 @@ export default function ApplicationEditPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const [isAddMode, setIsAddMode] = useState((location.state as any)?.mode === "add");
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const modal = useModal();
   const { orgOptions, isGlobalAdmin } = useOrganization();
   const queryClient = useQueryClient();
@@ -392,6 +393,7 @@ export default function ApplicationEditPage() {
   }, [originalJson]);
 
   const UI_SECTION_FIELDS: Record<string, string[]> = {
+    layoutTemplate: ["template", "templateOptions"],
     branding: ["displayName", "logo", "favicon", "title", "themeData"],
     signin: ["orgChoiceMode", "signinMethodMode", "signinMethods", "signinItems", "signinHtml"],
     signup: ["signupItems", "signupHtml"],
@@ -1195,6 +1197,7 @@ export default function ApplicationEditPage() {
   ];
 
   const uiNavItems = [
+    { id: "layout-template", label: t("apps.uiGroup.layoutTemplate.title" as any), icon: <LayoutTemplate size={14} /> },
     { id: "branding", label: t("apps.uiGroup.branding.title" as any), icon: <Palette size={14} /> },
     { id: "signin", label: t("apps.uiGroup.signin.title" as any), icon: <LogIn size={14} /> },
     { id: "signup", label: t("apps.uiGroup.signup.title" as any), icon: <UserPlus size={14} /> },
@@ -1228,6 +1231,53 @@ export default function ApplicationEditPage() {
       <div className="flex gap-4">
         <SectionNavRail items={uiNavItems} className="hidden lg:block" />
         <div className="flex-1 min-w-0 space-y-4">
+          <CollapsibleCard
+            id="layout-template"
+            title={t("apps.uiGroup.layoutTemplate.title" as any)}
+            subtitle={t("apps.uiGroup.layoutTemplate.subtitle" as any)}
+            icon={<LayoutTemplate size={16} />}
+            defaultOpen
+            modified={isSectionModified(UI_SECTION_FIELDS.layoutTemplate)}
+            onReset={() => resetSection(UI_SECTION_FIELDS.layoutTemplate)}
+            modifiedLabel={t("common.modifiedBadge" as any)}
+            resetLabel={t("common.resetSection" as any)}
+            highlight={highlightedSection === "layout-template"}
+          >
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              {templateList.map((tpl) => {
+                const isActive = (String(app.template ?? "") || DEFAULT_TEMPLATE_ID) === tpl.id;
+                const label = locale === "zh" ? tpl.name.zh : tpl.name.en;
+                const desc = locale === "zh" ? tpl.description.zh : tpl.description.en;
+                return (
+                  <button
+                    key={tpl.id}
+                    type="button"
+                    onClick={() => set("template", tpl.id)}
+                    className={[
+                      "relative rounded-lg border px-3.5 py-3 text-left transition-colors",
+                      isActive
+                        ? "border-accent bg-accent-subtle"
+                        : "border-border bg-surface-1 hover:bg-surface-2",
+                    ].join(" ")}
+                  >
+                    {isActive && (
+                      <span className="absolute top-2 right-2 inline-flex items-center gap-1 rounded-full bg-accent px-1.5 py-0.5 text-[10px] font-semibold text-white">
+                        <Check size={10} />
+                        {t("apps.uiGroup.layoutTemplate.active" as any)}
+                      </span>
+                    )}
+                    <div className="text-[13px] font-semibold text-text-primary">
+                      {label}
+                    </div>
+                    <div className="mt-1 text-[11px] text-text-muted line-clamp-2">
+                      {desc}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </CollapsibleCard>
+
           <CollapsibleCard
             id="branding"
             title={t("apps.uiGroup.branding.title" as any)}

@@ -176,6 +176,14 @@ type Application struct {
 	FormBackgroundUrl       string        `xorm:"varchar(200)" json:"formBackgroundUrl"`
 	FormBackgroundUrlMobile string        `xorm:"varchar(200)" json:"formBackgroundUrlMobile"`
 
+	// Layout template for signin/signup/forgot pages. Empty = "centered-card"
+	// default, resolved client-side via resolveTemplate(). Options carry
+	// template-specific params (hero image, sidebar copy, etc.) and their
+	// schema is owned by each template module — deliberately typed as
+	// map[string]interface{} to stay template-agnostic at the DB layer.
+	Template        string         `xorm:"varchar(100)" json:"template,omitempty"`
+	TemplateOptions map[string]any `xorm:"mediumtext" json:"templateOptions,omitempty"`
+
 	FailedSigninLimit      int `json:"failedSigninLimit"`
 	FailedSigninFrozenTime int `json:"failedSigninFrozenTime"`
 	CodeResendTimeout      int `json:"codeResendTimeout"`
