@@ -260,6 +260,26 @@ func (c *ApiController) GetProviderFromContext(category string) (*object.Provide
 		return nil, errors.New(c.T("general:Please login first"))
 	}
 
+	// If the caller passed ?owner=<org>, prefer that org's default application
+	// for provider resolution. This lets a global admin editing resources under
+	// a specific org scope (e.g. uploading a provider logo in jetems) pull the
+	// Storage provider from that org instead of falling back to the admin's
+	// signed-in app (usually app-built-in, which often has no Storage).
+	if ownerQuery := c.Ctx.Input.Query("owner"); ownerQuery != "" && ownerQuery != "admin" {
+		signedInUser, err := object.GetUser(userId)
+		if err == nil && signedInUser != nil && (signedInUser.IsGlobalAdmin() || signedInUser.Owner == ownerQuery) {
+			orgApp, appErr := object.GetDefaultApplication(util.GetId("admin", ownerQuery))
+			if appErr == nil && orgApp != nil {
+				if p, provErr := orgApp.GetProviderByCategory(category); provErr == nil && p != nil {
+					return p, nil
+				}
+				// org has a default app but no provider of this category —
+				// fall through to the signed-in app so the error message
+				// surfaces the original context.
+			}
+		}
+	}
+
 	application, err := object.GetApplicationByUserId(userId)
 	if err != nil {
 		return nil, err
