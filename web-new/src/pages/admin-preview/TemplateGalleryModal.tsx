@@ -1,8 +1,28 @@
-import { useEffect } from "react";
-import { X, Sparkles, LayoutTemplate, Check, ArrowUpCircle } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
+import {
+  X,
+  Sparkles,
+  LayoutTemplate,
+  Check,
+  ArrowUpCircle,
+  Globe,
+  Settings,
+  AlertTriangle,
+  Plus,
+  Trash2,
+  RefreshCw,
+} from "lucide-react";
 import { useTranslation } from "../../i18n";
 import { AUTH_TEMPLATES, type AuthTemplate } from "./templates";
 import { templates as LAYOUT_TEMPLATES } from "../../auth/templates";
+import {
+  addRegistryUrl,
+  clearAllCaches,
+  getRegistryUrls,
+  loadAllRegistries,
+  removeRegistryUrl,
+  type RegistryLoadResult,
+} from "./remoteRegistry";
 
 interface Props {
   open: boolean;
@@ -28,6 +48,23 @@ interface Props {
  */
 export default function TemplateGalleryModal({ open, onClose, onApply, currentManifest }: Props) {
   const { t } = useTranslation();
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [registries, setRegistries] = useState<RegistryLoadResult[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  const refresh = useCallback(async () => {
+    if (getRegistryUrls().length === 0) {
+      setRegistries([]);
+      return;
+    }
+    setLoading(true);
+    try {
+      const results = await loadAllRegistries();
+      setRegistries(results);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
     if (!open) return;
@@ -35,6 +72,11 @@ export default function TemplateGalleryModal({ open, onClose, onApply, currentMa
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [open, onClose]);
+
+  useEffect(() => {
+    if (!open) return;
+    void refresh();
+  }, [open, refresh]);
 
   if (!open) return null;
 
@@ -63,15 +105,47 @@ export default function TemplateGalleryModal({ open, onClose, onApply, currentMa
               {t("apps.template.subtitle" as any)}
             </p>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="shrink-0 rounded-lg p-1.5 text-text-muted hover:bg-surface-2 transition-colors"
-            aria-label={t("apps.template.cancel" as any)}
-          >
-            <X size={16} />
-          </button>
+          <div className="flex items-center gap-1 shrink-0">
+            <button
+              type="button"
+              onClick={() => { clearAllCaches(); void refresh(); }}
+              disabled={loading}
+              title={t("apps.template.refresh" as never)}
+              className="rounded-lg p-1.5 text-text-muted hover:bg-surface-2 disabled:opacity-50 transition-colors"
+              aria-label={t("apps.template.refresh" as never)}
+            >
+              <RefreshCw size={16} className={loading ? "animate-spin" : ""} />
+            </button>
+            <button
+              type="button"
+              onClick={() => setSettingsOpen((s) => !s)}
+              title={t("apps.template.registrySettings" as never)}
+              className={[
+                "rounded-lg p-1.5 transition-colors",
+                settingsOpen ? "bg-surface-2 text-text-primary" : "text-text-muted hover:bg-surface-2",
+              ].join(" ")}
+              aria-label={t("apps.template.registrySettings" as never)}
+              aria-expanded={settingsOpen}
+            >
+              <Settings size={16} />
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-lg p-1.5 text-text-muted hover:bg-surface-2 transition-colors"
+              aria-label={t("apps.template.cancel" as any)}
+            >
+              <X size={16} />
+            </button>
+          </div>
         </div>
+
+        {settingsOpen && (
+          <RegistrySettings
+            onChange={() => void refresh()}
+            onClose={() => setSettingsOpen(false)}
+          />
+        )}
 
         <div className="flex-1 overflow-auto p-6 bg-surface-1">
           <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
@@ -95,9 +169,158 @@ export default function TemplateGalleryModal({ open, onClose, onApply, currentMa
                 />
               );
             })}
+            {registries.flatMap((reg) =>
+              reg.manifests.map((tmpl) => {
+                const isCurrent = currentManifest?.id === tmpl.id;
+                const hasUpdate = isCurrent && currentManifest?.version !== tmpl.version;
+                const applyLabel = hasUpdate
+                  ? `${t("apps.template.update" as never)} → v${tmpl.version}`
+                  : isCurrent
+                  ? t("apps.template.reapply" as never)
+                  : t("apps.template.apply" as never);
+                return (
+                  <TemplateCard
+                    key={`remote:${reg.url}:${tmpl.id}`}
+                    template={tmpl}
+                    applyLabel={applyLabel}
+                    onApply={() => onApply(tmpl)}
+                    isCurrent={isCurrent}
+                    hasUpdate={hasUpdate}
+                    currentBadgeLabel={t("apps.template.current" as never)}
+                    thirdPartyHost={reg.host}
+                  />
+                );
+              }),
+            )}
           </div>
+
+          {registries.filter((r) => r.error).length > 0 && (
+            <div className="mt-6 space-y-1.5">
+              {registries
+                .filter((r) => r.error)
+                .map((r) => (
+                  <div
+                    key={r.url}
+                    className="flex items-center gap-2 text-[12px] text-warning"
+                  >
+                    <AlertTriangle size={12} />
+                    <span className="font-mono">{r.host}</span>
+                    <span className="text-text-muted">— {r.error}</span>
+                  </div>
+                ))}
+            </div>
+          )}
         </div>
       </div>
+    </div>
+  );
+}
+
+// ── Registry settings (add/remove URLs) ───────────────────────────────────
+
+function RegistrySettings({ onChange, onClose }: { onChange: () => void; onClose: () => void }) {
+  const { t } = useTranslation();
+  const [urls, setUrls] = useState(getRegistryUrls());
+  const [input, setInput] = useState("");
+  const [error, setError] = useState("");
+
+  const handleAdd = (e: React.FormEvent) => {
+    e.preventDefault();
+    const url = input.trim();
+    if (!url) return;
+    try {
+      const parsed = new URL(url);
+      if (parsed.protocol !== "https:" && parsed.protocol !== "http:") {
+        throw new Error("must be http(s)");
+      }
+    } catch {
+      setError(t("apps.template.registry.invalidUrl" as never));
+      return;
+    }
+    addRegistryUrl(url);
+    setUrls(getRegistryUrls());
+    setInput("");
+    setError("");
+    onChange();
+  };
+
+  const handleRemove = (url: string) => {
+    removeRegistryUrl(url);
+    setUrls(getRegistryUrls());
+    onChange();
+  };
+
+  return (
+    <div className="border-b border-border bg-surface-0 px-6 py-4 shrink-0">
+      <div className="flex items-start justify-between gap-4 mb-3">
+        <div className="min-w-0">
+          <div className="text-[13px] font-semibold text-text-primary">
+            {t("apps.template.registrySettings" as never)}
+          </div>
+          <p className="mt-0.5 text-[12px] text-text-muted">
+            {t("apps.template.registry.hint" as never)}
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={onClose}
+          className="rounded-lg p-1 text-text-muted hover:bg-surface-2 transition-colors shrink-0"
+          aria-label="close"
+        >
+          <X size={14} />
+        </button>
+      </div>
+
+      <div className="flex items-center gap-2 rounded-lg border border-warning/40 bg-warning/10 px-3 py-2 mb-3">
+        <AlertTriangle size={14} className="text-warning shrink-0" />
+        <p className="text-[11px] text-warning leading-snug">
+          {t("apps.template.registry.warning" as never)}
+        </p>
+      </div>
+
+      <form onSubmit={handleAdd} className="flex items-stretch gap-2 mb-3">
+        <input
+          type="url"
+          value={input}
+          onChange={(e) => { setInput(e.target.value); setError(""); }}
+          placeholder="https://example.com/templates.json"
+          className="flex-1 rounded-lg border border-border bg-surface-1 px-3 py-1.5 text-[13px] text-text-primary placeholder:text-text-muted focus:border-accent focus:ring-1 focus:ring-accent/30 outline-none"
+        />
+        <button
+          type="submit"
+          disabled={!input.trim()}
+          className="inline-flex items-center gap-1 rounded-lg bg-accent px-3 py-1.5 text-[13px] font-semibold text-white hover:bg-accent-hover disabled:opacity-50"
+        >
+          <Plus size={13} />
+          {t("apps.template.registry.add" as never)}
+        </button>
+      </form>
+
+      {error && (
+        <p className="text-[11px] text-danger mb-2">{error}</p>
+      )}
+
+      {urls.length > 0 ? (
+        <ul className="space-y-1">
+          {urls.map((u) => (
+            <li key={u} className="flex items-center justify-between gap-3 text-[12px]">
+              <span className="font-mono text-text-secondary truncate">{u}</span>
+              <button
+                type="button"
+                onClick={() => handleRemove(u)}
+                className="shrink-0 rounded-md p-1 text-text-muted hover:text-danger hover:bg-danger/10 transition-colors"
+                aria-label={t("apps.template.registry.remove" as never)}
+              >
+                <Trash2 size={12} />
+              </button>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="text-[11px] text-text-muted">
+          {t("apps.template.registry.empty" as never)}
+        </p>
+      )}
     </div>
   );
 }
@@ -109,6 +332,8 @@ interface CardProps {
   isCurrent: boolean;
   hasUpdate: boolean;
   currentBadgeLabel: string;
+  /** Set for manifests loaded from a remote registry — drives the warning badge. */
+  thirdPartyHost?: string;
 }
 
 function TemplateCard({
@@ -118,9 +343,11 @@ function TemplateCard({
   isCurrent,
   hasUpdate,
   currentBadgeLabel,
+  thirdPartyHost,
 }: CardProps) {
   const layoutId = template.config.template;
   const layoutMeta = layoutId ? LAYOUT_TEMPLATES[layoutId]?.meta : undefined;
+  const previewOk = template.preview && template.preview.startsWith("<svg");
   return (
     <div
       className={[
@@ -132,13 +359,22 @@ function TemplateCard({
       data-testid={`template-card-${template.id}`}
     >
       <div className="relative">
-        <div
-          className="aspect-[12/7] bg-surface-2 border-b border-border overflow-hidden [&>svg]:h-full [&>svg]:w-full"
-          // Preview SVG comes from the template data file — fully authored by us,
-          // never user input, so dangerouslySetInnerHTML is safe here.
-          dangerouslySetInnerHTML={{ __html: template.preview }}
-          aria-hidden="true"
-        />
+        {previewOk ? (
+          <div
+            className="aspect-[12/7] bg-surface-2 border-b border-border overflow-hidden [&>svg]:h-full [&>svg]:w-full"
+            // Curated tier ships its preview SVG as a string literal that we authored.
+            // Remote tier previews are filtered in validateRegistryPayload — we only
+            // render previews that pass `startsWith("<svg")` above, and the browser's
+            // SVG parser rejects non-XML content. Scripts inside SVG still run though,
+            // so this is the piece that would benefit most from DOMPurify in v1.2.
+            dangerouslySetInnerHTML={{ __html: template.preview }}
+            aria-hidden="true"
+          />
+        ) : (
+          <div className="aspect-[12/7] bg-surface-2 border-b border-border flex items-center justify-center text-text-muted">
+            <LayoutTemplate size={24} />
+          </div>
+        )}
         {layoutMeta && (
           <span
             className="absolute top-2 left-2 inline-flex items-center gap-1 rounded-full bg-surface-0/90 border border-border px-2 py-0.5 text-[10px] font-semibold text-text-secondary backdrop-blur-sm"
@@ -146,6 +382,15 @@ function TemplateCard({
           >
             <LayoutTemplate size={10} />
             {layoutMeta.name.en}
+          </span>
+        )}
+        {thirdPartyHost && (
+          <span
+            className="absolute bottom-2 left-2 inline-flex items-center gap-1 rounded-full bg-warning/15 border border-warning/40 px-2 py-0.5 text-[10px] font-semibold text-warning backdrop-blur-sm"
+            title={`Third-party registry — unsigned. Review before applying.`}
+          >
+            <Globe size={10} />
+            {thirdPartyHost}
           </span>
         )}
         {isCurrent && (
