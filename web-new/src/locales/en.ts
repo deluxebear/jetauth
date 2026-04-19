@@ -1011,6 +1011,8 @@ const en = {
   "apps.template.splitHero.sideLeft": "Left",
   "apps.template.splitHero.sideRight": "Right",
   "apps.template.splitHero.overlay": "Image overlay opacity",
+  "apps.field.signinItems.toggles": "Sign-in feature toggles",
+  "apps.field.signinItems.advanced": "Advanced table (labels / placeholders / CSS / ordering)",
   "apps.template.fullBleed.image": "Background image",
   "apps.template.fullBleed.imageDark": "Background image (dark)",
   "apps.template.fullBleed.overlay": "Overlay opacity",

@@ -31,6 +31,7 @@ import type { AuthApplication, SigninItem, SigninItemProvider } from "../auth/ap
 import { templateList, DEFAULT_TEMPLATE_ID } from "../auth/templates";
 import TemplateOptions from "./ApplicationEditPage/TemplateOptions";
 import TemplatePreviewModal from "./ApplicationEditPage/TemplatePreviewModal";
+import SigninFeatureToggles from "./ApplicationEditPage/SigninFeatureToggles";
 import SigninProvidersSubtable from "./ApplicationEditPage/SigninProvidersSubtable";
 import ColorPicker from "../components/ColorPicker";
 import CollapsibleCard from "../components/CollapsibleCard";
@@ -1402,19 +1403,38 @@ export default function ApplicationEditPage() {
                 />
               </div>
               <div className="col-span-2">
-                <EditableTable
-                  title={t("apps.field.signinItems" as any)}
-                  columns={signinItemColumns}
-                  rows={(app.signinItems as Record<string, unknown>[]) ?? []}
-                  onChange={(rows) => set("signinItems", rows)}
-                  newRow={() => ({ name: "", visible: true, required: true, placeholder: "", customCss: "" })}
-                  onAddCustom={() => {
-                    const items = (app.signinItems as Record<string, unknown>[]) ?? [];
-                    set("signinItems", [...items, { name: `Text ${Date.now()}`, visible: true, isCustom: true }]);
-                  }}
-                  addCustomLabel={t("apps.ui.addCustom" as any)}
-                  sortable
+                <div className="text-[13px] font-semibold text-text-primary mb-2">
+                  {t("apps.field.signinItems.toggles" as any)}
+                </div>
+                <SigninFeatureToggles
+                  items={(app.signinItems as SigninItem[] | undefined) ?? []}
+                  onChange={(next) => set("signinItems", next)}
+                  knownNames={SIGNIN_ITEM_NAMES}
+                  i18n={SIGNIN_ITEM_I18N}
                 />
+              </div>
+              <div className="col-span-2">
+                <details className="group">
+                  <summary className="cursor-pointer text-[12px] font-medium text-text-muted hover:text-text-secondary select-none flex items-center gap-1">
+                    <span className="inline-block transition-transform group-open:rotate-90">▸</span>
+                    {t("apps.field.signinItems.advanced" as any)}
+                  </summary>
+                  <div className="mt-3">
+                    <EditableTable
+                      title={t("apps.field.signinItems" as any)}
+                      columns={signinItemColumns}
+                      rows={(app.signinItems as Record<string, unknown>[]) ?? []}
+                      onChange={(rows) => set("signinItems", rows)}
+                      newRow={() => ({ name: "", visible: true, required: true, placeholder: "", customCss: "" })}
+                      onAddCustom={() => {
+                        const items = (app.signinItems as Record<string, unknown>[]) ?? [];
+                        set("signinItems", [...items, { name: `Text ${Date.now()}`, visible: true, isCustom: true }]);
+                      }}
+                      addCustomLabel={t("apps.ui.addCustom" as any)}
+                      sortable
+                    />
+                  </div>
+                </details>
               </div>
               {(() => {
                 // Render the Providers display-config sub-table inline below

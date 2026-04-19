@@ -1092,6 +1092,8 @@ const zh: Record<string, string> = {
   "apps.template.splitHero.sideLeft": "左侧",
   "apps.template.splitHero.sideRight": "右侧",
   "apps.template.splitHero.overlay": "图片遮罩透明度",
+  "apps.field.signinItems.toggles": "登录项开关",
+  "apps.field.signinItems.advanced": "高级表格（标签 / 占位符 / CSS / 排序）",
   "apps.template.fullBleed.image": "背景图",
   "apps.template.fullBleed.imageDark": "背景图（深色）",
   "apps.template.fullBleed.overlay": "遮罩透明度",
