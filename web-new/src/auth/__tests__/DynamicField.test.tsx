@@ -113,7 +113,7 @@ describe("DynamicField router", () => {
     expect(screen.getByRole("checkbox")).toBeInTheDocument();
   });
 
-  it("dispatches 'providers' → returns null (renders nothing)", () => {
+  it("dispatches 'providers' with no providers in context → renders nothing visible", () => {
     const { container } = render(
       <DynamicField
         schema={makeSchema({ type: "providers", label: "Providers" })}
@@ -121,7 +121,10 @@ describe("DynamicField router", () => {
         onChange={noop}
       />
     );
-    expect(container.firstChild).toBeNull();
+    // No providers in context → ProvidersField returns null; DynamicField
+    // still wraps in a data-tagged div for CSS scoping, but it has no
+    // visible content (no buttons, no divider text).
+    expect(container.querySelector("button")).toBeNull();
   });
 
   it("shows error message below the field", () => {

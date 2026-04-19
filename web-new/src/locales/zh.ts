@@ -80,6 +80,8 @@ const zh: Record<string, string> = {
   "auth.signup.requiredError": "请输入{label}",
   "auth.signup.invalidError": "{label}格式错误",
   "auth.signup.confirmMismatch": "两次密码不一致",
+  "auth.signup.providers.title": "或使用以下方式注册",
+  "auth.signup.agreement.label": "我同意{terms}",
   // Common
   "common.search": "搜索...",
   "common.signOut": "退出登录",

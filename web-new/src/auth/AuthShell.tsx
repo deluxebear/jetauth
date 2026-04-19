@@ -212,7 +212,7 @@ function AuthShellInner({ lookup, mode }: { lookup: AuthLookup; mode: Mode }) {
       return <SigninPage application={app} providers={providers} />;
     }
     if (mode === "forget") return <ForgotPasswordPage application={app} />;
-    return <SignupPage application={app} />;
+    return <SignupPage application={app} providers={providers} />;
   })();
 
   // Per-item scoped CSS: admin can set customCss on any signinItem or

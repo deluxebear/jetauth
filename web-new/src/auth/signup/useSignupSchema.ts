@@ -26,6 +26,15 @@ export interface FieldSchema {
   validationMessage?: Record<string, string>;
   group?: string;
   step: number;
+  /**
+   * Admin-provided rule string from the signupItem. Semantics depend on the
+   * field type:
+   *  - type="providers" → "big" (stacked full-width buttons) or "small"
+   *    (icon-tile row). Default: "small".
+   *  - other types → ignored at the schema level; still exposed so fields
+   *    can read it without extending the prop surface later.
+   */
+  rule?: string;
 }
 
 export interface SignupSchema {
@@ -113,6 +122,7 @@ export function buildSignupSchema(
       validationMessage: (it.validationMessage as Record<string, string> | undefined) || undefined,
       group: (it.group as string | undefined) || undefined,
       step,
+      rule: (it.rule as string | undefined) || undefined,
     };
   });
 

@@ -1,4 +1,5 @@
 import { useMemo, useState, type FormEvent } from "react";
+import { useSearchParams } from "react-router-dom";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import { useTheme } from "../../theme";
 import { useTranslation } from "../../i18n";
@@ -9,10 +10,16 @@ import SafeHtml from "../shell/SafeHtml";
 import DynamicField from "./DynamicField";
 import { buildSignupSchema, type FieldSchema } from "./useSignupSchema";
 import { useSigninItemVisibility } from "../items/useSigninItemVisibility";
-import type { AuthApplication } from "../api/types";
+import type { AuthApplication, ResolvedProvider } from "../api/types";
 
 interface SignupPageProps {
   application: AuthApplication;
+  /**
+   * Resolved OAuth providers for this application. Optional to preserve
+   * backward-compat with callers that don't yet thread the list through;
+   * when absent, the Providers signupItem simply renders nothing.
+   */
+  providers?: ResolvedProvider[];
 }
 
 /**
@@ -20,9 +27,10 @@ interface SignupPageProps {
  * buildSignupSchema, renders each step with DynamicField, validates on
  * Next + Submit. On success → full page reload to / (matches SigninPage).
  */
-export default function SignupPage({ application }: SignupPageProps) {
+export default function SignupPage({ application, providers }: SignupPageProps) {
   const { theme } = useTheme();
   const { t } = useTranslation();
+  const [searchParams] = useSearchParams();
 
   const schema = useMemo(
     () => buildSignupSchema(application.signupItems, 6),
@@ -212,7 +220,13 @@ export default function SignupPage({ application }: SignupPageProps) {
                 onChange={(v) => updateValue(field.name, v)}
                 error={errors[field.name]}
                 disabled={submitting}
-                context={{ termsOfUse }}
+                context={{
+                  termsOfUse,
+                  providers,
+                  application,
+                  redirectUri: searchParams.get("redirect_uri") ?? undefined,
+                  state: searchParams.get("state") ?? undefined,
+                }}
               />
             ))}
 

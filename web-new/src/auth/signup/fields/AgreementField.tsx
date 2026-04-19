@@ -1,30 +1,53 @@
 import type { FieldProps } from "../DynamicField";
 import { fieldWrapperClass, helperClass, errorClass } from "./shared";
 
+/**
+ * Signup "Agreement" row: a required checkbox that gates submit until the
+ * user accepts the Terms of Service. Label supports a `{terms}` placeholder
+ * that gets replaced by a link to `application.termsOfUse` (passed via
+ * context); when no placeholder is present, the label renders as-is.
+ *
+ * When the admin hasn't set a label, we fall back to a reasonable default
+ * that still surfaces the terms link. Validation is handled in
+ * SignupPage.validateField — if required and unchecked, submit is blocked
+ * and the field shows the configured validationMessage or the fallback.
+ */
 export default function AgreementField({ schema, value, onChange, error, disabled, context }: FieldProps) {
   const termsUrl = context?.termsOfUse;
 
-  // Render label text: replace "{terms}" placeholder with an anchor if termsUrl is available.
+  // Use admin label if set; otherwise a sensible default with {terms} token
+  // so the link still appears when termsOfUse is configured.
+  const rawLabel = schema.label && schema.label.trim().length > 0
+    ? schema.label
+    : "I agree to the {terms}";
+
+  // Link text to inject where `{terms}` appears in the label.
+  const termsText = "Terms of Use";
+
   function renderLabel() {
-    const text = schema.label;
-    if (termsUrl && text.includes("{terms}")) {
-      const [before, after] = text.split("{terms}");
+    if (rawLabel.includes("{terms}")) {
+      const [before, after] = rawLabel.split("{terms}");
       return (
         <>
           {before}
-          <a
-            href={termsUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-accent underline hover:opacity-80"
-          >
-            Terms of Use
-          </a>
+          {termsUrl ? (
+            <a
+              href={termsUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-accent underline hover:opacity-80"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {termsText}
+            </a>
+          ) : (
+            <span className="text-text-primary">{termsText}</span>
+          )}
           {after}
         </>
       );
     }
-    return text;
+    return rawLabel;
   }
 
   return (

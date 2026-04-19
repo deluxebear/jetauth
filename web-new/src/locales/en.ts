@@ -80,6 +80,8 @@ const en = {
   "auth.signup.requiredError": "{label} is required",
   "auth.signup.invalidError": "Invalid {label}",
   "auth.signup.confirmMismatch": "Passwords don't match",
+  "auth.signup.providers.title": "Or sign up with",
+  "auth.signup.agreement.label": "I agree to the {terms}",
   // Common
   "common.search": "Search...",
   "common.signOut": "Sign out",

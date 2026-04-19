@@ -1,4 +1,5 @@
 import type { FieldSchema } from "./useSignupSchema";
+import type { AuthApplication, ResolvedProvider } from "../api/types";
 import TextField from "./fields/TextField";
 import EmailField from "./fields/EmailField";
 import PhoneField from "./fields/PhoneField";
@@ -8,6 +9,7 @@ import SelectField from "./fields/SelectField";
 import CheckboxField from "./fields/CheckboxField";
 import DateField from "./fields/DateField";
 import AgreementField from "./fields/AgreementField";
+import ProvidersField from "./fields/ProvidersField";
 
 export interface FieldProps {
   schema: FieldSchema;
@@ -15,7 +17,21 @@ export interface FieldProps {
   onChange: (v: unknown) => void;
   error?: string;
   disabled?: boolean;
-  context?: { termsOfUse?: string };
+  context?: {
+    termsOfUse?: string;
+    /**
+     * Resolved provider list threaded down from AuthShell → SignupPage so
+     * the ProvidersField can render branded OAuth buttons. Empty or
+     * undefined = render nothing (ProvidersField handles this).
+     */
+    providers?: ResolvedProvider[];
+    /** Application — needed by ProvidersField to build OAuth authorize URLs. */
+    application?: AuthApplication;
+    /** Optional OAuth redirect_uri passthrough from URL params. */
+    redirectUri?: string;
+    /** Optional OAuth state passthrough from URL params. */
+    state?: string;
+  };
 }
 
 export default function DynamicField(props: FieldProps) {
@@ -38,8 +54,7 @@ export default function DynamicField(props: FieldProps) {
       case "agreement":
         return <AgreementField {...props} />;
       case "providers":
-        // ProvidersRow handles this case — DynamicField renders nothing
-        return null;
+        return <ProvidersField {...props} />;
       case "invitation-code":
       case "text":
       default:

@@ -1,1 +1,0 @@
-import{M as e}from"./index-CrswBGjz.js";export{e as startAuthentication};
