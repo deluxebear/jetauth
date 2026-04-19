@@ -17,22 +17,66 @@ type ResolvedProvider struct {
 // providerLogoMap is the canonical mapping of built-in provider types to
 // static logo URLs. The frontend ships the actual SVGs in web-new/public/
 // and the backend just returns the path so responses stay cache-friendly.
+//
+// Keys match the Type values in the admin "类型" dropdown exactly
+// (case-sensitive). When a type isn't mapped, ResolveProviders falls back
+// to fallbackProviderLogo.
 var providerLogoMap = map[string]string{
+	// Git hosts
 	"GitHub":    "/providers/github.svg",
-	"Google":    "/providers/google.svg",
-	"WeChat":    "/providers/wechat.svg",
-	"DingTalk":  "/providers/dingtalk.svg",
-	"Lark":      "/providers/lark.svg",
+	"GitLab":    "/providers/gitlab.svg",
 	"Gitee":     "/providers/gitee.svg",
-	"Gitlab":    "/providers/gitlab.svg",
-	"Apple":     "/providers/apple.svg",
-	"Microsoft": "/providers/microsoft.svg",
-	"LinkedIn":  "/providers/linkedin.svg",
-	"SAML":      "/providers/saml.svg",
-	"OIDC":      "/providers/oidc.svg",
+	"Bitbucket": "/providers/bitbucket.svg",
+	// Big-tech identity
+	"Google":     "/providers/google.svg",
+	"Apple":      "/providers/apple.svg",
+	"AzureAD":    "/providers/microsoft.svg",
+	"AzureADB2C": "/providers/microsoft.svg",
+	"Okta":       "/providers/okta.svg",
+	"Auth0":      "/providers/auth0.svg",
+	"Facebook":   "/providers/facebook.svg",
+	"Twitter":    "/providers/twitter.svg",
+	"LinkedIn":   "/providers/linkedin.svg",
+	"Dropbox":    "/providers/dropbox.svg",
+	// Chat / misc
+	"Discord": "/providers/discord.svg",
+	"Slack":   "/providers/slack.svg",
+	// Chinese ecosystem
+	"WeChat":   "/providers/wechat.svg",
+	"DingTalk": "/providers/dingtalk.svg",
+	"Lark":     "/providers/lark.svg",
+	"Alipay":   "/providers/alipay.svg",
+	"Baidu":    "/providers/baidu.svg",
+	// Federation
+	"SAML": "/providers/saml.svg",
+	"OIDC": "/providers/oidc.svg",
 }
 
-const fallbackProviderLogo = "/providers/generic.svg"
+// providerLogoDarkMap lists dark-mode overrides for types whose light logo
+// is transparent-background monochrome (pure-black paths) and would vanish
+// on a dark button. Types NOT listed here reuse their light logo for both
+// modes — that's the right answer for self-contained badge-style logos
+// that carry their own colored background (Auth0, Facebook, Slack, etc).
+var providerLogoDarkMap = map[string]string{
+	"GitHub":     "/providers/github-dark.svg",
+	"Apple":      "/providers/apple-dark.svg",
+	"GitLab":     "/providers/gitlab-dark.svg",
+	"Gitee":      "/providers/gitee-dark.svg",
+	"Google":     "/providers/google-dark.svg",
+	"AzureAD":    "/providers/microsoft-dark.svg",
+	"AzureADB2C": "/providers/microsoft-dark.svg",
+	"LinkedIn":   "/providers/linkedin-dark.svg",
+	"WeChat":     "/providers/wechat-dark.svg",
+	"DingTalk":   "/providers/dingtalk-dark.svg",
+	"Lark":       "/providers/lark-dark.svg",
+	"SAML":       "/providers/saml-dark.svg",
+	"OIDC":       "/providers/oidc-dark.svg",
+}
+
+const (
+	fallbackProviderLogo     = "/providers/generic.svg"
+	fallbackProviderLogoDark = "/providers/generic-dark.svg"
+)
 
 // ResolveProviders filters an application's Providers down to sign-in-enabled
 // entries and pre-attaches the logo URL + display-safe metadata.
@@ -60,7 +104,21 @@ func ResolveProviders(app *Application) []ResolvedProvider {
 		}
 		dark := p.CustomLogoDark
 		if dark == "" {
-			dark = light
+			// Only fall back to a dedicated dark file when:
+			//  (a) there's no admin override AND
+			//  (b) there's no admin-set custom light logo (because a custom
+			//      light upload should be mirrored, not replaced by a random
+			//      built-in dark icon).
+			if p.CustomLogo == "" {
+				if builtInDark, ok := providerLogoDarkMap[p.Type]; ok {
+					dark = builtInDark
+				} else if light == fallbackProviderLogo {
+					dark = fallbackProviderLogoDark
+				}
+			}
+			if dark == "" {
+				dark = light
+			}
 		}
 		out = append(out, ResolvedProvider{
 			Name:        pi.Name,

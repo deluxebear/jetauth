@@ -45,14 +45,42 @@ export default function ImageUrlInput({
 
   const aspectRatio = outputWidth && outputHeight ? outputWidth / outputHeight : undefined;
 
+  const isSvg = (f: File) => f.type === "image/svg+xml" || f.name.toLowerCase().endsWith(".svg");
+
+  const uploadRaw = useCallback(async (file: File) => {
+    setUploading(true);
+    try {
+      const ext = file.name.includes(".") ? file.name.slice(file.name.lastIndexOf(".")) : "";
+      const fullPath = `/${tag}/${owner}/${tag}${ext}`;
+      const account = JSON.parse(localStorage.getItem("account") ?? "{}");
+      const user = account?.name || owner;
+      const res = await uploadResource(owner, user, tag, tag, fullPath, file);
+      if (res.status === "ok" && res.data) {
+        onChange(res.data);
+      } else {
+        modal.toast(res.msg || t("common.saveFailed" as any), "error");
+      }
+    } catch (err: any) {
+      modal.toast(err?.message || t("common.saveFailed" as any), "error");
+    } finally {
+      setUploading(false);
+    }
+  }, [owner, tag, onChange, modal, t]);
+
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    if (fileRef.current) fileRef.current.value = "";
+    // SVG is a vector format — cropping via canvas.toBlob rasterizes it to
+    // PNG and destroys the resolution. Upload it as-is, skip the cropper.
+    if (isSvg(file)) {
+      uploadRaw(file);
+      return;
+    }
     setCropFile(file);
     const reader = new FileReader();
     reader.onload = () => setCropSrc(reader.result as string);
     reader.readAsDataURL(file);
-    if (fileRef.current) fileRef.current.value = "";
   };
 
   const handleCropConfirm = useCallback(async () => {

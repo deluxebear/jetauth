@@ -260,22 +260,25 @@ func (c *ApiController) GetProviderFromContext(category string) (*object.Provide
 		return nil, errors.New(c.T("general:Please login first"))
 	}
 
-	// If the caller passed ?owner=<org>, prefer that org's default application
-	// for provider resolution. This lets a global admin editing resources under
-	// a specific org scope (e.g. uploading a provider logo in jetems) pull the
-	// Storage provider from that org instead of falling back to the admin's
-	// signed-in app (usually app-built-in, which often has no Storage).
+	// If the caller passed ?owner=<org>, prefer any provider of this category
+	// that lives in that org. This lets a global admin editing resources under
+	// a specific org scope (e.g. uploading a provider logo in jetems) use
+	// that org's Storage provider instead of falling back to the admin's
+	// signed-in app (usually app-built-in, which often has nothing attached).
+	//
+	// We scan the org's provider table directly instead of going through an
+	// application's Providers list — the "provider must be attached to an
+	// app" constraint is a sign-in-flow concern, not a storage concern.
 	if ownerQuery := c.Ctx.Input.Query("owner"); ownerQuery != "" && ownerQuery != "admin" {
-		signedInUser, err := object.GetUser(userId)
-		if err == nil && signedInUser != nil && (signedInUser.IsGlobalAdmin() || signedInUser.Owner == ownerQuery) {
-			orgApp, appErr := object.GetDefaultApplication(util.GetId("admin", ownerQuery))
-			if appErr == nil && orgApp != nil {
-				if p, provErr := orgApp.GetProviderByCategory(category); provErr == nil && p != nil {
-					return p, nil
+		signedInUser, userErr := object.GetUser(userId)
+		if userErr == nil && signedInUser != nil && (signedInUser.IsGlobalAdmin() || signedInUser.Owner == ownerQuery) {
+			orgProviders, provErr := object.GetProviders(ownerQuery)
+			if provErr == nil {
+				for _, p := range orgProviders {
+					if p != nil && p.Category == category {
+						return p, nil
+					}
 				}
-				// org has a default app but no provider of this category —
-				// fall through to the signed-in app so the error message
-				// surfaces the original context.
 			}
 		}
 	}
