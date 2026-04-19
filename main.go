@@ -86,8 +86,16 @@ func main() {
 	// web.DelStaticPath("/static")
 
 	web.BConfig.WebConfig.DirectoryIndex = true
+	// Strip the beego version leak from the default Server header. The
+	// framework identity and version are not useful to legitimate clients
+	// and help attackers fingerprint vulnerable endpoints.
+	web.BConfig.ServerName = ""
 	web.SetStaticPath("/swagger", "swagger")
 	web.SetStaticPath("/files", "files")
+	// Replace beego's default "Not Found / Powered by beego" page so we
+	// don't leak the framework version and so /api/* clients get JSON
+	// instead of HTML when a route misses.
+	web.ErrorHandler("404", routers.Handle404)
 	// https://studygolang.com/articles/2303
 	web.InsertFilter("*", web.BeforeStatic, routers.RequestBodyFilter)
 	web.InsertFilter("*", web.BeforeRouter, routers.StaticFilter)

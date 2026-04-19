@@ -20,6 +20,8 @@ import TopBar from "../shell/TopBar";
 import SafeHtml from "../shell/SafeHtml";
 import ProvidersRow from "./ProvidersRow";
 import { useSigninItemVisibility } from "../items/useSigninItemVisibility";
+import { MarkdownLinks } from "../items/MarkdownLinks";
+import { useModal } from "../../components/Modal";
 import type { AuthApplication, ResolvedProvider } from "../api/types";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
@@ -111,6 +113,9 @@ function PasswordBody({
   showForgot = true,
   forgotLabel,
   submitLabel,
+  showAgreement = false,
+  agreementLabel,
+  agreementRequired = false,
 }: {
   username: string;
   setUsername: (v: string) => void;
@@ -122,21 +127,49 @@ function PasswordBody({
   showForgot?: boolean;
   forgotLabel?: string;
   submitLabel?: string;
+  showAgreement?: boolean;
+  agreementLabel?: string;
+  agreementRequired?: boolean;
 }) {
   const { t } = useTranslation();
+  const modal = useModal();
   const [password, setPassword] = useState("");
   const [show, setShow] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [agreed, setAgreed] = useState(false);
 
-  const handleSubmit = async (e: FormEvent) => {
-    e.preventDefault();
-    if (!username || !password || submitting) return;
+  const resolvedAgreementLabel = agreementLabel && agreementLabel.length > 0
+    ? agreementLabel
+    : t("auth.agreement.label");
+  const needsAgreement = showAgreement && agreementRequired && !agreed;
+
+  const runSubmit = async () => {
     setSubmitting(true);
     try {
       await onSubmit(password);
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const handleSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!username || !password || submitting) return;
+    if (needsAgreement) {
+      modal.showConfirm(
+        <>
+          <p className="mb-2">{t("auth.agreement.confirmIntro")}</p>
+          <MarkdownLinks text={resolvedAgreementLabel} className="block" />
+        </>,
+        () => {
+          setAgreed(true);
+          void runSubmit();
+        },
+        t("auth.agreement.confirmTitle"),
+      );
+      return;
+    }
+    await runSubmit();
   };
 
   return (
@@ -171,6 +204,21 @@ function PasswordBody({
         <div className="rounded-lg border border-danger/30 bg-danger/10 px-4 py-2.5 text-[13px] text-danger">
           {error}
         </div>
+      )}
+
+      {showAgreement && (
+        <label
+          className="flex items-start gap-2 text-[12px] text-text-secondary cursor-pointer select-none"
+          data-signinitem="agreement"
+        >
+          <input
+            type="checkbox"
+            checked={agreed}
+            onChange={(e) => setAgreed(e.target.checked)}
+            className="mt-0.5 h-3.5 w-3.5 rounded border-border text-accent focus:ring-accent/30"
+          />
+          <MarkdownLinks text={resolvedAgreementLabel} />
+        </label>
       )}
 
       <button
@@ -213,6 +261,9 @@ function CodeBody({
   error,
   application,
   orgName,
+  showAgreement = false,
+  agreementLabel,
+  agreementRequired = false,
 }: {
   username: string;
   setUsername: (v: string) => void;
@@ -222,14 +273,24 @@ function CodeBody({
   error: string;
   application: string;
   orgName: string;
+  showAgreement?: boolean;
+  agreementLabel?: string;
+  agreementRequired?: boolean;
 }) {
   const { t } = useTranslation();
+  const modal = useModal();
   const [phase, setPhase] = useState<"send" | "verify">("send");
   const [code, setCode] = useState("");
   const [countdown, setCountdown] = useState(0);
   const [sending, setSending] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [sendError, setSendError] = useState("");
+  const [agreed, setAgreed] = useState(false);
+
+  const resolvedAgreementLabel = agreementLabel && agreementLabel.length > 0
+    ? agreementLabel
+    : t("auth.agreement.label");
+  const needsAgreement = showAgreement && agreementRequired && !agreed;
 
   useEffect(() => {
     if (countdown <= 0) return;
@@ -265,15 +326,33 @@ function CodeBody({
     }
   };
 
-  const handleSubmit = async (e: FormEvent) => {
-    e.preventDefault();
-    if (code.length !== 6 || submitting) return;
+  const runSubmit = async () => {
     setSubmitting(true);
     try {
       await onSubmit(code);
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const handleSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    if (code.length !== 6 || submitting) return;
+    if (needsAgreement) {
+      modal.showConfirm(
+        <>
+          <p className="mb-2">{t("auth.agreement.confirmIntro")}</p>
+          <MarkdownLinks text={resolvedAgreementLabel} className="block" />
+        </>,
+        () => {
+          setAgreed(true);
+          void runSubmit();
+        },
+        t("auth.agreement.confirmTitle"),
+      );
+      return;
+    }
+    await runSubmit();
   };
 
   return (
@@ -323,6 +402,21 @@ function CodeBody({
               className="w-full rounded-lg border border-border bg-surface-1 px-3.5 py-2.5 text-[14px] tracking-[0.3em] text-center text-text-primary placeholder:text-text-muted focus:border-accent focus:ring-1 focus:ring-accent/30 outline-none transition-all"
             />
           </div>
+
+          {showAgreement && (
+            <label
+              className="flex items-start gap-2 text-[12px] text-text-secondary cursor-pointer select-none"
+              data-signinitem="agreement"
+            >
+              <input
+                type="checkbox"
+                checked={agreed}
+                onChange={(e) => setAgreed(e.target.checked)}
+                className="mt-0.5 h-3.5 w-3.5 rounded border-border text-accent focus:ring-accent/30"
+              />
+              <MarkdownLinks text={resolvedAgreementLabel} />
+            </label>
+          )}
 
           <button
             type="submit"
@@ -798,6 +892,9 @@ export default function ClassicSigninPage({ application, providers }: Props) {
               showForgot={signinItemVis.isVisible("Forgot password?")}
               forgotLabel={signinItemVis.labelOf("Forgot password?")}
               submitLabel={signinItemVis.labelOf("Login button")}
+              showAgreement={signinItemVis.isListed("Agreement") && signinItemVis.isVisible("Agreement")}
+              agreementLabel={signinItemVis.labelOf("Agreement")}
+              agreementRequired={signinItemVis.requiredOf("Agreement") ?? true}
             />
           )}
 
@@ -811,6 +908,9 @@ export default function ClassicSigninPage({ application, providers }: Props) {
               error={error}
               application={application.name}
               orgName={orgName}
+              showAgreement={signinItemVis.isListed("Agreement") && signinItemVis.isVisible("Agreement")}
+              agreementLabel={signinItemVis.labelOf("Agreement")}
+              agreementRequired={signinItemVis.requiredOf("Agreement") ?? true}
             />
           )}
 
@@ -853,6 +953,18 @@ export default function ClassicSigninPage({ application, providers }: Props) {
               }
             />
           </div>
+
+          {signinItemVis.isVisible("Signup link") && application.enableSignUp && (
+            <p
+              className="mt-6 text-center text-[12px] text-text-muted"
+              data-signinitem="signup-link"
+            >
+              {t("auth.signin.noAccount")}{" — "}
+              <a href={`/signup/${application.name}`} className="text-accent hover:underline">
+                {signinItemVis.labelOf("Signup link") ?? t("auth.signin.signupLink")}
+              </a>
+            </p>
+          )}
 
           <SafeHtml html={application.signinHtml ?? ""} className="auth-page-html" />
         </div>

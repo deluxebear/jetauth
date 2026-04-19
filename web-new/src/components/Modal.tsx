@@ -9,7 +9,7 @@ interface ModalState {
   open: boolean;
   type: ModalType;
   title: string;
-  message: string;
+  message: ReactNode;
   onConfirm?: () => void;
   onCancel?: () => void;
 }
@@ -21,10 +21,10 @@ interface ToastItem {
 }
 
 interface ModalContextType {
-  showConfirm: (message: string, onConfirm: () => void, title?: string) => void;
-  showSuccess: (message: string, title?: string) => void;
-  showError: (message: string, title?: string) => void;
-  showInfo: (message: string, title?: string) => void;
+  showConfirm: (message: ReactNode, onConfirm: () => void, title?: string) => void;
+  showSuccess: (message: ReactNode, title?: string) => void;
+  showError: (message: ReactNode, title?: string) => void;
+  showInfo: (message: ReactNode, title?: string) => void;
   toast: (message: string, type?: "success" | "error" | "info") => void;
 }
 
@@ -56,7 +56,7 @@ export function ModalProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const showConfirm = useCallback(
-    (message: string, onConfirm: () => void, title?: string) => {
+    (message: ReactNode, onConfirm: () => void, title?: string) => {
       setState({
         open: true,
         type: "confirm",
@@ -73,21 +73,21 @@ export function ModalProvider({ children }: { children: ReactNode }) {
   );
 
   const showSuccess = useCallback(
-    (message: string, title?: string) => {
+    (message: ReactNode, title?: string) => {
       setState({ open: true, type: "success", title: title ?? "", message, onConfirm: close });
     },
     [close]
   );
 
   const showError = useCallback(
-    (message: string, title?: string) => {
+    (message: ReactNode, title?: string) => {
       setState({ open: true, type: "error", title: title ?? "", message, onConfirm: close });
     },
     [close]
   );
 
   const showInfo = useCallback(
-    (message: string, title?: string) => {
+    (message: ReactNode, title?: string) => {
       setState({ open: true, type: "info", title: title ?? "", message, onConfirm: close });
     },
     [close]
@@ -160,9 +160,9 @@ function ModalOverlay({ state, onClose }: { state: ModalState; onClose: () => vo
 
               {/* Body */}
               <div className="px-5 py-4">
-                <p className="text-[13px] text-text-secondary leading-relaxed">
+                <div className="text-[13px] text-text-secondary leading-relaxed">
                   {state.message}
-                </p>
+                </div>
               </div>
 
               {/* Footer */}

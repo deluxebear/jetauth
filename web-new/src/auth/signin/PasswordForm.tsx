@@ -1,6 +1,8 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { Eye, EyeOff, ArrowLeft, ArrowRight } from "lucide-react";
 import { useTranslation } from "../../i18n";
+import { useModal } from "../../components/Modal";
+import { MarkdownLinks } from "../items/MarkdownLinks";
 
 interface PasswordFormProps {
   identifier: string;
@@ -57,6 +59,7 @@ export default function PasswordForm({
   rememberLabel,
 }: PasswordFormProps) {
   const { t } = useTranslation();
+  const modal = useModal();
   const [password, setPassword] = useState("");
   const [showPw, setShowPw] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -81,18 +84,39 @@ export default function PasswordForm({
   }, [rememberMe, showRememberMe]);
 
   const display = userHint && userHint.length > 0 ? userHint : identifier;
-  const agreementOk = !showAgreement || !agreementRequired || agreed;
-  const canSubmit = password.length > 0 && !loading && agreementOk;
+  const needsAgreement = showAgreement && agreementRequired && !agreed;
+  const canSubmit = password.length > 0 && !loading;
 
-  const handleSubmit = async (e: FormEvent) => {
-    e.preventDefault();
-    if (!canSubmit) return;
+  const runSubmit = async () => {
     setLoading(true);
     try {
       await onSubmit(password, showRememberMe ? { autoSignin: rememberMe } : undefined);
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!canSubmit) return;
+    // Chinese "弹窗派" pattern: if the agreement is required but unchecked,
+    // pop a confirm modal restating the terms with clickable links. Confirming
+    // in the modal auto-checks the box and proceeds — cancelling just closes.
+    if (needsAgreement) {
+      modal.showConfirm(
+        <>
+          <p className="mb-2">{t("auth.agreement.confirmIntro")}</p>
+          <MarkdownLinks text={resolvedAgreementLabel} className="block" />
+        </>,
+        () => {
+          setAgreed(true);
+          void runSubmit();
+        },
+        t("auth.agreement.confirmTitle"),
+      );
+      return;
+    }
+    await runSubmit();
   };
 
   const resolvedSubmitLabel = submitLabel && submitLabel.length > 0
@@ -198,7 +222,7 @@ export default function PasswordForm({
             onChange={(e) => setAgreed(e.target.checked)}
             className="mt-0.5 h-3.5 w-3.5 rounded border-border text-accent focus:ring-accent/30"
           />
-          <span>{resolvedAgreementLabel}</span>
+          <MarkdownLinks text={resolvedAgreementLabel} />
         </label>
       )}
 

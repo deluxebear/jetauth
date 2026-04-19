@@ -37,6 +37,8 @@ const zh: Record<string, string> = {
 
   "auth.agreement.label": "我同意服务条款",
   "auth.agreement.requiredError": "请先勾选同意条款",
+  "auth.agreement.confirmTitle": "请先阅读并同意协议",
+  "auth.agreement.confirmIntro": "为保障你的权益，请先阅读并同意以下协议后再继续：",
   "auth.rememberMe": "记住我",
   "auth.captcha.placeholder": "人机验证将在此显示",
 
@@ -70,6 +72,9 @@ const zh: Record<string, string> = {
   "auth.forgot.backToSignin": "返回登录",
 
   "auth.signup.title": "创建账号",
+  "auth.signup.disabledTitle": "注册已关闭",
+  "auth.signup.disabledBody": "管理员已关闭该应用的注册功能。",
+  "auth.signup.backToLogin": "返回登录",
   "auth.signup.subtitle": "用时不到一分钟",
   "auth.signup.submitButton": "创建账号",
   "auth.signup.stepOf": "第 {current} 步 / 共 {total} 步",
@@ -77,6 +82,8 @@ const zh: Record<string, string> = {
   "auth.signup.backButton": "上一步",
   "auth.signup.haveAccount": "已有账号？",
   "auth.signup.signinLink": "登录",
+  "auth.signin.noAccount": "还没有账号？",
+  "auth.signin.signupLink": "注册",
   "auth.signup.requiredError": "请输入{label}",
   "auth.signup.invalidError": "{label}格式错误",
   "auth.signup.confirmMismatch": "两次密码不一致",
@@ -1736,7 +1743,7 @@ const zh: Record<string, string> = {
   "apps.signinItem.providers.label": "第三方登录",
   "apps.signinItem.providers.desc": "Google / GitHub 等社交登录按钮",
   "apps.signinItem.agreement.label": "协议确认",
-  "apps.signinItem.agreement.desc": "登录前需要勾选的服务条款/隐私协议",
+  "apps.signinItem.agreement.desc": "登录前需要勾选的服务条款/隐私协议。标签支持 [文字](URL) 语法嵌入协议链接，例如：我已阅读并同意[《用户协议》](https://…/terms)和[《隐私政策》](https://…/privacy)。未勾选时点登录会弹窗二次确认。",
   "apps.signinItem.forgotPassword.label": "忘记密码链接",
   "apps.signinItem.forgotPassword.desc": "密码输入框下方的「忘记密码」链接",
   "apps.signinItem.loginButton.label": "登录按钮",

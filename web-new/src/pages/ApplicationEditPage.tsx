@@ -1092,10 +1092,35 @@ export default function ApplicationEditPage() {
       key: "label", title: t("apps.ui.label" as any), width: "15%",
       visible: (row) => {
         const n = String(row.name);
-        return !!row.isCustom || n.startsWith("Text ") || ["Username", "Password", "Verification code", "Signup link", "Forgot password?", "Login button"].includes(n);
+        return (
+          !!row.isCustom ||
+          n.startsWith("Text ") ||
+          [
+            "Username",
+            "Password",
+            "Verification code",
+            "Signup link",
+            "Forgot password?",
+            "Login button",
+            "Agreement",
+            "Auto sign in",
+          ].includes(n)
+        );
       },
     },
-    { key: "placeholder", title: t("apps.ui.placeholder" as any), width: "20%", placeholder: "e.g. you@example.com" },
+    {
+      key: "placeholder", title: t("apps.ui.placeholder" as any), width: "20%", placeholder: "e.g. you@example.com",
+      // Rows whose UI element has no placeholder concept — hide the cell so
+      // the admin doesn't think a placeholder will show somewhere. Checkbox/
+      // toggle-style items (Agreement, Auto sign in) fall here, as do pure
+      // visual/nav chrome (Logo, Languages, Back button, Signin methods,
+      // Login button, Providers, Forgot password link, Signup link).
+      visible: (row) => {
+        const n = String(row.name);
+        if (row.isCustom || n.startsWith("Text ")) return true;
+        return ["Username", "Password", "Verification code", "Captcha"].includes(n);
+      },
+    },
     { key: "customCss", title: "CSS", width: "20%", placeholder: ".this-row { ... }" },
   ];
 

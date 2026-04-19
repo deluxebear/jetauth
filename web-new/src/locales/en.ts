@@ -37,6 +37,8 @@ const en = {
 
   "auth.agreement.label": "I agree to the Terms of Service",
   "auth.agreement.requiredError": "Please accept the terms to continue",
+  "auth.agreement.confirmTitle": "Please confirm",
+  "auth.agreement.confirmIntro": "Please read and accept the following before continuing:",
   "auth.rememberMe": "Remember me",
   "auth.captcha.placeholder": "Captcha will appear here",
 
@@ -70,6 +72,9 @@ const en = {
   "auth.forgot.backToSignin": "Back to sign in",
 
   "auth.signup.title": "Create your account",
+  "auth.signup.disabledTitle": "Registration is closed",
+  "auth.signup.disabledBody": "The administrator has disabled signup for this application.",
+  "auth.signup.backToLogin": "Back to sign in",
   "auth.signup.subtitle": "Takes less than a minute",
   "auth.signup.submitButton": "Create account",
   "auth.signup.stepOf": "Step {current} of {total}",
@@ -77,6 +82,8 @@ const en = {
   "auth.signup.backButton": "Back",
   "auth.signup.haveAccount": "Already have an account?",
   "auth.signup.signinLink": "Sign in",
+  "auth.signin.noAccount": "Don't have an account?",
+  "auth.signin.signupLink": "Sign up",
   "auth.signup.requiredError": "{label} is required",
   "auth.signup.invalidError": "Invalid {label}",
   "auth.signup.confirmMismatch": "Passwords don't match",
@@ -1655,7 +1662,7 @@ const en = {
   "apps.signinItem.providers.label": "Third-party providers",
   "apps.signinItem.providers.desc": "Google / GitHub / etc. social login buttons",
   "apps.signinItem.agreement.label": "Terms agreement",
-  "apps.signinItem.agreement.desc": "Terms-of-service checkbox shown before login",
+  "apps.signinItem.agreement.desc": "Terms-of-service checkbox shown before login. The label supports [text](url) syntax for inline links, e.g. I agree to the [Terms](https://…/terms) and [Privacy Policy](https://…/privacy). When the box is unchecked, submitting pops a confirm modal.",
   "apps.signinItem.forgotPassword.label": "Forgot-password link",
   "apps.signinItem.forgotPassword.desc": "\"Forgot password?\" link shown under the password field",
   "apps.signinItem.loginButton.label": "Login button",

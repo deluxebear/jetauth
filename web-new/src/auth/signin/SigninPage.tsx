@@ -225,9 +225,9 @@ export default function SigninPage({ application, providers }: SigninPageProps) 
                     className="mt-6 text-center text-[12px] text-text-muted"
                     data-signinitem="signup-link"
                   >
-                    {t("auth.signup.haveAccount")}{" — "}
+                    {t("auth.signin.noAccount")}{" — "}
                     <a href={`/signup/${application.name}`} className="text-accent hover:underline">
-                      {signinItemVis.labelOf("Signup link") ?? t("auth.signup.signinLink")}
+                      {signinItemVis.labelOf("Signup link") ?? t("auth.signin.signupLink")}
                     </a>
                   </p>
                 )}

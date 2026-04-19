@@ -168,6 +168,45 @@ export default function SignupPage({ application, providers }: SignupPageProps) 
     }
   };
 
+  // Hard gate: admins who disable enableSignUp expect no one to register,
+  // even via a direct /signup/<app> URL. Without this, the signup form
+  // renders and only fails at POST /api/signup — which leaks schema, wastes
+  // the user's time, and contradicts the admin toggle.
+  if (!application.enableSignUp) {
+    return (
+      <div className="min-h-screen flex relative">
+        <TopBar />
+        <div className="w-full flex items-center justify-center p-6 lg:p-12">
+          <div className="w-full max-w-sm text-center">
+            <div className="mb-10">
+              <BrandingLayer
+                logo={orgLogo}
+                logoDark={application.organizationObj?.logoDark}
+                favicon={application.organizationObj?.favicon ?? application.favicon}
+                displayName={orgDisplay}
+                title={application.title}
+                theme={theme}
+                hideLogo={!signinItemVis.isVisible("Logo")}
+              />
+            </div>
+            <h1 className="text-2xl font-bold tracking-tight text-text-primary mb-2">
+              {t("auth.signup.disabledTitle")}
+            </h1>
+            <p className="text-[13px] text-text-muted mb-6">
+              {t("auth.signup.disabledBody")}
+            </p>
+            <a
+              href={`/login/${orgName}/${application.name}`}
+              className="inline-block rounded-lg bg-accent px-4 py-2 text-[13px] font-semibold text-white hover:bg-accent-hover transition-colors"
+            >
+              {t("auth.signup.backToLogin")}
+            </a>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen flex relative">
       <TopBar />

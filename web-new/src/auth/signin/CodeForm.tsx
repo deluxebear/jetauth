@@ -2,6 +2,8 @@ import { useEffect, useState, type FormEvent } from "react";
 import { ArrowLeft, ArrowRight, Send } from "lucide-react";
 import { useTranslation } from "../../i18n";
 import { api } from "../../api/client";
+import { useModal } from "../../components/Modal";
+import { MarkdownLinks } from "../items/MarkdownLinks";
 
 interface CodeFormProps {
   identifier: string;
@@ -56,6 +58,7 @@ export default function CodeForm({
   captchaPlaceholder,
 }: CodeFormProps) {
   const { t } = useTranslation();
+  const modal = useModal();
   const [phase, setPhase] = useState<"send" | "verify">("send");
   const [code, setCode] = useState("");
   const [countdown, setCountdown] = useState(0);
@@ -91,11 +94,9 @@ export default function CodeForm({
     }
   };
 
-  const agreementOk = !showAgreement || !agreementRequired || agreed;
+  const needsAgreement = showAgreement && agreementRequired && !agreed;
 
-  const handleSubmit = async (e: FormEvent) => {
-    e.preventDefault();
-    if (code.length !== 6 || submitting || !agreementOk) return;
+  const runSubmit = async () => {
     setSubmitting(true);
     try {
       await onSubmit(code);
@@ -110,6 +111,26 @@ export default function CodeForm({
   const resolvedAgreementLabel = agreementLabel && agreementLabel.length > 0
     ? agreementLabel
     : t("auth.agreement.label");
+
+  const handleSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    if (code.length !== 6 || submitting) return;
+    if (needsAgreement) {
+      modal.showConfirm(
+        <>
+          <p className="mb-2">{t("auth.agreement.confirmIntro")}</p>
+          <MarkdownLinks text={resolvedAgreementLabel} className="block" />
+        </>,
+        () => {
+          setAgreed(true);
+          void runSubmit();
+        },
+        t("auth.agreement.confirmTitle"),
+      );
+      return;
+    }
+    await runSubmit();
+  };
   const resolvedCaptchaLabel = captchaPlaceholder && captchaPlaceholder.length > 0
     ? captchaPlaceholder
     : t("auth.captcha.placeholder");
@@ -197,7 +218,7 @@ export default function CodeForm({
                 onChange={(e) => setAgreed(e.target.checked)}
                 className="mt-0.5 h-3.5 w-3.5 rounded border-border text-accent focus:ring-accent/30"
               />
-              <span>{resolvedAgreementLabel}</span>
+              <MarkdownLinks text={resolvedAgreementLabel} />
             </label>
           )}
 
@@ -212,7 +233,7 @@ export default function CodeForm({
 
           <button
             type="submit"
-            disabled={code.length !== 6 || submitting || !agreementOk}
+            disabled={code.length !== 6 || submitting}
             data-cfg-section="branding"
             data-cfg-field="colorPrimary"
             data-signinitem="login-button"
