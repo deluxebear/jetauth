@@ -25,6 +25,7 @@ export interface ResolvedProvider {
   displayName: string;
   type: string;
   logoUrl: string;
+  logoUrlDark: string;
   clientId: string;
   prompted: boolean;
   canSignUp: boolean;

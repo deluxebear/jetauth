@@ -22,6 +22,7 @@ export interface Provider {
   customTokenUrl: string;
   customUserInfoUrl: string;
   customLogo: string;
+  customLogoDark: string;
 
   // Mapping
   scopes: string;
@@ -121,6 +122,7 @@ export function newProvider(owner: string): Provider {
     customTokenUrl: "",
     customUserInfoUrl: "",
     customLogo: "",
+    customLogoDark: "",
     scopes: "",
     userMapping: {},
     httpHeaders: {},

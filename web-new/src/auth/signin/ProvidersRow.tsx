@@ -4,6 +4,17 @@ import type {
   SigninItemProvider,
 } from "../api/types";
 import { useTranslation } from "../../i18n";
+import { useTheme } from "../../theme";
+
+/**
+ * Picks the right logo for the active theme. Falls back to the light URL
+ * when the dark one is missing (the backend already mirrors light→dark, but
+ * we keep this guard so callers can't render a broken image).
+ */
+function logoFor(p: ResolvedProvider, theme: "light" | "dark"): string {
+  if (theme === "dark" && p.logoUrlDark) return p.logoUrlDark;
+  return p.logoUrl;
+}
 
 interface ProvidersRowProps {
   application: AuthApplication;
@@ -47,6 +58,7 @@ export default function ProvidersRow({
   config,
 }: ProvidersRowProps) {
   const { t } = useTranslation();
+  const { theme } = useTheme();
   if (providers.length === 0) return null;
 
   const buildAuthorizeUrl = (p: ResolvedProvider): string => {
@@ -96,14 +108,14 @@ export default function ProvidersRow({
           <div className="h-px flex-1 bg-border" />
         </div>
         {primary.length > 0 && (
-          <ProvidersGroup entries={primary} onPick={go} t={t} />
+          <ProvidersGroup entries={primary} onPick={go} t={t} theme={theme} />
         )}
         {secondary.length > 0 && (
           <>
             {primary.length > 0 && (
               <div className="my-3 h-px bg-border-subtle" aria-hidden="true" />
             )}
-            <ProvidersGroup entries={secondary} onPick={go} t={t} />
+            <ProvidersGroup entries={secondary} onPick={go} t={t} theme={theme} />
           </>
         )}
       </>
@@ -134,7 +146,7 @@ export default function ProvidersRow({
             title={t("auth.providers.continueWith").replace("{name}", p.displayName)}
             className="flex items-center justify-center gap-1.5 rounded-lg border border-border bg-surface-1 py-2.5 text-[12px] font-medium text-text-secondary hover:bg-surface-2 hover:text-text-primary transition-colors"
           >
-            <img src={p.logoUrl} alt={p.displayName} className="h-4 w-4" />
+            <img src={logoFor(p, theme)} alt={p.displayName} className="h-4 w-4" />
             <span className="truncate">{p.displayName}</span>
           </button>
         ))}
@@ -151,7 +163,7 @@ export default function ProvidersRow({
                   onClick={() => go(p)}
                   className="flex w-full items-center gap-2 rounded-md px-3 py-1.5 text-left text-text-secondary hover:bg-surface-2"
                 >
-                  <img src={p.logoUrl} alt={p.displayName} className="h-4 w-4" />
+                  <img src={logoFor(p, theme)} alt={p.displayName} className="h-4 w-4" />
                   <span className="truncate">{p.displayName}</span>
                 </button>
               ))}
@@ -175,10 +187,12 @@ function ProvidersGroup({
   entries,
   onPick,
   t,
+  theme,
 }: {
   entries: Array<{ provider: ResolvedProvider; cfg: SigninItemProvider }>;
   onPick: (p: ResolvedProvider) => void;
   t: (k: string) => string;
+  theme: "light" | "dark";
 }) {
   const large = entries.filter((e) => e.cfg.size === "large");
   const small = entries.filter((e) => e.cfg.size !== "large");
@@ -195,7 +209,7 @@ function ProvidersGroup({
               title={t("auth.providers.continueWith").replace("{name}", p.displayName)}
               className="w-full flex items-center justify-center gap-2 rounded-lg border border-border bg-surface-1 py-2.5 text-[13px] font-medium text-text-secondary hover:bg-surface-2 hover:text-text-primary transition-colors"
             >
-              <img src={p.logoUrl} alt={p.displayName} className="h-4 w-4" />
+              <img src={logoFor(p, theme)} alt={p.displayName} className="h-4 w-4" />
               <span className="truncate">
                 {t("auth.providers.continueWith").replace("{name}", p.displayName)}
               </span>
@@ -214,7 +228,7 @@ function ProvidersGroup({
               title={t("auth.providers.continueWith").replace("{name}", p.displayName)}
               className="flex h-10 w-10 items-center justify-center rounded-lg border border-border bg-surface-1 text-text-secondary hover:bg-surface-2 hover:text-text-primary transition-colors"
             >
-              <img src={p.logoUrl} alt={p.displayName} className="h-4 w-4" />
+              <img src={logoFor(p, theme)} alt={p.displayName} className="h-4 w-4" />
             </button>
           ))}
         </div>

@@ -7,6 +7,10 @@ vi.mock("../../i18n", () => ({
   useTranslation: () => ({ t: (k: string) => k }),
 }));
 
+vi.mock("../../theme", () => ({
+  useTheme: () => ({ theme: "light", toggle: () => {} }),
+}));
+
 const mockApp = { name: "app-test", organization: "admin" } as AuthApplication;
 
 function makeProvider(name: string, type = "GitHub"): ResolvedProvider {
@@ -15,6 +19,7 @@ function makeProvider(name: string, type = "GitHub"): ResolvedProvider {
     displayName: name,
     type,
     logoUrl: `/providers/${type.toLowerCase()}.svg`,
+    logoUrlDark: `/providers/${type.toLowerCase()}.svg`,
     clientId: `client-${name}`,
     prompted: false,
     canSignUp: true,

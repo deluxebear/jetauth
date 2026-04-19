@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import { Trash2, LogOut, ExternalLink, Copy, ChevronDown, ChevronRight, ShieldCheck, Bell, HardDrive, CreditCard, Wallet, MessageSquare, Smartphone, Key, Globe, Link, Settings, HelpCircle } from "lucide-react";
 import StickyEditHeader from "../components/StickyEditHeader";
 import { FormField, FormSection, Switch, inputClass, monoInputClass } from "../components/FormSection";
+import ImageUrlInput from "../components/ImageUrlInput";
 import SimpleSelect from "../components/SimpleSelect";
 import { BodyTemplateEditor } from "../components/BodyTemplateEditor";
 import { PresetPicker } from "../components/PresetPicker";
@@ -937,12 +938,46 @@ export default function ProviderEditPage() {
               </FormField>
             ))}
           </FormSection>
-          <FormSection title={t("providers.field.customLogo" as any)}>
-            <FormField label={t("providers.field.customLogo" as any)} span="full">
-              <input value={String(prov.customLogo ?? "")} onChange={(e) => set("customLogo", e.target.value)} className={inputClass} />
-            </FormField>
-          </FormSection>
         </>
+      )}
+      {category === "OAuth" && (
+        <FormSection title={t("providers.field.customLogo" as any)}>
+          <FormField label="" span="full">
+            <p className="text-[12px] text-text-muted">
+              {t("providers.section.customLogo.desc" as any)}
+            </p>
+          </FormField>
+          <FormField label={t("providers.field.customLogoLight" as any)}>
+            <ImageUrlInput
+              value={String(prov.customLogo ?? "")}
+              onChange={(v) => set("customLogo", v)}
+              owner={String(prov.owner ?? "")}
+              tag={`provider-logo-${String(prov.name ?? "provider")}-light`}
+              accept="image/png,image/svg+xml,image/jpeg,image/webp"
+              previewClass="hidden"
+              placeholder="https://… or /providers/custom.svg"
+            />
+          </FormField>
+          <FormField label={t("providers.field.customLogoDark" as any)}>
+            <ImageUrlInput
+              value={String(prov.customLogoDark ?? "")}
+              onChange={(v) => set("customLogoDark", v)}
+              owner={String(prov.owner ?? "")}
+              tag={`provider-logo-${String(prov.name ?? "provider")}-dark`}
+              accept="image/png,image/svg+xml,image/jpeg,image/webp"
+              previewClass="hidden"
+              placeholder={t("providers.field.customLogoDark.placeholder" as any)}
+            />
+          </FormField>
+          <FormField label={t("providers.field.customLogo.preview" as any)} span="full">
+            <LogoPreview
+              light={String(prov.customLogo ?? "")}
+              dark={String(prov.customLogoDark ?? "")}
+              type={String(prov.type ?? "")}
+              t={t}
+            />
+          </FormField>
+        </FormSection>
       )}
     </>
   );
@@ -1916,6 +1951,56 @@ function ProviderTypeSelect({ category, value, options, onChange, placeholder, i
           {filtered.length === 0 && <div className="px-3 py-2 text-[12px] text-text-muted">No results</div>}
         </div>
       )}
+    </div>
+  );
+}
+
+// Same built-in logo map the backend uses — kept in sync so the preview
+// can show what the login page will actually render when both custom fields
+// are empty. If the type isn't in the map, fall back to the generic icon.
+const BUILT_IN_LOGO: Record<string, string> = {
+  GitHub: "/providers/github.svg",
+  Google: "/providers/google.svg",
+  WeChat: "/providers/wechat.svg",
+  DingTalk: "/providers/dingtalk.svg",
+  Lark: "/providers/lark.svg",
+  Gitee: "/providers/gitee.svg",
+  Gitlab: "/providers/gitlab.svg",
+  Apple: "/providers/apple.svg",
+  Microsoft: "/providers/microsoft.svg",
+  LinkedIn: "/providers/linkedin.svg",
+  SAML: "/providers/saml.svg",
+  OIDC: "/providers/oidc.svg",
+};
+
+function LogoPreview({ light, dark, type, t }: { light: string; dark: string; type: string; t: (k: string) => string }) {
+  const fallback = BUILT_IN_LOGO[type] ?? "/providers/generic.svg";
+  const lightSrc = light || fallback;
+  const darkSrc = dark || light || fallback;
+  return (
+    <div className="grid grid-cols-2 gap-3">
+      <LogoPreviewTile src={lightSrc} mode="light" label={t("providers.field.customLogoLight" as any)} />
+      <LogoPreviewTile src={darkSrc} mode="dark" label={t("providers.field.customLogoDark" as any)} />
+    </div>
+  );
+}
+
+function LogoPreviewTile({ src, mode, label }: { src: string; mode: "light" | "dark"; label: string }) {
+  const bg = mode === "dark" ? "bg-[#0f172a]" : "bg-white";
+  const border = mode === "dark" ? "border-white/10" : "border-slate-200";
+  const text = mode === "dark" ? "text-white/80" : "text-slate-700";
+  return (
+    <div className={`flex flex-col gap-2 rounded-xl border ${border} ${bg} p-3`}>
+      <span className={`text-[11px] font-medium uppercase tracking-wide ${mode === "dark" ? "text-white/50" : "text-slate-500"}`}>{label}</span>
+      <div className={`flex h-10 w-full items-center justify-center gap-2 rounded-lg border ${border} ${mode === "dark" ? "bg-black/20" : "bg-slate-50"}`}>
+        <img
+          src={src}
+          alt=""
+          className="h-5 w-5 object-contain"
+          onError={(e) => { (e.target as HTMLImageElement).style.opacity = "0.2"; }}
+        />
+        <span className={`text-[12px] ${text}`}>Continue</span>
+      </div>
     </div>
   );
 }

@@ -7,6 +7,7 @@ type ResolvedProvider struct {
 	DisplayName string `json:"displayName"`
 	Type        string `json:"type"`
 	LogoURL     string `json:"logoUrl"`
+	LogoURLDark string `json:"logoUrlDark"`
 	ClientID    string `json:"clientId"`
 	Prompted    bool   `json:"prompted"`
 	CanSignUp   bool   `json:"canSignUp"`
@@ -46,15 +47,27 @@ func ResolveProviders(app *Application) []ResolvedProvider {
 			continue
 		}
 		p := pi.Provider
-		logo, ok := providerLogoMap[p.Type]
-		if !ok {
-			logo = fallbackProviderLogo
+		// Prefer admin-set custom logo over the built-in type map. When only
+		// one of light/dark is set, reuse it for both modes so a single upload
+		// still works everywhere.
+		light := p.CustomLogo
+		if light == "" {
+			if builtIn, ok := providerLogoMap[p.Type]; ok {
+				light = builtIn
+			} else {
+				light = fallbackProviderLogo
+			}
+		}
+		dark := p.CustomLogoDark
+		if dark == "" {
+			dark = light
 		}
 		out = append(out, ResolvedProvider{
 			Name:        pi.Name,
 			DisplayName: p.DisplayName,
 			Type:        p.Type,
-			LogoURL:     logo,
+			LogoURL:     light,
+			LogoURLDark: dark,
 			ClientID:    p.ClientId,
 			Prompted:    pi.Prompted,
 			CanSignUp:   pi.CanSignUp,
