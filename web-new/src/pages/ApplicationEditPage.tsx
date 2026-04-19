@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback, lazy, Suspense } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Trash2, Copy, LogOut, Plus, Settings, KeyRound, Lock, FileKey2, Puzzle, Palette, ShieldCheck, Network, LogIn, UserPlus, LayoutGrid, LayoutTemplate, Eye, X, Sparkles, Check } from "lucide-react";
+import { Trash2, Copy, LogOut, Plus, Settings, KeyRound, Lock, FileKey2, Puzzle, Palette, ShieldCheck, Network, LogIn, UserPlus, LayoutGrid, LayoutTemplate, Eye, X, Sparkles, Check, Image as ImageIcon, Type } from "lucide-react";
 import HelpTooltip from "../components/HelpTooltip";
 import StickyEditHeader from "../components/StickyEditHeader";
 import { FormField, FormSection, Switch, inputClass, monoInputClass } from "../components/FormSection";
@@ -407,6 +407,7 @@ export default function ApplicationEditPage() {
   }, [originalJson]);
 
   const UI_SECTION_FIELDS: Record<string, string[]> = {
+    theme: ["themeData"],
     layoutTemplate: ["template", "templateOptions"],
     branding: ["displayName", "logo", "favicon", "title", "themeData"],
     signin: ["orgChoiceMode", "signinMethodMode", "signinMethods", "signinItems", "signinHtml"],
@@ -1211,8 +1212,9 @@ export default function ApplicationEditPage() {
   ];
 
   const uiNavItems = [
+    { id: "theme", label: t("apps.uiGroup.theme.title" as any), icon: <Palette size={14} /> },
     { id: "layout-template", label: t("apps.uiGroup.layoutTemplate.title" as any), icon: <LayoutTemplate size={14} /> },
-    { id: "branding", label: t("apps.uiGroup.branding.title" as any), icon: <Palette size={14} /> },
+    { id: "branding", label: t("apps.uiGroup.branding.title" as any), icon: <ImageIcon size={14} /> },
     { id: "signin", label: t("apps.uiGroup.signin.title" as any), icon: <LogIn size={14} /> },
     { id: "signup", label: t("apps.uiGroup.signup.title" as any), icon: <UserPlus size={14} /> },
     { id: "forget", label: t("apps.uiGroup.forget.title" as any), icon: <KeyRound size={14} /> },
@@ -1245,6 +1247,62 @@ export default function ApplicationEditPage() {
       <div className="flex gap-4">
         <SectionNavRail items={uiNavItems} className="hidden lg:block" />
         <div className="flex-1 min-w-0 space-y-4">
+          <CollapsibleCard
+            id="theme"
+            title={t("apps.uiGroup.theme.title" as any)}
+            subtitle={t("apps.uiGroup.theme.subtitle" as any)}
+            icon={<Palette size={16} />}
+            defaultOpen
+            modified={isSectionModified(UI_SECTION_FIELDS.theme)}
+            onReset={() => resetSection(UI_SECTION_FIELDS.theme)}
+            modifiedLabel={t("common.modifiedBadge" as any)}
+            resetLabel={t("common.resetSection" as any)}
+            highlight={highlightedSection === "theme"}
+          >
+            <div className="grid grid-cols-2 gap-x-6 gap-y-4">
+              <FormField label={t("apps.field.colorPrimary" as any)}>
+                <ColorPicker
+                  value={(app.themeData as Record<string, string> | undefined)?.colorPrimary ?? "#2563EB"}
+                  onChange={(hex) => set("themeData", { ...(app.themeData as Record<string, unknown> ?? {}), colorPrimary: hex, isEnabled: true })}
+                />
+              </FormField>
+              <FormField label={t("apps.field.darkColorPrimary" as any)}>
+                <ColorPicker
+                  value={(app.themeData as Record<string, string> | undefined)?.darkColorPrimary ?? "#3b82f6"}
+                  onChange={(hex) => set("themeData", { ...(app.themeData as Record<string, unknown> ?? {}), darkColorPrimary: hex, isEnabled: true })}
+                />
+              </FormField>
+              <FormField label={t("apps.field.borderRadius" as any)}>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="range"
+                    min={0}
+                    max={16}
+                    step={1}
+                    value={(app.themeData as Record<string, number> | undefined)?.borderRadius ?? 8}
+                    onChange={(e) => set("themeData", { ...(app.themeData as Record<string, unknown> ?? {}), borderRadius: Number(e.target.value), isEnabled: true })}
+                    className="flex-1"
+                  />
+                  <span className="text-[12px] font-mono text-text-muted w-12 text-right">
+                    {(app.themeData as Record<string, number> | undefined)?.borderRadius ?? 8}px
+                  </span>
+                </div>
+              </FormField>
+              <FormField label={t("apps.field.fontFamily" as any)}>
+                <div className="flex items-center gap-2">
+                  <Type size={14} className="text-text-muted shrink-0" />
+                  <input
+                    type="text"
+                    value={(app.themeData as Record<string, string> | undefined)?.fontFamily ?? ""}
+                    onChange={(e) => set("themeData", { ...(app.themeData as Record<string, unknown> ?? {}), fontFamily: e.target.value, isEnabled: true })}
+                    placeholder="Inter, system-ui, sans-serif"
+                    className={`${inputClass} flex-1 font-mono text-[12px]`}
+                  />
+                </div>
+              </FormField>
+            </div>
+          </CollapsibleCard>
+
           <CollapsibleCard
             id="layout-template"
             title={t("apps.uiGroup.layoutTemplate.title" as any)}
