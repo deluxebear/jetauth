@@ -19,6 +19,7 @@ export type PreviewOverrides = Partial<
     | "signinMethods"
     | "signinItems"
     | "signupItems"
+    | "forgetItems"
     | "signinMethodMode"
     | "orgChoiceMode"
     | "formOffset"
@@ -31,6 +32,7 @@ export type PreviewOverrides = Partial<
     | "footerHtml"
     | "signinHtml"
     | "signupHtml"
+    | "forgetHtml"
     | "organizationObj"
     | "enablePassword"
     | "enableSignUp"
@@ -53,6 +55,7 @@ export function buildPreviewConfig(app: AuthApplication): PreviewOverrides {
     signinMethods: app.signinMethods,
     signinItems: app.signinItems,
     signupItems: app.signupItems,
+    forgetItems: app.forgetItems,
     signinMethodMode: app.signinMethodMode,
     orgChoiceMode: app.orgChoiceMode,
     formOffset: app.formOffset,
@@ -65,6 +68,7 @@ export function buildPreviewConfig(app: AuthApplication): PreviewOverrides {
     footerHtml: app.footerHtml,
     signinHtml: app.signinHtml,
     signupHtml: app.signupHtml,
+    forgetHtml: app.forgetHtml,
     organizationObj: app.organizationObj,
     enablePassword: app.enablePassword,
     enableSignUp: app.enableSignUp,

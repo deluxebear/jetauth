@@ -1,1 +1,0 @@
-import{C as e,D as t,E as n,O as r,S as i,T as a,w as o,x as s}from"./index-bOaoTUEu.js";export{s as addApplication,i as deleteApplication,e as getApplication,o as getApplications,a as getApplicationsByOrganization,n as getSamlMetadata,t as newApplication,r as updateApplication};

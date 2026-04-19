@@ -32,7 +32,7 @@ export default function ForgotPasswordPage({ application }: Props) {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const signinItemVis = useSigninItemVisibility(application.signinItems);
+  const forgetItemVis = useSigninItemVisibility(application.forgetItems);
 
   const orgName =
     application.organizationObj?.name ?? application.organization ?? "built-in";
@@ -119,9 +119,19 @@ export default function ForgotPasswordPage({ application }: Props) {
     }
   };
 
+  // Label overrides from admin-configured forgetItems. Fall back to i18n
+  // when no override is set — keeps backward compat when forgetItems is
+  // empty/missing.
+  const newPasswordLabel = forgetItemVis.labelOf("New password") || t("auth.forgot.newPassword");
+  const confirmPasswordLabel = forgetItemVis.labelOf("Confirm password") || t("auth.forgot.confirmPassword");
+  const verifyCodeButtonLabel = forgetItemVis.labelOf("Verify code button") || t("auth.code.submit");
+  const resetPasswordButtonLabel = forgetItemVis.labelOf("Reset password button") || t("auth.forgot.submitButton");
+  const successMessageLabel = forgetItemVis.labelOf("Success message") || t("auth.forgot.success");
+  const signinLinkLabel = forgetItemVis.labelOf("Signin link") || t("auth.forgot.backToSignin");
+
   return (
     <div className="min-h-screen flex relative">
-      <TopBar />
+      <TopBar hideLanguage={!forgetItemVis.isVisible("Languages")} />
       <div className="w-full flex items-center justify-center p-6 lg:p-12">
         <div className="w-full max-w-sm">
           <div className="mb-10">
@@ -132,7 +142,7 @@ export default function ForgotPasswordPage({ application }: Props) {
               displayName={orgDisplay}
               title={application.title}
               theme={theme}
-              hideLogo={!signinItemVis.isVisible("Logo")}
+              hideLogo={!forgetItemVis.isVisible("Logo")}
             />
           </div>
 
@@ -140,7 +150,7 @@ export default function ForgotPasswordPage({ application }: Props) {
             {t("auth.forgot.title")}
           </h1>
           <p className="text-[13px] text-text-muted mb-8">
-            {phase === "done" ? t("auth.forgot.success") : t("auth.forgot.subtitle")}
+            {phase === "done" ? successMessageLabel : t("auth.forgot.subtitle")}
           </p>
 
           {error && (
@@ -149,122 +159,138 @@ export default function ForgotPasswordPage({ application }: Props) {
             </div>
           )}
 
-          {phase === "identifier" && (
-            <div data-signinitem="username">
-              <IdentifierStep
-                onSubmit={handleIdentifierSubmit}
-                placeholder={(application.signinItems ?? []).find(
-                  (it) => it.name === "Username" && !it.isCustom,
-                )?.placeholder}
-              />
-            </div>
-          )}
-
-          {phase === "code" && (
-            <form onSubmit={handleCodeSubmit} className="space-y-4">
-              <input
-                type="text"
-                inputMode="numeric"
-                pattern="[0-9]*"
-                maxLength={6}
-                value={code}
-                onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
-                autoFocus
-                autoComplete="one-time-code"
-                aria-label={t("auth.code.codePlaceholder")}
-                placeholder={t("auth.code.codePlaceholder")}
-                className="w-full rounded-lg border border-border bg-surface-1 px-3.5 py-2.5 text-[14px] tracking-[0.3em] text-center text-text-primary placeholder:text-text-muted focus:border-accent focus:ring-1 focus:ring-accent/30 outline-none transition-all"
-              />
-              <button
-                type="submit"
-                disabled={code.length !== 6}
-                className="group w-full flex items-center justify-center gap-2 rounded-lg bg-accent py-2.5 text-[14px] font-semibold text-white hover:bg-accent-hover disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
-              >
-                {t("auth.code.submit")}
-                <ArrowRight size={16} />
-              </button>
-            </form>
-          )}
-
-          {phase === "password" && (
-            <form onSubmit={handlePasswordSubmit} className="space-y-4">
-              <div>
-                <label className="block text-[12px] font-medium text-text-secondary mb-1.5">
-                  {t("auth.forgot.newPassword")}
-                </label>
-                <div className="relative">
-                  <input
-                    type={showPw ? "text" : "password"}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    autoComplete="new-password"
-                    autoFocus
-                    required
-                    placeholder={t("auth.password.placeholder")}
-                    className="w-full border border-border bg-surface-1 px-3.5 py-2.5 pr-10 text-[14px] text-text-primary placeholder:text-text-muted focus:border-accent focus:ring-1 focus:ring-accent/30 outline-none transition-all rounded-lg"
-                  />
-                  <button
-                    type="button"
-                    tabIndex={-1}
-                    onClick={() => setShowPw(!showPw)}
-                    aria-label={showPw ? t("auth.password.hidePassword") : t("auth.password.showPassword")}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted hover:text-text-secondary"
-                  >
-                    {showPw ? <EyeOff size={16} /> : <Eye size={16} />}
-                  </button>
-                </div>
-              </div>
-              <div>
-                <label className="block text-[12px] font-medium text-text-secondary mb-1.5">
-                  {t("auth.forgot.confirmPassword")}
-                </label>
-                <input
-                  type={showPw ? "text" : "password"}
-                  value={confirm}
-                  onChange={(e) => setConfirm(e.target.value)}
-                  autoComplete="new-password"
-                  required
-                  placeholder={t("auth.password.placeholder")}
-                  className="w-full border border-border bg-surface-1 px-3.5 py-2.5 text-[14px] text-text-primary placeholder:text-text-muted focus:border-accent focus:ring-1 focus:ring-accent/30 outline-none transition-all rounded-lg"
+          <div data-cfg-section="forget" data-cfg-field="forgetItems">
+            {phase === "identifier" && forgetItemVis.isVisible("Username") && (
+              <div data-signinitem="username">
+                <IdentifierStep
+                  onSubmit={handleIdentifierSubmit}
+                  placeholder={forgetItemVis.placeholderOf("Username")}
                 />
               </div>
-              <button
-                type="submit"
-                disabled={loading || password.length === 0 || confirm.length === 0}
-                className="group w-full flex items-center justify-center gap-2 rounded-lg bg-accent py-2.5 text-[14px] font-semibold text-white hover:bg-accent-hover disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
-              >
-                {loading ? (
-                  <>
-                    <div className="h-4 w-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
-                    {t("auth.forgot.submitButton")}
-                  </>
-                ) : (
-                  <>
-                    {t("auth.forgot.submitButton")}
-                    <ArrowRight size={16} />
-                  </>
+            )}
+
+            {phase === "code" && forgetItemVis.isVisible("Verification code") && (
+              <form onSubmit={handleCodeSubmit} className="space-y-4" data-signinitem="verification-code">
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  maxLength={6}
+                  value={code}
+                  onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                  autoFocus
+                  autoComplete="one-time-code"
+                  aria-label={t("auth.code.codePlaceholder")}
+                  placeholder={forgetItemVis.placeholderOf("Verification code") || t("auth.code.codePlaceholder")}
+                  className="w-full rounded-lg border border-border bg-surface-1 px-3.5 py-2.5 text-[14px] tracking-[0.3em] text-center text-text-primary placeholder:text-text-muted focus:border-accent focus:ring-1 focus:ring-accent/30 outline-none transition-all"
+                />
+                <button
+                  type="submit"
+                  disabled={code.length !== 6}
+                  data-signinitem="verify-code-button"
+                  className="group w-full flex items-center justify-center gap-2 rounded-lg bg-accent py-2.5 text-[14px] font-semibold text-white hover:bg-accent-hover disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+                >
+                  {verifyCodeButtonLabel}
+                  <ArrowRight size={16} />
+                </button>
+              </form>
+            )}
+
+            {phase === "password" && (
+              <form onSubmit={handlePasswordSubmit} className="space-y-4">
+                {forgetItemVis.isVisible("New password") && (
+                  <div data-signinitem="new-password">
+                    <label className="block text-[12px] font-medium text-text-secondary mb-1.5">
+                      {newPasswordLabel}
+                    </label>
+                    <div className="relative">
+                      <input
+                        type={showPw ? "text" : "password"}
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        autoComplete="new-password"
+                        autoFocus
+                        required
+                        placeholder={forgetItemVis.placeholderOf("New password") || t("auth.password.placeholder")}
+                        className="w-full border border-border bg-surface-1 px-3.5 py-2.5 pr-10 text-[14px] text-text-primary placeholder:text-text-muted focus:border-accent focus:ring-1 focus:ring-accent/30 outline-none transition-all rounded-lg"
+                      />
+                      <button
+                        type="button"
+                        tabIndex={-1}
+                        onClick={() => setShowPw(!showPw)}
+                        aria-label={showPw ? t("auth.password.hidePassword") : t("auth.password.showPassword")}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted hover:text-text-secondary"
+                      >
+                        {showPw ? <EyeOff size={16} /> : <Eye size={16} />}
+                      </button>
+                    </div>
+                  </div>
                 )}
-              </button>
-            </form>
-          )}
+                {forgetItemVis.isVisible("Confirm password") && (
+                  <div data-signinitem="confirm-password">
+                    <label className="block text-[12px] font-medium text-text-secondary mb-1.5">
+                      {confirmPasswordLabel}
+                    </label>
+                    <input
+                      type={showPw ? "text" : "password"}
+                      value={confirm}
+                      onChange={(e) => setConfirm(e.target.value)}
+                      autoComplete="new-password"
+                      required
+                      placeholder={forgetItemVis.placeholderOf("Confirm password") || t("auth.password.placeholder")}
+                      className="w-full border border-border bg-surface-1 px-3.5 py-2.5 text-[14px] text-text-primary placeholder:text-text-muted focus:border-accent focus:ring-1 focus:ring-accent/30 outline-none transition-all rounded-lg"
+                    />
+                  </div>
+                )}
+                {forgetItemVis.isVisible("Reset password button") && (
+                  <button
+                    type="submit"
+                    disabled={loading || password.length === 0 || confirm.length === 0}
+                    data-signinitem="reset-password-button"
+                    className="group w-full flex items-center justify-center gap-2 rounded-lg bg-accent py-2.5 text-[14px] font-semibold text-white hover:bg-accent-hover disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+                  >
+                    {loading ? (
+                      <>
+                        <div className="h-4 w-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+                        {resetPasswordButtonLabel}
+                      </>
+                    ) : (
+                      <>
+                        {resetPasswordButtonLabel}
+                        <ArrowRight size={16} />
+                      </>
+                    )}
+                  </button>
+                )}
+              </form>
+            )}
 
-          {phase === "done" && (
-            <div className="space-y-4">
-              <div className="flex items-center gap-3 rounded-lg border border-success/30 bg-success/10 px-4 py-3 text-[14px] text-success">
-                <CheckCircle size={18} />
-                {t("auth.forgot.success")}
+            {phase === "done" && (
+              <div className="space-y-4">
+                {forgetItemVis.isVisible("Success message") && (
+                  <div
+                    data-signinitem="success-message"
+                    className="flex items-center gap-3 rounded-lg border border-success/30 bg-success/10 px-4 py-3 text-[14px] text-success"
+                  >
+                    <CheckCircle size={18} />
+                    {successMessageLabel}
+                  </div>
+                )}
+                {forgetItemVis.isVisible("Signin link") && (
+                  <a
+                    href={`/login/${orgName}/${application.name}`}
+                    data-signinitem="signin-link"
+                    className="group w-full flex items-center justify-center gap-2 rounded-lg bg-accent py-2.5 text-[14px] font-semibold text-white hover:bg-accent-hover transition-all duration-200"
+                  >
+                    <ArrowLeft size={16} />
+                    {signinLinkLabel}
+                  </a>
+                )}
               </div>
-              <a
-                href={`/login/${orgName}/${application.name}`}
-                className="group w-full flex items-center justify-center gap-2 rounded-lg bg-accent py-2.5 text-[14px] font-semibold text-white hover:bg-accent-hover transition-all duration-200"
-              >
-                <ArrowLeft size={16} />
-                {t("auth.forgot.backToSignin")}
-              </a>
-            </div>
-          )}
+            )}
+          </div>
 
-          <SafeHtml html={application.signinHtml ?? ""} className="auth-page-html" />
+          <SafeHtml html={application.forgetHtml || ""} className="auth-page-html" />
         </div>
       </div>
     </div>

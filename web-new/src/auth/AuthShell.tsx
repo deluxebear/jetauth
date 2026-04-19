@@ -228,11 +228,16 @@ function AuthShellInner({ lookup, mode }: { lookup: AuthLookup; mode: Mode }) {
     .filter((it) => it.customCss && it.name)
     .map((it) => `[data-signupitem="${normalize(String(it.name))}"] { ${it.customCss} }`)
     .join("\n");
+  const forgetItemCss = (app.forgetItems ?? [])
+    .filter((it) => it.customCss && it.name)
+    .map((it) => `[data-signinitem="${normalize(String(it.name))}"] { ${it.customCss} }`)
+    .join("\n");
   const customCss = [
     app.formCss ?? "",
     app.formCssMobile ? `@media (max-width: 640px) { ${app.formCssMobile} }` : "",
     itemCss,
     signupItemCss,
+    forgetItemCss,
   ].filter(Boolean).join("\n");
 
   return (

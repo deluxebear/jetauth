@@ -115,9 +115,11 @@ export interface AuthApplication {
   footerHtml: string;
   signinHtml: string;
   signupHtml: string;
+  forgetHtml?: string;
   signinMethods: SigninMethod[];
   signupItems: SignupItem[];
   signinItems: SigninItem[];
+  forgetItems?: SigninItem[];
   themeData?: ResolvedTheme | null;
   organizationObj?: {
     name: string;

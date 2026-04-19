@@ -121,6 +121,27 @@ const SIGNIN_ITEM_NAMES = [
   "Signup link", "Captcha", "Auto sign in", "Select organization",
 ];
 
+const FORGET_ITEM_NAMES = [
+  "Logo", "Back button", "Languages", "Username", "Verification code",
+  "New password", "Confirm password", "Send code button", "Verify code button",
+  "Reset password button", "Success message", "Signin link",
+];
+
+const FORGET_ITEM_I18N: Record<string, { label: string; desc: string }> = {
+  "Logo":                  { label: "apps.forgetItem.logo.label",                desc: "apps.forgetItem.logo.desc" },
+  "Back button":           { label: "apps.forgetItem.backButton.label",          desc: "apps.forgetItem.backButton.desc" },
+  "Languages":             { label: "apps.forgetItem.languages.label",           desc: "apps.forgetItem.languages.desc" },
+  "Username":              { label: "apps.forgetItem.username.label",            desc: "apps.forgetItem.username.desc" },
+  "Verification code":     { label: "apps.forgetItem.verificationCode.label",    desc: "apps.forgetItem.verificationCode.desc" },
+  "New password":          { label: "apps.forgetItem.newPassword.label",         desc: "apps.forgetItem.newPassword.desc" },
+  "Confirm password":      { label: "apps.forgetItem.confirmPassword.label",     desc: "apps.forgetItem.confirmPassword.desc" },
+  "Send code button":      { label: "apps.forgetItem.sendCodeButton.label",      desc: "apps.forgetItem.sendCodeButton.desc" },
+  "Verify code button":    { label: "apps.forgetItem.verifyCodeButton.label",    desc: "apps.forgetItem.verifyCodeButton.desc" },
+  "Reset password button": { label: "apps.forgetItem.resetPasswordButton.label", desc: "apps.forgetItem.resetPasswordButton.desc" },
+  "Success message":       { label: "apps.forgetItem.successMessage.label",      desc: "apps.forgetItem.successMessage.desc" },
+  "Signin link":           { label: "apps.forgetItem.signinLink.label",          desc: "apps.forgetItem.signinLink.desc" },
+};
+
 const SIGNIN_ITEM_I18N: Record<string, { label: string; desc: string }> = {
   "Signin methods":      { label: "apps.signinItem.signinMethods.label",     desc: "apps.signinItem.signinMethods.desc" },
   "Logo":                { label: "apps.signinItem.logo.label",              desc: "apps.signinItem.logo.desc" },
@@ -180,7 +201,7 @@ export default function ApplicationEditPage() {
       const scalarKeys = [
         "formOffset", "formBackgroundUrl", "formBackgroundUrlMobile",
         "formSideHtml", "formCss", "formCssMobile",
-        "headerHtml", "footerHtml", "signinHtml", "signupHtml",
+        "headerHtml", "footerHtml", "signinHtml", "signupHtml", "forgetHtml",
       ] as const;
       for (const k of scalarKeys) {
         const v = (cfg as Record<string, unknown>)[k];
@@ -374,6 +395,7 @@ export default function ApplicationEditPage() {
     branding: ["displayName", "logo", "favicon", "title", "themeData"],
     signin: ["orgChoiceMode", "signinMethodMode", "signinMethods", "signinItems", "signinHtml"],
     signup: ["signupItems", "signupHtml"],
+    forget: ["forgetItems", "forgetHtml"],
     layout: ["formOffset", "formSideHtml", "formBackgroundUrl", "formBackgroundUrlMobile", "formCss", "formCssMobile", "headerHtml", "footerHtml"],
   };
 
@@ -1077,6 +1099,47 @@ export default function ApplicationEditPage() {
     { key: "customCss", title: "CSS", width: "20%", placeholder: ".this-row { ... }" },
   ];
 
+  const forgetItemColumns: EditableColumn<Record<string, unknown>>[] = [
+    {
+      key: "name", title: t("col.name" as any), width: "22%",
+      render: (row, _i, onChange) => {
+        if (row.isCustom) {
+          return <input value={String(row.name ?? "")} disabled className={`${inputClass} !py-1 !text-[12px] opacity-60`} />;
+        }
+        const usedNames = ((app.forgetItems as any[]) ?? []).filter((it: any) => !it.isCustom && it.name !== row.name).map((it: any) => it.name);
+        const available = FORGET_ITEM_NAMES.filter((n) => !usedNames.includes(n));
+        const i18nMeta = FORGET_ITEM_I18N[String(row.name)];
+        const tooltip = i18nMeta ? t(i18nMeta.desc as any) : undefined;
+        return (
+          <div className="flex items-center gap-1.5 min-w-0">
+            <div className="flex-1 min-w-0">
+              <SimpleSelect
+                value={String(row.name ?? "")}
+                options={available.map((n) => ({ value: n, label: FORGET_ITEM_I18N[n] ? t(FORGET_ITEM_I18N[n].label as any) : n }))}
+                onChange={(v) => onChange("name", v)}
+              />
+            </div>
+            {tooltip && <HelpTooltip content={tooltip} className="shrink-0" />}
+          </div>
+        );
+      },
+    },
+    { key: "visible", title: t("apps.ui.visible" as any), width: "10%", type: "switch" },
+    {
+      key: "label", title: t("apps.ui.label" as any), width: "15%",
+      visible: (row) => {
+        const n = String(row.name);
+        return !!row.isCustom || n.startsWith("Text ") || [
+          "Username", "Verification code", "New password", "Confirm password",
+          "Send code button", "Verify code button", "Reset password button",
+          "Success message", "Signin link",
+        ].includes(n);
+      },
+    },
+    { key: "placeholder", title: t("apps.ui.placeholder" as any), width: "20%", placeholder: "e.g. you@example.com" },
+    { key: "customCss", title: "CSS", width: "20%", placeholder: ".this-row { ... }" },
+  ];
+
   const signupItemColumns: EditableColumn<Record<string, unknown>>[] = [
     {
       key: "name", title: t("col.name" as any), width: "22%",
@@ -1110,6 +1173,7 @@ export default function ApplicationEditPage() {
     { id: "branding", label: t("apps.uiGroup.branding.title" as any), icon: <Palette size={14} /> },
     { id: "signin", label: t("apps.uiGroup.signin.title" as any), icon: <LogIn size={14} /> },
     { id: "signup", label: t("apps.uiGroup.signup.title" as any), icon: <UserPlus size={14} /> },
+    { id: "forget", label: t("apps.uiGroup.forget.title" as any), icon: <KeyRound size={14} /> },
     { id: "layout", label: t("apps.uiGroup.layout.title" as any), icon: <LayoutGrid size={14} /> },
   ];
 
@@ -1291,6 +1355,39 @@ export default function ApplicationEditPage() {
               )}
               <FormField label={t("apps.field.signupHtml" as any)} span="full">
                 <textarea value={String(app.signupHtml ?? "")} onChange={(e) => set("signupHtml", e.target.value)} rows={3} className={`${inputClass} font-mono text-[12px]`} />
+              </FormField>
+            </div>
+          </CollapsibleCard>
+
+          <CollapsibleCard
+            id="forget"
+            title={t("apps.uiGroup.forget.title" as any)}
+            subtitle={t("apps.uiGroup.forget.subtitle" as any)}
+            icon={<KeyRound size={16} />}
+            modified={isSectionModified(UI_SECTION_FIELDS.forget)}
+            onReset={() => resetSection(UI_SECTION_FIELDS.forget)}
+            modifiedLabel={t("common.modifiedBadge" as any)}
+            resetLabel={t("common.resetSection" as any)}
+            highlight={highlightedSection === "forget"}
+          >
+            <div className="grid grid-cols-2 gap-x-6 gap-y-4">
+              <div className="col-span-2">
+                <EditableTable
+                  title={t("apps.field.forgetItems" as any)}
+                  columns={forgetItemColumns}
+                  rows={(app.forgetItems as Record<string, unknown>[]) ?? []}
+                  onChange={(rows) => set("forgetItems", rows)}
+                  newRow={() => ({ name: "", visible: true, required: true, placeholder: "", customCss: "" })}
+                  onAddCustom={() => {
+                    const items = (app.forgetItems as Record<string, unknown>[]) ?? [];
+                    set("forgetItems", [...items, { name: `Text ${Date.now()}`, visible: true, isCustom: true }]);
+                  }}
+                  addCustomLabel={t("apps.ui.addCustom" as any)}
+                  sortable
+                />
+              </div>
+              <FormField label={t("apps.field.forgetHtml" as any)} span="full">
+                <textarea value={String(app.forgetHtml ?? "")} onChange={(e) => set("forgetHtml", e.target.value)} rows={3} className={`${inputClass} font-mono text-[12px]`} />
               </FormField>
             </div>
           </CollapsibleCard>

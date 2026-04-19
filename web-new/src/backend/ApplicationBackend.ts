@@ -71,6 +71,7 @@ export interface Application {
   // UI
   signupHtml: string;
   signinHtml: string;
+  forgetHtml: string;
   footerHtml: string;
   formCss: string;
   formCssMobile: string;
@@ -87,6 +88,7 @@ export interface Application {
   signinMethods: unknown[];
   signupItems: unknown[];
   signinItems: unknown[];
+  forgetItems: unknown[];
   orgChoiceMode: string;
 
   // Security
@@ -221,6 +223,7 @@ export function newApplication(orgName: string): Application {
     termsOfUse: "",
     signupHtml: "",
     signinHtml: "",
+    forgetHtml: "",
     footerHtml: "",
     formCss: "",
     formCssMobile: "",
@@ -251,6 +254,7 @@ export function newApplication(orgName: string): Application {
       { name: "Providers", visible: true, required: true, rule: "None" },
     ],
     signinItems: [],
+    forgetItems: [],
     orgChoiceMode: "",
     failedSigninLimit: 0,
     failedSigninFrozenTime: 0,
