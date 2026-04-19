@@ -32,6 +32,7 @@ import { templateList, DEFAULT_TEMPLATE_ID } from "../auth/templates";
 import TemplateOptions from "./ApplicationEditPage/TemplateOptions";
 import TemplatePreviewModal from "./ApplicationEditPage/TemplatePreviewModal";
 import ItemFeatureToggles from "./ApplicationEditPage/ItemFeatureToggles";
+import ThemeExport from "./ApplicationEditPage/ThemeExport";
 import { SIGNIN_ICONS, SIGNUP_ICONS, FORGET_ICONS } from "./ApplicationEditPage/itemToggleIcons";
 import SigninProvidersSubtable from "./ApplicationEditPage/SigninProvidersSubtable";
 import ColorPicker from "../components/ColorPicker";
@@ -1301,6 +1302,21 @@ export default function ApplicationEditPage() {
                   />
                 </div>
               </FormField>
+              <div className="col-span-2 flex justify-end">
+                <button
+                  type="button"
+                  onClick={() =>
+                    modal.showInfo(
+                      <ThemeExport themeData={app.themeData as Record<string, unknown> | null | undefined} />,
+                      t("apps.theme.exportTitle" as any),
+                    )
+                  }
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface-1 px-3 py-1.5 text-[12px] font-medium text-text-secondary hover:bg-surface-2 hover:text-text-primary transition-colors"
+                >
+                  {"{…}"}
+                  {t("apps.theme.exportButton" as any)}
+                </button>
+              </div>
             </div>
           </CollapsibleCard>
 

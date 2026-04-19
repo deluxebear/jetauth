@@ -76,3 +76,78 @@ test.describe("Signup variant", () => {
     await expect(page.locator("div.min-h-screen.flex")).toBeVisible();
   });
 });
+
+/**
+ * Matrix test: each of the 5 templates, when posted as an override,
+ * must produce a DOM signature unique to that template. Regressions
+ * where a template silently falls back to the default, or renders
+ * empty, are caught here rather than in production.
+ *
+ * The signatures are intentionally loose — they check for a structural
+ * element, not specific classes or spacing, so a visual refresh of a
+ * template doesn't cascade test breakage.
+ */
+const TEMPLATE_SIGNATURES: Array<{
+  id: string;
+  label: string;
+  signature: string;
+  options?: Record<string, unknown>;
+}> = [
+  {
+    id: "centered-card",
+    label: "Centered",
+    // Centered's form column caps at max-w-sm; other templates diverge.
+    signature: "div.max-w-sm",
+  },
+  {
+    id: "split-hero",
+    label: "Split Hero",
+    // Hero panel uses lg:flex flex-1 — only renders on Split Hero.
+    signature: "div.hidden.lg\\:flex.flex-1.relative.overflow-hidden",
+    options: {
+      heroHeadline: { en: "Acme", zh: "Acme" },
+      heroSide: "left",
+    },
+  },
+  {
+    id: "full-bleed",
+    label: "Full-bleed",
+    // Glass card wraps form with rounded-2xl + p-8/10 inside a full-height
+    // absolute-background container.
+    signature: "div.min-h-screen.relative.overflow-hidden",
+  },
+  {
+    id: "minimal-inline",
+    label: "Minimal",
+    // Minimal uses max-w-md (wider) + top-aligned pt-16.
+    signature: "div.max-w-md",
+  },
+  {
+    id: "sidebar-brand",
+    label: "Sidebar Brand",
+    // Persistent sidebar on lg — aside element, hidden < lg.
+    signature: "aside.hidden.lg\\:flex",
+  },
+];
+
+test.describe("Template matrix", () => {
+  for (const { id, label, signature, options } of TEMPLATE_SIGNATURES) {
+    test(`${label} (${id}) renders its signature element`, async ({ page }) => {
+      await page.goto(`${APP_URL}?preview=1&asGuest=1`);
+      await page.waitForLoadState("networkidle");
+      await page.evaluate(
+        ({ tpl, opts }) => {
+          window.postMessage(
+            {
+              type: "jetauth.preview.config",
+              payload: { template: tpl, templateOptions: opts ?? {} },
+            },
+            window.location.origin,
+          );
+        },
+        { tpl: id, opts: options },
+      );
+      await expect(page.locator(signature).first()).toBeVisible({ timeout: 10_000 });
+    });
+  }
+});
