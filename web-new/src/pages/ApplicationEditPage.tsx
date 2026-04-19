@@ -29,6 +29,7 @@ import TemplateGalleryModal from "./admin-preview/TemplateGalleryModal";
 import type { AuthTemplate } from "./admin-preview/templates";
 import type { AuthApplication, SigninItem, SigninItemProvider } from "../auth/api/types";
 import { templateList, DEFAULT_TEMPLATE_ID } from "../auth/templates";
+import TemplateOptions from "./ApplicationEditPage/TemplateOptions";
 import SigninProvidersSubtable from "./ApplicationEditPage/SigninProvidersSubtable";
 import ColorPicker from "../components/ColorPicker";
 import CollapsibleCard from "../components/CollapsibleCard";
@@ -1286,86 +1287,11 @@ export default function ApplicationEditPage() {
               })}
             </div>
 
-            {String(app.template ?? "") === "split-hero" && (
-              <div className="mt-5 pt-5 border-t border-border grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
-                <FormField label={t("apps.template.splitHero.image" as any)}>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="text"
-                      value={String(templateOpts.heroImageUrl ?? "")}
-                      onChange={(e) => setOption("heroImageUrl", e.target.value)}
-                      placeholder={t("help.placeholder.url" as any)}
-                      className={`${inputClass} flex-1`}
-                    />
-                    {templateOpts.heroImageUrl ? (
-                      <img
-                        src={String(templateOpts.heroImageUrl)}
-                        alt=""
-                        className="h-10 w-10 rounded-lg border border-border object-cover bg-surface-2"
-                      />
-                    ) : null}
-                  </div>
-                </FormField>
-                <FormField label={t("apps.template.splitHero.imageDark" as any)}>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="text"
-                      value={String(templateOpts.heroImageUrlDark ?? "")}
-                      onChange={(e) => setOption("heroImageUrlDark", e.target.value)}
-                      placeholder={t("help.placeholder.url" as any)}
-                      className={`${inputClass} flex-1`}
-                    />
-                    {templateOpts.heroImageUrlDark ? (
-                      <img
-                        src={String(templateOpts.heroImageUrlDark)}
-                        alt=""
-                        className="h-10 w-10 rounded-lg border border-border object-cover bg-surface-2"
-                      />
-                    ) : null}
-                  </div>
-                </FormField>
-                <FormField label={t("apps.template.splitHero.headline" as any)} span="full">
-                  <input
-                    type="text"
-                    value={String(templateOpts.heroHeadline ?? "")}
-                    onChange={(e) => setOption("heroHeadline", e.target.value)}
-                    className={inputClass}
-                  />
-                </FormField>
-                <FormField label={t("apps.template.splitHero.subcopy" as any)} span="full">
-                  <textarea
-                    rows={2}
-                    value={String(templateOpts.heroSubcopy ?? "")}
-                    onChange={(e) => setOption("heroSubcopy", e.target.value)}
-                    className={`${inputClass} resize-y`}
-                  />
-                </FormField>
-                <FormField label={t("apps.template.splitHero.side" as any)}>
-                  <SimpleSelect
-                    value={String(templateOpts.heroSide ?? "left")}
-                    options={[
-                      { value: "left", label: t("apps.template.splitHero.sideLeft" as any) },
-                      { value: "right", label: t("apps.template.splitHero.sideRight" as any) },
-                    ]}
-                    onChange={(v) => setOption("heroSide", v)}
-                  />
-                </FormField>
-                <FormField label={t("apps.template.splitHero.overlay" as any)}>
-                  <input
-                    type="range"
-                    min={0}
-                    max={1}
-                    step={0.05}
-                    value={typeof templateOpts.overlayOpacity === "number" ? templateOpts.overlayOpacity : 0.35}
-                    onChange={(e) => setOption("overlayOpacity", Number(e.target.value))}
-                    className="w-full"
-                  />
-                  <div className="text-[11px] text-text-muted mt-1">
-                    {Math.round((typeof templateOpts.overlayOpacity === "number" ? templateOpts.overlayOpacity : 0.35) * 100)}%
-                  </div>
-                </FormField>
-              </div>
-            )}
+            <TemplateOptions
+              templateId={String(app.template ?? "") || DEFAULT_TEMPLATE_ID}
+              options={templateOpts}
+              onChange={setOption}
+            />
           </CollapsibleCard>
 
           <CollapsibleCard
