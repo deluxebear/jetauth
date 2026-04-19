@@ -4,13 +4,17 @@
 // WeChat-type provider, polls for the scan event, and calls onSuccess
 // when the ticket flips to SCAN.
 //
-// The backend dependencies are the pre-existing WeChat plumbing:
-//   GET /api/get-qrcode?id=<provider>     -> { data: imageUrl, data2: ticket }
-//   GET /api/get-webhook-event?ticket=<t> -> { data: "SCAN" } once scanned
+// The backend dependencies are the generalised QR endpoints:
+//   GET /api/qr/begin?provider=<id>   -> { data: imageUrl, data2: ticket, data3: expiresInSec }
+//   GET /api/qr/status?ticket=<t>     -> { data: "pending" | "scanned" | "expired" }
 //
-// Final session handoff after SCAN is still TODO — the component surfaces
-// the scan event to the caller so the integration can plug into /api/login
-// when the generalized flow lands (see docs/2026-04-19-qr-signin-proposal.md).
+// WeChat-typed providers route through the existing Casdoor plumbing;
+// DingTalk / Lark / Custom return a "not yet implemented" error from
+// /api/qr/begin until their IdP adapters land (see docs/2026-04-19-qr-signin-proposal.md).
+//
+// Final session handoff after "scanned" is still TODO — the component
+// surfaces the scan event to the caller so the integration can plug
+// into /api/login when the full flow lands.
 
 import { useEffect, useState } from "react";
 import { QrCode } from "lucide-react";
@@ -49,7 +53,7 @@ export default function QRBody({ providers, onScanned }: Props) {
     }
     const providerId = `admin/${qrProvider.name}`;
     api
-      .get<QRResponse>(`/api/get-qrcode?id=${encodeURIComponent(providerId)}`)
+      .get<QRResponse>(`/api/qr/begin?provider=${encodeURIComponent(providerId)}`)
       .then((res) => {
         if (res.status !== "ok" || !res.data) {
           setError(res.msg ?? t("auth.qr.failed"));
@@ -67,15 +71,18 @@ export default function QRBody({ providers, onScanned }: Props) {
     const poll = async () => {
       try {
         const res = await api.get<QRResponse>(
-          `/api/get-webhook-event?ticket=${encodeURIComponent(ticket)}`,
+          `/api/qr/status?ticket=${encodeURIComponent(ticket)}`,
         );
         if (cancelled) return;
-        if (res.status === "ok" && res.data === "SCAN") {
+        if (res.status === "ok" && res.data === "scanned") {
           setScanned(true);
           onScanned();
         }
+        // "pending" / "expired" stay quiet — pending is the normal pre-scan
+        // state, and expired is treated the same as pending for now (the
+        // ticket regeneration story is M4+).
       } catch {
-        // Ticket not in cache yet is the normal state before scan; swallow.
+        // Network hiccup during poll — swallow and retry next tick.
       }
     };
     const id = setInterval(poll, 2000);

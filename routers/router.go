@@ -65,6 +65,11 @@ func InitAPI() {
 	web.Router("/api/webhook", &controllers.ApiController{}, "*:HandleOfficialAccountEvent")
 	web.Router("/api/get-qrcode", &controllers.ApiController{}, "GET:GetQRCode")
 	web.Router("/api/get-webhook-event", &controllers.ApiController{}, "GET:GetWebhookEventType")
+	// Generalised QR sign-in pipeline (see docs/2026-04-19-qr-signin-proposal.md).
+	// WeChat path wraps the legacy endpoints above; DingTalk / Lark / Custom
+	// dispatch here once their IdP adapters land.
+	web.Router("/api/qr/begin", &controllers.ApiController{}, "GET:BeginQRSignin")
+	web.Router("/api/qr/status", &controllers.ApiController{}, "GET:GetQRSigninStatus")
 	web.Router("/api/get-captcha-status", &controllers.ApiController{}, "GET:GetCaptchaStatus")
 	web.Router("/api/callback", &controllers.ApiController{}, "POST:Callback")
 	web.Router("/api/device-auth", &controllers.ApiController{}, "POST:DeviceAuth")

@@ -59,6 +59,8 @@ p, *, *, GET, /api/health, *, *
 p, *, *, *, /api/webhook, *, *
 p, *, *, GET, /api/get-qrcode, *, *
 p, *, *, GET, /api/get-webhook-event, *, *
+p, *, *, GET, /api/qr/begin, *, *
+p, *, *, GET, /api/qr/status, *, *
 p, *, *, GET, /api/get-captcha-status, *, *
 p, *, *, *, /api/login/oauth, *, *
 p, *, *, POST, /api/oauth/register, *, *
