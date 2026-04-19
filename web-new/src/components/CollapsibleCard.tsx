@@ -97,9 +97,7 @@ export default function CollapsibleCard({
         </div>
       </button>
       {open && (
-        <div className="overflow-hidden">
-          <div className="p-5 pt-4">{children}</div>
-        </div>
+        <div className="p-5 pt-4">{children}</div>
       )}
     </section>
   );

@@ -60,25 +60,13 @@ export default function UserListPage() {
   const prefs = useTablePrefs({ persistKey: "list:users" });
   const bulkDelete = useBulkDelete<User>(UserBackend.deleteUser, list.refetch);
 
-  const handleAdd = async () => {
-    const user = UserBackend.newUser(getNewEntityOwner());
-    // Use organization's default avatar if available
-    try {
-      const orgData = JSON.parse(localStorage.getItem("organizationData") ?? "null");
-      if (orgData?.defaultAvatar) {
-        user.avatar = orgData.defaultAvatar;
-      }
-    } catch { /* ignore */ }
-    try {
-      const res = await UserBackend.addUser(user);
-      if (res.status === "ok") {
-        navigate(`/users/${user.owner}/${user.name}`, { state: { mode: "add" } });
-      } else {
-        modal.showError(res.msg || t("common.addFailed" as any));
-      }
-    } catch (e: any) {
-      modal.showError(e?.message || t("common.addFailed" as any));
-    }
+  // Deferred create: navigate to the edit page in "new" mode without
+  // calling /api/add-user. The actual POST happens when the admin clicks
+  // Save on the edit page. Prior behavior pre-created a placeholder user
+  // (`user_abc123`) on every click, leaving junk rows whenever someone
+  // closed the tab without saving.
+  const handleAdd = () => {
+    navigate(`/users/${getNewEntityOwner()}/new`, { state: { mode: "add" } });
   };
 
   const handleDelete = (record: User, e: React.MouseEvent) => {
@@ -347,6 +335,7 @@ export default function UserListPage() {
         pageSize={list.pageSize}
         total={list.total}
         onPageChange={list.setPage}
+        onPageSizeChange={list.setPageSize}
         onSort={list.handleSort}
         onFilter={list.handleFilter}
         emptyText={t("common.noData")}

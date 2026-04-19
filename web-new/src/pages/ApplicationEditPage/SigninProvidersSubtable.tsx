@@ -16,7 +16,7 @@
 // inside it) — the row-level EditableTable isn't designed for expandable
 // children and slotting a sub-table inline would force invasive changes.
 
-import { useMemo } from "react";
+import { useMemo, useState, useRef, useEffect } from "react";
 import { ArrowUp, ArrowDown, Plus } from "lucide-react";
 import SimpleSelect from "../../components/SimpleSelect";
 import { Switch } from "../../components/FormSection";
@@ -77,6 +77,14 @@ export default function SigninProvidersSubtable({ appProviders, value, onChange 
     ]);
   };
 
+  const addAll = () => {
+    const seeded = appProviders
+      .filter((p) => !!p.name && !rows.some((r) => r.name === p.name))
+      .map((p) => ({ name: p.name, size: "small" as const, group: "primary" as const, visible: true }));
+    if (seeded.length === 0) return;
+    onChange([...rows, ...seeded]);
+  };
+
   const sizeOpts = [
     { value: "small", label: t("apps.providerConfig.size.small" as any) },
     { value: "large", label: t("apps.providerConfig.size.large" as any) },
@@ -105,8 +113,24 @@ export default function SigninProvidersSubtable({ appProviders, value, onChange 
       </div>
 
       {rows.length === 0 ? (
-        <div className="py-6 text-center text-[12px] text-text-muted">
-          {t("common.noData")}
+        <div className="px-4 py-6 text-center text-[12px] text-text-muted">
+          {appProviders.length === 0 ? (
+            <>
+              <p>{t("apps.providerConfig.emptyNoProviders" as any)}</p>
+            </>
+          ) : (
+            <div className="flex flex-col items-center gap-3">
+              <p>{t("apps.providerConfig.emptyWithProviders" as any).replace("{count}", String(appProviders.length))}</p>
+              <button
+                type="button"
+                onClick={addAll}
+                className="inline-flex items-center gap-1.5 rounded-lg bg-accent px-3.5 py-1.5 text-[12px] font-semibold text-white hover:bg-accent-hover transition-colors"
+              >
+                <Plus size={13} />
+                {t("apps.providerConfig.addAll" as any)}
+              </button>
+            </div>
+          )}
         </div>
       ) : (
         <div>
@@ -197,34 +221,44 @@ export default function SigninProvidersSubtable({ appProviders, value, onChange 
   );
 }
 
-/**
- * Small "+ Add provider" button with a native <select> picker. Uses a native
- * element rather than SimpleSelect so there's no lingering "selected" state
- * to clear after each pick.
- */
 function AddProviderMenu({ options, onPick }: { options: string[]; onPick: (name: string) => void }) {
   const { t } = useTranslation();
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: MouseEvent) => {
+      if (!ref.current?.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [open]);
+
   return (
-    <label className="flex items-center gap-1 rounded-lg bg-accent px-2.5 py-1 text-[12px] font-medium text-white hover:bg-accent-hover cursor-pointer transition-colors">
-      <Plus size={13} />
-      <span>{t("common.add")}</span>
-      <select
-        className="sr-only"
-        value=""
-        onChange={(e) => {
-          onPick(e.target.value);
-          e.currentTarget.value = "";
-        }}
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="inline-flex items-center gap-1 rounded-lg bg-accent px-2.5 py-1 text-[12px] font-medium text-white hover:bg-accent-hover transition-colors"
       >
-        <option value="" disabled>
-          {t("common.add")}
-        </option>
-        {options.map((n) => (
-          <option key={n} value={n}>
-            {n}
-          </option>
-        ))}
-      </select>
-    </label>
+        <Plus size={13} />
+        <span>{t("common.add")}</span>
+      </button>
+      {open && (
+        <div className="absolute right-0 top-full mt-1 z-50 min-w-[180px] max-h-60 overflow-y-auto rounded-xl border border-border bg-surface-1 py-1 shadow-[var(--shadow-elevated)]">
+          {options.map((n) => (
+            <button
+              key={n}
+              type="button"
+              onClick={() => { onPick(n); setOpen(false); }}
+              className="w-full text-left px-3 py-1.5 text-[12px] text-text-primary hover:bg-surface-2 transition-colors"
+            >
+              {n}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }

@@ -31,7 +31,11 @@ export default function UserEditPage() {
   const { owner, name } = useParams<{ owner: string; name: string }>();
   const navigate = useNavigate();
   const location = useLocation();
-  const [isAddMode, setIsAddMode] = useState((location.state as any)?.mode === "add");
+  // `/users/:owner/new` = deferred-create draft (no API call until Save).
+  // Anything else is an existing user being edited. isAddMode stays synced
+  // with isNew but also flips to false after the first successful save.
+  const isNew = name === "new";
+  const [isAddMode, setIsAddMode] = useState(isNew || (location.state as any)?.mode === "add");
   const { t, locale } = useTranslation();
   const modal = useModal();
   const { orgOptions, isGlobalAdmin } = useOrganization();
@@ -67,18 +71,48 @@ export default function UserEditPage() {
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
+  // Cmd/Ctrl+S: in add mode save-and-add-another (batch onboarding path);
+  // in edit mode just save. Always preventDefault so the browser's native
+  // page-save dialog doesn't steal the shortcut.
+  const saveShortcutRef = useRef<() => void>(() => {});
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "s") {
+        e.preventDefault();
+        saveShortcutRef.current();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
   const isBuiltInAdmin = owner === "built-in" && name === "admin";
 
   const { entity, loading, invalidate, invalidateList } = useEntityEdit<UserType>({
     queryKey: "user",
     owner,
-    name,
+    // Skip the fetch for drafts — /api/get-user?id=owner/new would 404.
+    name: isNew ? undefined : name,
     fetchFn: UserBackend.getUser,
   });
 
   useEffect(() => {
     if (entity) { setUser(entity); setOriginalJson(JSON.stringify(entity)); }
   }, [entity]);
+
+  // Seed a local draft when we land on `/users/:owner/new`. Pulls the org's
+  // default avatar from the cached organizationData when available so the
+  // admin sees a sensible starting point instead of the generic placeholder.
+  useEffect(() => {
+    if (!isNew || user || !owner) return;
+    const draft = UserBackend.newUser(owner) as UserType;
+    try {
+      const orgData = JSON.parse(localStorage.getItem("organizationData") ?? "null");
+      if (orgData?.defaultAvatar) draft.avatar = orgData.defaultAvatar;
+    } catch { /* ignore */ }
+    setUser(draft);
+    setOriginalJson(JSON.stringify(draft));
+  }, [isNew, owner, user]);
 
   const [noAppError, setNoAppError] = useState(false);
 
@@ -184,42 +218,63 @@ export default function UserEditPage() {
     return translated === key ? name : translated;
   };
 
-  /** Save user data + handle password change via dedicated API */
-  const saveUser = async (): Promise<boolean> => {
+  /** Save user data + handle password change via dedicated API.
+   *  Branches on isAddMode:
+   *    - add mode  → POST /api/add-user with the password inline (no pre-
+   *                  existing row, so we don't need the "*** then setPassword"
+   *                  dance).
+   *    - edit mode → PUT /api/update-user with password="***", then call
+   *                  /api/set-password separately if the admin typed a new
+   *                  password. Matches the old semantics.
+   *  Returns the saved user on success (with the real name/owner, which may
+   *  differ from the draft stub), or null on failure. */
+  const saveUser = async (): Promise<UserType | null> => {
     const userData = JSON.parse(JSON.stringify(user));
     const newPassword = userData.password;
     const passwordChanged = newPassword && newPassword !== "***" && newPassword !== "";
-    // Always send "***" to updateUser so it doesn't touch the password
-    userData.password = "***";
 
+    if (isAddMode) {
+      // addUser takes the password directly; no need to redact.
+      const res = await UserBackend.addUser(userData);
+      if (res.status !== "ok") {
+        modal.toast(friendlyError(res.msg, t) || t("common.saveFailed" as any), "error");
+        return null;
+      }
+      return userData as UserType;
+    }
+
+    // Edit mode: redact password before update, then set separately.
+    userData.password = "***";
     const res = await UserBackend.updateUser(owner!, name!, userData);
     if (res.status !== "ok") {
       modal.toast(friendlyError(res.msg, t) || t("common.saveFailed" as any), "error");
-      return false;
+      return null;
     }
-
-    // If password was changed, set it via dedicated API
     if (passwordChanged) {
       const pwdRes = await UserBackend.setPassword(owner!, name!, "", obfuscatePassword(newPassword));
       if (pwdRes.status !== "ok") {
         modal.toast(pwdRes.msg || t("common.saveFailed" as any), "error");
-        return false;
+        return null;
       }
     }
-    return true;
+    return userData as UserType;
   };
 
   const handleSave = async () => {
     setSaving(true);
     try {
-      const ok = await saveUser();
-      if (ok) {
+      const saved = await saveUser();
+      if (saved) {
         modal.toast(t("common.saveSuccess" as any));
         setIsAddMode(false);
         setSaved(true);
         setOriginalJson(JSON.stringify(user));
         invalidateList();
-        if (user.name !== name) {
+        // After a successful add, move off the /new route so subsequent
+        // saves behave as updates and the URL reflects the real user.
+        // Edit-mode renames also land here (user.name drifted from the
+        // route param).
+        if (isNew || user.name !== name) {
           navigate(`/users/${user.owner}/${user.name}`, { replace: true });
         }
       }
@@ -227,11 +282,38 @@ export default function UserEditPage() {
     finally { setSaving(false); }
   };
 
+  /** Save the current draft, then reset the form to a fresh draft and stay
+   *  on /new. Designed for bulk onboarding — admins can keep adding users
+   *  without bouncing through the list page between each one. */
+  const handleSaveAndNew = async () => {
+    setSaving(true);
+    try {
+      const saved = await saveUser();
+      if (!saved) return;
+      modal.toast(t("users.savedAndReady" as any));
+      invalidateList();
+      const nextDraft = UserBackend.newUser(owner!) as UserType;
+      try {
+        const orgData = JSON.parse(localStorage.getItem("organizationData") ?? "null");
+        if (orgData?.defaultAvatar) nextDraft.avatar = orgData.defaultAvatar;
+      } catch { /* ignore */ }
+      setUser(nextDraft);
+      setOriginalJson(JSON.stringify(nextDraft));
+      setIsAddMode(true);
+      // Make sure the URL stays /new so the next save re-enters add mode.
+      if (!isNew) navigate(`/users/${owner}/new`, { replace: true, state: { mode: "add" } });
+    } catch (e: any) {
+      modal.toast(e?.message || t("common.saveFailed" as any), "error");
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const handleSaveAndExit = async () => {
     setSaving(true);
     try {
-      const ok = await saveUser();
-      if (ok) {
+      const saved = await saveUser();
+      if (saved) {
         modal.toast(t("common.saveSuccess" as any));
         invalidateList();
         navigate("/users");
@@ -243,12 +325,23 @@ export default function UserEditPage() {
     }
   };
 
-  const handleBack = async () => {
-    if (isAddMode) {
-      await UserBackend.deleteUser(user);
-      invalidateList();
-    }
+  // Deferred-create means there's nothing to clean up on back — the user
+  // only exists in local state until they hit Save. The old handler called
+  // deleteUser to compensate for the optimistic pre-create, which we removed.
+  const handleBack = () => {
     navigate("/users");
+  };
+
+  // Refresh the Cmd/Ctrl+S target on every render. This runs AFTER the
+  // `if (loading || !user) return` early-return — which is fine because we
+  // assign a plain ref (not a hook), so it's OK to skip in early-return
+  // renders. The listener itself (registered earlier, before the early
+  // return) reads the current ref value at keypress time, so both add-mode
+  // and edit-mode hit the right handler without re-subscribing.
+  saveShortcutRef.current = () => {
+    if (saving) return;
+    if (isAddMode) handleSaveAndNew();
+    else handleSave();
   };
 
   const handleDelete = () => {
@@ -369,8 +462,11 @@ export default function UserEditPage() {
               </div>
             )}
           </div>)}
-        {dynField("Name", undefined, <input value={user.name} onChange={(e) => set("name", e.target.value)} disabled={isBuiltInAdmin || isFieldDisabled("Name")} className={monoInputClass} />)}
+        {/* Grid order: Organization + ID on the first row (primary identity —
+            both are system-bound, immutable-ish); Name + Display name on the
+            second row (human-authored labels that change post-creation). */}
         {dynField("ID", undefined, <input value={user.id ?? ""} disabled className={`${monoInputClass} text-[12px]`} />)}
+        {dynField("Name", undefined, <input value={user.name} onChange={(e) => set("name", e.target.value)} disabled={isBuiltInAdmin || isFieldDisabled("Name")} className={monoInputClass} />)}
         {dynField("Display name", undefined, <input value={user.displayName ?? ""} onChange={(e) => setWithValidation("Display name", "displayName", e.target.value)} disabled={isFieldDisabled("Display name")} className={inputClass} />)}
         {locale.startsWith("zh") ? (
           <>
@@ -832,19 +928,54 @@ export default function UserEditPage() {
           </div>
         }
       >
-          {!isBuiltInAdmin && !isSelf && (
+          {/* Delete is hidden for the draft (nothing to delete yet) and for
+              the built-in admin / current user (safety). */}
+          {!isBuiltInAdmin && !isSelf && !isAddMode && (
             <button onClick={handleDelete} className="flex items-center gap-1.5 rounded-lg border border-danger/30 px-3 py-2 text-[13px] font-medium text-danger hover:bg-danger/10 transition-colors">
               <Trash2 size={14} /> {t("common.delete")}
             </button>
           )}
-          <SaveButton onClick={handleSave} saving={saving} saved={saved} label={t("common.save")} />
-          <button onClick={handleSaveAndExit} disabled={saving} className="flex items-center gap-1.5 rounded-lg bg-accent px-4 py-2 text-[13px] font-semibold text-white hover:bg-accent-hover disabled:opacity-50 transition-colors">
-            {saving ? <div className="h-3.5 w-3.5 rounded-full border-2 border-white/30 border-t-white animate-spin" /> : <LogOut size={14} />}
-            {t("common.saveAndExit" as any)}
-          </button>
+          {/* In add mode the batch-add flow is the expected primary path:
+              one solid accent "Save & new" button, and plain outline Save /
+              Save & exit alternates. In edit mode we keep the classic
+              Save (primary) + Save & exit (accent) pairing. */}
+          {isAddMode ? (
+            <>
+              <button
+                onClick={handleSave}
+                disabled={saving}
+                className="flex items-center gap-1.5 rounded-lg border border-border bg-surface-1 px-4 py-2 text-[13px] font-medium text-text-secondary hover:bg-surface-2 disabled:opacity-50 transition-colors"
+              >
+                {t("common.save")}
+              </button>
+              <button
+                onClick={handleSaveAndExit}
+                disabled={saving}
+                className="flex items-center gap-1.5 rounded-lg border border-border bg-surface-1 px-4 py-2 text-[13px] font-medium text-text-secondary hover:bg-surface-2 disabled:opacity-50 transition-colors"
+              >
+                <LogOut size={14} /> {t("common.saveAndExit" as any)}
+              </button>
+              <button
+                onClick={handleSaveAndNew}
+                disabled={saving}
+                className="flex items-center gap-1.5 rounded-lg bg-accent px-4 py-2 text-[13px] font-semibold text-white hover:bg-accent-hover disabled:opacity-50 transition-colors"
+              >
+                {saving ? <div className="h-3.5 w-3.5 rounded-full border-2 border-white/30 border-t-white animate-spin" /> : <Check size={14} />}
+                {t("users.saveAndNew" as any)}
+              </button>
+            </>
+          ) : (
+            <>
+              <SaveButton onClick={handleSave} saving={saving} saved={saved} label={t("common.save")} />
+              <button onClick={handleSaveAndExit} disabled={saving} className="flex items-center gap-1.5 rounded-lg bg-accent px-4 py-2 text-[13px] font-semibold text-white hover:bg-accent-hover disabled:opacity-50 transition-colors">
+                {saving ? <div className="h-3.5 w-3.5 rounded-full border-2 border-white/30 border-t-white animate-spin" /> : <LogOut size={14} />}
+                {t("common.saveAndExit" as any)}
+              </button>
+            </>
+          )}
       </StickyEditHeader>
 
-      {showBanner && <UnsavedBanner isAddMode={isAddMode} />}
+      {showBanner && <UnsavedBanner isAddMode={isAddMode} draftMode />}
 
       {/* Account locked banner */}
       {isAdmin && !isSelf && (user as any).signinWrongTimes >= 5 && (

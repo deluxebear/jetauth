@@ -26,14 +26,10 @@ export default function InvitationListPage() {
   const prefs = useTablePrefs({ persistKey: "list:invitations" });
   const bulkDelete = useBulkDelete<Invitation>(InvBackend.deleteInvitation, list.refetch);
 
-  const handleAdd = async () => {
-    const inv = InvBackend.newInvitation(getNewEntityOwner());
-    const res = await InvBackend.addInvitation(inv);
-    if (res.status === "ok") {
-      navigate(`/invitations/${inv.owner}/${inv.name}`, { state: { mode: "add" } });
-    } else {
-      modal.toast(res.msg || t("common.addFailed" as any), "error");
-    }
+  // Deferred-create: the /api/add-invitation call happens when the admin
+  // clicks Save on the edit page (same pattern as users + groups).
+  const handleAdd = () => {
+    navigate(`/invitations/${getNewEntityOwner()}/new`, { state: { mode: "add" } });
   };
 
   const handleDelete = (record: Invitation, e: React.MouseEvent) => {
@@ -150,6 +146,7 @@ export default function InvitationListPage() {
         pageSize={list.pageSize}
         total={list.total}
         onPageChange={list.setPage}
+        onPageSizeChange={list.setPageSize}
         onSort={list.handleSort}
         onFilter={list.handleFilter}
         emptyText={t("common.noData")}

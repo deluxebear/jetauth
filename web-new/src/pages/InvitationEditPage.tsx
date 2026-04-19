@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Trash2, Copy, Send, LogOut, RefreshCw } from "lucide-react";
+import { Trash2, Copy, Send, LogOut, RefreshCw, Check } from "lucide-react";
 import StickyEditHeader from "../components/StickyEditHeader";
 import { FormField, FormSection, Switch, inputClass, monoInputClass } from "../components/FormSection";
 import SimpleSelect from "../components/SimpleSelect";
@@ -147,7 +147,10 @@ export default function InvitationEditPage() {
   const { owner, name } = useParams<{ owner: string; name: string }>();
   const navigate = useNavigate();
   const location = useLocation();
-  const [isAddMode, setIsAddMode] = useState((location.state as any)?.mode === "add");
+  // `/invitations/:owner/new` = deferred-create draft. No /api/add-invitation
+  // call until Save, matching the users + groups flow.
+  const isNew = name === "new";
+  const [isAddMode, setIsAddMode] = useState(isNew || (location.state as any)?.mode === "add");
   const { t } = useTranslation();
   const modal = useModal();
   const queryClient = useQueryClient();
@@ -213,11 +216,28 @@ export default function InvitationEditPage() {
 
   const invalidateList = () => queryClient.invalidateQueries({ queryKey: ["invitations"] });
 
+  // Cmd/Ctrl+S shortcut — registered before any early return to keep hook
+  // order stable. The ref is refreshed lower in render body (not a hook).
+  const saveShortcutRef = useRef<() => void>(() => {});
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "s") {
+        e.preventDefault();
+        saveShortcutRef.current();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
   const fetchData = useCallback(async () => {
     if (!owner || !name) return;
     setLoading(true);
     try {
-      const res = await InvBackend.getInvitation(owner, name);
+      // Draft mode: seed locally instead of hitting /api/get-invitation.
+      const res = isNew
+        ? { status: "ok" as const, data: InvBackend.newInvitation(owner) }
+        : await InvBackend.getInvitation(owner, name);
       if (res.status === "ok" && res.data) {
         setInv(res.data);
         setOriginalJson(JSON.stringify(res.data));
@@ -237,7 +257,7 @@ export default function InvitationEditPage() {
           setCoreCode(res.data.code || "");
         }
       } else {
-        modal.showError(res.msg || t("invitations.loadFailed" as any));
+        modal.showError((res as any).msg || t("invitations.loadFailed" as any));
         navigate("/invitations");
       }
     } catch (e) {
@@ -245,7 +265,7 @@ export default function InvitationEditPage() {
     } finally {
       setLoading(false);
     }
-  }, [owner, name, navigate]);
+  }, [owner, name, navigate, isNew]);
 
   useEffect(() => {
     fetchData();
@@ -265,21 +285,30 @@ export default function InvitationEditPage() {
   const set = <K extends keyof Invitation>(key: K, val: Invitation[K]) =>
     setInv((prev) => (prev ? { ...prev, [key]: val } : prev));
 
+  /** Persist the invitation. Add mode → /api/add-invitation, else update. */
+  const saveInvitation = async (): Promise<boolean> => {
+    const res = isAddMode
+      ? await InvBackend.addInvitation(inv)
+      : await InvBackend.updateInvitation(owner!, name!, inv);
+    if (res.status !== "ok") {
+      modal.toast(friendlyError(res.msg, t) || t("common.saveFailed" as any), "error");
+      return false;
+    }
+    return true;
+  };
+
   const handleSave = async () => {
     setSaving(true);
     try {
-      const res = await InvBackend.updateInvitation(owner!, name!, inv);
-      if (res.status === "ok") {
-        invalidateList();
-        if (inv.name !== name) {
-          navigate(`/invitations/${inv.owner}/${inv.name}`, { replace: true });
-        }
-        modal.toast(t("common.saveSuccess" as any));
-        setSaved(true);
-        setIsAddMode(false);
-        setOriginalJson(JSON.stringify(inv));
-      } else {
-        modal.toast(friendlyError(res.msg, t) || t("common.saveFailed" as any), "error");
+      const ok = await saveInvitation();
+      if (!ok) return;
+      modal.toast(t("common.saveSuccess" as any));
+      setSaved(true);
+      setOriginalJson(JSON.stringify(inv));
+      setIsAddMode(false);
+      invalidateList();
+      if (isNew || inv.name !== name) {
+        navigate(`/invitations/${inv.owner}/${inv.name}`, { replace: true });
       }
     } catch (e: any) {
       modal.toast(e.message || t("common.saveFailed" as any), "error");
@@ -287,17 +316,25 @@ export default function InvitationEditPage() {
       setSaving(false);
     }
   };
-  const handleSaveAndExit = async () => {
+
+  /** Save then reset to a fresh draft for bulk invitation creation. */
+  const handleSaveAndNew = async () => {
     setSaving(true);
     try {
-      const res = await InvBackend.updateInvitation(owner!, name!, inv);
-      if (res.status === "ok") {
-        modal.toast(t("common.saveSuccess" as any));
-        invalidateList();
-        navigate("/invitations");
-      } else {
-        modal.toast(friendlyError(res.msg, t) || t("common.saveFailed" as any), "error");
-      }
+      const ok = await saveInvitation();
+      if (!ok) return;
+      modal.toast(t("invitations.savedAndReady" as any));
+      invalidateList();
+      const nextDraft = InvBackend.newInvitation(owner!);
+      setInv(nextDraft);
+      setOriginalJson(JSON.stringify(nextDraft));
+      setCoreCode(nextDraft.code || "");
+      setObfuscate(false);
+      setPrefixLen(0);
+      setSuffixLen(0);
+      setCharSet("alphanumeric");
+      setIsAddMode(true);
+      if (!isNew) navigate(`/invitations/${owner}/new`, { replace: true, state: { mode: "add" } });
     } catch (e: any) {
       modal.toast(e?.message || t("common.saveFailed" as any), "error");
     } finally {
@@ -305,12 +342,32 @@ export default function InvitationEditPage() {
     }
   };
 
-  const handleBack = async () => {
-    if (isAddMode) {
-      await InvBackend.deleteInvitation(inv);
+  const handleSaveAndExit = async () => {
+    setSaving(true);
+    try {
+      const ok = await saveInvitation();
+      if (!ok) return;
+      modal.toast(t("common.saveSuccess" as any));
       invalidateList();
+      navigate("/invitations");
+    } catch (e: any) {
+      modal.toast(e?.message || t("common.saveFailed" as any), "error");
+    } finally {
+      setSaving(false);
     }
+  };
+
+  // Deferred-create: nothing to clean up on back.
+  const handleBack = () => {
     navigate("/invitations");
+  };
+
+  // Plain ref assignment (not a hook) — runs only when we pass the early
+  // return below, refreshing the Cmd/Ctrl+S target on every live render.
+  saveShortcutRef.current = () => {
+    if (saving) return;
+    if (isAddMode) handleSaveAndNew();
+    else handleSave();
   };
 
   const handleDelete = async () => {
@@ -441,28 +498,59 @@ export default function InvitationEditPage() {
         subtitle={`${owner}/${name}`}
         onBack={handleBack}
       >
-          <button
-            onClick={handleDelete}
-            className="flex items-center gap-1.5 rounded-lg border border-danger/30 px-3 py-2 text-[13px] font-medium text-danger hover:bg-danger/10 transition-colors"
-          >
-            <Trash2 size={14} /> {t("common.delete")}
-          </button>
-          <SaveButton onClick={handleSave} saving={saving} saved={saved} label={t("common.save")} />
-          <button
-            onClick={handleSaveAndExit}
-            disabled={saving}
-            className="flex items-center gap-1.5 rounded-lg bg-accent px-4 py-2 text-[13px] font-semibold text-white hover:bg-accent-hover disabled:opacity-50 transition-colors"
-          >
-            {saving ? (
-              <div className="h-3.5 w-3.5 rounded-full border-2 border-white/30 border-t-white animate-spin" />
-            ) : (
-              <LogOut size={14} />
-            )}
-            {t("common.saveAndExit" as any)}
-          </button>
+          {!isAddMode && (
+            <button
+              onClick={handleDelete}
+              className="flex items-center gap-1.5 rounded-lg border border-danger/30 px-3 py-2 text-[13px] font-medium text-danger hover:bg-danger/10 transition-colors"
+            >
+              <Trash2 size={14} /> {t("common.delete")}
+            </button>
+          )}
+          {isAddMode ? (
+            <>
+              <button
+                onClick={handleSave}
+                disabled={saving}
+                className="flex items-center gap-1.5 rounded-lg border border-border bg-surface-1 px-4 py-2 text-[13px] font-medium text-text-secondary hover:bg-surface-2 disabled:opacity-50 transition-colors"
+              >
+                {t("common.save")}
+              </button>
+              <button
+                onClick={handleSaveAndExit}
+                disabled={saving}
+                className="flex items-center gap-1.5 rounded-lg border border-border bg-surface-1 px-4 py-2 text-[13px] font-medium text-text-secondary hover:bg-surface-2 disabled:opacity-50 transition-colors"
+              >
+                <LogOut size={14} /> {t("common.saveAndExit" as any)}
+              </button>
+              <button
+                onClick={handleSaveAndNew}
+                disabled={saving}
+                className="flex items-center gap-1.5 rounded-lg bg-accent px-4 py-2 text-[13px] font-semibold text-white hover:bg-accent-hover disabled:opacity-50 transition-colors"
+              >
+                {saving ? <div className="h-3.5 w-3.5 rounded-full border-2 border-white/30 border-t-white animate-spin" /> : <Check size={14} />}
+                {t("invitations.saveAndNew" as any)}
+              </button>
+            </>
+          ) : (
+            <>
+              <SaveButton onClick={handleSave} saving={saving} saved={saved} label={t("common.save")} />
+              <button
+                onClick={handleSaveAndExit}
+                disabled={saving}
+                className="flex items-center gap-1.5 rounded-lg bg-accent px-4 py-2 text-[13px] font-semibold text-white hover:bg-accent-hover disabled:opacity-50 transition-colors"
+              >
+                {saving ? (
+                  <div className="h-3.5 w-3.5 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+                ) : (
+                  <LogOut size={14} />
+                )}
+                {t("common.saveAndExit" as any)}
+              </button>
+            </>
+          )}
       </StickyEditHeader>
 
-      {showBanner && <UnsavedBanner isAddMode={isAddMode} />}
+      {showBanner && <UnsavedBanner isAddMode={isAddMode} draftMode />}
 
       {/* Basic Info */}
       <FormSection title={t("invitations.section.basic" as any)}>
@@ -621,7 +709,11 @@ export default function InvitationEditPage() {
         </FormField>
       </FormSection>
 
-      {/* Signup Link & Send */}
+      {/* Signup Link & Send — hidden on a draft. The URL references an
+          invitation row that doesn't exist yet, and /api/send-invitation
+          would fail against a non-persisted record. Admins see this block
+          after the first save. */}
+      {!isAddMode && (
       <FormSection title={t("invitations.section.link" as any)}>
         <FormField label={t("invitations.field.signupUrl" as any)} span="full">
           <div className="flex gap-2">
@@ -667,6 +759,7 @@ export default function InvitationEditPage() {
           </div>
         </FormField>
       </FormSection>
+      )}
 
       {/* Limits & Application */}
       <FormSection title={t("invitations.section.limits" as any)}>

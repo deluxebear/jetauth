@@ -490,12 +490,16 @@ export default function DataTable<T extends Record<string, unknown>>({
   };
 
   const stickyHeadClass = (col: Column<T>) => {
+    // All thead cells are sticky to top-0 so column titles stay visible
+    // when the body scrolls vertically. Fixed-left/right cells are sticky
+    // on BOTH axes; their z-index is bumped one tier higher so they sit
+    // above plain top-sticky cells at the row intersection.
     if (col.fixed === "left") {
       const line = col.key === lastLeftKey ? dividerLeft : "";
-      return `sticky z-20 bg-surface-2 relative ${line}`;
+      return `sticky top-0 z-30 bg-surface-2 relative ${line}`;
     }
-    if (col.fixed === "right") return `sticky right-0 z-20 bg-surface-2 relative ${dividerRight}`;
-    return "";
+    if (col.fixed === "right") return `sticky right-0 top-0 z-30 bg-surface-2 relative ${dividerRight}`;
+    return "sticky top-0 z-20 bg-surface-2";
   };
 
   const stickyStyle = (col: Column<T>): React.CSSProperties | undefined => {
@@ -597,14 +601,24 @@ export default function DataTable<T extends Record<string, unknown>>({
         </div>
       )}
 
-      <div className="overflow-x-auto">
+      {/* Capped body height so choosing 20/50/100 per page triggers a
+          vertical scroll inside the table rather than pushing the page
+          down and hiding the pagination below the fold. `thead` cells all
+          get `sticky top-0` so column headers stay visible while the body
+          scrolls. 100dvh so mobile browser chrome doesn't clip. The -260
+          buffer leaves room for the sticky page header + list chrome +
+          pagination footer without being fragile to small layout tweaks. */}
+      <div className="overflow-auto max-h-[calc(100dvh-260px)]">
         <table ref={tableRef} className="w-full text-left" style={{ minWidth: "max-content" }}>
           <thead>
-            <tr className="border-b border-border bg-surface-2">
+            {/* `shadow-[...]` gives the sticky row a subtle bottom edge so
+                body rows sliding under it read as "behind" instead of
+                butting up against the header borderlessly. */}
+            <tr className="border-b border-border bg-surface-2 shadow-[0_1px_0_0_var(--color-border)]">
               {selectable && (
                 <th
-                  className="sticky left-0 z-20 bg-surface-2 px-3 py-2.5 w-10"
-                  style={{ width: 40, minWidth: 40 }}
+                  className="z-30 bg-surface-2 px-3 py-2.5 w-10"
+                  style={{ width: 40, minWidth: 40, position: "sticky", top: 0, left: 0 }}
                 >
                   <input
                     type="checkbox"
@@ -626,8 +640,15 @@ export default function DataTable<T extends Record<string, unknown>>({
                 <th
                   key={col.key}
                   data-col-key={col.key}
-                  style={{ ...widthStyle, ...stickyStyle(col) }}
-                  className={`px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wider text-text-muted relative ${stickyHeadClass(col)} ${colIdx < visibleColumns.length - 1 ? "border-r border-border" : ""}`}
+                  // Inline `position: sticky` wins over any Tailwind class
+                  // ordering collision (we previously had both `relative`
+                  // and `sticky` in the class list — whichever came last in
+                  // the generated CSS won, which is fragile). position:
+                  // sticky also serves as the positioning context for the
+                  // absolute-positioned resize handle below, so we no
+                  // longer need a separate `relative`.
+                  style={{ ...widthStyle, ...stickyStyle(col), position: "sticky", top: 0 }}
+                  className={`px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wider text-text-muted ${stickyHeadClass(col)} ${colIdx < visibleColumns.length - 1 ? "border-r border-border" : ""}`}
                 >
                   <div className="flex items-center gap-1">
                     <span
@@ -1029,7 +1050,11 @@ export function ColumnsMenu<T>({
         <ChevronDown size={11} />
       </button>
       {open && (
-        <div className={`absolute ${align === "right" ? "right-0" : "left-0"} z-30 mt-1 min-w-[200px] rounded-lg border border-border bg-surface-1 p-1.5 shadow-[var(--shadow-elevated)]`}>
+        // z-50 sits above the table's sticky headers (z-30). Prior z-30
+        // tied the sticky "操作" column on equal footing — later DOM
+        // painting let the column cover this popup. Lift it out of the
+        // competition entirely.
+        <div className={`absolute ${align === "right" ? "right-0" : "left-0"} z-50 mt-1 min-w-[200px] rounded-lg border border-border bg-surface-1 p-1.5 shadow-[var(--shadow-elevated)]`}>
           {toggleable.map((c) => (
             <label key={c.key} className="flex items-center gap-2 rounded px-2 py-1.5 text-[12px] text-text-primary hover:bg-surface-2 cursor-pointer">
               <input

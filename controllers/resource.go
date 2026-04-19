@@ -69,12 +69,16 @@ func (c *ApiController) GetResources() {
 	sortField := c.Ctx.Input.Query("sortField")
 	sortOrder := c.Ctx.Input.Query("sortOrder")
 
-	isOrgAdmin, ok := c.IsOrgAdmin()
+	// RequireAdmin returns ("", true) for global admins (built-in org) and
+	// (user.Owner, true) for org admins. We lock non-global admins to their
+	// own org regardless of the owner query param — otherwise an org admin
+	// could call the API directly with owner="" and list every org's files.
+	adminOrg, ok := c.RequireAdmin()
 	if !ok {
 		return
 	}
-
-	if isOrgAdmin {
+	if adminOrg != "" {
+		owner = adminOrg
 		user = ""
 	}
 

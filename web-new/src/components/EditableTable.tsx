@@ -28,7 +28,7 @@ export interface EditableColumn<T> {
   key: string;
   title: string;
   width?: string;
-  render?: (row: T, index: number, onChange: (key: string, val: unknown) => void) => React.ReactNode;
+  render?: (row: T, index: number, onChange: (keyOrPatch: string | Partial<T>, val?: unknown) => void) => React.ReactNode;
   type?: "text" | "select" | "switch" | "custom";
   options?: { value: string; label: string }[];
   placeholder?: string;
@@ -105,8 +105,8 @@ function RowContent<T extends Record<string, unknown>>({
         }
         const isDisabled =
           typeof col.disabled === "function" ? col.disabled(row) : col.disabled;
-        const cellOnChange = (key: string, val: unknown) =>
-          handleCellChange(i, key, val);
+        const cellOnChange = (keyOrPatch: string | Partial<T>, val?: unknown) =>
+          handleCellChange(i, keyOrPatch as string, val);
 
         if (col.render) {
           return <div key={col.key}>{col.render(row, i, cellOnChange)}</div>;
@@ -231,9 +231,13 @@ export default function EditableTable<T extends Record<string, unknown>>({
     onChange(next);
   };
 
-  const handleCellChange = (index: number, key: string, val: unknown) => {
+  const handleCellChange = (index: number, keyOrPatch: string | Partial<T>, val?: unknown) => {
     const next = [...rows];
-    next[index] = { ...next[index], [key]: val };
+    if (typeof keyOrPatch === "string") {
+      next[index] = { ...next[index], [keyOrPatch]: val };
+    } else {
+      next[index] = { ...next[index], ...(keyOrPatch as Record<string, unknown>) };
+    }
     onChange(next);
   };
 

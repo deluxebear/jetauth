@@ -266,6 +266,7 @@ export default function ProductListPage() {
         pageSize={list.pageSize}
         total={list.total}
         onPageChange={list.setPage}
+        onPageSizeChange={list.setPageSize}
         onSort={list.handleSort}
         onFilter={list.handleFilter}
         emptyText={t("common.noData")}

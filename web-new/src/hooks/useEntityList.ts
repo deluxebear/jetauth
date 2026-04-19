@@ -22,11 +22,17 @@ interface UseEntityListOptions<T> {
   extraKeys?: unknown[];
 }
 
-export function useEntityList<T>({ queryKey, fetchFn, owner: explicitOwner, pageSize = 10, extraKeys = [] }: UseEntityListOptions<T>) {
+export function useEntityList<T>({ queryKey, fetchFn, owner: explicitOwner, pageSize: initialPageSize = 10, extraKeys = [] }: UseEntityListOptions<T>) {
   const { getRequestOwner, selectedOrg } = useOrganization();
   const owner = explicitOwner ?? getRequestOwner();
 
   const [page, setPage] = useState(1);
+  // Runtime-changeable pageSize so the DataTable's "10 / page" selector
+  // actually does something. Prior shape was a fixed const — onPageSizeChange
+  // had nowhere to land. Initial value comes from the caller (default 10);
+  // resetting to page 1 on change avoids landing on page 7 of a now-2-page
+  // list.
+  const [pageSize, setPageSizeState] = useState(initialPageSize);
   const [sortState, setSortState] = useState<SortState>({ field: "", order: "" });
   const [filterState, setFilterState] = useState<FilterState>({ field: "", value: "" });
   const queryClient = useQueryClient();
@@ -57,6 +63,7 @@ export function useEntityList<T>({ queryKey, fetchFn, owner: explicitOwner, page
 
   const handleSort = (s: SortState) => { setSortState(s); setPage(1); };
   const handleFilter = (f: FilterState) => { setFilterState(f); setPage(1); };
+  const setPageSize = (n: number) => { setPageSizeState(n); setPage(1); };
 
   return {
     items,
@@ -66,6 +73,7 @@ export function useEntityList<T>({ queryKey, fetchFn, owner: explicitOwner, page
     loading: isLoading,
     fetching: isFetching,
     setPage,
+    setPageSize,
     sortState,
     filterState,
     handleSort,

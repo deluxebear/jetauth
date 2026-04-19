@@ -36,14 +36,11 @@ export default function GroupListPage() {
   const prefs = useTablePrefs({ persistKey: "list:groups" });
   const bulkDelete = useBulkDelete<Group>(GroupBackend.deleteGroup, list.refetch);
 
-  const handleAdd = async () => {
-    const group = GroupBackend.newGroup(getNewEntityOwner());
-    const res = await GroupBackend.addGroup(group);
-    if (res.status === "ok") {
-      navigate(`/groups/${group.owner}/${group.name}`, { state: { mode: "add" } });
-    } else {
-      modal.toast(res.msg || t("common.addFailed" as any), "error");
-    }
+  // Deferred-create: the POST to /api/add-group happens when the admin
+  // clicks Save on the edit page. See the equivalent comment in
+  // UserListPage.handleAdd for the rationale.
+  const handleAdd = () => {
+    navigate(`/groups/${getNewEntityOwner()}/new`, { state: { mode: "add" } });
   };
 
   const handleDelete = (record: Group, e: React.MouseEvent) => {
@@ -179,6 +176,7 @@ export default function GroupListPage() {
         pageSize={list.pageSize}
         total={list.total}
         onPageChange={list.setPage}
+        onPageSizeChange={list.setPageSize}
         onSort={list.handleSort}
         onFilter={list.handleFilter}
         emptyText={t("common.noData")}

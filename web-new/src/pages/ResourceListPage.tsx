@@ -8,6 +8,7 @@ import { useBulkDelete } from "../hooks/useBulkDelete";
 import { useTranslation } from "../i18n";
 import { useModal } from "../components/Modal";
 import { useEntityList } from "../hooks/useEntityList";
+import { useOrganization } from "../OrganizationContext";
 import * as ResourceBackend from "../backend/ResourceBackend";
 import type { Resource } from "../backend/ResourceBackend";
 
@@ -24,11 +25,16 @@ export default function ResourceListPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { t } = useTranslation();
   const modal = useModal();
+  const { selectedOrg, isAll } = useOrganization();
 
+  // Org scoping: non-global admins are locked to their own org by OrganizationContext
+  // (selectedOrg === user.Owner, isAll === false), so this also enforces org-admin
+  // isolation on the client. The backend enforces it regardless.
   const list = useEntityList<Resource>({
     queryKey: "resources",
     fetchFn: (params) => ResourceBackend.getResources({ ...params, user: "" }),
-    owner: "",
+    owner: isAll ? "" : selectedOrg,
+    extraKeys: [selectedOrg],
   });
   const prefs = useTablePrefs({ persistKey: "list:resources" });
   const bulkDelete = useBulkDelete<Resource>(ResourceBackend.deleteResource, list.refetch);
@@ -149,6 +155,7 @@ export default function ResourceListPage() {
         pageSize={list.pageSize}
         total={list.total}
         onPageChange={list.setPage}
+        onPageSizeChange={list.setPageSize}
         onSort={list.handleSort}
         onFilter={list.handleFilter}
         emptyText={t("common.noData")}

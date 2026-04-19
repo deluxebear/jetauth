@@ -1,8 +1,8 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useParams, useNavigate, useLocation, Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Trash2, LogOut, Pencil } from "lucide-react";
+import { Trash2, LogOut, Pencil, Check } from "lucide-react";
 import StickyEditHeader from "../components/StickyEditHeader";
 import { FormField, FormSection, Switch, inputClass, monoInputClass } from "../components/FormSection";
 import DataTable, { type Column } from "../components/DataTable";
@@ -25,7 +25,10 @@ export default function GroupEditPage() {
   const { owner, name } = useParams<{ owner: string; name: string }>();
   const navigate = useNavigate();
   const location = useLocation();
-  const [isAddMode, setIsAddMode] = useState((location.state as any)?.mode === "add");
+  // `/groups/:owner/new` = deferred-create draft — no /api/add-group call
+  // until Save. Prior behavior pre-created `group_abc123` on every click.
+  const isNew = name === "new";
+  const [isAddMode, setIsAddMode] = useState(isNew || (location.state as any)?.mode === "add");
   const { t } = useTranslation();
   const modal = useModal();
   const { isGlobalAdmin } = useOrganization();
@@ -46,12 +49,33 @@ export default function GroupEditPage() {
 
   const invalidateList = () => queryClient.invalidateQueries({ queryKey: ["groups"] });
 
+  // Cmd/Ctrl+S shortcut — add mode triggers save-and-new (batch path),
+  // edit mode triggers plain save. The listener is registered before any
+  // early returns so hook order stays stable; the ref is re-assigned below
+  // (after handlers) on every render where we pass the early return.
+  const saveShortcutRef = useRef<() => void>(() => {});
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "s") {
+        e.preventDefault();
+        saveShortcutRef.current();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
   const fetchData = useCallback(async () => {
     if (!owner || !name) return;
     setLoading(true);
     try {
+      // In new-draft mode skip /api/get-group (would 404) and seed a local
+      // draft instead. We still fetch the parent-group and org lists so the
+      // dropdowns work on first render.
       const [groupRes, allGroupsRes, orgRes] = await Promise.all([
-        GroupBackend.getGroup(owner, name),
+        isNew
+          ? Promise.resolve({ status: "ok" as const, data: GroupBackend.newGroup(owner) })
+          : GroupBackend.getGroup(owner, name),
         GroupBackend.getGroups({ owner }),
         OrgBackend.getOrganizationNames("admin"),
       ]);
@@ -59,7 +83,7 @@ export default function GroupEditPage() {
         setGroup(groupRes.data);
         setOriginalJson(JSON.stringify(groupRes.data));
       } else {
-        modal.showError(groupRes.msg || t("groups.error.loadFailed" as any));
+        modal.showError((groupRes as any).msg || t("groups.error.loadFailed" as any));
         navigate("/groups");
         return;
       }
@@ -74,12 +98,12 @@ export default function GroupEditPage() {
     } finally {
       setLoading(false);
     }
-  }, [owner, name, navigate]);
+  }, [owner, name, navigate, isNew]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
   const fetchGroupUsers = useCallback(async () => {
-    if (!owner || !name) return;
+    if (!owner || !name || isNew) return; // no users on a draft
     setUserLoading(true);
     try {
       // First try paginated, fall back to group.users if empty
@@ -92,7 +116,7 @@ export default function GroupEditPage() {
       }
     } catch (e: any) { modal.toast(e?.message || t("common.saveFailed" as any), "error"); }
     finally { setUserLoading(false); }
-  }, [owner, name, userPage]);
+  }, [owner, name, userPage, isNew]);
 
   useEffect(() => { fetchGroupUsers(); }, [fetchGroupUsers]);
 
@@ -106,26 +130,34 @@ export default function GroupEditPage() {
   const set = <K extends keyof Group>(key: K, val: Group[K]) =>
     setGroup((prev) => prev ? { ...prev, [key]: val } : prev);
 
+  /** Persist the group. In add mode calls /api/add-group; in edit mode
+   *  calls /api/update-group. Returns true on success. */
+  const saveGroup = async (): Promise<boolean> => {
+    const payload = { ...group, isTopGroup: group.parentId === owner };
+    const res = isAddMode
+      ? await GroupBackend.addGroup(payload)
+      : await GroupBackend.updateGroup(owner!, name!, payload);
+    if (res.status !== "ok") {
+      modal.toast(friendlyError(res.msg, t) || t("common.saveFailed" as any), "error");
+      return false;
+    }
+    return true;
+  };
+
   const handleSave = async () => {
     setSaving(true);
     try {
-      // Calculate isTopGroup: parentId equals owner org name
-      const updatedGroup = {
-        ...group,
-        isTopGroup: group.parentId === owner,
-      };
-      const res = await GroupBackend.updateGroup(owner!, name!, updatedGroup);
-      if (res.status === "ok") {
-        invalidateList();
-        if (group.name !== name) {
-          navigate(`/groups/${group.owner}/${group.name}`, { replace: true });
-        }
-        modal.toast(t("common.saveSuccess" as any));
-        setSaved(true);
-        setOriginalJson(JSON.stringify(group));
-        setIsAddMode(false);
-      } else {
-        modal.toast(friendlyError(res.msg, t) || t("common.saveFailed" as any), "error");
+      const ok = await saveGroup();
+      if (!ok) return;
+      modal.toast(t("common.saveSuccess" as any));
+      setSaved(true);
+      setOriginalJson(JSON.stringify(group));
+      setIsAddMode(false);
+      invalidateList();
+      // After first-save in add mode, leave /new so subsequent saves are
+      // updates and the URL reflects the real group.
+      if (isNew || group.name !== name) {
+        navigate(`/groups/${group.owner}/${group.name}`, { replace: true });
       }
     } catch (e: any) {
       modal.toast(e.message || t("common.saveFailed" as any), "error");
@@ -133,18 +165,21 @@ export default function GroupEditPage() {
       setSaving(false);
     }
   };
-  const handleSaveAndExit = async () => {
+
+  /** Save the current draft, then reset the form to a fresh draft and stay
+   *  on /new for bulk onboarding. */
+  const handleSaveAndNew = async () => {
     setSaving(true);
     try {
-      const updatedGroup = { ...group, isTopGroup: group.parentId === owner };
-      const res = await GroupBackend.updateGroup(owner!, name!, updatedGroup);
-      if (res.status === "ok") {
-        modal.toast(t("common.saveSuccess" as any));
-        invalidateList();
-        navigate("/groups");
-      } else {
-        modal.toast(friendlyError(res.msg, t) || t("common.saveFailed" as any), "error");
-      }
+      const ok = await saveGroup();
+      if (!ok) return;
+      modal.toast(t("groups.savedAndReady" as any));
+      invalidateList();
+      const nextDraft = GroupBackend.newGroup(owner!);
+      setGroup(nextDraft);
+      setOriginalJson(JSON.stringify(nextDraft));
+      setIsAddMode(true);
+      if (!isNew) navigate(`/groups/${owner}/new`, { replace: true, state: { mode: "add" } });
     } catch (e: any) {
       modal.toast(e?.message || t("common.saveFailed" as any), "error");
     } finally {
@@ -152,12 +187,32 @@ export default function GroupEditPage() {
     }
   };
 
-  const handleBack = async () => {
-    if (isAddMode) {
-      await GroupBackend.deleteGroup(group);
+  const handleSaveAndExit = async () => {
+    setSaving(true);
+    try {
+      const ok = await saveGroup();
+      if (!ok) return;
+      modal.toast(t("common.saveSuccess" as any));
       invalidateList();
+      navigate("/groups");
+    } catch (e: any) {
+      modal.toast(e?.message || t("common.saveFailed" as any), "error");
+    } finally {
+      setSaving(false);
     }
+  };
+
+  // Deferred-create: no pre-created row to clean up on back.
+  const handleBack = () => {
     navigate("/groups");
+  };
+
+  // Plain assignment (not a hook) — refreshes the shortcut target every
+  // render where we've passed the early-return guard above.
+  saveShortcutRef.current = () => {
+    if (saving) return;
+    if (isAddMode) handleSaveAndNew();
+    else handleSave();
   };
 
   const handleDelete = async () => {
@@ -233,17 +288,49 @@ export default function GroupEditPage() {
         subtitle={`${owner}/${name}`}
         onBack={handleBack}
       >
-          <button onClick={handleDelete} className="flex items-center gap-1.5 rounded-lg border border-danger/30 px-3 py-2 text-[13px] font-medium text-danger hover:bg-danger/10 transition-colors">
-            <Trash2 size={14} /> {t("common.delete")}
-          </button>
-                    <SaveButton onClick={handleSave} saving={saving} saved={saved} label={t("common.save")} />
-          <button onClick={handleSaveAndExit} disabled={saving} className="flex items-center gap-1.5 rounded-lg bg-accent px-4 py-2 text-[13px] font-semibold text-white hover:bg-accent-hover disabled:opacity-50 transition-colors">
-            {saving ? <div className="h-3.5 w-3.5 rounded-full border-2 border-white/30 border-t-white animate-spin" /> : <LogOut size={14} />}
-            {t("common.saveAndExit" as any)}
-          </button>
+          {/* Draft has nothing to delete yet; hide the danger button in add mode. */}
+          {!isAddMode && (
+            <button onClick={handleDelete} className="flex items-center gap-1.5 rounded-lg border border-danger/30 px-3 py-2 text-[13px] font-medium text-danger hover:bg-danger/10 transition-colors">
+              <Trash2 size={14} /> {t("common.delete")}
+            </button>
+          )}
+          {isAddMode ? (
+            <>
+              <button
+                onClick={handleSave}
+                disabled={saving}
+                className="flex items-center gap-1.5 rounded-lg border border-border bg-surface-1 px-4 py-2 text-[13px] font-medium text-text-secondary hover:bg-surface-2 disabled:opacity-50 transition-colors"
+              >
+                {t("common.save")}
+              </button>
+              <button
+                onClick={handleSaveAndExit}
+                disabled={saving}
+                className="flex items-center gap-1.5 rounded-lg border border-border bg-surface-1 px-4 py-2 text-[13px] font-medium text-text-secondary hover:bg-surface-2 disabled:opacity-50 transition-colors"
+              >
+                <LogOut size={14} /> {t("common.saveAndExit" as any)}
+              </button>
+              <button
+                onClick={handleSaveAndNew}
+                disabled={saving}
+                className="flex items-center gap-1.5 rounded-lg bg-accent px-4 py-2 text-[13px] font-semibold text-white hover:bg-accent-hover disabled:opacity-50 transition-colors"
+              >
+                {saving ? <div className="h-3.5 w-3.5 rounded-full border-2 border-white/30 border-t-white animate-spin" /> : <Check size={14} />}
+                {t("groups.saveAndNew" as any)}
+              </button>
+            </>
+          ) : (
+            <>
+              <SaveButton onClick={handleSave} saving={saving} saved={saved} label={t("common.save")} />
+              <button onClick={handleSaveAndExit} disabled={saving} className="flex items-center gap-1.5 rounded-lg bg-accent px-4 py-2 text-[13px] font-semibold text-white hover:bg-accent-hover disabled:opacity-50 transition-colors">
+                {saving ? <div className="h-3.5 w-3.5 rounded-full border-2 border-white/30 border-t-white animate-spin" /> : <LogOut size={14} />}
+                {t("common.saveAndExit" as any)}
+              </button>
+            </>
+          )}
       </StickyEditHeader>
 
-      {showBanner && <UnsavedBanner isAddMode={isAddMode} />}
+      {showBanner && <UnsavedBanner isAddMode={isAddMode} draftMode />}
 
       {/* Basic Info */}
       <FormSection title={t("orgs.section.basic" as any)}>
