@@ -197,6 +197,21 @@ export default function ApplicationEditPage() {
     setApp((prev) => {
       const next = { ...prev } as Record<string, unknown>;
       const cfg = tmpl.config;
+      // Layout template id (L2) — manifests that opt into the new layout
+      // system set this; legacy CSS-overlay manifests leave it unset and
+      // apply on top of whatever layout the admin already picked.
+      if (typeof cfg.template === "string" && cfg.template.length > 0) {
+        next.template = cfg.template;
+      }
+      // templateOptions merge: preserve keys the manifest doesn't set so
+      // an admin's prior tweaks (say, a custom hero headline) survive a
+      // manifest refresh that only adjusts colours.
+      if (cfg.templateOptions) {
+        next.templateOptions = {
+          ...((prev.templateOptions as Record<string, unknown>) ?? {}),
+          ...cfg.templateOptions,
+        };
+      }
       // Merge themeData (preserve keys the template doesn't touch).
       if (cfg.themeData) {
         next.themeData = {

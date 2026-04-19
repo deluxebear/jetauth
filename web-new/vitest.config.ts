@@ -10,5 +10,9 @@ export default defineConfig({
       "@testing-library/jest-dom/vitest",
       "./src/__tests__/setup-axe.ts",
     ],
+    // e2e/ holds Playwright specs; those have their own runner (npm run e2e)
+    // and import from @playwright/test, not vitest. Excluding them here
+    // prevents vitest from tripping over the imports.
+    exclude: ["node_modules", "dist", "e2e/**"],
   },
 });

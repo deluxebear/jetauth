@@ -32,6 +32,17 @@ export interface AuthTemplate {
   preview: string;
   /** Only the fields the template wants to apply. Missing fields are left alone. */
   config: {
+    /**
+     * Optional layout template id (L2). When set, applying this manifest
+     * writes `application.template = <id>` and merges the provided
+     * templateOptions into `application.templateOptions`. Legacy
+     * CSS-overlay-only manifests leave this field unset — they keep
+     * working as presets on top of whatever layout the admin has already
+     * picked. See docs/2026-04-19-template-store-proposal.md.
+     */
+    template?: string;
+    /** Template-specific options (hero image, sidebar copy, etc.). */
+    templateOptions?: Record<string, unknown>;
     formOffset?: number;
     formBackgroundUrl?: string;
     formBackgroundUrlMobile?: string;
@@ -169,6 +180,69 @@ const PREVIEW_CENTERED_ILLUSTRATED = `
   <rect x="92" y="88" width="56" height="10" rx="3" fill="#0052CC"/>
 </svg>`.trim();
 
+// ── Layout-template manifests (store v1) ──────────────────────────────────
+// These opt into the L2 layout system via config.template/templateOptions
+// and overlay L1 tokens on top. Previews match the corresponding outer
+// layouts (split-hero / full-bleed / sidebar-brand).
+
+const PREVIEW_PRISM_SPLIT = `
+<svg viewBox="0 0 240 140" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <linearGradient id="prism-g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#9333EA"/>
+      <stop offset="100%" stop-color="#EC4899"/>
+    </linearGradient>
+  </defs>
+  <rect width="240" height="140" fill="#FFFFFF"/>
+  <rect width="108" height="140" fill="url(#prism-g)"/>
+  <rect x="12" y="88" width="78" height="5" rx="2" fill="#FFFFFF" opacity="0.95"/>
+  <rect x="12" y="100" width="60" height="3" rx="1.5" fill="#FFFFFF" opacity="0.75"/>
+  <rect x="12" y="108" width="68" height="3" rx="1.5" fill="#FFFFFF" opacity="0.75"/>
+  <rect x="124" y="38" width="96" height="66" rx="8" fill="#FFFFFF" stroke="#E5E7EB"/>
+  <circle cx="148" cy="54" r="4" fill="#9333EA"/>
+  <rect x="158" y="52" width="30" height="3" rx="1.5" fill="#111827"/>
+  <rect x="134" y="68" width="72" height="8" rx="2" fill="#F3F4F6"/>
+  <rect x="134" y="80" width="72" height="8" rx="2" fill="#F3F4F6"/>
+  <rect x="134" y="93" width="72" height="8" rx="2" fill="#9333EA"/>
+</svg>`.trim();
+
+const PREVIEW_AURORA_GLASS = `
+<svg viewBox="0 0 240 140" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <linearGradient id="aurora-g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0EA5E9"/>
+      <stop offset="50%" stop-color="#8B5CF6"/>
+      <stop offset="100%" stop-color="#EC4899"/>
+    </linearGradient>
+  </defs>
+  <rect width="240" height="140" fill="url(#aurora-g)"/>
+  <rect width="240" height="140" fill="rgba(0,0,0,0.2)"/>
+  <rect x="72" y="20" width="96" height="104" rx="10" fill="rgba(255,255,255,0.15)" stroke="rgba(255,255,255,0.35)"/>
+  <circle cx="120" cy="42" r="5" fill="#FFFFFF" opacity="0.9"/>
+  <rect x="104" y="54" width="32" height="3" rx="1.5" fill="#FFFFFF" opacity="0.85"/>
+  <rect x="88" y="70" width="64" height="8" rx="2" fill="rgba(255,255,255,0.25)" stroke="rgba(255,255,255,0.4)"/>
+  <rect x="88" y="82" width="64" height="8" rx="2" fill="rgba(255,255,255,0.25)" stroke="rgba(255,255,255,0.4)"/>
+  <rect x="88" y="98" width="64" height="10" rx="2" fill="#FFFFFF" opacity="0.95"/>
+</svg>`.trim();
+
+const PREVIEW_ATRIUM_SIDEBAR = `
+<svg viewBox="0 0 240 140" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice">
+  <rect width="240" height="140" fill="#F8FAFC"/>
+  <rect width="72" height="140" fill="#1E293B"/>
+  <circle cx="16" cy="18" r="5" fill="#F59E0B"/>
+  <rect x="26" y="15" width="30" height="5" rx="2" fill="#F59E0B"/>
+  <rect x="12" y="46" width="48" height="3" rx="1.5" fill="#94A3B8"/>
+  <rect x="12" y="56" width="52" height="3" rx="1.5" fill="#94A3B8"/>
+  <rect x="12" y="66" width="40" height="3" rx="1.5" fill="#94A3B8"/>
+  <rect x="12" y="124" width="40" height="3" rx="1.5" fill="#475569"/>
+  <rect x="112" y="38" width="96" height="66" rx="8" fill="#FFFFFF" stroke="#E2E8F0"/>
+  <circle cx="140" cy="54" r="4" fill="#F59E0B"/>
+  <rect x="148" y="52" width="32" height="3" rx="1.5" fill="#111827"/>
+  <rect x="124" y="68" width="72" height="8" rx="2" fill="#F1F5F9"/>
+  <rect x="124" y="80" width="72" height="8" rx="2" fill="#F1F5F9"/>
+  <rect x="124" y="93" width="72" height="8" rx="2" fill="#F59E0B"/>
+</svg>`.trim();
+
 // ── HTML bundles ──────────────────────────────────────────────────────────
 
 const NEON_SPLIT_SIDE_HTML = `
@@ -290,6 +364,96 @@ const CENTERED_ILLUSTRATED_HEADER_HTML = `
 // ── The gallery ────────────────────────────────────────────────────────────
 
 export const AUTH_TEMPLATES: AuthTemplate[] = [
+  // ── Store v1: layout-template manifests ─────────────────────────────────
+  // These opt into the L2 layout system (config.template + templateOptions).
+  // Applying writes app.template directly so the login page renders the
+  // matching outer layout — Split Hero, Full-bleed, Sidebar Brand.
+  {
+    id: "prism-split",
+    name: "Prism split",
+    description:
+      "Vibrant purple→pink hero panel on the left, form on the right. Creative-tool vibe.",
+    preview: PREVIEW_PRISM_SPLIT,
+    config: {
+      template: "split-hero",
+      templateOptions: {
+        heroImageUrl: "",
+        heroImageUrlDark: "",
+        heroHeadline: {
+          en: "Build something brilliant",
+          zh: "让创意落地成真",
+        },
+        heroSubcopy: {
+          en: "Sign in to continue where you left off.",
+          zh: "登录继续未完成的工作。",
+        },
+        heroSide: "left",
+        overlayOpacity: 0.3,
+      },
+      themeData: {
+        colorPrimary: "#9333EA",
+        darkColorPrimary: "#A855F7",
+        borderRadius: 10,
+        themeType: "light",
+      },
+    },
+  },
+  {
+    id: "aurora-glass",
+    name: "Aurora glass",
+    description:
+      "Full-bleed aurora gradient behind a glass form card. High drama for consumer brands.",
+    preview: PREVIEW_AURORA_GLASS,
+    config: {
+      template: "full-bleed",
+      templateOptions: {
+        backgroundImageUrl: "",
+        backgroundImageUrlDark: "",
+        overlayOpacity: 0.2,
+        glassBlur: 20,
+        cardStyle: "glass",
+        formPosition: "center",
+      },
+      themeData: {
+        colorPrimary: "#8B5CF6",
+        darkColorPrimary: "#A78BFA",
+        borderRadius: 14,
+        themeType: "light",
+      },
+    },
+  },
+  {
+    id: "atrium-enterprise",
+    name: "Atrium enterprise",
+    description:
+      "Left rail with feature list + warm amber accent. Enterprise portal with a human touch.",
+    preview: PREVIEW_ATRIUM_SIDEBAR,
+    config: {
+      template: "sidebar-brand",
+      templateOptions: {
+        sidebarWidth: "standard",
+        sidebarBackground: "surface",
+        sidebarFeatureList: [
+          "Single sign-on across every workspace",
+          "Audit logs retained for 90 days",
+          "Team roles with fine-grained access",
+        ],
+        sidebarFooterText: { en: "© Your team · 2026", zh: "© 你的团队 · 2026" },
+      },
+      themeData: {
+        colorPrimary: "#F59E0B",
+        darkColorPrimary: "#FBBF24",
+        borderRadius: 8,
+        themeType: "light",
+      },
+    },
+  },
+
+  // ── Legacy CSS-overlay presets ──────────────────────────────────────────
+  // Pre-dates the L2 layout template system. These apply theme tokens +
+  // side-panel HTML + custom CSS on top of whatever layout the admin
+  // already picked. Kept because a good number of apps were built on them
+  // and the visual intent still works.
   {
     id: "default-centered",
     name: "Default centered",

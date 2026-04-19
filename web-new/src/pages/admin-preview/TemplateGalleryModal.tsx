@@ -1,7 +1,8 @@
 import { useEffect } from "react";
-import { X, Sparkles } from "lucide-react";
+import { X, Sparkles, LayoutTemplate } from "lucide-react";
 import { useTranslation } from "../../i18n";
 import { AUTH_TEMPLATES, type AuthTemplate } from "./templates";
+import { templates as LAYOUT_TEMPLATES } from "../../auth/templates";
 
 interface Props {
   open: boolean;
@@ -89,18 +90,31 @@ interface CardProps {
 }
 
 function TemplateCard({ template, applyLabel, onApply }: CardProps) {
+  const layoutId = template.config.template;
+  const layoutMeta = layoutId ? LAYOUT_TEMPLATES[layoutId]?.meta : undefined;
   return (
     <div
       className="flex flex-col rounded-xl border border-border bg-surface-0 overflow-hidden hover:border-accent/60 hover:shadow-[var(--shadow-card)] transition-all"
       data-testid={`template-card-${template.id}`}
     >
-      <div
-        className="aspect-[12/7] bg-surface-2 border-b border-border overflow-hidden [&>svg]:h-full [&>svg]:w-full"
-        // Preview SVG comes from the template data file — fully authored by us,
-        // never user input, so dangerouslySetInnerHTML is safe here.
-        dangerouslySetInnerHTML={{ __html: template.preview }}
-        aria-hidden="true"
-      />
+      <div className="relative">
+        <div
+          className="aspect-[12/7] bg-surface-2 border-b border-border overflow-hidden [&>svg]:h-full [&>svg]:w-full"
+          // Preview SVG comes from the template data file — fully authored by us,
+          // never user input, so dangerouslySetInnerHTML is safe here.
+          dangerouslySetInnerHTML={{ __html: template.preview }}
+          aria-hidden="true"
+        />
+        {layoutMeta && (
+          <span
+            className="absolute top-2 left-2 inline-flex items-center gap-1 rounded-full bg-surface-0/90 border border-border px-2 py-0.5 text-[10px] font-semibold text-text-secondary backdrop-blur-sm"
+            title={layoutMeta.description.en}
+          >
+            <LayoutTemplate size={10} />
+            {layoutMeta.name.en}
+          </span>
+        )}
+      </div>
       <div className="flex-1 flex flex-col gap-3 p-4">
         <div>
           <h4 className="text-[14px] font-semibold text-text-primary">{template.name}</h4>

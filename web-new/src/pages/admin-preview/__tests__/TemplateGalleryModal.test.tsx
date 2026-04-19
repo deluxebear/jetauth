@@ -8,11 +8,13 @@ vi.mock("../../../i18n", () => ({
 }));
 
 describe("TemplateGalleryModal", () => {
-  it("renders one card per template (6 defaults)", () => {
+  it("renders one card per template", () => {
     render(
       <TemplateGalleryModal open onClose={() => {}} onApply={() => {}} />
     );
-    expect(AUTH_TEMPLATES).toHaveLength(6);
+    // 3 layout-template manifests (store v1) + 6 legacy CSS-overlay presets.
+    // If this count shifts, re-check whether the new entry is intended.
+    expect(AUTH_TEMPLATES).toHaveLength(9);
     for (const tmpl of AUTH_TEMPLATES) {
       expect(screen.getByTestId(`template-card-${tmpl.id}`)).toBeInTheDocument();
     }
