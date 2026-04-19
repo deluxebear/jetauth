@@ -335,6 +335,9 @@ func (a *Ormer) createTable() {
 	if err != nil {
 		panic(err)
 	}
+	// One-shot data migration gated by the Template column existing — safe
+	// to call every startup because it's idempotent (see function comment).
+	migrateLegacyFormBackground()
 
 	err = a.Engine.Sync2(new(Provider))
 	if err != nil {
