@@ -6,7 +6,7 @@
 // the config payload so the iframe renders that layout instead of the
 // currently-selected one.
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { X } from "lucide-react";
 import { buildPreviewConfig } from "../admin-preview/buildPreviewConfig";
 import type { AuthApplication } from "../../auth/api/types";
@@ -34,7 +34,6 @@ export default function TemplatePreviewModal({
 }: Props) {
   const { t } = useTranslation();
   const iframeRef = useRef<HTMLIFrameElement>(null);
-  const [iframeReady, setIframeReady] = useState(false);
 
   const orgName =
     application.organizationObj?.name ?? application.organization ?? "built-in";
@@ -51,29 +50,27 @@ export default function TemplatePreviewModal({
     return () => window.removeEventListener("keydown", onKey);
   }, [open, onClose]);
 
-  // When `open` is false the whole modal returns null below, so all local
-  // state unmounts. Next open starts fresh with iframeReady=false — no
-  // explicit reset needed.
+  // Single handler: when a fresh iframe signals READY, post the config
+  // with the template override using the closure's current templateId.
+  // Re-registers on templateId change so the closure is never stale.
+  // Combined with key={templateId} on the iframe this also means: each
+  // new iframe gets exactly one config post tagged with the right id.
   useEffect(() => {
     if (!open) return;
     const handler = (e: MessageEvent) => {
       if (e.origin !== window.location.origin) return;
-      if (e.data?.type === PREVIEW_READY_TYPE) setIframeReady(true);
+      if (e.data?.type !== PREVIEW_READY_TYPE) return;
+      if (!iframeRef.current) return;
+      const cfg = buildPreviewConfig(application);
+      cfg.template = templateId;
+      iframeRef.current.contentWindow?.postMessage(
+        { type: PREVIEW_MESSAGE_TYPE, payload: cfg },
+        window.location.origin,
+      );
     };
     window.addEventListener("message", handler);
     return () => window.removeEventListener("message", handler);
-  }, [open]);
-
-  useEffect(() => {
-    if (!iframeRef.current || !iframeReady || !open) return;
-    const cfg = buildPreviewConfig(application);
-    // Override with the candidate id — admin is previewing, not committing.
-    cfg.template = templateId;
-    iframeRef.current.contentWindow?.postMessage(
-      { type: PREVIEW_MESSAGE_TYPE, payload: cfg },
-      window.location.origin,
-    );
-  }, [iframeReady, open, application, templateId]);
+  }, [open, application, templateId]);
 
   if (!open) return null;
 
@@ -104,7 +101,14 @@ export default function TemplatePreviewModal({
           </button>
         </div>
         <div className="flex-1 overflow-hidden bg-surface-2">
+          {/* key={templateId} forces a fresh iframe on every preview click.
+              Without this the modal stays open across clicks, src is
+              stable, and the postMessage override can race with the
+              iframe's already-rendered state — visually every template
+              ends up showing whatever rendered first. Remount is cheap
+              and removes the race entirely. */}
           <iframe
+            key={templateId}
             ref={iframeRef}
             src={src}
             title="template preview"
