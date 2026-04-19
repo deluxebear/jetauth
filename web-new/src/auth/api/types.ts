@@ -68,6 +68,24 @@ export interface SigninItem {
    * Optional for backward compat with stored rows that pre-date the field.
    */
   required?: boolean;
+  /**
+   * For the row with `name === "Providers"` only. Per-provider render config
+   * applied on the login page. When undefined or empty, all providers render
+   * in server order at the default (small) size — backward-compatible default.
+   *
+   * - `name` — provider name (unique key, must match a configured provider)
+   * - `size` — "large" (full-width button with display name) or "small" (icon-only)
+   * - `group` — "primary" (top group) or "secondary" (below divider)
+   * - `visible` — default true; `false` hides the button from the login page
+   */
+  providers?: SigninItemProvider[];
+}
+
+export interface SigninItemProvider {
+  name: string;
+  size: "large" | "small";
+  group: "primary" | "secondary";
+  visible?: boolean;
 }
 
 export interface AuthApplication {

@@ -27,7 +27,8 @@ import EditableTable, { type EditableColumn } from "../components/EditableTable"
 import AdminPreviewPane from "./admin-preview/AdminPreviewPane";
 import TemplateGalleryModal from "./admin-preview/TemplateGalleryModal";
 import type { AuthTemplate } from "./admin-preview/templates";
-import type { AuthApplication } from "../auth/api/types";
+import type { AuthApplication, SigninItem, SigninItemProvider } from "../auth/api/types";
+import SigninProvidersSubtable from "./ApplicationEditPage/SigninProvidersSubtable";
 import ColorPicker from "../components/ColorPicker";
 import CollapsibleCard from "../components/CollapsibleCard";
 import SectionNavRail from "../components/SectionNavRail";
@@ -1227,6 +1228,37 @@ export default function ApplicationEditPage() {
                   sortable
                 />
               </div>
+              {(() => {
+                // Render the Providers display-config sub-table inline below
+                // signinItems when the admin has added a visible "Providers"
+                // row. Hidden when Providers is toggled off or missing, since
+                // the login page won't render providers in that case anyway.
+                const items = (app.signinItems as SigninItem[] | undefined) ?? [];
+                const providersItem = items.find(
+                  (it) => it?.name === "Providers" && !it?.isCustom,
+                );
+                if (!providersItem || providersItem.visible === false) return null;
+                const appProviders = ((app.providers as Array<{ name?: string }> | undefined) ?? [])
+                  .filter((p) => !!p?.name)
+                  .map((p) => ({ name: String(p.name) }));
+                const handleChange = (next: SigninItemProvider[]) => {
+                  const nextItems = items.map((it) =>
+                    it?.name === "Providers" && !it?.isCustom
+                      ? { ...it, providers: next }
+                      : it,
+                  );
+                  set("signinItems", nextItems);
+                };
+                return (
+                  <div className="col-span-2">
+                    <SigninProvidersSubtable
+                      appProviders={appProviders}
+                      value={providersItem.providers}
+                      onChange={handleChange}
+                    />
+                  </div>
+                );
+              })()}
               <FormField label={t("apps.field.signinHtml" as any)} span="full">
                 <textarea value={String(app.signinHtml ?? "")} onChange={(e) => set("signinHtml", e.target.value)} rows={3} className={`${inputClass} font-mono text-[12px]`} />
               </FormField>

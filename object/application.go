@@ -57,6 +57,21 @@ type SigninItem struct {
 	Placeholder string `json:"placeholder"`
 	Rule        string `json:"rule"`
 	IsCustom    bool   `json:"isCustom"`
+
+	// Providers is only meaningful for the row with Name == "Providers".
+	// When nil or empty the login page renders all configured providers in
+	// server order at the default size (backward-compatible default). When
+	// set, admins can reorder, hide, resize, and group individual providers.
+	Providers []*SigninItemProvider `json:"providers,omitempty"`
+}
+
+// SigninItemProvider controls how a single OAuth/SAML provider is rendered
+// on the login page. Attached to the "Providers" SigninItem row only.
+type SigninItemProvider struct {
+	Name    string `json:"name"`              // provider name (unique key)
+	Size    string `json:"size"`              // "large" | "small"
+	Group   string `json:"group"`             // "primary" | "secondary"
+	Visible bool   `json:"visible,omitempty"` // false hides the button
 }
 
 type SamlItem struct {

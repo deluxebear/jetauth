@@ -1,0 +1,1 @@
+import{j as e}from"./index-CrswBGjz.js";export{e as uploadResource};

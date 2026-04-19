@@ -211,6 +211,11 @@ export default function SigninPage({ application, providers }: SigninPageProps) 
                       providers={providers}
                       redirectUri={searchParams.get("redirect_uri") ?? undefined}
                       state={searchParams.get("state") ?? undefined}
+                      config={
+                        (application.signinItems ?? []).find(
+                          (it) => it.name === "Providers" && !it.isCustom,
+                        )?.providers
+                      }
                     />
                   </div>
                 )}
