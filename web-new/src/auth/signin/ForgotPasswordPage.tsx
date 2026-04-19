@@ -8,6 +8,7 @@ import TopBar from "../shell/TopBar";
 import SafeHtml from "../shell/SafeHtml";
 import IdentifierStep from "./IdentifierStep";
 import { resolveSigninMethods } from "../api/resolveSigninMethods";
+import { useSigninItemVisibility } from "../items/useSigninItemVisibility";
 import type { AuthApplication } from "../api/types";
 
 type Phase = "identifier" | "code" | "password" | "done";
@@ -31,11 +32,13 @@ export default function ForgotPasswordPage({ application }: Props) {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
+  const signinItemVis = useSigninItemVisibility(application.signinItems);
+
   const orgName =
     application.organizationObj?.name ?? application.organization ?? "built-in";
   const orgDisplay =
-    application.organizationObj?.displayName ??
-    application.displayName ??
+    application.displayName ||
+    application.organizationObj?.displayName ||
     application.name;
   const orgLogo =
     theme === "dark" && application.organizationObj?.logoDark
@@ -129,6 +132,7 @@ export default function ForgotPasswordPage({ application }: Props) {
               displayName={orgDisplay}
               title={application.title}
               theme={theme}
+              hideLogo={!signinItemVis.isVisible("Logo")}
             />
           </div>
 

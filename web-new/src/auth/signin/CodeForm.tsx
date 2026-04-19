@@ -14,6 +14,18 @@ interface CodeFormProps {
   onSubmit: (code: string) => Promise<void>;
   onBack?: () => void;
   error?: string;
+  /** Admin override label for the primary submit button. */
+  submitLabel?: string;
+  /** Render the agreement checkbox above the submit button. */
+  showAgreement?: boolean;
+  /** Label for the agreement checkbox. */
+  agreementLabel?: string;
+  /** Block submit until the agreement is checked. */
+  agreementRequired?: boolean;
+  /** Render the captcha placeholder slot above the submit button. */
+  showCaptcha?: boolean;
+  /** Text inside the captcha placeholder box. */
+  captchaPlaceholder?: string;
 }
 
 const COUNTDOWN_SECONDS = 60;
@@ -36,6 +48,12 @@ export default function CodeForm({
   onSubmit,
   onBack,
   error: externalError,
+  submitLabel,
+  showAgreement = false,
+  agreementLabel,
+  agreementRequired = false,
+  showCaptcha = false,
+  captchaPlaceholder,
 }: CodeFormProps) {
   const { t } = useTranslation();
   const [phase, setPhase] = useState<"send" | "verify">("send");
@@ -44,6 +62,7 @@ export default function CodeForm({
   const [sending, setSending] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [sendError, setSendError] = useState("");
+  const [agreed, setAgreed] = useState(false);
 
   useEffect(() => {
     if (countdown <= 0) return;
@@ -72,9 +91,11 @@ export default function CodeForm({
     }
   };
 
+  const agreementOk = !showAgreement || !agreementRequired || agreed;
+
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    if (code.length !== 6 || submitting) return;
+    if (code.length !== 6 || submitting || !agreementOk) return;
     setSubmitting(true);
     try {
       await onSubmit(code);
@@ -82,6 +103,16 @@ export default function CodeForm({
       setSubmitting(false);
     }
   };
+
+  const resolvedSubmitLabel = submitLabel && submitLabel.length > 0
+    ? submitLabel
+    : t("auth.code.submit");
+  const resolvedAgreementLabel = agreementLabel && agreementLabel.length > 0
+    ? agreementLabel
+    : t("auth.agreement.label");
+  const resolvedCaptchaLabel = captchaPlaceholder && captchaPlaceholder.length > 0
+    ? captchaPlaceholder
+    : t("auth.captcha.placeholder");
 
   const sendLabel = t(destType === "email" ? "auth.code.sendToEmail" : "auth.code.sendToPhone")
     .replace(destType === "email" ? "{email}" : "{phone}", destValue);
@@ -155,21 +186,46 @@ export default function CodeForm({
             />
           </div>
 
+          {showAgreement && (
+            <label
+              className="flex items-start gap-2 text-[12px] text-text-secondary cursor-pointer select-none"
+              data-signinitem="agreement"
+            >
+              <input
+                type="checkbox"
+                checked={agreed}
+                onChange={(e) => setAgreed(e.target.checked)}
+                className="mt-0.5 h-3.5 w-3.5 rounded border-border text-accent focus:ring-accent/30"
+              />
+              <span>{resolvedAgreementLabel}</span>
+            </label>
+          )}
+
+          {showCaptcha && (
+            <div
+              className="captcha-slot border border-dashed border-border rounded p-4 text-center text-[12px] text-text-muted"
+              data-signinitem="captcha"
+            >
+              {resolvedCaptchaLabel}
+            </div>
+          )}
+
           <button
             type="submit"
-            disabled={code.length !== 6 || submitting}
+            disabled={code.length !== 6 || submitting || !agreementOk}
             data-cfg-section="branding"
             data-cfg-field="colorPrimary"
+            data-signinitem="login-button"
             className="group w-full flex items-center justify-center gap-2 rounded-lg bg-accent py-2.5 text-[14px] font-semibold text-white hover:bg-accent-hover disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
           >
             {submitting ? (
               <>
                 <div className="h-4 w-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
-                {t("auth.code.submit")}
+                {resolvedSubmitLabel}
               </>
             ) : (
               <>
-                {t("auth.code.submit")}
+                {resolvedSubmitLabel}
                 <ArrowRight size={16} className="transition-transform group-hover:translate-x-0.5" />
               </>
             )}

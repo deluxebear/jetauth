@@ -17,7 +17,7 @@ interface MethodStepProps {
   methods: SigninMethodInfo[];
   recommended: string;
   forgotPasswordHref?: string;
-  onPasswordSubmit: (password: string) => Promise<void>;
+  onPasswordSubmit: (password: string, extras?: { autoSignin?: boolean }) => Promise<void>;
   onCodeSubmit: (code: string) => Promise<void>;
   onWebAuthnSuccess: () => void;
   onFaceSuccess: () => void;
@@ -30,6 +30,18 @@ interface MethodStepProps {
    */
   orderedMethodNames?: string[];
   error?: string;
+  // Admin-driven signin item overrides, wired by SigninPage from
+  // useSigninItemVisibility. Each form consumes only the ones that apply.
+  showForgot?: boolean;
+  forgotLabel?: string;
+  submitLabel?: string;
+  showAgreement?: boolean;
+  agreementLabel?: string;
+  agreementRequired?: boolean;
+  showCaptcha?: boolean;
+  captchaPlaceholder?: string;
+  showRememberMe?: boolean;
+  rememberLabel?: string;
 }
 
 /**
@@ -54,6 +66,16 @@ export default function MethodStep({
   onBack,
   orderedMethodNames,
   error,
+  showForgot,
+  forgotLabel,
+  submitLabel,
+  showAgreement,
+  agreementLabel,
+  agreementRequired,
+  showCaptcha,
+  captchaPlaceholder,
+  showRememberMe,
+  rememberLabel,
 }: MethodStepProps) {
   const { t } = useTranslation();
 
@@ -93,6 +115,16 @@ export default function MethodStep({
         onBack={onBack}
         error={error}
         forgotPasswordHref={forgotPasswordHref}
+        showForgot={showForgot}
+        forgotLabel={forgotLabel}
+        submitLabel={submitLabel}
+        showAgreement={showAgreement}
+        agreementLabel={agreementLabel}
+        agreementRequired={agreementRequired}
+        showCaptcha={showCaptcha}
+        captchaPlaceholder={captchaPlaceholder}
+        showRememberMe={showRememberMe}
+        rememberLabel={rememberLabel}
       />
     );
   } else if (active === "Verification code") {
@@ -106,6 +138,12 @@ export default function MethodStep({
         onSubmit={onCodeSubmit}
         onBack={onBack}
         error={error}
+        submitLabel={submitLabel}
+        showAgreement={showAgreement}
+        agreementLabel={agreementLabel}
+        agreementRequired={agreementRequired}
+        showCaptcha={showCaptcha}
+        captchaPlaceholder={captchaPlaceholder}
       />
     );
   } else if (active === "WebAuthn") {
@@ -118,6 +156,7 @@ export default function MethodStep({
         onSuccess={onWebAuthnSuccess}
         onBack={onBack}
         error={error}
+        submitLabel={submitLabel}
       />
     );
   } else if (active === "Face ID") {
@@ -130,6 +169,7 @@ export default function MethodStep({
         onSuccess={onFaceSuccess}
         onBack={onBack}
         error={error}
+        submitLabel={submitLabel}
       />
     );
   }

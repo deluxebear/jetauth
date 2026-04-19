@@ -16,6 +16,8 @@ interface FaceFormProps {
   onSuccess: () => void;
   onBack?: () => void;
   error?: string;
+  /** Admin override label for the primary submit button. */
+  submitLabel?: string;
 }
 
 type State = "init" | "live" | "processing" | "cameraDenied" | "noFace" | "failed";
@@ -44,6 +46,7 @@ export default function FaceForm({
   onSuccess,
   onBack,
   error: externalError,
+  submitLabel,
 }: FaceFormProps) {
   const { t } = useTranslation();
   const [state, setState] = useState<State>("init");
@@ -231,6 +234,7 @@ export default function FaceForm({
             type="button"
             onClick={handleCapture}
             disabled={state === "processing"}
+            data-signinitem="login-button"
             className="w-full flex items-center justify-center gap-2 rounded-lg bg-accent py-2.5 text-[14px] font-semibold text-white hover:bg-accent-hover disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
           >
             {state === "processing" ? (
@@ -241,7 +245,7 @@ export default function FaceForm({
             ) : (
               <>
                 <Camera size={16} />
-                {t("auth.face.button")}
+                {submitLabel && submitLabel.length > 0 ? submitLabel : t("auth.face.button")}
               </>
             )}
           </button>

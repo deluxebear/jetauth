@@ -86,11 +86,13 @@ export default function SigninPage({ application, providers }: SigninPageProps) 
     return false;
   };
 
-  const handlePasswordSubmit = async (password: string) => {
+  const handlePasswordSubmit = async (password: string, extras?: { autoSignin?: boolean }) => {
     setError("");
     // Construct the same AuthForm shape the legacy Login.tsx used — the
-    // /api/login handler accepts it unchanged.
-    const body = {
+    // /api/login handler accepts it unchanged. `autoSignin` is forwarded
+    // when the admin has enabled the "Auto sign in" (Remember me) widget;
+    // the backend currently ignores unknown fields so this is safe.
+    const body: Record<string, unknown> = {
       application: application.name,
       organization: orgName,
       username: identifier,
@@ -101,6 +103,9 @@ export default function SigninPage({ application, providers }: SigninPageProps) 
       redirectUri: searchParams.get("redirect_uri") ?? "",
       state: searchParams.get("state") ?? "",
     };
+    if (extras?.autoSignin) {
+      body.autoSignin = true;
+    }
     try {
       const res = await api.post<{ status: string; msg?: string; data?: string }>(
         "/api/login",
@@ -158,8 +163,8 @@ export default function SigninPage({ application, providers }: SigninPageProps) 
       ? application.organizationObj.logoDark
       : application.organizationObj?.logo ?? application.logo;
   const orgDisplay =
-    application.organizationObj?.displayName ??
-    application.displayName ??
+    application.displayName ||
+    application.organizationObj?.displayName ||
     application.name;
 
   return (
@@ -176,6 +181,7 @@ export default function SigninPage({ application, providers }: SigninPageProps) 
               displayName={orgDisplay}
               title={application.title}
               theme={theme}
+              hideLogo={!signinItemVis.isVisible("Logo")}
             />
           </div>
 
@@ -240,6 +246,19 @@ export default function SigninPage({ application, providers }: SigninPageProps) 
                   onBack={signinItemVis.isVisible("Back button") ? handleBack : undefined}
                   orderedMethodNames={signinMethodOrder}
                   error={error}
+                  showForgot={signinItemVis.isVisible("Forgot password?")}
+                  forgotLabel={signinItemVis.labelOf("Forgot password?")}
+                  submitLabel={signinItemVis.labelOf("Login button")}
+                  // Default-off widgets: only render when the admin has
+                  // explicitly added the item to signinItems. This prevents
+                  // a fresh "I agree" checkbox from surprising existing apps.
+                  showAgreement={signinItemVis.isListed("Agreement") && signinItemVis.isVisible("Agreement")}
+                  agreementLabel={signinItemVis.labelOf("Agreement")}
+                  agreementRequired={signinItemVis.requiredOf("Agreement") ?? true}
+                  showCaptcha={signinItemVis.isListed("Captcha") && signinItemVis.isVisible("Captcha")}
+                  captchaPlaceholder={signinItemVis.placeholderOf("Captcha")}
+                  showRememberMe={signinItemVis.isListed("Auto sign in") && signinItemVis.isVisible("Auto sign in")}
+                  rememberLabel={signinItemVis.labelOf("Auto sign in")}
                 />
 
                 <CustomTextItems items={signinItemVis.customItems} />

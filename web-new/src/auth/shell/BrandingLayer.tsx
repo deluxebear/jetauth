@@ -10,6 +10,12 @@ interface BrandingLayerProps {
   theme?: "light" | "dark";
   /** Size variant; default = "header" (~36px). "hero" = larger for hero banners. */
   size?: "header" | "hero";
+  /**
+   * When true, skip rendering the logo <img>. The displayName heading still
+   * renders as a text-only header. Gated by signinItems[name="Logo"].visible
+   * from the calling page.
+   */
+  hideLogo?: boolean;
 }
 
 /**
@@ -25,6 +31,7 @@ export default function BrandingLayer({
   title,
   theme = "light",
   size = "header",
+  hideLogo = false,
 }: BrandingLayerProps) {
   useEffect(() => {
     const originalTitle = document.title;
@@ -54,7 +61,7 @@ export default function BrandingLayer({
   const resolvedLogo = theme === "dark" && logoDark ? logoDark : logo;
   const heightClass = size === "hero" ? "h-16 max-w-[360px]" : "h-9 max-w-[200px]";
 
-  if (resolvedLogo) {
+  if (resolvedLogo && !hideLogo) {
     return (
       <div className="flex items-center gap-3">
         <img

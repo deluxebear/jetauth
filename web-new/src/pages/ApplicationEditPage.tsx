@@ -3,6 +3,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Trash2, Copy, LogOut, Plus, Settings, KeyRound, Lock, FileKey2, Puzzle, Palette, ShieldCheck, Network, LogIn, UserPlus, LayoutGrid, Eye, X, Sparkles } from "lucide-react";
+import HelpTooltip from "../components/HelpTooltip";
 import StickyEditHeader from "../components/StickyEditHeader";
 import { FormField, FormSection, Switch, inputClass, monoInputClass } from "../components/FormSection";
 import { useTranslation } from "../i18n";
@@ -89,15 +90,12 @@ const SIGNIN_METHOD_OPTIONS = [
   { name: "Password", displayName: "Password", rule: "All" },
   { name: "Verification code", displayName: "Verification code", rule: "All" },
   { name: "WebAuthn", displayName: "WebAuthn", rule: "None" },
-  { name: "LDAP", displayName: "LDAP", rule: "None" },
   { name: "Face ID", displayName: "Face ID", rule: "None" },
-  { name: "WeChat", displayName: "WeChat", rule: "Tab" },
 ];
 
 const SIGNIN_METHOD_RULES: Record<string, { value: string; label: string }[]> = {
   "Password": [{ value: "All", label: "All" }, { value: "Non-LDAP", label: "Non-LDAP" }, { value: "Hide password", label: "Hide password" }],
   "Verification code": [{ value: "All", label: "All" }, { value: "Email only", label: "Email only" }, { value: "Phone only", label: "Phone only" }],
-  "WeChat": [{ value: "Tab", label: "Tab" }, { value: "Login page", label: "Login page" }],
 };
 
 const SIGNUP_ITEM_NAMES = [
@@ -121,6 +119,24 @@ const SIGNIN_ITEM_NAMES = [
   "Verification code", "Providers", "Agreement", "Forgot password?", "Login button",
   "Signup link", "Captcha", "Auto sign in", "Select organization",
 ];
+
+const SIGNIN_ITEM_I18N: Record<string, { label: string; desc: string }> = {
+  "Signin methods":      { label: "apps.signinItem.signinMethods.label",     desc: "apps.signinItem.signinMethods.desc" },
+  "Logo":                { label: "apps.signinItem.logo.label",              desc: "apps.signinItem.logo.desc" },
+  "Back button":         { label: "apps.signinItem.backButton.label",        desc: "apps.signinItem.backButton.desc" },
+  "Languages":           { label: "apps.signinItem.languages.label",         desc: "apps.signinItem.languages.desc" },
+  "Username":            { label: "apps.signinItem.username.label",          desc: "apps.signinItem.username.desc" },
+  "Password":            { label: "apps.signinItem.password.label",          desc: "apps.signinItem.password.desc" },
+  "Verification code":   { label: "apps.signinItem.verificationCode.label",  desc: "apps.signinItem.verificationCode.desc" },
+  "Providers":           { label: "apps.signinItem.providers.label",         desc: "apps.signinItem.providers.desc" },
+  "Agreement":           { label: "apps.signinItem.agreement.label",         desc: "apps.signinItem.agreement.desc" },
+  "Forgot password?":    { label: "apps.signinItem.forgotPassword.label",    desc: "apps.signinItem.forgotPassword.desc" },
+  "Login button":        { label: "apps.signinItem.loginButton.label",       desc: "apps.signinItem.loginButton.desc" },
+  "Signup link":         { label: "apps.signinItem.signupLink.label",        desc: "apps.signinItem.signupLink.desc" },
+  "Captcha":             { label: "apps.signinItem.captcha.label",           desc: "apps.signinItem.captcha.desc" },
+  "Auto sign in":        { label: "apps.signinItem.autoSignIn.label",        desc: "apps.signinItem.autoSignIn.desc" },
+  "Select organization": { label: "apps.signinItem.selectOrganization.label", desc: "apps.signinItem.selectOrganization.desc" },
+};
 
 export default function ApplicationEditPage() {
   const { owner: orgName, name } = useParams<{ owner: string; name: string }>();
@@ -355,7 +371,7 @@ export default function ApplicationEditPage() {
 
   const UI_SECTION_FIELDS: Record<string, string[]> = {
     branding: ["displayName", "logo", "favicon", "title", "themeData"],
-    signin: ["orgChoiceMode", "signinMethods", "signinItems", "signinHtml"],
+    signin: ["orgChoiceMode", "signinMethodMode", "signinMethods", "signinItems", "signinHtml"],
     signup: ["signupItems", "signupHtml"],
     layout: ["formOffset", "formSideHtml", "formBackgroundUrl", "formBackgroundUrlMobile", "formCss", "formCssMobile", "headerHtml", "footerHtml"],
   };
@@ -1001,11 +1017,10 @@ export default function ApplicationEditPage() {
             options={available.map((m: any) => ({ value: m.name, label: m.name }))}
             onChange={(v) => {
               const def = SIGNIN_METHOD_OPTIONS.find((m) => m.name === v);
-              onChange("name", v);
-              if (def) {
-                onChange("displayName", def.displayName);
-                onChange("rule", def.rule);
-              }
+              onChange({
+                name: v,
+                ...(def ? { displayName: def.displayName, rule: def.rule } : {}),
+              });
             }}
           />
         );
@@ -1026,19 +1041,26 @@ export default function ApplicationEditPage() {
 
   const signinItemColumns: EditableColumn<Record<string, unknown>>[] = [
     {
-      key: "name", title: t("col.name" as any), width: "20%",
+      key: "name", title: t("col.name" as any), width: "22%",
       render: (row, _i, onChange) => {
         if (row.isCustom) {
           return <input value={String(row.name ?? "")} disabled className={`${inputClass} !py-1 !text-[12px] opacity-60`} />;
         }
         const usedNames = ((app.signinItems as any[]) ?? []).filter((it: any) => !it.isCustom && it.name !== row.name).map((it: any) => it.name);
         const available = SIGNIN_ITEM_NAMES.filter((n) => !usedNames.includes(n));
+        const i18nMeta = SIGNIN_ITEM_I18N[String(row.name)];
+        const tooltip = i18nMeta ? t(i18nMeta.desc as any) : undefined;
         return (
-          <SimpleSelect
-            value={String(row.name ?? "")}
-            options={available.map((n) => ({ value: n, label: n }))}
-            onChange={(v) => onChange("name", v)}
-          />
+          <div className="flex items-center gap-1.5 min-w-0">
+            <div className="flex-1 min-w-0">
+              <SimpleSelect
+                value={String(row.name ?? "")}
+                options={available.map((n) => ({ value: n, label: SIGNIN_ITEM_I18N[n] ? t(SIGNIN_ITEM_I18N[n].label as any) : n }))}
+                onChange={(v) => onChange("name", v)}
+              />
+            </div>
+            {tooltip && <HelpTooltip content={tooltip} className="shrink-0" />}
+          </div>
         );
       },
     },
@@ -1164,6 +1186,19 @@ export default function ApplicationEditPage() {
             <div className="grid grid-cols-2 gap-x-6 gap-y-4">
               <FormField label={t("apps.field.orgChoiceMode" as any)}>
                 <SimpleSelect value={String(app.orgChoiceMode ?? "None")} options={[{ value: "None", label: "None" }, { value: "Select", label: "Select" }, { value: "Input", label: "Input" }]} onChange={(v) => set("orgChoiceMode", v)} />
+              </FormField>
+              <FormField
+                label={t("apps.field.signinMethodMode" as any)}
+                tooltip={t("apps.field.signinMethodMode.desc" as any)}
+              >
+                <SimpleSelect
+                  value={String(app.signinMethodMode ?? "default")}
+                  options={[
+                    { value: "default", label: t("apps.signinMethodMode.default" as any) },
+                    { value: "classic", label: t("apps.signinMethodMode.classic" as any) },
+                  ]}
+                  onChange={(v) => set("signinMethodMode", v)}
+                />
               </FormField>
               <div className="col-span-2">
                 <EditableTable

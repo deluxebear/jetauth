@@ -63,6 +63,11 @@ export interface SigninItem {
   placeholder: string;
   rule: string;
   isCustom: boolean;
+  /**
+   * Required flag. Only meaningful for Agreement (must-check-before-submit).
+   * Optional for backward compat with stored rows that pre-date the field.
+   */
+  required?: boolean;
 }
 
 export interface AuthApplication {

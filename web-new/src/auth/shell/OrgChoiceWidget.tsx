@@ -41,7 +41,11 @@ export default function OrgChoiceWidget({ mode, currentOrg }: OrgChoiceWidgetPro
   }, []);
 
   if (!mode || mode === "None") return null;
-  if (currentOrg && currentOrg !== "built-in") return null; // URL already has org
+  const isPreview =
+    typeof window !== "undefined" &&
+    (new URLSearchParams(window.location.search).has("preview") ||
+      new URLSearchParams(window.location.search).has("asGuest"));
+  if (!isPreview && currentOrg && currentOrg !== "built-in") return null; // URL already has org
 
   const commit = (org: string) => {
     const trimmed = org.trim();

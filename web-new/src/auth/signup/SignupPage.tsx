@@ -8,6 +8,7 @@ import TopBar from "../shell/TopBar";
 import SafeHtml from "../shell/SafeHtml";
 import DynamicField from "./DynamicField";
 import { buildSignupSchema, type FieldSchema } from "./useSignupSchema";
+import { useSigninItemVisibility } from "../items/useSigninItemVisibility";
 import type { AuthApplication } from "../api/types";
 
 interface SignupPageProps {
@@ -34,11 +35,16 @@ export default function SignupPage({ application }: SignupPageProps) {
   const [submitting, setSubmitting] = useState(false);
   const [globalError, setGlobalError] = useState("");
 
+  // Logo visibility on signup page follows the same signinItems config
+  // ("Logo" row). Keeping a single source of truth simplifies admin UX —
+  // there's no separate signupItem for Logo.
+  const signinItemVis = useSigninItemVisibility(application.signinItems);
+
   const orgName =
     application.organizationObj?.name ?? application.organization ?? "built-in";
   const orgDisplay =
-    application.organizationObj?.displayName ??
-    application.displayName ??
+    application.displayName ||
+    application.organizationObj?.displayName ||
     application.name;
   const orgLogo =
     theme === "dark" && application.organizationObj?.logoDark
@@ -167,6 +173,7 @@ export default function SignupPage({ application }: SignupPageProps) {
               displayName={orgDisplay}
               title={application.title}
               theme={theme}
+              hideLogo={!signinItemVis.isVisible("Logo")}
             />
           </div>
 

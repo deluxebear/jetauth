@@ -118,7 +118,7 @@ function AuthShellInner({ lookup, mode }: { lookup: AuthLookup; mode: Mode }) {
       if (!overrides) return;
       setApp((prev) => {
         if (!prev) return prev;
-        return {
+        const merged = {
           ...prev,
           ...overrides,
           organizationObj:
@@ -129,6 +129,16 @@ function AuthShellInner({ lookup, mode }: { lookup: AuthLookup; mode: Mode }) {
                   ...overrides.organizationObj,
                 },
         } as AuthApplication;
+        // Keep document.title in sync during live preview. BrandingLayer
+        // also sets it on mount, but preview overrides arrive after mount
+        // and the useEffect dep on `title` only fires when the component
+        // re-renders — setApp triggers that re-render, but we also patch
+        // here so preview mode reliably reflects admin edits to title/displayName.
+        if (typeof document !== "undefined") {
+          const nextTitle = merged.title || merged.displayName;
+          if (nextTitle) document.title = nextTitle;
+        }
+        return merged;
       });
 
       // Patch :root CSS vars directly so ThemeProvider's initial injection

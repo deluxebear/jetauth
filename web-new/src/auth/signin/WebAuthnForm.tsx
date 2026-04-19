@@ -12,6 +12,8 @@ interface WebAuthnFormProps {
   onSuccess: () => void;
   onBack?: () => void;
   error?: string;
+  /** Admin override label for the primary submit button. */
+  submitLabel?: string;
 }
 
 /**
@@ -35,6 +37,7 @@ export default function WebAuthnForm({
   onSuccess,
   onBack,
   error: externalError,
+  submitLabel,
 }: WebAuthnFormProps) {
   const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
@@ -113,6 +116,7 @@ export default function WebAuthnForm({
             type="button"
             onClick={handleSignin}
             disabled={loading}
+            data-signinitem="login-button"
             className="group w-full flex items-center justify-center gap-2 rounded-lg bg-accent py-2.5 text-[14px] font-semibold text-white hover:bg-accent-hover disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
           >
             {loading ? (
@@ -123,7 +127,7 @@ export default function WebAuthnForm({
             ) : (
               <>
                 <KeyRound size={16} />
-                {t("auth.webauthn.button")}
+                {submitLabel && submitLabel.length > 0 ? submitLabel : t("auth.webauthn.button")}
               </>
             )}
           </button>

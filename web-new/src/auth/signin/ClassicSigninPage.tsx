@@ -19,6 +19,7 @@ import BrandingLayer from "../shell/BrandingLayer";
 import TopBar from "../shell/TopBar";
 import SafeHtml from "../shell/SafeHtml";
 import ProvidersRow from "./ProvidersRow";
+import { useSigninItemVisibility } from "../items/useSigninItemVisibility";
 import type { AuthApplication, ResolvedProvider } from "../api/types";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
@@ -107,6 +108,9 @@ function PasswordBody({
   onSubmit,
   error,
   forgotHref,
+  showForgot = true,
+  forgotLabel,
+  submitLabel,
 }: {
   username: string;
   setUsername: (v: string) => void;
@@ -115,6 +119,9 @@ function PasswordBody({
   onSubmit: (pw: string) => Promise<void>;
   error: string;
   forgotHref?: string;
+  showForgot?: boolean;
+  forgotLabel?: string;
+  submitLabel?: string;
 }) {
   const { t } = useTranslation();
   const [password, setPassword] = useState("");
@@ -169,25 +176,26 @@ function PasswordBody({
       <button
         type="submit"
         disabled={!username || !password || submitting}
+        data-signinitem="login-button"
         className="group w-full flex items-center justify-center gap-2 rounded-lg bg-accent py-2.5 text-[14px] font-semibold text-white hover:bg-accent-hover disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
       >
         {submitting ? (
           <div className="h-4 w-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
         ) : (
           <>
-            {t("auth.password.submitButton")}
+            {submitLabel && submitLabel.length > 0 ? submitLabel : t("auth.password.submitButton")}
             <ArrowRight size={16} className="transition-transform group-hover:translate-x-0.5" />
           </>
         )}
       </button>
 
-      {forgotHref && (
-        <div className="text-center">
+      {showForgot && forgotHref && (
+        <div className="text-center" data-signinitem="forgot-password?">
           <a
             href={forgotHref}
             className="text-[12px] text-accent hover:underline"
           >
-            {t("auth.password.forgotLink")}
+            {forgotLabel && forgotLabel.length > 0 ? forgotLabel : t("auth.password.forgotLink")}
           </a>
         </div>
       )}
@@ -623,6 +631,8 @@ export default function ClassicSigninPage({ application, providers }: Props) {
   const orgName =
     application.organizationObj?.name ?? application.organization ?? "built-in";
 
+  const signinItemVis = useSigninItemVisibility(application.signinItems);
+
   // Known tab handlers in this file. Methods outside this set are skipped
   // (e.g. LDAP / WeChat are handled elsewhere in classic mode).
   const SUPPORTED_CLASSIC_TABS: readonly ClassicTab[] = [
@@ -669,8 +679,8 @@ export default function ClassicSigninPage({ application, providers }: Props) {
       ? application.organizationObj.logoDark
       : application.organizationObj?.logo ?? application.logo;
   const orgDisplay =
-    application.organizationObj?.displayName ??
-    application.displayName ??
+    application.displayName ||
+    application.organizationObj?.displayName ||
     application.name;
 
   // ── Submit handlers ─────────────────────────────────────────────────────
@@ -734,6 +744,7 @@ export default function ClassicSigninPage({ application, providers }: Props) {
               displayName={orgDisplay}
               title={application.title}
               theme={theme}
+              hideLogo={!signinItemVis.isVisible("Logo")}
             />
           </div>
 
@@ -784,6 +795,9 @@ export default function ClassicSigninPage({ application, providers }: Props) {
               onSubmit={handlePasswordSubmit}
               error={error}
               forgotHref={`/forget/${application.name}`}
+              showForgot={signinItemVis.isVisible("Forgot password?")}
+              forgotLabel={signinItemVis.labelOf("Forgot password?")}
+              submitLabel={signinItemVis.labelOf("Login button")}
             />
           )}
 
