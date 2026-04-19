@@ -205,11 +205,15 @@ export default function ApplicationEditPage() {
       }
       // templateOptions merge: preserve keys the manifest doesn't set so
       // an admin's prior tweaks (say, a custom hero headline) survive a
-      // manifest refresh that only adjusts colours.
-      if (cfg.templateOptions) {
+      // manifest refresh that only adjusts colours. The _manifest tombstone
+      // (id + version) always gets rewritten — it records which store
+      // entry the app came from so the gallery can surface "current" +
+      // "update available" badges on return visits.
+      if (cfg.templateOptions || cfg.template) {
         next.templateOptions = {
           ...((prev.templateOptions as Record<string, unknown>) ?? {}),
-          ...cfg.templateOptions,
+          ...(cfg.templateOptions ?? {}),
+          _manifest: { id: tmpl.id, version: tmpl.version },
         };
       }
       // Merge themeData (preserve keys the template doesn't touch).
@@ -1802,6 +1806,18 @@ export default function ApplicationEditPage() {
         open={templateGalleryOpen}
         onClose={() => setTemplateGalleryOpen(false)}
         onApply={applyTemplate}
+        currentManifest={
+          (() => {
+            const m = (app.templateOptions as Record<string, unknown> | undefined)?._manifest;
+            if (m && typeof m === "object") {
+              const obj = m as Record<string, unknown>;
+              if (typeof obj.id === "string" && typeof obj.version === "string") {
+                return { id: obj.id, version: obj.version };
+              }
+            }
+            return undefined;
+          })()
+        }
       />
       <TemplatePreviewModal
         open={templatePreviewId !== null}

@@ -130,24 +130,36 @@ const TEMPLATE_SIGNATURES: Array<{
   },
 ];
 
-test.describe("Template matrix", () => {
-  for (const { id, label, signature, options } of TEMPLATE_SIGNATURES) {
-    test(`${label} (${id}) renders its signature element`, async ({ page }) => {
-      await page.goto(`${APP_URL}?preview=1&asGuest=1`);
-      await page.waitForLoadState("networkidle");
-      await page.evaluate(
-        ({ tpl, opts }) => {
-          window.postMessage(
-            {
-              type: "jetauth.preview.config",
-              payload: { template: tpl, templateOptions: opts ?? {} },
-            },
-            window.location.origin,
-          );
-        },
-        { tpl: id, opts: options },
-      );
-      await expect(page.locator(signature).first()).toBeVisible({ timeout: 10_000 });
-    });
+/**
+ * Variants the app serves. Each template should render its signature on
+ * all three so a regression in one page type gets caught.
+ */
+const VARIANTS = [
+  { name: "signin", path: `/login/built-in/app-built-in` },
+  { name: "signup", path: `/signup/app-built-in` },
+  { name: "forget", path: `/forget/app-built-in` },
+] as const;
+
+test.describe("Template matrix (signin / signup / forget)", () => {
+  for (const variant of VARIANTS) {
+    for (const { id, label, signature, options } of TEMPLATE_SIGNATURES) {
+      test(`${variant.name} · ${label} (${id}) renders its signature`, async ({ page }) => {
+        await page.goto(`${variant.path}?preview=1&asGuest=1`);
+        await page.waitForLoadState("networkidle");
+        await page.evaluate(
+          ({ tpl, opts }) => {
+            window.postMessage(
+              {
+                type: "jetauth.preview.config",
+                payload: { template: tpl, templateOptions: opts ?? {} },
+              },
+              window.location.origin,
+            );
+          },
+          { tpl: id, opts: options },
+        );
+        await expect(page.locator(signature).first()).toBeVisible({ timeout: 10_000 });
+      });
+    }
   }
 });

@@ -26,6 +26,13 @@
 
 export interface AuthTemplate {
   id: string;
+  /**
+   * Semver for this manifest. Bumped whenever the `config` block changes
+   * substantially — the gallery diffs this against the version stamped
+   * on applied apps (stored in templateOptions._manifest) and shows an
+   * "Update available" pip when they drift.
+   */
+  version: string;
   name: string;
   description: string;
   /** Small inline SVG string — rendered as dangerouslySetInnerHTML in the gallery card. */
@@ -370,6 +377,7 @@ export const AUTH_TEMPLATES: AuthTemplate[] = [
   // matching outer layout — Split Hero, Full-bleed, Sidebar Brand.
   {
     id: "prism-split",
+    version: "1.0.0",
     name: "Prism split",
     description:
       "Vibrant purple→pink hero panel on the left, form on the right. Creative-tool vibe.",
@@ -400,6 +408,7 @@ export const AUTH_TEMPLATES: AuthTemplate[] = [
   },
   {
     id: "aurora-glass",
+    version: "1.0.0",
     name: "Aurora glass",
     description:
       "Full-bleed aurora gradient behind a glass form card. High drama for consumer brands.",
@@ -424,6 +433,7 @@ export const AUTH_TEMPLATES: AuthTemplate[] = [
   },
   {
     id: "atrium-enterprise",
+    version: "1.0.0",
     name: "Atrium enterprise",
     description:
       "Left rail with feature list + warm amber accent. Enterprise portal with a human touch.",
@@ -456,6 +466,7 @@ export const AUTH_TEMPLATES: AuthTemplate[] = [
   // and the visual intent still works.
   {
     id: "default-centered",
+    version: "1.0.0",
     name: "Default centered",
     description: "Clean, centered login card on a neutral background. A safe baseline for any product.",
     preview: PREVIEW_DEFAULT_CENTERED,
@@ -478,6 +489,7 @@ export const AUTH_TEMPLATES: AuthTemplate[] = [
   },
   {
     id: "neon-split",
+    version: "1.0.0",
     name: "Neon split",
     description: "Dark hero panel with a pulsing neon accent. Pairs well with developer-tool vibes.",
     preview: PREVIEW_NEON_SPLIT,
@@ -495,6 +507,7 @@ export const AUTH_TEMPLATES: AuthTemplate[] = [
   },
   {
     id: "product-showcase",
+    version: "1.0.0",
     name: "Product showcase",
     description: "Mock product UI on a bold dark panel — great for showing off what users are signing into.",
     preview: PREVIEW_PRODUCT_SHOWCASE,
@@ -511,6 +524,7 @@ export const AUTH_TEMPLATES: AuthTemplate[] = [
   },
   {
     id: "testimonial-aside",
+    version: "1.0.0",
     name: "Testimonial aside",
     description: "Glassy testimonial card on a dotted dark canvas. Social proof built in.",
     preview: PREVIEW_TESTIMONIAL_ASIDE,
@@ -526,6 +540,7 @@ export const AUTH_TEMPLATES: AuthTemplate[] = [
   },
   {
     id: "product-split",
+    version: "1.0.0",
     name: "Product split",
     description: "Bright, airy feature panel with a prominent stat — Apollo-style balanced split.",
     preview: PREVIEW_PRODUCT_SPLIT,
@@ -542,6 +557,7 @@ export const AUTH_TEMPLATES: AuthTemplate[] = [
   },
   {
     id: "centered-illustrated",
+    version: "1.0.0",
     name: "Centered illustrated",
     description: "Centered card softly framed by gradient blobs — Atlassian-style friendliness.",
     preview: PREVIEW_CENTERED_ILLUSTRATED,

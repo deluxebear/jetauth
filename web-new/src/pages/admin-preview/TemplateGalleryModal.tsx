@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { X, Sparkles, LayoutTemplate } from "lucide-react";
+import { X, Sparkles, LayoutTemplate, Check, ArrowUpCircle } from "lucide-react";
 import { useTranslation } from "../../i18n";
 import { AUTH_TEMPLATES, type AuthTemplate } from "./templates";
 import { templates as LAYOUT_TEMPLATES } from "../../auth/templates";
@@ -8,6 +8,13 @@ interface Props {
   open: boolean;
   onClose: () => void;
   onApply: (t: AuthTemplate) => void;
+  /**
+   * Tombstone stamped on the app at last apply (templateOptions._manifest).
+   * When set, the matching card renders a "Currently applied" badge; if
+   * the version in the catalog has moved on, the Apply button becomes
+   * "Update to v{new}" instead.
+   */
+  currentManifest?: { id: string; version: string };
 }
 
 /**
@@ -19,7 +26,7 @@ interface Props {
  * - "Apply" on a card delegates to the parent; the parent performs the
  *   config merge and closes.
  */
-export default function TemplateGalleryModal({ open, onClose, onApply }: Props) {
+export default function TemplateGalleryModal({ open, onClose, onApply, currentManifest }: Props) {
   const { t } = useTranslation();
 
   useEffect(() => {
@@ -68,14 +75,26 @@ export default function TemplateGalleryModal({ open, onClose, onApply }: Props) 
 
         <div className="flex-1 overflow-auto p-6 bg-surface-1">
           <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
-            {AUTH_TEMPLATES.map((tmpl) => (
-              <TemplateCard
-                key={tmpl.id}
-                template={tmpl}
-                applyLabel={t("apps.template.apply" as any)}
-                onApply={() => onApply(tmpl)}
-              />
-            ))}
+            {AUTH_TEMPLATES.map((tmpl) => {
+              const isCurrent = currentManifest?.id === tmpl.id;
+              const hasUpdate = isCurrent && currentManifest?.version !== tmpl.version;
+              const applyLabel = hasUpdate
+                ? `${t("apps.template.update" as never)} → v${tmpl.version}`
+                : isCurrent
+                ? t("apps.template.reapply" as never)
+                : t("apps.template.apply" as never);
+              return (
+                <TemplateCard
+                  key={tmpl.id}
+                  template={tmpl}
+                  applyLabel={applyLabel}
+                  onApply={() => onApply(tmpl)}
+                  isCurrent={isCurrent}
+                  hasUpdate={hasUpdate}
+                  currentBadgeLabel={t("apps.template.current" as never)}
+                />
+              );
+            })}
           </div>
         </div>
       </div>
@@ -87,14 +106,29 @@ interface CardProps {
   template: AuthTemplate;
   applyLabel: string;
   onApply: () => void;
+  isCurrent: boolean;
+  hasUpdate: boolean;
+  currentBadgeLabel: string;
 }
 
-function TemplateCard({ template, applyLabel, onApply }: CardProps) {
+function TemplateCard({
+  template,
+  applyLabel,
+  onApply,
+  isCurrent,
+  hasUpdate,
+  currentBadgeLabel,
+}: CardProps) {
   const layoutId = template.config.template;
   const layoutMeta = layoutId ? LAYOUT_TEMPLATES[layoutId]?.meta : undefined;
   return (
     <div
-      className="flex flex-col rounded-xl border border-border bg-surface-0 overflow-hidden hover:border-accent/60 hover:shadow-[var(--shadow-card)] transition-all"
+      className={[
+        "flex flex-col rounded-xl border bg-surface-0 overflow-hidden transition-all",
+        isCurrent
+          ? "border-accent ring-2 ring-accent/30"
+          : "border-border hover:border-accent/60 hover:shadow-[var(--shadow-card)]",
+      ].join(" ")}
       data-testid={`template-card-${template.id}`}
     >
       <div className="relative">
@@ -114,19 +148,41 @@ function TemplateCard({ template, applyLabel, onApply }: CardProps) {
             {layoutMeta.name.en}
           </span>
         )}
+        {isCurrent && (
+          <span
+            className="absolute top-2 right-2 inline-flex items-center gap-1 rounded-full bg-accent px-2 py-0.5 text-[10px] font-semibold text-white shadow-sm"
+            data-testid={`template-current-${template.id}`}
+          >
+            <Check size={10} />
+            {currentBadgeLabel}
+          </span>
+        )}
       </div>
       <div className="flex-1 flex flex-col gap-3 p-4">
         <div>
-          <h4 className="text-[14px] font-semibold text-text-primary">{template.name}</h4>
+          <h4 className="text-[14px] font-semibold text-text-primary">
+            {template.name}
+            <span className="ml-2 text-[11px] font-mono text-text-muted">
+              v{template.version}
+            </span>
+          </h4>
           <p className="mt-1 text-[12px] leading-relaxed text-text-muted">{template.description}</p>
         </div>
         <div className="mt-auto pt-1">
           <button
             type="button"
             onClick={onApply}
-            className="w-full rounded-lg bg-accent px-3 py-1.5 text-[13px] font-semibold text-white hover:bg-accent-hover transition-colors"
+            className={[
+              "w-full inline-flex items-center justify-center gap-1.5 rounded-lg px-3 py-1.5 text-[13px] font-semibold transition-colors",
+              hasUpdate
+                ? "bg-warning text-white hover:opacity-90"
+                : isCurrent
+                ? "bg-surface-2 text-text-secondary hover:bg-surface-1 border border-border"
+                : "bg-accent text-white hover:bg-accent-hover",
+            ].join(" ")}
             data-testid={`template-apply-${template.id}`}
           >
+            {hasUpdate && <ArrowUpCircle size={13} />}
             {applyLabel}
           </button>
         </div>
