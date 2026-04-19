@@ -23,3 +23,9 @@ jetauth.db
 *.njsproj
 *.sln
 *.sw?
+
+# Playwright artefacts
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
