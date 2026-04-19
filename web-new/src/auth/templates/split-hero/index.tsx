@@ -6,6 +6,8 @@
 
 /* eslint-disable react-refresh/only-export-components */
 
+import { useTranslation } from "../../../i18n";
+import { pickLang } from "../lang";
 import type { TemplateMeta, TemplateProps } from "../types";
 
 export const meta: TemplateMeta = {
@@ -97,11 +99,12 @@ export default function SplitHeroTemplate({
   options,
   theme,
 }: TemplateProps) {
+  const { locale } = useTranslation();
   const imageUrl = typeof options.heroImageUrl === "string" ? options.heroImageUrl : "";
   const imageUrlDark =
     typeof options.heroImageUrlDark === "string" ? options.heroImageUrlDark : "";
-  const headline = typeof options.heroHeadline === "string" ? options.heroHeadline : "";
-  const subcopy = typeof options.heroSubcopy === "string" ? options.heroSubcopy : "";
+  const headline = pickLang(options.heroHeadline, locale);
+  const subcopy = pickLang(options.heroSubcopy, locale);
   const heroSide: "left" | "right" =
     options.heroSide === "right" ? "right" : "left";
   const overlayOpacity =

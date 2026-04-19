@@ -7,6 +7,7 @@
 import { FormField, inputClass } from "../../components/FormSection";
 import SimpleSelect from "../../components/SimpleSelect";
 import { useTranslation } from "../../i18n";
+import BilingualField from "./BilingualField";
 
 interface Props {
   templateId: string;
@@ -127,22 +128,19 @@ function SplitHeroOptions({
         onChange={(v) => onChange("heroImageUrlDark", v)}
         urlPlaceholder={t("help.placeholder.url")}
       />
-      <FormField label={t("apps.template.splitHero.headline")} span="full">
-        <input
-          type="text"
-          value={String(options.heroHeadline ?? "")}
-          onChange={(e) => onChange("heroHeadline", e.target.value)}
-          className={inputClass}
-        />
-      </FormField>
-      <FormField label={t("apps.template.splitHero.subcopy")} span="full">
-        <textarea
-          rows={2}
-          value={String(options.heroSubcopy ?? "")}
-          onChange={(e) => onChange("heroSubcopy", e.target.value)}
-          className={`${inputClass} resize-y`}
-        />
-      </FormField>
+      <BilingualField
+        label={t("apps.template.splitHero.headline")}
+        value={options.heroHeadline}
+        onChange={(v) => onChange("heroHeadline", v)}
+        span="full"
+      />
+      <BilingualField
+        label={t("apps.template.splitHero.subcopy")}
+        value={options.heroSubcopy}
+        onChange={(v) => onChange("heroSubcopy", v)}
+        rows={2}
+        span="full"
+      />
       <FormField label={t("apps.template.splitHero.side")}>
         <SimpleSelect
           value={String(options.heroSide ?? "left")}
@@ -279,14 +277,12 @@ function SidebarBrandOptions({
           className={`${inputClass} resize-y`}
         />
       </FormField>
-      <FormField label={t("apps.template.sidebar.footer")} span="full">
-        <input
-          type="text"
-          value={String(options.sidebarFooterText ?? "")}
-          onChange={(e) => onChange("sidebarFooterText", e.target.value)}
-          className={inputClass}
-        />
-      </FormField>
+      <BilingualField
+        label={t("apps.template.sidebar.footer")}
+        value={options.sidebarFooterText}
+        onChange={(v) => onChange("sidebarFooterText", v)}
+        span="full"
+      />
     </div>
   );
 }

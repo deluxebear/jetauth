@@ -6,6 +6,8 @@
 
 /* eslint-disable react-refresh/only-export-components */
 
+import { useTranslation } from "../../../i18n";
+import { pickLang } from "../lang";
 import type { TemplateMeta, TemplateProps } from "../types";
 
 const WIDTH_MAP: Record<string, string> = {
@@ -38,6 +40,7 @@ export const meta: TemplateMeta = {
 };
 
 export default function SidebarBrandTemplate({ slots, options }: TemplateProps) {
+  const { locale } = useTranslation();
   const widthClass =
     (typeof options.sidebarWidth === "string" && WIDTH_MAP[options.sidebarWidth]) ||
     WIDTH_MAP.standard;
@@ -49,8 +52,7 @@ export default function SidebarBrandTemplate({ slots, options }: TemplateProps) 
         .filter((f): f is string => typeof f === "string" && f.length > 0)
         .slice(0, 8)
     : [];
-  const footerText =
-    typeof options.sidebarFooterText === "string" ? options.sidebarFooterText : "";
+  const footerText = pickLang(options.sidebarFooterText, locale);
 
   return (
     <div className="min-h-screen flex relative">
