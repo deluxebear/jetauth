@@ -78,12 +78,25 @@ function getStoredOrganization(): Record<string, unknown> | null {
   }
 }
 
-/** Collect all allowed nav keys (group keys + item paths) from the org config.
- *  Returns null when not configured or "all" is in the list (= show everything).
- *  Returns empty Set when configured but nothing selected (= show nothing). */
-function getAllowedKeys(items: unknown): Set<string> | null {
-  if (!Array.isArray(items) || items.includes("all")) {
-    return null; // not configured or explicitly "all"
+/** Collect allowed nav keys from the org's navItems / userNavItems config.
+ *
+ *  `defaultWhenUnset` decides how to interpret null/undefined (i.e. the field
+ *  is missing — xorm JSON-marshals a nil Go slice to `null`, which happens
+ *  whenever the admin never wrote the field). Admin navItems default to "all"
+ *  (show everything, matches OrganizationEditPage which renders a fully-
+ *  checked tree by default). User navItems default to "none" — unconfigured
+ *  means a normal user gets no menu at all, matching the edit page's empty-
+ *  by-default tree. Without this split, an org that never set userNavItems
+ *  would let every normal user see every menu item. */
+function getAllowedKeys(
+  items: unknown,
+  defaultWhenUnset: "all" | "none"
+): Set<string> | null {
+  if (!Array.isArray(items)) {
+    return defaultWhenUnset === "all" ? null : new Set<string>();
+  }
+  if (items.includes("all")) {
+    return null; // explicit "all"
   }
   return new Set(items as string[]);
 }
@@ -263,7 +276,9 @@ export default function Sidebar({ account }: { account?: Account | null }) {
   const sidebarLogo = (theme === "dark" && org?.logoDark) ? org.logoDark : org?.logo;
   const allowedKeys = isGA
     ? null // global admins always see everything
-    : getAllowedKeys(isLA ? org?.navItems : org?.userNavItems);
+    : isLA
+      ? getAllowedKeys(org?.navItems, "all")          // org admin default: all
+      : getAllowedKeys(org?.userNavItems, "none");    // normal user default: none
 
   // Filter nav groups based on user permissions + org nav settings
   const filteredGroups = navGroups

@@ -34,8 +34,8 @@ export default function SignupPage({ application, providers }: SignupPageProps) 
   const [searchParams] = useSearchParams();
 
   const schema = useMemo(
-    () => buildSignupSchema(application.signupItems, 6),
-    [application.signupItems]
+    () => buildSignupSchema(application.signupItems, undefined, t),
+    [application.signupItems, t]
   );
 
   const [values, setValues] = useState<Record<string, unknown>>({});
@@ -237,11 +237,25 @@ export default function SignupPage({ application, providers }: SignupPageProps) 
             </p>
 
             {schema.hasVisibleStepBreak && (
-              <p className="text-[12px] text-text-muted mb-4">
-                {t("auth.signup.stepOf")
-                  .replace("{current}", String(currentStep + 1))
-                  .replace("{total}", String(schema.steps.length))}
-              </p>
+              // Chip + progress rail. The prior `text-text-muted` sentence
+              // disappeared on non-white template backgrounds (glass / full
+              // bleed) because it leaned on surface contrast. This renders
+              // on its own contrast layer via bg-surface-2/border-border.
+              <div className="mb-5 flex items-center gap-3">
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-surface-2 px-2.5 py-1 text-[11px] font-medium text-text-secondary">
+                  {t("auth.signup.stepOf")
+                    .replace("{current}", String(currentStep + 1))
+                    .replace("{total}", String(schema.steps.length))}
+                </span>
+                <div className="flex-1 h-1 rounded-full bg-surface-2 overflow-hidden">
+                  <div
+                    className="h-full bg-accent transition-all duration-300"
+                    style={{
+                      width: `${((currentStep + 1) / schema.steps.length) * 100}%`,
+                    }}
+                  />
+                </div>
+              </div>
             )}
 
             {globalError && (

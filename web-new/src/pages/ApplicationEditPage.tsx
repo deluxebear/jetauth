@@ -149,6 +149,34 @@ const FORGET_ITEM_I18N: Record<string, { label: string; desc: string }> = {
   "Signin link":           { label: "apps.forgetItem.signinLink.label",          desc: "apps.forgetItem.signinLink.desc" },
 };
 
+// Reuses the auth.signup.field.* keys defined in the locale files for the
+// signup page itself — one source of truth across admin + runtime. `desc` is
+// empty for now; ItemFeatureToggles only reads `label`.
+const SIGNUP_ITEM_I18N: Record<string, { label: string; desc: string }> = {
+  "ID":               { label: "auth.signup.field.id",               desc: "" },
+  "Username":         { label: "auth.signup.field.username",         desc: "" },
+  "Display name":     { label: "auth.signup.field.displayName",      desc: "" },
+  "First name":       { label: "auth.signup.field.firstName",        desc: "" },
+  "Last name":        { label: "auth.signup.field.lastName",         desc: "" },
+  "Affiliation":      { label: "auth.signup.field.affiliation",      desc: "" },
+  "Gender":           { label: "auth.signup.field.gender",           desc: "" },
+  "Bio":              { label: "auth.signup.field.bio",              desc: "" },
+  "Tag":              { label: "auth.signup.field.tag",              desc: "" },
+  "Education":        { label: "auth.signup.field.education",        desc: "" },
+  "Country/Region":   { label: "auth.signup.field.countryRegion",    desc: "" },
+  "ID card":          { label: "auth.signup.field.idCard",           desc: "" },
+  "Password":         { label: "auth.signup.field.password",         desc: "" },
+  "Confirm password": { label: "auth.signup.field.confirmPassword",  desc: "" },
+  "Email":            { label: "auth.signup.field.email",            desc: "" },
+  "Phone":            { label: "auth.signup.field.phone",            desc: "" },
+  "Email or Phone":   { label: "auth.signup.field.emailOrPhone",     desc: "" },
+  "Phone or Email":   { label: "auth.signup.field.phoneOrEmail",     desc: "" },
+  "Invitation code":  { label: "auth.signup.field.invitationCode",   desc: "" },
+  "Agreement":        { label: "auth.signup.field.agreement",        desc: "" },
+  "Signup button":    { label: "auth.signup.field.signupButton",     desc: "" },
+  "Providers":        { label: "auth.signup.field.providers",        desc: "" },
+};
+
 const SIGNIN_ITEM_I18N: Record<string, { label: string; desc: string }> = {
   "Signin methods":      { label: "apps.signinItem.signinMethods.label",     desc: "apps.signinItem.signinMethods.desc" },
   "Logo":                { label: "apps.signinItem.logo.label",              desc: "apps.signinItem.logo.desc" },
@@ -1208,7 +1236,16 @@ export default function ApplicationEditPage() {
       render: (row, _i, onChange) => {
         const usedNames = ((app.signupItems as any[]) ?? []).filter((it: any) => it.name !== row.name).map((it: any) => it.name);
         const available = SIGNUP_ITEM_NAMES.filter((n) => !usedNames.includes(n));
-        return <SimpleSelect value={String(row.name ?? "")} options={available.map((n) => ({ value: n, label: n }))} onChange={(v) => onChange("name", v)} />;
+        return (
+          <SimpleSelect
+            value={String(row.name ?? "")}
+            options={available.map((n) => ({
+              value: n,
+              label: SIGNUP_ITEM_I18N[n] ? t(SIGNUP_ITEM_I18N[n].label as never) : n,
+            }))}
+            onChange={(v) => onChange("name", v)}
+          />
+        );
       },
     },
     {
@@ -1585,6 +1622,7 @@ export default function ApplicationEditPage() {
                       items={(app.signupItems as Array<Record<string, unknown>>) ?? []}
                       onChange={(next) => set("signupItems", next)}
                       knownNames={SIGNUP_ITEM_NAMES}
+                      i18n={SIGNUP_ITEM_I18N}
                       iconMap={SIGNUP_ICONS}
                       createRow={(name, visible) => ({
                         name,

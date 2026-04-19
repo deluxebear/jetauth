@@ -68,9 +68,12 @@ function ProvidersFieldInner({
 
   return (
     <div className="space-y-2">
+      {/* Divider text lives inside a surface-2 pill so it stays legible on
+          tinted / glass / gradient template backgrounds — the prior plain
+          muted text disappeared on anything that wasn't pure white. */}
       <div className="my-2 flex items-center gap-3">
         <div className="h-px flex-1 bg-border" />
-        <span className="text-[11px] text-text-muted">
+        <span className="rounded-full bg-surface-2 px-2 py-0.5 text-[11px] font-medium text-text-secondary">
           {t("auth.signup.providers.title")}
         </span>
         <div className="h-px flex-1 bg-border" />
