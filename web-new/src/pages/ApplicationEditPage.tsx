@@ -31,7 +31,8 @@ import type { AuthApplication, SigninItem, SigninItemProvider } from "../auth/ap
 import { templateList, DEFAULT_TEMPLATE_ID } from "../auth/templates";
 import TemplateOptions from "./ApplicationEditPage/TemplateOptions";
 import TemplatePreviewModal from "./ApplicationEditPage/TemplatePreviewModal";
-import SigninFeatureToggles from "./ApplicationEditPage/SigninFeatureToggles";
+import ItemFeatureToggles from "./ApplicationEditPage/ItemFeatureToggles";
+import { SIGNIN_ICONS, SIGNUP_ICONS, FORGET_ICONS } from "./ApplicationEditPage/itemToggleIcons";
 import SigninProvidersSubtable from "./ApplicationEditPage/SigninProvidersSubtable";
 import ColorPicker from "../components/ColorPicker";
 import CollapsibleCard from "../components/CollapsibleCard";
@@ -1406,11 +1407,21 @@ export default function ApplicationEditPage() {
                 <div className="text-[13px] font-semibold text-text-primary mb-2">
                   {t("apps.field.signinItems.toggles" as any)}
                 </div>
-                <SigninFeatureToggles
+                <ItemFeatureToggles<SigninItem>
                   items={(app.signinItems as SigninItem[] | undefined) ?? []}
                   onChange={(next) => set("signinItems", next)}
                   knownNames={SIGNIN_ITEM_NAMES}
                   i18n={SIGNIN_ITEM_I18N}
+                  iconMap={SIGNIN_ICONS}
+                  createRow={(name, visible) => ({
+                    name,
+                    visible,
+                    label: "",
+                    customCss: "",
+                    placeholder: "",
+                    rule: "",
+                    isCustom: false,
+                  })}
                 />
               </div>
               <div className="col-span-2">
@@ -1486,16 +1497,50 @@ export default function ApplicationEditPage() {
           >
             <div className="grid grid-cols-2 gap-x-6 gap-y-4">
               {!!app.enableSignUp && (
-                <div className="col-span-2">
-                  <EditableTable
-                    title={t("apps.field.signupItems" as any)}
-                    columns={signupItemColumns}
-                    rows={(app.signupItems as Record<string, unknown>[]) ?? []}
-                    onChange={(rows) => set("signupItems", rows)}
-                    newRow={() => ({ name: "", visible: true, required: true, options: [], rule: "None", customCss: "" })}
-                    sortable
-                  />
-                </div>
+                <>
+                  <div className="col-span-2">
+                    <div className="text-[13px] font-semibold text-text-primary mb-2">
+                      {t("apps.field.signupItems.toggles" as any)}
+                    </div>
+                    <ItemFeatureToggles
+                      items={(app.signupItems as Array<Record<string, unknown>>) ?? []}
+                      onChange={(next) => set("signupItems", next)}
+                      knownNames={SIGNUP_ITEM_NAMES}
+                      iconMap={SIGNUP_ICONS}
+                      createRow={(name, visible) => ({
+                        name,
+                        visible,
+                        required: true,
+                        prompted: false,
+                        type: "Input",
+                        customCss: "",
+                        label: "",
+                        placeholder: "",
+                        options: [],
+                        regex: "",
+                        rule: "None",
+                      })}
+                    />
+                  </div>
+                  <div className="col-span-2">
+                    <details className="group">
+                      <summary className="cursor-pointer text-[12px] font-medium text-text-muted hover:text-text-secondary select-none flex items-center gap-1">
+                        <span className="inline-block transition-transform group-open:rotate-90">▸</span>
+                        {t("apps.field.signupItems.advanced" as any)}
+                      </summary>
+                      <div className="mt-3">
+                        <EditableTable
+                          title={t("apps.field.signupItems" as any)}
+                          columns={signupItemColumns}
+                          rows={(app.signupItems as Record<string, unknown>[]) ?? []}
+                          onChange={(rows) => set("signupItems", rows)}
+                          newRow={() => ({ name: "", visible: true, required: true, options: [], rule: "None", customCss: "" })}
+                          sortable
+                        />
+                      </div>
+                    </details>
+                  </div>
+                </>
               )}
               <FormField label={t("apps.field.signupHtml" as any)} span="full">
                 <textarea value={String(app.signupHtml ?? "")} onChange={(e) => set("signupHtml", e.target.value)} rows={3} className={`${inputClass} font-mono text-[12px]`} />
@@ -1516,19 +1561,48 @@ export default function ApplicationEditPage() {
           >
             <div className="grid grid-cols-2 gap-x-6 gap-y-4">
               <div className="col-span-2">
-                <EditableTable
-                  title={t("apps.field.forgetItems" as any)}
-                  columns={forgetItemColumns}
-                  rows={(app.forgetItems as Record<string, unknown>[]) ?? []}
-                  onChange={(rows) => set("forgetItems", rows)}
-                  newRow={() => ({ name: "", visible: true, required: true, placeholder: "", customCss: "" })}
-                  onAddCustom={() => {
-                    const items = (app.forgetItems as Record<string, unknown>[]) ?? [];
-                    set("forgetItems", [...items, { name: `Text ${Date.now()}`, visible: true, isCustom: true }]);
-                  }}
-                  addCustomLabel={t("apps.ui.addCustom" as any)}
-                  sortable
+                <div className="text-[13px] font-semibold text-text-primary mb-2">
+                  {t("apps.field.forgetItems.toggles" as any)}
+                </div>
+                <ItemFeatureToggles<SigninItem>
+                  items={(app.forgetItems as SigninItem[] | undefined) ?? []}
+                  onChange={(next) => set("forgetItems", next)}
+                  knownNames={FORGET_ITEM_NAMES}
+                  i18n={FORGET_ITEM_I18N}
+                  iconMap={FORGET_ICONS}
+                  createRow={(name, visible) => ({
+                    name,
+                    visible,
+                    label: "",
+                    customCss: "",
+                    placeholder: "",
+                    rule: "",
+                    isCustom: false,
+                  })}
                 />
+              </div>
+              <div className="col-span-2">
+                <details className="group">
+                  <summary className="cursor-pointer text-[12px] font-medium text-text-muted hover:text-text-secondary select-none flex items-center gap-1">
+                    <span className="inline-block transition-transform group-open:rotate-90">▸</span>
+                    {t("apps.field.forgetItems.advanced" as any)}
+                  </summary>
+                  <div className="mt-3">
+                    <EditableTable
+                      title={t("apps.field.forgetItems" as any)}
+                      columns={forgetItemColumns}
+                      rows={(app.forgetItems as Record<string, unknown>[]) ?? []}
+                      onChange={(rows) => set("forgetItems", rows)}
+                      newRow={() => ({ name: "", visible: true, required: true, placeholder: "", customCss: "" })}
+                      onAddCustom={() => {
+                        const items = (app.forgetItems as Record<string, unknown>[]) ?? [];
+                        set("forgetItems", [...items, { name: `Text ${Date.now()}`, visible: true, isCustom: true }]);
+                      }}
+                      addCustomLabel={t("apps.ui.addCustom" as any)}
+                      sortable
+                    />
+                  </div>
+                </details>
               </div>
               <FormField label={t("apps.field.forgetHtml" as any)} span="full">
                 <textarea value={String(app.forgetHtml ?? "")} onChange={(e) => set("forgetHtml", e.target.value)} rows={3} className={`${inputClass} font-mono text-[12px]`} />
