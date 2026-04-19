@@ -13,6 +13,7 @@ import { resolveSigninMethods } from "../api/resolveSigninMethods";
 import { useSigninItemVisibility } from "../items/useSigninItemVisibility";
 import CustomTextItems from "../items/CustomTextItems";
 import SafeHtml from "../shell/SafeHtml";
+import { resolveTemplate } from "../templates";
 import type {
   AuthApplication,
   ResolvedProvider,
@@ -167,113 +168,118 @@ export default function SigninPage({ application, providers }: SigninPageProps) 
     application.organizationObj?.displayName ||
     application.name;
 
+  const { Component: Template } = resolveTemplate(application.template);
+
   return (
-    <div className="min-h-screen flex relative">
-      <TopBar hideLanguage={!signinItemVis.isVisible("Languages")} />
+    <Template
+      variant="signin"
+      application={application}
+      theme={theme}
+      options={application.templateOptions ?? {}}
+      slots={{
+        topBar: <TopBar hideLanguage={!signinItemVis.isVisible("Languages")} />,
+        branding: (
+          <BrandingLayer
+            logo={orgLogo}
+            logoDark={application.organizationObj?.logoDark}
+            favicon={application.organizationObj?.favicon ?? application.favicon}
+            displayName={orgDisplay}
+            title={application.title}
+            theme={theme}
+            hideLogo={!signinItemVis.isVisible("Logo")}
+          />
+        ),
+        content: (
+          <>
+            <OrgChoiceWidget mode={application.orgChoiceMode} currentOrg={orgName} />
 
-      <div className="w-full flex items-center justify-center p-6 lg:p-12">
-        <div className="w-full max-w-sm">
-          <div className="mb-10">
-            <BrandingLayer
-              logo={orgLogo}
-              logoDark={application.organizationObj?.logoDark}
-              favicon={application.organizationObj?.favicon ?? application.favicon}
-              displayName={orgDisplay}
-              title={application.title}
-              theme={theme}
-              hideLogo={!signinItemVis.isVisible("Logo")}
-            />
-          </div>
+            <h1 className="text-2xl font-bold tracking-tight text-text-primary mb-1">
+              {orgDisplay}
+            </h1>
+            <p className="text-[13px] text-text-muted mb-8">
+              {t("auth.signin.brandingSubtitle")}
+            </p>
 
-          <OrgChoiceWidget mode={application.orgChoiceMode} currentOrg={orgName} />
-
-          <h1 className="text-2xl font-bold tracking-tight text-text-primary mb-1">
-            {orgDisplay}
-          </h1>
-          <p className="text-[13px] text-text-muted mb-8">
-            {t("auth.signin.brandingSubtitle")}
-          </p>
-
-          <div data-cfg-section="signin" data-cfg-field="signinItems">
-            {step === "identifier" && (
-              <>
-                <div data-signinitem="username">
-                  <IdentifierStep
-                    onSubmit={handleIdentifierSubmit}
-                    error={error}
-                    placeholder={signinItemVis.placeholderOf("Username")}
-                  />
-                </div>
-                {signinItemVis.isVisible("Providers") && (
-                  <div data-signinitem="providers">
-                    <ProvidersRow
-                      application={application}
-                      providers={providers}
-                      redirectUri={searchParams.get("redirect_uri") ?? undefined}
-                      state={searchParams.get("state") ?? undefined}
-                      config={
-                        (application.signinItems ?? []).find(
-                          (it) => it.name === "Providers" && !it.isCustom,
-                        )?.providers
-                      }
+            <div data-cfg-section="signin" data-cfg-field="signinItems">
+              {step === "identifier" && (
+                <>
+                  <div data-signinitem="username">
+                    <IdentifierStep
+                      onSubmit={handleIdentifierSubmit}
+                      error={error}
+                      placeholder={signinItemVis.placeholderOf("Username")}
                     />
                   </div>
-                )}
-                <CustomTextItems items={signinItemVis.customItems} />
-                {signinItemVis.isVisible("Signup link") && application.enableSignUp && (
-                  <p
-                    className="mt-6 text-center text-[12px] text-text-muted"
-                    data-signinitem="signup-link"
-                  >
-                    {t("auth.signin.noAccount")}{" — "}
-                    <a href={`/signup/${application.name}`} className="text-accent hover:underline">
-                      {signinItemVis.labelOf("Signup link") ?? t("auth.signin.signupLink")}
-                    </a>
-                  </p>
-                )}
-              </>
-            )}
+                  {signinItemVis.isVisible("Providers") && (
+                    <div data-signinitem="providers">
+                      <ProvidersRow
+                        application={application}
+                        providers={providers}
+                        redirectUri={searchParams.get("redirect_uri") ?? undefined}
+                        state={searchParams.get("state") ?? undefined}
+                        config={
+                          (application.signinItems ?? []).find(
+                            (it) => it.name === "Providers" && !it.isCustom,
+                          )?.providers
+                        }
+                      />
+                    </div>
+                  )}
+                  <CustomTextItems items={signinItemVis.customItems} />
+                  {signinItemVis.isVisible("Signup link") && application.enableSignUp && (
+                    <p
+                      className="mt-6 text-center text-[12px] text-text-muted"
+                      data-signinitem="signup-link"
+                    >
+                      {t("auth.signin.noAccount")}{" — "}
+                      <a href={`/signup/${application.name}`} className="text-accent hover:underline">
+                        {signinItemVis.labelOf("Signup link") ?? t("auth.signin.signupLink")}
+                      </a>
+                    </p>
+                  )}
+                </>
+              )}
 
-            {step === "method" && (
-              <>
-                <MethodStep
-                  identifier={identifier}
-                  userHint={userHint}
-                  application={application.name}
-                  organization={orgName}
-                  methods={methods}
-                  recommended={recommended}
-                  forgotPasswordHref={`/forget/${application.name}`}
-                  onPasswordSubmit={handlePasswordSubmit}
-                  onCodeSubmit={handleCodeSubmit}
-                  onWebAuthnSuccess={reloadHome}
-                  onFaceSuccess={reloadHome}
-                  onBack={signinItemVis.isVisible("Back button") ? handleBack : undefined}
-                  orderedMethodNames={signinMethodOrder}
-                  error={error}
-                  showForgot={signinItemVis.isVisible("Forgot password?")}
-                  forgotLabel={signinItemVis.labelOf("Forgot password?")}
-                  submitLabel={signinItemVis.labelOf("Login button")}
-                  // Default-off widgets: only render when the admin has
-                  // explicitly added the item to signinItems. This prevents
-                  // a fresh "I agree" checkbox from surprising existing apps.
-                  showAgreement={signinItemVis.isListed("Agreement") && signinItemVis.isVisible("Agreement")}
-                  agreementLabel={signinItemVis.labelOf("Agreement")}
-                  agreementRequired={signinItemVis.requiredOf("Agreement") ?? true}
-                  showCaptcha={signinItemVis.isListed("Captcha") && signinItemVis.isVisible("Captcha")}
-                  captchaPlaceholder={signinItemVis.placeholderOf("Captcha")}
-                  showRememberMe={signinItemVis.isListed("Auto sign in") && signinItemVis.isVisible("Auto sign in")}
-                  rememberLabel={signinItemVis.labelOf("Auto sign in")}
-                />
+              {step === "method" && (
+                <>
+                  <MethodStep
+                    identifier={identifier}
+                    userHint={userHint}
+                    application={application.name}
+                    organization={orgName}
+                    methods={methods}
+                    recommended={recommended}
+                    forgotPasswordHref={`/forget/${application.name}`}
+                    onPasswordSubmit={handlePasswordSubmit}
+                    onCodeSubmit={handleCodeSubmit}
+                    onWebAuthnSuccess={reloadHome}
+                    onFaceSuccess={reloadHome}
+                    onBack={signinItemVis.isVisible("Back button") ? handleBack : undefined}
+                    orderedMethodNames={signinMethodOrder}
+                    error={error}
+                    showForgot={signinItemVis.isVisible("Forgot password?")}
+                    forgotLabel={signinItemVis.labelOf("Forgot password?")}
+                    submitLabel={signinItemVis.labelOf("Login button")}
+                    // Default-off widgets: only render when the admin has
+                    // explicitly added the item to signinItems. This prevents
+                    // a fresh "I agree" checkbox from surprising existing apps.
+                    showAgreement={signinItemVis.isListed("Agreement") && signinItemVis.isVisible("Agreement")}
+                    agreementLabel={signinItemVis.labelOf("Agreement")}
+                    agreementRequired={signinItemVis.requiredOf("Agreement") ?? true}
+                    showCaptcha={signinItemVis.isListed("Captcha") && signinItemVis.isVisible("Captcha")}
+                    captchaPlaceholder={signinItemVis.placeholderOf("Captcha")}
+                    showRememberMe={signinItemVis.isListed("Auto sign in") && signinItemVis.isVisible("Auto sign in")}
+                    rememberLabel={signinItemVis.labelOf("Auto sign in")}
+                  />
 
-                <CustomTextItems items={signinItemVis.customItems} />
-              </>
-            )}
-          </div>
-
-          <SafeHtml html={application.signinHtml ?? ""} className="auth-page-html" />
-        </div>
-      </div>
-    </div>
+                  <CustomTextItems items={signinItemVis.customItems} />
+                </>
+              )}
+            </div>
+          </>
+        ),
+        htmlInjection: <SafeHtml html={application.signinHtml ?? ""} className="auth-page-html" />,
+      }}
+    />
   );
 }

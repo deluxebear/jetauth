@@ -22,6 +22,7 @@ import ProvidersRow from "./ProvidersRow";
 import { useSigninItemVisibility } from "../items/useSigninItemVisibility";
 import { MarkdownLinks } from "../items/MarkdownLinks";
 import { useModal } from "../../components/Modal";
+import { resolveTemplate } from "../templates";
 import type { AuthApplication, ResolvedProvider } from "../api/types";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
@@ -741,7 +742,7 @@ export default function ClassicSigninPage({ application, providers }: Props) {
   // order wins — iterate it and include only methods this file knows how to
   // render. When it's empty/null, fall back to legacy default-all behavior
   // driven by boolean flags (backward compat).
-  let availableTabs: ClassicTab[] = [];
+  const availableTabs: ClassicTab[] = [];
   const configuredMethods = application.signinMethods ?? [];
   if (configuredMethods.length > 0) {
     for (const m of configuredMethods) {
@@ -824,34 +825,38 @@ export default function ClassicSigninPage({ application, providers }: Props) {
     (it) => it.name === "Username" && !it.isCustom,
   )?.placeholder;
 
+  const { Component: Template } = resolveTemplate(application.template);
+
   return (
-    <div className="min-h-screen flex relative">
-      <TopBar />
+    <Template
+      variant="signin"
+      application={application}
+      theme={theme}
+      options={application.templateOptions ?? {}}
+      slots={{
+        topBar: <TopBar />,
+        branding: (
+          <BrandingLayer
+            logo={orgLogo}
+            logoDark={application.organizationObj?.logoDark}
+            favicon={application.organizationObj?.favicon ?? application.favicon}
+            displayName={orgDisplay}
+            title={application.title}
+            theme={theme}
+            hideLogo={!signinItemVis.isVisible("Logo")}
+          />
+        ),
+        content: (
+          <>
+            <h1 className="text-2xl font-bold tracking-tight text-text-primary mb-1">
+              {orgDisplay}
+            </h1>
+            <p className="text-[13px] text-text-muted mb-8">
+              {t("auth.signin.brandingSubtitle")}
+            </p>
 
-      <div className="w-full flex items-center justify-center p-6 lg:p-12">
-        <div className="w-full max-w-sm">
-          {/* Branding */}
-          <div className="mb-10">
-            <BrandingLayer
-              logo={orgLogo}
-              logoDark={application.organizationObj?.logoDark}
-              favicon={application.organizationObj?.favicon ?? application.favicon}
-              displayName={orgDisplay}
-              title={application.title}
-              theme={theme}
-              hideLogo={!signinItemVis.isVisible("Logo")}
-            />
-          </div>
-
-          <h1 className="text-2xl font-bold tracking-tight text-text-primary mb-1">
-            {orgDisplay}
-          </h1>
-          <p className="text-[13px] text-text-muted mb-8">
-            {t("auth.signin.brandingSubtitle")}
-          </p>
-
-          {/* Method tabs */}
-          {availableTabs.length > 1 && (
+            {/* Method tabs */}
+            {availableTabs.length > 1 && (
             <div
               role="tablist"
               aria-label="Sign-in method"
@@ -956,21 +961,21 @@ export default function ClassicSigninPage({ application, providers }: Props) {
             />
           </div>
 
-          {signinItemVis.isVisible("Signup link") && application.enableSignUp && (
-            <p
-              className="mt-6 text-center text-[12px] text-text-muted"
-              data-signinitem="signup-link"
-            >
-              {t("auth.signin.noAccount")}{" — "}
-              <a href={`/signup/${application.name}`} className="text-accent hover:underline">
-                {signinItemVis.labelOf("Signup link") ?? t("auth.signin.signupLink")}
-              </a>
-            </p>
-          )}
-
-          <SafeHtml html={application.signinHtml ?? ""} className="auth-page-html" />
-        </div>
-      </div>
-    </div>
+            {signinItemVis.isVisible("Signup link") && application.enableSignUp && (
+              <p
+                className="mt-6 text-center text-[12px] text-text-muted"
+                data-signinitem="signup-link"
+              >
+                {t("auth.signin.noAccount")}{" — "}
+                <a href={`/signup/${application.name}`} className="text-accent hover:underline">
+                  {signinItemVis.labelOf("Signup link") ?? t("auth.signin.signupLink")}
+                </a>
+              </p>
+            )}
+          </>
+        ),
+        htmlInjection: <SafeHtml html={application.signinHtml ?? ""} className="auth-page-html" />,
+      }}
+    />
   );
 }

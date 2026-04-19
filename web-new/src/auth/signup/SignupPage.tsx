@@ -10,6 +10,7 @@ import SafeHtml from "../shell/SafeHtml";
 import DynamicField from "./DynamicField";
 import { buildSignupSchema, type FieldSchema } from "./useSignupSchema";
 import { useSigninItemVisibility } from "../items/useSigninItemVisibility";
+import { resolveTemplate } from "../templates";
 import type { AuthApplication, ResolvedProvider } from "../api/types";
 
 interface SignupPageProps {
@@ -61,7 +62,7 @@ export default function SignupPage({ application, providers }: SignupPageProps) 
 
   const stepFields = schema.steps[currentStep] ?? [];
   const isLastStep = currentStep === schema.steps.length - 1;
-  const termsOfUse = (application as any).termsOfUse as string | undefined;
+  const termsOfUse = application.termsOfUse;
 
   const validateField = (field: FieldSchema, value: unknown): string | null => {
     if (field.required) {
@@ -168,150 +169,154 @@ export default function SignupPage({ application, providers }: SignupPageProps) 
     }
   };
 
+  const { Component: Template } = resolveTemplate(application.template);
+
+  const brandingSlot = (
+    <BrandingLayer
+      logo={orgLogo}
+      logoDark={application.organizationObj?.logoDark}
+      favicon={application.organizationObj?.favicon ?? application.favicon}
+      displayName={orgDisplay}
+      title={application.title}
+      theme={theme}
+      hideLogo={!signinItemVis.isVisible("Logo")}
+    />
+  );
+
   // Hard gate: admins who disable enableSignUp expect no one to register,
   // even via a direct /signup/<app> URL. Without this, the signup form
   // renders and only fails at POST /api/signup — which leaks schema, wastes
   // the user's time, and contradicts the admin toggle.
   if (!application.enableSignUp) {
     return (
-      <div className="min-h-screen flex relative">
-        <TopBar />
-        <div className="w-full flex items-center justify-center p-6 lg:p-12">
-          <div className="w-full max-w-sm text-center">
-            <div className="mb-10">
-              <BrandingLayer
-                logo={orgLogo}
-                logoDark={application.organizationObj?.logoDark}
-                favicon={application.organizationObj?.favicon ?? application.favicon}
-                displayName={orgDisplay}
-                title={application.title}
-                theme={theme}
-                hideLogo={!signinItemVis.isVisible("Logo")}
-              />
+      <Template
+        variant="signup"
+        application={application}
+        theme={theme}
+        options={application.templateOptions ?? {}}
+        slots={{
+          topBar: <TopBar />,
+          branding: brandingSlot,
+          content: (
+            <div className="text-center">
+              <h1 className="text-2xl font-bold tracking-tight text-text-primary mb-2">
+                {t("auth.signup.disabledTitle")}
+              </h1>
+              <p className="text-[13px] text-text-muted mb-6">
+                {t("auth.signup.disabledBody")}
+              </p>
+              <a
+                href={`/login/${orgName}/${application.name}`}
+                className="inline-block rounded-lg bg-accent px-4 py-2 text-[13px] font-semibold text-white hover:bg-accent-hover transition-colors"
+              >
+                {t("auth.signup.backToLogin")}
+              </a>
             </div>
-            <h1 className="text-2xl font-bold tracking-tight text-text-primary mb-2">
-              {t("auth.signup.disabledTitle")}
-            </h1>
-            <p className="text-[13px] text-text-muted mb-6">
-              {t("auth.signup.disabledBody")}
-            </p>
-            <a
-              href={`/login/${orgName}/${application.name}`}
-              className="inline-block rounded-lg bg-accent px-4 py-2 text-[13px] font-semibold text-white hover:bg-accent-hover transition-colors"
-            >
-              {t("auth.signup.backToLogin")}
-            </a>
-          </div>
-        </div>
-      </div>
+          ),
+        }}
+      />
     );
   }
 
   return (
-    <div className="min-h-screen flex relative">
-      <TopBar />
-      <div className="w-full flex items-center justify-center p-6 lg:p-12">
-        <div className="w-full max-w-sm">
-          <div className="mb-10">
-            <BrandingLayer
-              logo={orgLogo}
-              logoDark={application.organizationObj?.logoDark}
-              favicon={application.organizationObj?.favicon ?? application.favicon}
-              displayName={orgDisplay}
-              title={application.title}
-              theme={theme}
-              hideLogo={!signinItemVis.isVisible("Logo")}
-            />
-          </div>
-
-          <h1 className="text-2xl font-bold tracking-tight text-text-primary mb-1">
-            {t("auth.signup.title")}
-          </h1>
-          <p className="text-[13px] text-text-muted mb-6">
-            {t("auth.signup.subtitle")}
-          </p>
-
-          {schema.hasVisibleStepBreak && (
-            <p className="text-[12px] text-text-muted mb-4">
-              {t("auth.signup.stepOf")
-                .replace("{current}", String(currentStep + 1))
-                .replace("{total}", String(schema.steps.length))}
+    <Template
+      variant="signup"
+      application={application}
+      theme={theme}
+      options={application.templateOptions ?? {}}
+      slots={{
+        topBar: <TopBar />,
+        branding: brandingSlot,
+        content: (
+          <>
+            <h1 className="text-2xl font-bold tracking-tight text-text-primary mb-1">
+              {t("auth.signup.title")}
+            </h1>
+            <p className="text-[13px] text-text-muted mb-6">
+              {t("auth.signup.subtitle")}
             </p>
-          )}
 
-          {globalError && (
-            <div className="mb-4 rounded-lg border border-danger/30 bg-danger/10 px-4 py-2.5 text-[13px] text-danger">
-              {globalError}
-            </div>
-          )}
+            {schema.hasVisibleStepBreak && (
+              <p className="text-[12px] text-text-muted mb-4">
+                {t("auth.signup.stepOf")
+                  .replace("{current}", String(currentStep + 1))
+                  .replace("{total}", String(schema.steps.length))}
+              </p>
+            )}
 
-          <form
-            onSubmit={handleNext}
-            className="space-y-4"
-            data-cfg-section="signup"
-            data-cfg-field="signupItems"
-          >
-            {stepFields.map((field) => (
-              <DynamicField
-                key={field.name}
-                schema={field}
-                value={values[field.name]}
-                onChange={(v) => updateValue(field.name, v)}
-                error={errors[field.name]}
-                disabled={submitting}
-                context={{
-                  termsOfUse,
-                  providers,
-                  application,
-                  redirectUri: searchParams.get("redirect_uri") ?? undefined,
-                  state: searchParams.get("state") ?? undefined,
-                }}
-              />
-            ))}
+            {globalError && (
+              <div className="mb-4 rounded-lg border border-danger/30 bg-danger/10 px-4 py-2.5 text-[13px] text-danger">
+                {globalError}
+              </div>
+            )}
 
-            <div className="flex gap-2 pt-2">
-              {currentStep > 0 && (
-                <button
-                  type="button"
-                  onClick={handleBack}
+            <form
+              onSubmit={handleNext}
+              className="space-y-4"
+              data-cfg-section="signup"
+              data-cfg-field="signupItems"
+            >
+              {stepFields.map((field) => (
+                <DynamicField
+                  key={field.name}
+                  schema={field}
+                  value={values[field.name]}
+                  onChange={(v) => updateValue(field.name, v)}
+                  error={errors[field.name]}
                   disabled={submitting}
-                  className="flex items-center gap-1 rounded-lg border border-border bg-surface-1 px-4 py-2.5 text-[14px] font-medium text-text-secondary hover:bg-surface-2 disabled:opacity-50 transition-colors"
-                >
-                  <ArrowLeft size={16} />
-                  {t("auth.signup.backButton")}
-                </button>
-              )}
-              <button
-                type="submit"
-                disabled={submitting}
-                data-signupitem="signup-button"
-                className="group flex-1 flex items-center justify-center gap-2 rounded-lg bg-accent py-2.5 text-[14px] font-semibold text-white hover:bg-accent-hover disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
-              >
-                {submitting ? (
-                  <>
-                    <div className="h-4 w-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
-                    {isLastStep ? t("auth.signup.submitButton") : t("auth.signup.nextButton")}
-                  </>
-                ) : (
-                  <>
-                    {isLastStep ? t("auth.signup.submitButton") : t("auth.signup.nextButton")}
-                    <ArrowRight size={16} className="transition-transform group-hover:translate-x-0.5" />
-                  </>
+                  context={{
+                    termsOfUse,
+                    providers,
+                    application,
+                    redirectUri: searchParams.get("redirect_uri") ?? undefined,
+                    state: searchParams.get("state") ?? undefined,
+                  }}
+                />
+              ))}
+
+              <div className="flex gap-2 pt-2">
+                {currentStep > 0 && (
+                  <button
+                    type="button"
+                    onClick={handleBack}
+                    disabled={submitting}
+                    className="flex items-center gap-1 rounded-lg border border-border bg-surface-1 px-4 py-2.5 text-[14px] font-medium text-text-secondary hover:bg-surface-2 disabled:opacity-50 transition-colors"
+                  >
+                    <ArrowLeft size={16} />
+                    {t("auth.signup.backButton")}
+                  </button>
                 )}
-              </button>
-            </div>
-          </form>
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  data-signupitem="signup-button"
+                  className="group flex-1 flex items-center justify-center gap-2 rounded-lg bg-accent py-2.5 text-[14px] font-semibold text-white hover:bg-accent-hover disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+                >
+                  {submitting ? (
+                    <>
+                      <div className="h-4 w-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+                      {isLastStep ? t("auth.signup.submitButton") : t("auth.signup.nextButton")}
+                    </>
+                  ) : (
+                    <>
+                      {isLastStep ? t("auth.signup.submitButton") : t("auth.signup.nextButton")}
+                      <ArrowRight size={16} className="transition-transform group-hover:translate-x-0.5" />
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
 
-          <p className="mt-6 text-center text-[12px] text-text-muted">
-            {t("auth.signup.haveAccount")}{" "}
-            <a href={`/login/${orgName}/${application.name}`} className="text-accent hover:underline">
-              {t("auth.signup.signinLink")}
-            </a>
-          </p>
-
-          <SafeHtml html={application.signupHtml ?? ""} className="auth-page-html" />
-        </div>
-      </div>
-    </div>
+            <p className="mt-6 text-center text-[12px] text-text-muted">
+              {t("auth.signup.haveAccount")}{" "}
+              <a href={`/login/${orgName}/${application.name}`} className="text-accent hover:underline">
+                {t("auth.signup.signinLink")}
+              </a>
+            </p>
+          </>
+        ),
+        htmlInjection: <SafeHtml html={application.signupHtml ?? ""} className="auth-page-html" />,
+      }}
+    />
   );
 }

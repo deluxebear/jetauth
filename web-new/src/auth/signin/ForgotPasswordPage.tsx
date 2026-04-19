@@ -9,6 +9,7 @@ import SafeHtml from "../shell/SafeHtml";
 import IdentifierStep from "./IdentifierStep";
 import { resolveSigninMethods } from "../api/resolveSigninMethods";
 import { useSigninItemVisibility } from "../items/useSigninItemVisibility";
+import { resolveTemplate } from "../templates";
 import type { AuthApplication } from "../api/types";
 
 type Phase = "identifier" | "code" | "password" | "done";
@@ -139,37 +140,43 @@ export default function ForgotPasswordPage({ application }: Props) {
   };
   const showBack = phase === "code" || phase === "password";
 
+  const { Component: Template } = resolveTemplate(application.template);
+
   return (
-    <div className="min-h-screen flex relative">
-      <TopBar hideLanguage={!forgetItemVis.isVisible("Languages")} />
-      <div className="w-full flex items-center justify-center p-6 lg:p-12">
-        <div className="w-full max-w-sm">
-          <div className="mb-10">
-            <BrandingLayer
-              logo={orgLogo}
-              logoDark={application.organizationObj?.logoDark}
-              favicon={application.organizationObj?.favicon ?? application.favicon}
-              displayName={orgDisplay}
-              title={application.title}
-              theme={theme}
-              hideLogo={!forgetItemVis.isVisible("Logo")}
-            />
-          </div>
+    <Template
+      variant="forgot"
+      application={application}
+      theme={theme}
+      options={application.templateOptions ?? {}}
+      slots={{
+        topBar: <TopBar hideLanguage={!forgetItemVis.isVisible("Languages")} />,
+        branding: (
+          <BrandingLayer
+            logo={orgLogo}
+            logoDark={application.organizationObj?.logoDark}
+            favicon={application.organizationObj?.favicon ?? application.favicon}
+            displayName={orgDisplay}
+            title={application.title}
+            theme={theme}
+            hideLogo={!forgetItemVis.isVisible("Logo")}
+          />
+        ),
+        content: (
+          <>
+            <h1 className="text-2xl font-bold tracking-tight text-text-primary mb-1">
+              {t("auth.forgot.title")}
+            </h1>
+            <p className="text-[13px] text-text-muted mb-8">
+              {phase === "done" ? successMessageLabel : t("auth.forgot.subtitle")}
+            </p>
 
-          <h1 className="text-2xl font-bold tracking-tight text-text-primary mb-1">
-            {t("auth.forgot.title")}
-          </h1>
-          <p className="text-[13px] text-text-muted mb-8">
-            {phase === "done" ? successMessageLabel : t("auth.forgot.subtitle")}
-          </p>
+            {error && (
+              <div className="mb-4 rounded-lg border border-danger/30 bg-danger/10 px-4 py-2.5 text-[13px] text-danger">
+                {error}
+              </div>
+            )}
 
-          {error && (
-            <div className="mb-4 rounded-lg border border-danger/30 bg-danger/10 px-4 py-2.5 text-[13px] text-danger">
-              {error}
-            </div>
-          )}
-
-          <div data-cfg-section="forget" data-cfg-field="forgetItems">
+            <div data-cfg-section="forget" data-cfg-field="forgetItems">
             {phase === "identifier" && forgetItemVis.isVisible("Username") && (
               <div data-signinitem="username">
                 <IdentifierStep
@@ -314,9 +321,10 @@ export default function ForgotPasswordPage({ application }: Props) {
             )}
           </div>
 
-          <SafeHtml html={application.forgetHtml || ""} className="auth-page-html" />
-        </div>
-      </div>
-    </div>
+          </>
+        ),
+        htmlInjection: <SafeHtml html={application.forgetHtml || ""} className="auth-page-html" />,
+      }}
+    />
   );
 }

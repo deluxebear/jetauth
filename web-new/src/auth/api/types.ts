@@ -117,10 +117,19 @@ export interface AuthApplication {
   signinHtml: string;
   signupHtml: string;
   forgetHtml?: string;
+  /** Signup agreement (terms of use) content — markdown link syntax supported. */
+  termsOfUse?: string;
   signinMethods: SigninMethod[];
   signupItems: SignupItem[];
   signinItems: SigninItem[];
   forgetItems?: SigninItem[];
+  /**
+   * Layout template id. Empty / missing → "centered-card" (default). Pages
+   * resolve via `resolveTemplate()`; unknown ids also fall back to default.
+   */
+  template?: string;
+  /** Template-specific options (hero image, sidebar copy, etc). Schema owned by each template. */
+  templateOptions?: Record<string, unknown>;
   themeData?: ResolvedTheme | null;
   organizationObj?: {
     name: string;
