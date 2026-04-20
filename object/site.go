@@ -208,7 +208,9 @@ func UpdateSite(id string, site *Site) (bool, error) {
 
 	site.UpdatedTime = util.GetCurrentTime()
 
-	_, err := ormer.Engine.ID(core.PK{owner, name}).AllCols().Update(site)
+	affected, err := ormer.Engine.ID(core.PK{owner, name}).AllCols().Update(site)
+	fmt.Printf("[DBG UpdateSite] id=%s affected=%d err=%v enableBizAuthz=%v failMode=%q bypass=%v\n",
+		id, affected, err, site.EnableBizAuthz, site.BizAuthzFailMode, site.BizAuthzBypass)
 	if err != nil {
 		return false, err
 	}

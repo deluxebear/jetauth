@@ -29,8 +29,14 @@ export default defineConfig({
       "/.well-known": { target: "http://localhost:8000", changeOrigin: false },
       "/files": { target: "http://localhost:8000", changeOrigin: false },
     },
-    // Let the HMR websocket come back in over Funnel's HTTPS (port 443) so
-    // the browser doesn't try ws://localhost:7001 and fail.
-    hmr: { clientPort: 443 },
+    // When tunneling through Tailscale Funnel, the browser reaches the dev
+    // server over HTTPS on :443, so the HMR client has to dial wss://…:443
+    // to find us. Opt in with `FUNNEL=1 bun run dev`. Left unset, Vite's
+    // default (ws://<host>:<server.port>) is right for plain localhost —
+    // otherwise the browser keeps retrying :443 with nothing listening.
+    hmr:
+      process.env.FUNNEL === "1"
+        ? { clientPort: 443, protocol: "wss" }
+        : undefined,
   },
 });
