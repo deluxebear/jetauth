@@ -379,12 +379,30 @@ export default function ApplicationEditPage() {
       return { ...p, templateOptions: { ...prev, [key]: val } };
     });
 
+  // Strict SAML consumers (e.g. n8n) reject a claim whose Name URI has a
+  // stray leading space — trim on save so paste typos don't poison the
+  // assertion.
+  const normalizeSamlAttributesForSave = (a: Partial<Application>): Partial<Application> => {
+    if (!Array.isArray(a.samlAttributes)) return a;
+    return {
+      ...a,
+      samlAttributes: a.samlAttributes.map((row) => {
+        const out: Record<string, unknown> = {};
+        for (const [k, v] of Object.entries(row as Record<string, unknown>)) {
+          out[k] = typeof v === "string" ? v.trim() : v;
+        }
+        return out;
+      }) as Application["samlAttributes"],
+    };
+  };
+
   const handleSave = async () => {
     setSaving(true);
     try {
+      const payload = normalizeSamlAttributesForSave(app) as Application;
       const res = isNew
-        ? await AppBackend.addApplication(app as Application)
-        : await AppBackend.updateApplication(app.owner || "admin", name!, app as Application);
+        ? await AppBackend.addApplication(payload)
+        : await AppBackend.updateApplication(app.owner || "admin", name!, payload);
       if (res.status === "ok") {
         modal.toast(t("common.saveSuccess" as any));
         setSaved(true);
@@ -401,9 +419,10 @@ export default function ApplicationEditPage() {
   const handleSaveAndExit = async () => {
     setSaving(true);
     try {
+      const payload = normalizeSamlAttributesForSave(app) as Application;
       const res = isNew
-        ? await AppBackend.addApplication(app as Application)
-        : await AppBackend.updateApplication(app.owner || "admin", name!, app as Application);
+        ? await AppBackend.addApplication(payload)
+        : await AppBackend.updateApplication(app.owner || "admin", name!, payload);
       if (res.status === "ok") {
         modal.toast(t("common.saveSuccess" as any));
         invalidateList();

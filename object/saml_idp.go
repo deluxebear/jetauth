@@ -48,8 +48,6 @@ func NewSamlResponse(application *Application, user *User, host string, certific
 	expireTime := time.Now().UTC().Add(time.Hour * 24).Format(time.RFC3339)
 	samlResponse.CreateAttr("xmlns:samlp", "urn:oasis:names:tc:SAML:2.0:protocol")
 	samlResponse.CreateAttr("xmlns:saml", "urn:oasis:names:tc:SAML:2.0:assertion")
-	samlResponse.CreateAttr("xmlns:xsi", "http://www.w3.org/2001/XMLSchema-instance")
-	samlResponse.CreateAttr("xmlns:xs", "http://www.w3.org/2001/XMLSchema")
 	arId := util.GenerateUUID()
 
 	samlResponse.CreateAttr("ID", fmt.Sprintf("_%s", arId))
@@ -63,8 +61,6 @@ func NewSamlResponse(application *Application, user *User, host string, certific
 
 	assertion := samlResponse.CreateElement("saml:Assertion")
 	assertion.CreateAttr("xmlns:saml", "urn:oasis:names:tc:SAML:2.0:assertion")
-	assertion.CreateAttr("xmlns:xsi", "http://www.w3.org/2001/XMLSchema-instance")
-	assertion.CreateAttr("xmlns:xs", "http://www.w3.org/2001/XMLSchema")
 	assertion.CreateAttr("ID", fmt.Sprintf("_%s", util.GenerateUUID()))
 	assertion.CreateAttr("Version", "2.0")
 	assertion.CreateAttr("IssueInstant", now)
@@ -110,17 +106,17 @@ func NewSamlResponse(application *Application, user *User, host string, certific
 		email := attributes.CreateElement("saml:Attribute")
 		email.CreateAttr("Name", "Email")
 		email.CreateAttr("NameFormat", "urn:oasis:names:tc:SAML:2.0:attrname-format:basic")
-		email.CreateElement("saml:AttributeValue").CreateAttr("xsi:type", "xs:string").Element().SetText(user.Email)
+		email.CreateElement("saml:AttributeValue").SetText(user.Email)
 
 		name := attributes.CreateElement("saml:Attribute")
 		name.CreateAttr("Name", "Name")
 		name.CreateAttr("NameFormat", "urn:oasis:names:tc:SAML:2.0:attrname-format:basic")
-		name.CreateElement("saml:AttributeValue").CreateAttr("xsi:type", "xs:string").Element().SetText(user.Name)
+		name.CreateElement("saml:AttributeValue").SetText(user.Name)
 
 		displayName := attributes.CreateElement("saml:Attribute")
 		displayName.CreateAttr("Name", "DisplayName")
 		displayName.CreateAttr("NameFormat", "urn:oasis:names:tc:SAML:2.0:attrname-format:basic")
-		displayName.CreateElement("saml:AttributeValue").CreateAttr("xsi:type", "xs:string").Element().SetText(user.DisplayName)
+		displayName.CreateElement("saml:AttributeValue").SetText(user.DisplayName)
 
 		err := ExtendUserWithRolesAndPermissions(user)
 		if err != nil {
@@ -134,8 +130,7 @@ func NewSamlResponse(application *Application, user *User, host string, certific
 
 			valueList := replaceAttributeValue(user, item.Value)
 			for _, value := range valueList {
-				av := role.CreateElement("saml:AttributeValue")
-				av.CreateAttr("xsi:type", "xs:string").Element().SetText(value)
+				role.CreateElement("saml:AttributeValue").SetText(value)
 			}
 		}
 
@@ -144,7 +139,7 @@ func NewSamlResponse(application *Application, user *User, host string, certific
 		roles.CreateAttr("NameFormat", "urn:oasis:names:tc:SAML:2.0:attrname-format:basic")
 
 		for _, role := range user.Roles {
-			roles.CreateElement("saml:AttributeValue").CreateAttr("xsi:type", "xs:string").Element().SetText(role.Name)
+			roles.CreateElement("saml:AttributeValue").SetText(role.Name)
 		}
 	}
 
@@ -385,7 +380,15 @@ func GetSamlResponse(application *Application, user *User, samlRequest string, h
 	}
 
 	if application.EnableSamlC14n10 {
-		ctx.Canonicalizer = dsig.MakeC14N10ExclusiveCanonicalizerWithPrefixList("xs")
+		// Empty PrefixList: xs isn't a "visibly used" prefix for exclusive
+		// c14n purposes (xsi:type="xs:string" is a QName in an attribute
+		// value, not an element/attribute name), so both signer and verifier
+		// drop the xmlns:xs declaration from the canonical form. Passing "xs"
+		// here makes goxmldsig keep xmlns:xs on the signer side but emits no
+		// <ec:InclusiveNamespaces PrefixList="xs"/> declaration — strict
+		// verifiers (node-saml / xml-crypto) then recompute with an empty
+		// list, diverge, and reject.
+		ctx.Canonicalizer = dsig.MakeC14N10ExclusiveCanonicalizerWithPrefixList("")
 	}
 
 	// signedXML, err := ctx.SignEnvelopedLimix(samlResponse)

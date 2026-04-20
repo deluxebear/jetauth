@@ -114,15 +114,17 @@ func getOriginFromHost(host string) (string, string) {
 func GetOidcDiscovery(host string, applicationName string) OidcDiscovery {
 	originFrontend, originBackend := getOriginFromHost(host)
 
-	// If application is provided, use application-specific URLs
-	var issuer, jwksUri string
+	// Issuer must match the `iss` claim emitted by token_jwt.go (originBackend,
+	// NOT the per-app `/.well-known/<app>` URL). Strict OIDC clients
+	// (node-openid-client, passport-openidconnect) reject `id_token` when
+	// `id_token.iss !== discovery.issuer`, surfacing as the misleading
+	// "Invalid authorization code" error from n8n. Keep the jwks_uri
+	// app-scoped so routing stays per-app, but align issuer with the token.
+	issuer := originBackend
+	var jwksUri string
 	if applicationName != "" {
-		// Application-specific issuer and endpoints (owner is always "admin")
-		issuer = fmt.Sprintf("%s/.well-known/%s", originBackend, applicationName)
 		jwksUri = fmt.Sprintf("%s/.well-known/%s/jwks", originBackend, applicationName)
 	} else {
-		// Default global issuer and endpoints
-		issuer = originBackend
 		jwksUri = fmt.Sprintf("%s/.well-known/jwks", originBackend)
 	}
 

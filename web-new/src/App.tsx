@@ -9,6 +9,8 @@ import { useTheme } from "./theme";
 import * as OrgBackend from "./backend/OrganizationBackend";
 import AuthShell from "./auth/AuthShell";
 import AuthCallback from "./auth/AuthCallback";
+import SamlAuthorizePage from "./auth/SamlAuthorizePage";
+import OAuthAuthorizePage from "./auth/OAuthAuthorizePage";
 import WalletLoginPage from "./auth/WalletLoginPage";
 import TelegramLoginPage from "./auth/TelegramLoginPage";
 import MfaSetup from "./pages/MfaSetup";
@@ -338,6 +340,8 @@ export default function App() {
         <Route path="/callback" element={<AuthCallback />} />
         <Route path="/auth/wallet/:type" element={<WalletLoginPage />} />
         <Route path="/auth/telegram-login" element={<TelegramLoginPage />} />
+        <Route path="/login/saml/authorize/:organizationName/:applicationName" element={<AuthShell mode="signin" />} />
+        <Route path="/login/oauth/authorize" element={<OAuthAuthorizePage authed={false} />} />
         <Route path="/login/:organizationName/:applicationName" element={<AuthShell mode="signin" />} />
         <Route path="/login/:organizationName" element={<AuthShell mode="signin" />} />
         <Route path="/login" element={<AuthShell mode="signin" />} />
@@ -578,6 +582,8 @@ export default function App() {
         <Route path="/ldap/:owner/:id" element={<LdapEditPage />} />
         <Route path="/sysinfo" element={isGlobalAdmin(user) ? <SystemInfoPage /> : <Navigate to="/" replace />} />
         <Route path="/swagger" element={isGlobalAdmin(user) ? <SwaggerPage /> : <Navigate to="/" replace />} />
+        <Route path="/login/saml/authorize/:organizationName/:applicationName" element={<SamlAuthorizePage />} />
+        <Route path="/login/oauth/authorize" element={<OAuthAuthorizePage authed={true} />} />
         <Route path="/login" element={<Navigate to="/" replace />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

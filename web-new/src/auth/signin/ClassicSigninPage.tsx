@@ -24,6 +24,7 @@ import { useSigninItemVisibility } from "../items/useSigninItemVisibility";
 import { MarkdownLinks } from "../items/MarkdownLinks";
 import { useModal } from "../../components/Modal";
 import { resolveTemplate } from "../templates";
+import { submitSamlResponse, readSamlParams, buildOAuthCodeQuery, buildOAuthRedirectUrl, type LoginApiResponse } from "../authPost";
 import type { AuthApplication, ResolvedProvider } from "../api/types";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
@@ -45,27 +46,42 @@ function buildLoginBody(
   searchParams: URLSearchParams,
   extra?: Record<string, unknown>,
 ) {
-  return {
+  const { samlRequest, relayState } = readSamlParams(searchParams);
+  const body: Record<string, unknown> = {
     application: application.name,
     organization: orgName,
     username,
-    type: searchParams.get("type") ?? "login",
+    type: samlRequest ? "saml" : (searchParams.get("type") ?? "login"),
     signinMethod,
     clientId: application.name,
     redirectUri: searchParams.get("redirect_uri") ?? "",
     state: searchParams.get("state") ?? "",
     ...extra,
   };
+  if (samlRequest) {
+    body.samlRequest = samlRequest;
+    body.relayState = relayState;
+  }
+  return body;
 }
 
 function handleRedirect(
-  res: { status: string; msg?: string; data?: string },
+  res: LoginApiResponse,
   searchParams: URLSearchParams,
 ) {
+  if (res.data && res.data2?.redirectUrl) {
+    const { relayState } = readSamlParams(searchParams);
+    submitSamlResponse({
+      samlResponse: res.data,
+      redirectUrl: res.data2.redirectUrl,
+      method: res.data2.method,
+      relayState,
+    });
+    return;
+  }
   const redirectUri = searchParams.get("redirect_uri");
   if (redirectUri && res.data) {
-    const joiner = redirectUri.includes("?") ? "&" : "?";
-    window.location.href = `${redirectUri}${joiner}code=${encodeURIComponent(res.data)}&state=${encodeURIComponent(searchParams.get("state") ?? "")}`;
+    window.location.href = buildOAuthRedirectUrl(redirectUri, res.data, searchParams.get("state") ?? "");
   } else {
     window.location.href = "/";
   }
@@ -784,11 +800,16 @@ export default function ClassicSigninPage({ application, providers }: Props) {
 
   // ── Submit handlers ─────────────────────────────────────────────────────
 
+  const loginUrl = () => {
+    const oauthQs = buildOAuthCodeQuery(searchParams);
+    return oauthQs ? `/api/login?${oauthQs}` : "/api/login";
+  };
+
   const handlePasswordSubmit = async (password: string) => {
     setError("");
     try {
-      const res = await api.post<{ status: string; msg?: string; data?: string }>(
-        "/api/login",
+      const res = await api.post<LoginApiResponse>(
+        loginUrl(),
         buildLoginBody(application, orgName, username, "Password", searchParams, { password }),
       );
       if (res.status !== "ok") { setError(res.msg ?? t("auth.signin.noMethodError")); return; }
@@ -801,8 +822,8 @@ export default function ClassicSigninPage({ application, providers }: Props) {
   const handleCodeSubmit = async (code: string) => {
     setError("");
     try {
-      const res = await api.post<{ status: string; msg?: string; data?: string }>(
-        "/api/login",
+      const res = await api.post<LoginApiResponse>(
+        loginUrl(),
         buildLoginBody(application, orgName, username, "Verification code", searchParams, { code }),
       );
       if (res.status !== "ok") { setError(res.msg ?? t("auth.signin.noMethodError")); return; }

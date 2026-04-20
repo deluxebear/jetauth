@@ -14,6 +14,7 @@ import { useSigninItemVisibility } from "../items/useSigninItemVisibility";
 import CustomTextItems from "../items/CustomTextItems";
 import SafeHtml from "../shell/SafeHtml";
 import { resolveTemplate } from "../templates";
+import { submitSamlResponse, readSamlParams, buildOAuthCodeQuery, buildOAuthRedirectUrl, type LoginApiResponse } from "../authPost";
 import type {
   AuthApplication,
   ResolvedProvider,
@@ -77,14 +78,37 @@ export default function SigninPage({ application, providers }: SigninPageProps) 
     window.location.href = "/";
   };
 
+  const { samlRequest, relayState } = readSamlParams(searchParams);
+  const isSamlFlow = !!samlRequest;
+
+  const loginUrl = () => {
+    const oauthQs = buildOAuthCodeQuery(searchParams);
+    return oauthQs ? `/api/login?${oauthQs}` : "/api/login";
+  };
+
   const handleOAuthRedirect = (data: string): boolean => {
     const redirectUri = searchParams.get("redirect_uri");
     if (redirectUri && data) {
-      const joiner = redirectUri.includes("?") ? "&" : "?";
-      window.location.href = `${redirectUri}${joiner}code=${encodeURIComponent(data)}&state=${encodeURIComponent(searchParams.get("state") ?? "")}`;
+      window.location.href = buildOAuthRedirectUrl(redirectUri, data, searchParams.get("state") ?? "");
       return true;
     }
     return false;
+  };
+
+  const handleSamlResponse = (res: LoginApiResponse): boolean => {
+    if (!isSamlFlow) return false;
+    if (!res.data || !res.data2?.redirectUrl) {
+      console.error("[SAML] login ok but response missing data/redirectUrl", res);
+      setError(res.msg ?? t("auth.signin.noMethodError"));
+      return true;
+    }
+    submitSamlResponse({
+      samlResponse: res.data,
+      redirectUrl: res.data2.redirectUrl,
+      method: res.data2.method,
+      relayState,
+    });
+    return true;
   };
 
   const handlePasswordSubmit = async (password: string, extras?: { autoSignin?: boolean }) => {
@@ -98,24 +122,26 @@ export default function SigninPage({ application, providers }: SigninPageProps) 
       organization: orgName,
       username: identifier,
       password,
-      type: searchParams.get("type") ?? "login",
+      type: isSamlFlow ? "saml" : (searchParams.get("type") ?? "login"),
       signinMethod: "Password",
       clientId: application.name,
       redirectUri: searchParams.get("redirect_uri") ?? "",
       state: searchParams.get("state") ?? "",
     };
+    if (isSamlFlow) {
+      body.samlRequest = samlRequest;
+      body.relayState = relayState;
+    }
     if (extras?.autoSignin) {
       body.autoSignin = true;
     }
     try {
-      const res = await api.post<{ status: string; msg?: string; data?: string }>(
-        "/api/login",
-        body
-      );
+      const res = await api.post<LoginApiResponse>(loginUrl(), body);
       if (res.status !== "ok") {
         setError(res.msg ?? t("auth.signin.noMethodError"));
         return;
       }
+      if (handleSamlResponse(res)) return;
       if (res.data && handleOAuthRedirect(res.data)) return;
       // Full page reload so App.tsx re-bootstraps its `user` state via
       // /api/get-account; a plain navigate("/") would bounce back to
@@ -130,23 +156,28 @@ export default function SigninPage({ application, providers }: SigninPageProps) 
 
   const handleCodeSubmit = async (code: string) => {
     setError("");
-    const body = {
+    const body: Record<string, unknown> = {
       application: application.name,
       organization: orgName,
       username: identifier,
       code,
-      type: searchParams.get("type") ?? "login",
+      type: isSamlFlow ? "saml" : (searchParams.get("type") ?? "login"),
       signinMethod: "Verification code",
       clientId: application.name,
       redirectUri: searchParams.get("redirect_uri") ?? "",
       state: searchParams.get("state") ?? "",
     };
+    if (isSamlFlow) {
+      body.samlRequest = samlRequest;
+      body.relayState = relayState;
+    }
     try {
-      const res = await api.post<{ status: string; msg?: string; data?: string }>("/api/login", body);
+      const res = await api.post<LoginApiResponse>(loginUrl(), body);
       if (res.status !== "ok") {
         setError(res.msg ?? t("auth.signin.noMethodError"));
         return;
       }
+      if (handleSamlResponse(res)) return;
       if (res.data && handleOAuthRedirect(res.data)) return;
       reloadHome();
     } catch (e: unknown) {

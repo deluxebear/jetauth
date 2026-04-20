@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { decodeState, consumeCodeVerifier, submitProviderLogin } from "./providerAuth";
+import { submitSamlResponse, buildOAuthCodeQuery, buildOAuthRedirectUrl, type LoginApiResponse } from "./authPost";
+import { api } from "../api/client";
 
 /**
  * Handles the return leg of "Sign in with GitHub / Google / ..." flows.
@@ -73,15 +75,70 @@ export default function AuthCallback() {
       return;
     }
 
+    // State carries the original /login query — if the flow began at an SP
+    // (SAML or OAuth authorize), we still owe that SP a response after
+    // provider login sets our session cookie.
+    const samlRequest = inner.get("SAMLRequest") ?? inner.get("samlRequest") ?? "";
+    const relayState = inner.get("RelayState") ?? inner.get("relayState") ?? "";
+    const inboundClientId = inner.get("client_id") ?? "";
+    const inboundRedirectUri = inner.get("redirect_uri") ?? "";
+    const inboundSpState = inner.get("state") ?? "";
+
     submitProviderLogin({ applicationName, providerName, code, method, codeVerifier: verifier, invitationCode })
-      .then((res) => {
-        if (res.status === "ok") {
-          // Hard navigation so App re-runs getAccount() against the fresh
-          // session cookie and shows the authenticated shell.
-          window.location.assign("/");
-        } else {
+      .then(async (res) => {
+        if (res.status !== "ok") {
           setMsg(res.msg || "Sign-in failed.");
+          return;
         }
+        if (samlRequest) {
+          try {
+            const samlRes = await api.post<LoginApiResponse>("/api/login", {
+              application: applicationName,
+              organization: organizationName,
+              type: "saml",
+              signinMethod: "Password",
+              clientId: applicationName,
+              samlRequest,
+              relayState,
+            });
+            if (samlRes.status !== "ok" || !samlRes.data || !samlRes.data2?.redirectUrl) {
+              setMsg(samlRes.msg ?? "SAML response failed");
+              return;
+            }
+            submitSamlResponse({
+              samlResponse: samlRes.data,
+              redirectUrl: samlRes.data2.redirectUrl,
+              method: samlRes.data2.method,
+              relayState,
+            });
+            return;
+          } catch (err) {
+            setMsg(String(err));
+            return;
+          }
+        }
+        if (inboundClientId && inboundRedirectUri) {
+          try {
+            const oauthQs = buildOAuthCodeQuery(inner);
+            const codeRes = await api.post<LoginApiResponse>(`/api/login?${oauthQs}`, {
+              application: applicationName,
+              organization: organizationName,
+              type: "code",
+            });
+            if (codeRes.status !== "ok" || !codeRes.data) {
+              setMsg(codeRes.msg ?? "Authorization failed");
+              return;
+            }
+            window.location.replace(buildOAuthRedirectUrl(inboundRedirectUri, codeRes.data, inboundSpState));
+            return;
+          } catch (err) {
+            setMsg(String(err));
+            return;
+          }
+        }
+        // Hard navigation so App re-runs getAccount() against the fresh
+        // session cookie and shows the authenticated shell.
+        window.location.assign("/");
       })
       .catch((err) => {
         setMsg(String(err));
