@@ -27,6 +27,22 @@ export interface ResolvedProvider {
   logoUrl: string;
   logoUrlDark: string;
   clientId: string;
+  /** Secondary client id (WeChat MP/公众号 AppID for in-WeChat-browser flow). */
+  clientId2: string;
+  /** Tenant / host for providers whose authorize URL is per-instance (Auth0, Okta, ADFS, Casdoor-as-IdP, AzureAD, Nextcloud). */
+  domain: string;
+  /** Admin-supplied space-separated scopes that override the built-in default. */
+  scopes: string;
+  /** Full authorize URL for type=Custom providers. */
+  customAuthUrl: string;
+  /** Secondary id (AzureADB2C user-flow name, WeCom Agent ID, Infoflow Agent ID, ...). */
+  appId: string;
+  /** Flow-mode selector for multi-mode providers (WeChat Web/Mobile, WeCom Internal/Third-party, Infoflow same). */
+  subType: string;
+  /** Secondary mode selector (WeCom Silent/Normal). */
+  method: string;
+  /** Lark toggle: when true, switch to Lark Suite international endpoint instead of Feishu China. */
+  disableSsl: boolean;
   prompted: boolean;
   canSignUp: boolean;
   rule: string;

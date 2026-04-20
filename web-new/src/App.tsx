@@ -9,6 +9,8 @@ import { useTheme } from "./theme";
 import * as OrgBackend from "./backend/OrganizationBackend";
 import AuthShell from "./auth/AuthShell";
 import AuthCallback from "./auth/AuthCallback";
+import WalletLoginPage from "./auth/WalletLoginPage";
+import TelegramLoginPage from "./auth/TelegramLoginPage";
 import MfaSetup from "./pages/MfaSetup";
 import MfaVerify from "./pages/MfaVerify";
 import EnableMfaNotification from "./components/EnableMfaNotification";
@@ -334,6 +336,8 @@ export default function App() {
     return (
       <Routes>
         <Route path="/callback" element={<AuthCallback />} />
+        <Route path="/auth/wallet/:type" element={<WalletLoginPage />} />
+        <Route path="/auth/telegram-login" element={<TelegramLoginPage />} />
         <Route path="/login/:organizationName/:applicationName" element={<AuthShell mode="signin" />} />
         <Route path="/login/:organizationName" element={<AuthShell mode="signin" />} />
         <Route path="/login" element={<AuthShell mode="signin" />} />

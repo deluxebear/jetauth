@@ -135,8 +135,15 @@ func NewGothIdProvider(providerType string, clientId string, clientSecret string
 			Session:  &azureadv2.Session{},
 		}
 	case "Auth0":
+		// hostUrl is the admin-configured Auth0 tenant domain
+		// (e.g. "mytenant.us.auth0.com"). Error out with a useful message
+		// rather than falling through to the goth library default, which
+		// gives a confusing "Unknown host: casdoor.auth0.com".
+		if hostUrl == "" {
+			return nil, fmt.Errorf("Auth0 provider requires Domain to be set to the tenant host (e.g. mytenant.us.auth0.com)")
+		}
 		idp = GothIdProvider{
-			Provider: auth0.New(clientId, clientSecret, redirectUrl, "casdoor.auth0.com"),
+			Provider: auth0.New(clientId, clientSecret, redirectUrl, hostUrl),
 			Session:  &auth0.Session{},
 		}
 	case "BattleNet":

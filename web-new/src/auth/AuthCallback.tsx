@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { decodeState, consumeCodeVerifier } from "./providerAuth";
-import { api } from "../api/client";
+import { decodeState, consumeCodeVerifier, submitProviderLogin } from "./providerAuth";
 
 /**
  * Handles the return leg of "Sign in with GitHub / Google / ..." flows.
@@ -25,7 +24,13 @@ export default function AuthCallback() {
     if (consumedRef.current) return;
     consumedRef.current = true;
 
-    const code = searchParams.get("code") ?? searchParams.get("authCode") ?? searchParams.get("auth_code");
+    // Steam uses OpenID 2.0 — returns openid.* params instead of a code. Pack
+    // the full query string as the "code" the backend Steam IdP expects.
+    // DingTalk uses "authCode", WeCom historically used "auth_code".
+    const isSteam = searchParams.has("openid.mode");
+    const code = isSteam
+      ? window.location.search
+      : (searchParams.get("code") ?? searchParams.get("authCode") ?? searchParams.get("auth_code"));
     const state = searchParams.get("state") ?? "";
     const errorParam = searchParams.get("error_description") ?? searchParams.get("error");
 
@@ -41,11 +46,16 @@ export default function AuthCallback() {
     const inner = decodeState(state);
     const applicationName = inner.get("application") ?? "";
     const providerName = inner.get("provider") ?? "";
-    // Fallback to "signup" (not "signin") if state decode lost the method —
-    // on the backend "signin" means account-linking and requires an active
-    // session; "signup" is the combined login-or-register branch, which is
-    // what unauthenticated callback traffic always wants.
-    const method = inner.get("method") ?? "signup";
+    // Whitelist the method before forwarding — an attacker who could both
+    // forge state (bypassing the verifier check below) and inject a custom
+    // method would otherwise drive whichever backend branch they wanted.
+    // Fall back to "signup" (the combined login-or-register branch) for
+    // anything unexpected; "signin" is account-linking and requires a
+    // session we don't have here.
+    const rawMethod = inner.get("method");
+    const method = rawMethod === "signup" || rawMethod === "signin" || rawMethod === "link"
+      ? rawMethod
+      : "signup";
     const verifier = consumeCodeVerifier(state);
 
     // CSRF guard: state carries a crypto-random nonce and is stored keyed on
@@ -58,19 +68,7 @@ export default function AuthCallback() {
       return;
     }
 
-    const body = {
-      type: "login",
-      application: applicationName,
-      organization: "",
-      provider: providerName,
-      code,
-      state: applicationName,
-      redirectUri: `${window.location.origin}/callback`,
-      method,
-      codeVerifier: verifier,
-    };
-
-    api.post<{ status: string; msg?: string; data?: unknown }>("/api/login", body)
+    submitProviderLogin({ applicationName, providerName, code, method, codeVerifier: verifier })
       .then((res) => {
         if (res.status === "ok") {
           // Hard navigation so App re-runs getAccount() against the fresh

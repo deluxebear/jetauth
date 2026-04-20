@@ -84,6 +84,53 @@ const SUBTYPES: Record<string, string[]> = {
   Agent: ["OpenClaw"],
 };
 
+// Per-type OAuth config descriptor — which extra fields the admin needs to
+// fill beyond ClientId/Secret for the authorize URL to work. Drives the
+// "OAuth 配置" section in the provider edit page and mirrors the fields the
+// frontend's getAuthUrl (providerAuth.ts) reads.
+//
+// `domain` entries are for providers whose authorize endpoint is per-tenant
+// (Auth0 = <tenant>.auth0.com, Okta = <org>.okta.com, ADFS = AD FS server,
+// Casdoor = another Casdoor/JetAuth install, AzureAD/B2C = tenant name).
+// `disableSslLabel` is a Lark-only quirk (飞书国内 vs Lark Suite 国际版) —
+// the backend uses it to switch the authorize endpoint domain.
+type OAuthTypeConfig = {
+  domain?: { placeholder: string; hintKey: string };
+  disableSslLabel?: string; // label for DisableSsl toggle when meaningful
+  showScopesOverride?: boolean; // whether to expose the Scopes override input
+};
+
+const OAUTH_TYPE_CONFIG: Record<string, OAuthTypeConfig> = {
+  Auth0: {
+    domain: { placeholder: "your-tenant.us.auth0.com", hintKey: "providers.oauth.domain.auth0Hint" },
+    showScopesOverride: true,
+  },
+  Okta: {
+    domain: { placeholder: "https://dev-xxxxxx.okta.com", hintKey: "providers.oauth.domain.oktaHint" },
+    showScopesOverride: true,
+  },
+  ADFS: {
+    domain: { placeholder: "https://adfs.your-company.com", hintKey: "providers.oauth.domain.adfsHint" },
+  },
+  Casdoor: {
+    domain: { placeholder: "https://auth.example.com", hintKey: "providers.oauth.domain.casdoorHint" },
+    showScopesOverride: true,
+  },
+  AzureAD: {
+    domain: { placeholder: "common", hintKey: "providers.oauth.domain.azureAdHint" },
+  },
+  AzureADB2C: {
+    domain: { placeholder: "your-tenant-name", hintKey: "providers.oauth.domain.azureAdB2CHint" },
+  },
+  Nextcloud: {
+    domain: { placeholder: "https://nextcloud.example.com", hintKey: "providers.oauth.domain.nextcloudHint" },
+    showScopesOverride: true,
+  },
+  Lark: {
+    disableSslLabel: "providers.oauth.lark.useChinaEndpoint",
+  },
+};
+
 // ── Dynamic label helpers ──
 
 function getClientIdLabel(cat: string, type: string, t: (k: string) => string): string {
@@ -896,11 +943,46 @@ export default function ProviderEditPage() {
     );
   };
 
+  const renderOAuthTypeConfig = () => {
+    const cfg = OAUTH_TYPE_CONFIG[type];
+    if (!cfg) return null;
+    return (
+      <>
+        {cfg.domain && (
+          <FormField label={t("providers.field.domain")} help={t(cfg.domain.hintKey as any)} span="full">
+            <input
+              value={String(prov.domain ?? "")}
+              onChange={(e) => set("domain", e.target.value)}
+              className={monoInputClass}
+              placeholder={cfg.domain.placeholder}
+            />
+          </FormField>
+        )}
+        {cfg.showScopesOverride && (
+          <FormField label={t("providers.field.scopes" as any)} help={t("providers.oauth.scopesHint" as any)} span="full">
+            <input
+              value={String(prov.scopes ?? "")}
+              onChange={(e) => set("scopes", e.target.value)}
+              className={monoInputClass}
+              placeholder="openid profile email"
+            />
+          </FormField>
+        )}
+        {cfg.disableSslLabel && (
+          <FormField label={t(cfg.disableSslLabel as any)}>
+            <Switch checked={!!prov.disableSsl} onChange={(v) => set("disableSsl", v)} />
+          </FormField>
+        )}
+      </>
+    );
+  };
+
   const renderOAuthFields = () => (
     <>
-      {getGuide() && !isCustomOAuth && (
+      {(getGuide() || OAUTH_TYPE_CONFIG[type]) && !isCustomOAuth && (
         <FormSection title={t("providers.section.oauthConfig" as any)}>
           {renderGuide()}
+          {renderOAuthTypeConfig()}
         </FormSection>
       )}
       {isCustomOAuth && (

@@ -2,16 +2,30 @@ package object
 
 // ResolvedProvider is the pre-baked provider info the auth UI needs.
 // No secrets leak here — only display-safe values.
+//
+// Domain / Scopes / CustomAuthURL / AppID / SubType / DisableSSL are read by
+// the frontend getAuthUrl builder for provider types whose authorize endpoint
+// is admin-configured (Auth0 per-tenant, Okta, ADFS, Casdoor-as-IdP, Custom,
+// AzureAD, AzureADB2C, Nextcloud, WeChat/WeCom/Infoflow multi-mode, Lark
+// international-vs-China toggle).
 type ResolvedProvider struct {
-	Name        string `json:"name"`
-	DisplayName string `json:"displayName"`
-	Type        string `json:"type"`
-	LogoURL     string `json:"logoUrl"`
-	LogoURLDark string `json:"logoUrlDark"`
-	ClientID    string `json:"clientId"`
-	Prompted    bool   `json:"prompted"`
-	CanSignUp   bool   `json:"canSignUp"`
-	Rule        string `json:"rule"`
+	Name          string `json:"name"`
+	DisplayName   string `json:"displayName"`
+	Type          string `json:"type"`
+	LogoURL       string `json:"logoUrl"`
+	LogoURLDark   string `json:"logoUrlDark"`
+	ClientID      string `json:"clientId"`
+	ClientID2     string `json:"clientId2"`
+	Domain        string `json:"domain"`
+	Scopes        string `json:"scopes"`
+	CustomAuthURL string `json:"customAuthUrl"`
+	AppID         string `json:"appId"`
+	SubType       string `json:"subType"`
+	Method        string `json:"method"`
+	DisableSSL    bool   `json:"disableSsl"`
+	Prompted      bool   `json:"prompted"`
+	CanSignUp     bool   `json:"canSignUp"`
+	Rule          string `json:"rule"`
 }
 
 // providerLogoMap is the canonical mapping of built-in provider types to
@@ -121,15 +135,23 @@ func ResolveProviders(app *Application) []ResolvedProvider {
 			}
 		}
 		out = append(out, ResolvedProvider{
-			Name:        pi.Name,
-			DisplayName: p.DisplayName,
-			Type:        p.Type,
-			LogoURL:     light,
-			LogoURLDark: dark,
-			ClientID:    p.ClientId,
-			Prompted:    pi.Prompted,
-			CanSignUp:   pi.CanSignUp,
-			Rule:        pi.Rule,
+			Name:          pi.Name,
+			DisplayName:   p.DisplayName,
+			Type:          p.Type,
+			LogoURL:       light,
+			LogoURLDark:   dark,
+			ClientID:      p.ClientId,
+			ClientID2:     p.ClientId2,
+			Domain:        p.Domain,
+			Scopes:        p.Scopes,
+			CustomAuthURL: p.CustomAuthUrl,
+			AppID:         p.AppId,
+			SubType:       p.SubType,
+			Method:        p.Method,
+			DisableSSL:    p.DisableSsl,
+			Prompted:      pi.Prompted,
+			CanSignUp:     pi.CanSignUp,
+			Rule:          pi.Rule,
 		})
 	}
 	return out
