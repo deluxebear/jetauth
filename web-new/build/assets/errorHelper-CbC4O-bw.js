@@ -1,0 +1,1 @@
+import{b as e}from"./index-BRgxl2BJ.js";export{e as friendlyError};

@@ -15,34 +15,39 @@
 package idp
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
 	"strings"
-	"time"
 
 	"golang.org/x/oauth2"
 )
 
 const Web3AuthTokenKey = "web3AuthToken"
 
+// Web3AuthToken is what we stash inside the oauth2.Token Extra for downstream
+// GetUserInfo. After the SIWE migration, every field here is populated from a
+// signature-verified SIWE message — not client-supplied.
 type Web3AuthToken struct {
 	Address    string `json:"address"`
 	Nonce      string `json:"nonce"`
 	CreateAt   uint64 `json:"createAt"`
-	TypedData  string `json:"typedData"`  // typed data use for application
-	Signature  string `json:"signature"`  // signature for typed data
-	WalletType string `json:"walletType"` // e.g."MetaMask", "Coinbase"
+	TypedData  string `json:"typedData"`
+	Signature  string `json:"signature"`
+	WalletType string `json:"walletType"`
 }
 
 type Web3OnboardIdProvider struct {
-	Client *http.Client
+	Client         *http.Client
+	ExpectedNonce  string
+	ExpectedDomain string
 }
 
-func NewWeb3OnboardIdProvider() *Web3OnboardIdProvider {
-	idp := &Web3OnboardIdProvider{}
-	return idp
+func NewWeb3OnboardIdProvider(expectedNonce string, expectedDomain string) *Web3OnboardIdProvider {
+	return &Web3OnboardIdProvider{
+		ExpectedNonce:  expectedNonce,
+		ExpectedDomain: expectedDomain,
+	}
 }
 
 func (idp *Web3OnboardIdProvider) SetHttpClient(client *http.Client) {
@@ -50,20 +55,7 @@ func (idp *Web3OnboardIdProvider) SetHttpClient(client *http.Client) {
 }
 
 func (idp *Web3OnboardIdProvider) GetToken(code string) (*oauth2.Token, error) {
-	web3AuthToken := Web3AuthToken{}
-	if err := json.Unmarshal([]byte(code), &web3AuthToken); err != nil {
-		return nil, err
-	}
-	token := &oauth2.Token{
-		AccessToken: fmt.Sprintf("%v:%v", Web3AuthTokenKey, web3AuthToken.Address),
-		TokenType:   "Bearer",
-		Expiry:      time.Now().AddDate(0, 1, 0),
-	}
-
-	token = token.WithExtra(map[string]interface{}{
-		Web3AuthTokenKey: web3AuthToken,
-	})
-	return token, nil
+	return verifyWeb3SIWE(code, idp.ExpectedNonce, idp.ExpectedDomain, "Web3Onboard")
 }
 
 func (idp *Web3OnboardIdProvider) GetUserInfo(token *oauth2.Token) (*UserInfo, error) {
@@ -80,24 +72,7 @@ func (idp *Web3OnboardIdProvider) GetUserInfo(token *oauth2.Token) (*UserInfo, e
 		Id:          fmtAddress,
 		Username:    fmtAddress,
 		DisplayName: fmtAddress,
-		AvatarUrl:   fmt.Sprintf("metamask:%v", forceEthereumAddress(web3AuthToken.Address)),
+		AvatarUrl:   fmt.Sprintf("web3onboard:%v", web3AuthToken.Address),
 	}
 	return userInfo, nil
-}
-
-func forceEthereumAddress(address string) string {
-	// The required address to general MetaMask avatar is a string of length 42 that represents an Ethereum address.
-	// This function is used to force any address as an Ethereum address
-	address = strings.TrimSpace(address)
-	var builder strings.Builder
-	for _, ch := range address {
-		builder.WriteRune(ch)
-	}
-	for len(builder.String()) < 42 {
-		builder.WriteString("0")
-	}
-	if len(builder.String()) > 42 {
-		return builder.String()[:42]
-	}
-	return builder.String()
 }

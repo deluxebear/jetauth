@@ -1,0 +1,1 @@
+import{M as e}from"./index-BRgxl2BJ.js";export{e as startAuthentication};

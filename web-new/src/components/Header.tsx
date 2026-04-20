@@ -126,12 +126,14 @@ export default function Header({ user, onLogout }: HeaderProps) {
           <PortalDropdown anchorRef={userRef} open={userMenuOpen} dropdownRef={userDropRef}>
             <div className="w-48 rounded-lg border border-border bg-surface-2 py-1 shadow-[var(--shadow-elevated)]">
               <div className="px-3 py-2 border-b border-border-subtle">
-                <div className="text-[13px] font-medium text-text-primary">
+                <div className="text-[13px] font-medium text-text-primary break-all">
                   {user?.displayName ?? user?.name}
                 </div>
-                <div className="text-[11px] text-text-muted font-mono">
-                  {user?.name}
-                </div>
+                {user?.name && user.name !== user.displayName && (
+                  <div className="text-[11px] text-text-muted font-mono break-all">
+                    {user.name}
+                  </div>
+                )}
               </div>
               <Link
                 to={`/users/${user?.owner}/${user?.name}`}

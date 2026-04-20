@@ -416,6 +416,7 @@ func InitAPI() {
 	web.Router("/api/delete-ldap", &controllers.ApiController{}, "POST:DeleteLdap")
 	web.Router("/api/sync-ldap-users", &controllers.ApiController{}, "POST:SyncLdapUsers")
 
+	web.Router("/api/web3/nonce", &controllers.ApiController{}, "GET:GetWeb3Nonce")
 	web.Router("/api/login/oauth/access_token", &controllers.ApiController{}, "POST:GetOAuthToken")
 	web.Router("/api/login/oauth/refresh_token", &controllers.ApiController{}, "POST:RefreshToken")
 	web.Router("/api/login/oauth/introspect", &controllers.ApiController{}, "POST:IntrospectToken")

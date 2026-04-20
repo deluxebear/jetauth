@@ -73,6 +73,7 @@ require (
 	github.com/sendgrid/sendgrid-go v3.16.0+incompatible
 	github.com/shirou/gopsutil/v4 v4.25.9
 	github.com/siddontang/go-log v0.0.0-20190221022429-1e957dd83bed
+	github.com/spruceid/siwe-go v0.2.1
 	github.com/stretchr/testify v1.11.1
 	github.com/stripe/stripe-go/v74 v74.29.0
 	github.com/tealeg/xlsx v1.0.5
@@ -136,6 +137,7 @@ require (
 	github.com/blinkbean/dingtalk v1.1.3 // indirect
 	github.com/bmatcuk/doublestar/v4 v4.6.1 // indirect
 	github.com/boombuler/barcode v1.0.1 // indirect
+	github.com/btcsuite/btcd/btcec/v2 v2.3.2 // indirect
 	github.com/bwmarrin/discordgo v0.28.1 // indirect
 	github.com/caarlos0/go-reddit/v3 v3.0.1 // indirect
 	github.com/casbin/govaluate v1.3.0 // indirect
@@ -145,10 +147,11 @@ require (
 	github.com/cloudflare/circl v1.6.3 // indirect
 	github.com/cncf/xds/go v0.0.0-20251210132809-ee656c7534f5 // indirect
 	github.com/corazawaf/libinjection-go v0.2.2 // indirect
-	github.com/cpuguy83/go-md2man/v2 v2.0.0 // indirect
+	github.com/cpuguy83/go-md2man/v2 v2.0.2 // indirect
 	github.com/cschomburg/go-pushbullet v0.0.0-20171206132031-67759df45fbb // indirect
 	github.com/cyphar/filepath-securejoin v0.4.1 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
+	github.com/dchest/uniuri v1.2.0 // indirect
 	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.4.0 // indirect
 	github.com/dghubble/oauth1 v0.7.3 // indirect
 	github.com/dghubble/sling v1.4.2 // indirect
@@ -161,6 +164,7 @@ require (
 	github.com/emirpasic/gods v1.18.1 // indirect
 	github.com/envoyproxy/go-control-plane/envoy v1.36.0 // indirect
 	github.com/envoyproxy/protoc-gen-validate v1.3.0 // indirect
+	github.com/ethereum/go-ethereum v1.12.1 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
 	github.com/fxamacker/cbor/v2 v2.6.0 // indirect
 	github.com/ggicci/httpin v0.19.0 // indirect
@@ -184,7 +188,7 @@ require (
 	github.com/golang/freetype v0.0.0-20170609003504-e2365dfdc4a0 // indirect
 	github.com/golang/groupcache v0.0.0-20241129210726-2c02b8208cf8 // indirect
 	github.com/golang/mock v1.6.0 // indirect
-	github.com/golang/snappy v0.0.4 // indirect
+	github.com/golang/snappy v0.0.5-0.20220116011046-fa5810519dcb // indirect
 	github.com/google/go-querystring v1.1.0 // indirect
 	github.com/google/go-tpm v0.9.0 // indirect
 	github.com/google/jsonschema-go v0.4.2 // indirect
@@ -198,6 +202,7 @@ require (
 	github.com/hashicorp/go-cleanhttp v0.5.2 // indirect
 	github.com/hashicorp/go-uuid v1.0.3 // indirect
 	github.com/hashicorp/golang-lru v0.5.4 // indirect
+	github.com/holiman/uint256 v1.2.3 // indirect
 	github.com/jbenet/go-context v0.0.0-20150711004518-d14ea06fba99 // indirect
 	github.com/jcmturner/aescts/v2 v2.0.0 // indirect
 	github.com/jcmturner/dnsutils/v2 v2.0.0 // indirect
@@ -243,9 +248,10 @@ require (
 	github.com/prometheus/procfs v0.12.0 // indirect
 	github.com/qiniu/go-sdk/v7 v7.12.1 // indirect
 	github.com/rainycape/memcache v0.0.0-20150622160815-1031fa0ce2f2 // indirect
+	github.com/relvacode/iso8601 v1.1.1-0.20210511065120-b30b151cc433 // indirect
 	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
 	github.com/rs/zerolog v1.33.0 // indirect
-	github.com/russross/blackfriday/v2 v2.0.1 // indirect
+	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/scim2/filter-parser/v2 v2.2.0 // indirect
 	github.com/segmentio/asm v1.1.3 // indirect
 	github.com/segmentio/encoding v0.5.4 // indirect
@@ -253,7 +259,6 @@ require (
 	github.com/sergi/go-diff v1.3.2-0.20230802210424-5b0b94c5c0d3 // indirect
 	github.com/shiena/ansicolor v0.0.0-20200904210342-c7312218db18 // indirect
 	github.com/shopspring/decimal v0.0.0-20180709203117-cd690d0c9e24 // indirect
-	github.com/shurcooL/sanitized_anchor_name v1.0.0 // indirect
 	github.com/siddontang/go v0.0.0-20180604090527-bdc77568d726 // indirect
 	github.com/sirupsen/logrus v1.9.3 // indirect
 	github.com/skeema/knownhosts v1.3.1 // indirect
@@ -261,7 +266,7 @@ require (
 	github.com/spiffe/go-spiffe/v2 v2.6.0 // indirect
 	github.com/spyzhov/ajson v0.8.0 // indirect
 	github.com/stretchr/objx v0.5.2 // indirect
-	github.com/syndtr/goleveldb v1.0.0 // indirect
+	github.com/syndtr/goleveldb v1.0.1-0.20210819022825-2ae1ddf74ef7 // indirect
 	github.com/technoweenie/multipartstreamer v1.0.1 // indirect
 	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common v1.0.744 // indirect
 	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/sms v1.0.744 // indirect

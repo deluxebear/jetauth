@@ -15,16 +15,6 @@ import { api } from "../api/client";
 // sessionStorage entries since AuthCallback / login pages never consume them).
 const clientOnlyTypes = new Set(["MetaMask", "Web3Onboard", "Telegram", "Steam"]);
 
-export interface Web3AuthToken {
-  address: string;
-  nonce: string;
-  /** seconds since epoch. Spelling matches backend (`idp/web3onboard.go:33`). */
-  createAt: number;
-  typedData: string;
-  signature: string;
-  walletType: "MetaMask" | "Web3Onboard";
-}
-
 /** Subset of EIP-1193 we touch — enough to type window.ethereum without pulling a wallet lib. */
 export interface EIP1193Provider {
   request<T = unknown>(args: { method: string; params?: unknown[] }): Promise<T>;
@@ -82,9 +72,14 @@ export function consumeCodeVerifier(state: string): string | null {
 // /callback URL can't guess the nonce, so the state won't match any verifier
 // the victim actually stashed. RFC 6749 §10.12.
 
-export function encodeState(applicationName: string, providerName: string, method: string): string {
+export function encodeState(
+  applicationName: string,
+  providerName: string,
+  method: string,
+  organizationName: string = "",
+): string {
   const nonce = generateNonce();
-  const query = `${window.location.search}&application=${encodeURIComponent(applicationName)}&provider=${encodeURIComponent(providerName)}&method=${encodeURIComponent(method)}&nonce=${nonce}`;
+  const query = `${window.location.search}&application=${encodeURIComponent(applicationName)}&organization=${encodeURIComponent(organizationName)}&provider=${encodeURIComponent(providerName)}&method=${encodeURIComponent(method)}&nonce=${nonce}`;
   return btoa(query);
 }
 
@@ -191,7 +186,8 @@ export async function getAuthUrl(
   }
 
   const redirectUri = `${window.location.origin}/callback`;
-  const state = encodeState(application.name, provider.name, method);
+  const orgName = application.organizationObj?.name ?? application.organization ?? "";
+  const state = encodeState(application.name, provider.name, method, orgName);
   // PKCE verifier only matters for types that round-trip through AuthCallback
   // to exchange a server-issued code. Client-only flows (Web3 / Telegram /
   // Steam OpenID) skip both the stash and the later consume.

@@ -45,6 +45,7 @@ export default function AuthCallback() {
 
     const inner = decodeState(state);
     const applicationName = inner.get("application") ?? "";
+    const organizationName = inner.get("organization") ?? "";
     const providerName = inner.get("provider") ?? "";
     // Whitelist the method before forwarding — an attacker who could both
     // forge state (bypassing the verifier check below) and inject a custom
@@ -83,6 +84,16 @@ export default function AuthCallback() {
       });
   }, [searchParams]);
 
+  // Prefer the app-scoped login URL so the user lands on the same branded
+  // page they started from (`/login/{org}/{app}`). Both fields were packed
+  // into state at authorize time; fall back to the generic `/login` if
+  // anything is missing (old callback links, tampered state).
+  const state = searchParams.get("state") ?? "";
+  const decoded = state ? decodeState(state) : new URLSearchParams();
+  const backOrg = decoded.get("organization") ?? "";
+  const backApp = decoded.get("application") ?? "";
+  const backToLoginUrl = backOrg && backApp ? `/login/${backOrg}/${backApp}` : "/login";
+
   return (
     <div className="flex min-h-dvh items-center justify-center bg-surface-1 p-6">
       {msg === null ? (
@@ -94,7 +105,7 @@ export default function AuthCallback() {
         <div className="max-w-md rounded-lg border border-danger/30 bg-danger/10 p-4 text-[13px] text-danger">
           <div className="font-semibold mb-1">Sign-in failed</div>
           <div className="opacity-80 break-all">{msg}</div>
-          <a href="/login" className="mt-3 inline-block text-accent hover:underline">
+          <a href={backToLoginUrl} className="mt-3 inline-block text-accent hover:underline">
             Back to login
           </a>
         </div>

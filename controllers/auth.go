@@ -37,6 +37,8 @@ import (
 	"github.com/deluxebear/jetauth/object"
 	"github.com/deluxebear/jetauth/proxy"
 	"github.com/deluxebear/jetauth/util"
+	ethcommon "github.com/ethereum/go-ethereum/common"
+	siwe "github.com/spruceid/siwe-go"
 	"golang.org/x/oauth2"
 )
 
@@ -869,6 +871,51 @@ func (c *ApiController) Login() {
 				return
 			}
 			idpInfo.CodeVerifier = authForm.CodeVerifier
+
+			// Web3 providers verify a SIWE message on the backend. Pull the
+			// server-issued nonce we stashed for the claimed address out of
+			// the session and hand it plus our own host to the IdP as the
+			// expected values. The SIWE verify step then refuses any message
+			// whose nonce or domain doesn't match.
+			if provider.Type == "MetaMask" || provider.Type == "Web3Onboard" {
+				var sp struct {
+					Message string `json:"message"`
+				}
+				if unErr := json.Unmarshal([]byte(authForm.Code), &sp); unErr != nil || sp.Message == "" {
+					c.ResponseError("Web3 login payload is missing the SIWE message")
+					return
+				}
+				msg, parseErr := siwe.ParseMessage(sp.Message)
+				if parseErr != nil {
+					c.ResponseError(fmt.Sprintf("invalid SIWE message: %s", parseErr.Error()))
+					return
+				}
+				addressKey := web3NonceSessionPrefix + strings.ToLower(msg.GetAddress().Hex())
+				sessNonce := c.GetSession(addressKey)
+				if sessNonce == nil {
+					c.ResponseError("no pending Web3 nonce for this address; request one via /api/web3/nonce first")
+					return
+				}
+				// One-time use: clear immediately so a captured signature
+				// can't be replayed even within the session TTL.
+				c.DelSession(addressKey)
+				idpInfo.Web3ExpectedNonce, _ = sessNonce.(string)
+				// Expected domain: prefer explicit config (set `originFrontend`
+				// in app.conf when running behind a proxy that rewrites Host),
+				// else fall back to the Host header the client sent. The Vite
+				// dev proxy preserves the browser's Host by default, but some
+				// production proxies don't unless `proxy_set_header Host $host`.
+				expectedDomain := strings.TrimSpace(conf.GetConfigString("originFrontend"))
+				if expectedDomain != "" {
+					if u, uErr := url.Parse(expectedDomain); uErr == nil && u.Host != "" {
+						expectedDomain = u.Host
+					}
+				} else {
+					expectedDomain = c.Ctx.Request.Host
+				}
+				idpInfo.Web3ExpectedDomain = expectedDomain
+			}
+
 			var idProvider idp.IdProvider
 			idProvider, err = idp.GetIdProvider(idpInfo, authForm.RedirectUri)
 			if err != nil {
@@ -1466,6 +1513,41 @@ func (c *ApiController) Callback() {
 
 	frontendCallbackUrl := fmt.Sprintf("/callback?code=%s&state=%s", url.QueryEscape(code), url.QueryEscape(state))
 	c.Ctx.Redirect(http.StatusFound, frontendCallbackUrl)
+}
+
+// web3NonceSessionPrefix keys the one-time SIWE nonce in the client session.
+// Keying per-address lets a user legitimately start a second flow in the same
+// tab (e.g. switch wallets) without invalidating the first — the Login
+// handler reads using the address embedded in the signed SIWE message.
+const web3NonceSessionPrefix = "web3_nonce_"
+
+// GetWeb3Nonce issues a fresh server-tracked nonce for the SIWE message
+// the client is about to sign. Without this, a captured signature could
+// be replayed forever: the client would generate its own nonce, include
+// it in the signed message, and the backend would ecrecover just fine
+// because it never knew which nonce to expect. We pin the nonce here
+// and require it back in the POST /api/login payload.
+//
+// The nonce is bound to the claimed address so a concurrent sign-in for
+// a different address in the same tab doesn't kick the first one out.
+// @Router /web3/nonce [get]
+func (c *ApiController) GetWeb3Nonce() {
+	raw := strings.TrimSpace(c.Ctx.Input.Query("address"))
+	if raw == "" || !ethcommon.IsHexAddress(raw) {
+		c.ResponseError("address query param must be a valid 0x... Ethereum address")
+		return
+	}
+	// SIWE messages are required to carry the EIP-55 checksummed address
+	// (siwe-go's parser refuses anything else). Different wallets return
+	// different casings from eth_requestAccounts — MetaMask tends to return
+	// checksummed, others lowercase. Normalise here and hand the canonical
+	// form back to the client so the message it signs always parses.
+	checksum := ethcommon.HexToAddress(raw).Hex()
+	nonce := siwe.GenerateNonce()
+	c.SetSession(web3NonceSessionPrefix+strings.ToLower(checksum), nonce)
+	// Data = nonce (legacy flat shape for any old caller), Data2 = the
+	// checksum form the SIWE message must use.
+	c.ResponseOk(nonce, checksum)
 }
 
 // DeviceAuth

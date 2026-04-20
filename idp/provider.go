@@ -51,6 +51,15 @@ type ProviderInfo struct {
 	AuthURL     string
 	UserInfoURL string
 	UserMapping map[string]string
+
+	// Web3 (MetaMask / Web3Onboard) SIWE verification context — populated by
+	// the controller from the signed-in session right before GetIdProvider.
+	// ExpectedNonce is the server-issued, single-use nonce we handed to the
+	// client at /api/web3/nonce and now require inside the SIWE message.
+	// ExpectedDomain is the host the signature must be bound to (our own),
+	// preventing cross-site signature replay.
+	Web3ExpectedNonce  string
+	Web3ExpectedDomain string
 }
 
 type IdProvider interface {
@@ -125,9 +134,9 @@ func GetIdProvider(idpInfo *ProviderInfo, redirectUrl string) (IdProvider, error
 	case "Bilibili":
 		return NewBilibiliIdProvider(idpInfo.ClientId, idpInfo.ClientSecret, redirectUrl), nil
 	case "MetaMask":
-		return NewMetaMaskIdProvider(), nil
+		return NewMetaMaskIdProvider(idpInfo.Web3ExpectedNonce, idpInfo.Web3ExpectedDomain), nil
 	case "Web3Onboard":
-		return NewWeb3OnboardIdProvider(), nil
+		return NewWeb3OnboardIdProvider(idpInfo.Web3ExpectedNonce, idpInfo.Web3ExpectedDomain), nil
 	case "Twitter":
 		provider := NewTwitterIdProvider(idpInfo.ClientId, idpInfo.ClientSecret, redirectUrl)
 		provider.CodeVerifier = idpInfo.CodeVerifier
