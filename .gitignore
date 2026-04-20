@@ -50,3 +50,15 @@ cookie.txt
 # the binary at compile time via embed_static.go, so committing them just
 # produces noisy hash-rename churn on every build.
 web-new/build/
+
+# Demo binaries dropped in the repo root by `go build ./demo/task-api`
+# (the output name defaults to the last path segment).
+/task-api
+
+# Dump output from DumpToFile / init_data_dump_test.go — regenerated
+# whenever the test runs (ormer.go:41 defaultExportFilePath).
+object/init_data_dump.json
+
+# Internal planning / research scratchpad — kept local to each dev's
+# workflow, not meant to ship with the repo.
+docs/superpowers/
