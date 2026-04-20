@@ -1,0 +1,136 @@
+openapi: 3.1.0
+info:
+  title: Task API Demo
+  version: 1.0.0
+  summary: A tiny task-management service used to exercise JetAuth WAF URL-level authz
+  description: |
+    This spec is designed to be imported via **Application Authorization →
+    Resources → Import → OpenAPI** in JetAuth. Each operation carries a
+    `tags` entry so the importer groups resources by area (health,
+    identity, tasks, reports, admin) and a stable `operationId` so
+    re-importing updates the same rows instead of duplicating them.
+
+servers:
+  - url: http://localhost:8081
+    description: Direct (no WAF — identity headers will be empty)
+  - url: https://task-demo.jetauth.local
+    description: Behind the JetAuth WAF with BizAuthz enabled
+
+tags:
+  - name: health
+    description: Liveness probe. Usually added to the site's bypass list.
+  - name: identity
+    description: Echoes the caller identity the gateway forwarded.
+  - name: tasks
+    description: CRUD on tasks. Viewer reads, editor writes, admin deletes.
+  - name: reports
+    description: Aggregate views. Typically admin-only.
+  - name: admin
+    description: Platform-level controls. Super-admin only.
+
+paths:
+  /api/health:
+    get:
+      tags: [health]
+      operationId: healthCheck
+      summary: Liveness probe
+      description: Returns 200 when the service is up. Add this to Site → Bypass.
+      responses:
+        "200": { description: Service is healthy }
+
+  /api/me:
+    get:
+      tags: [identity]
+      operationId: whoAmI
+      summary: Return the gateway-forwarded identity
+      description: Reads X-Forwarded-User / X-Forwarded-Email and echoes them back.
+      responses:
+        "200": { description: Identity payload }
+
+  /api/tasks:
+    get:
+      tags: [tasks]
+      operationId: listTasks
+      summary: List all tasks
+      description: All authenticated users may read.
+      responses:
+        "200": { description: Array of tasks }
+    post:
+      tags: [tasks]
+      operationId: createTask
+      summary: Create a task
+      description: Editor / admin only.
+      responses:
+        "201": { description: Created task }
+        "400": { description: Invalid body }
+
+  /api/tasks/{id}:
+    get:
+      tags: [tasks]
+      operationId: getTask
+      summary: Fetch a single task
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      responses:
+        "200": { description: Task payload }
+        "404": { description: Task not found }
+    put:
+      tags: [tasks]
+      operationId: updateTask
+      summary: Update a task
+      description: Editor / admin only.
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      responses:
+        "200": { description: Updated task }
+        "404": { description: Task not found }
+    delete:
+      tags: [tasks]
+      operationId: deleteTask
+      summary: Delete a task
+      description: Admin only.
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      responses:
+        "204": { description: Deleted }
+        "404": { description: Task not found }
+
+  /api/reports/summary:
+    get:
+      tags: [reports]
+      operationId: reportSummary
+      summary: Aggregate task counts
+      description: Admin only.
+      responses:
+        "200": { description: Summary payload }
+
+  /api/reports/export:
+    get:
+      tags: [reports]
+      operationId: exportReport
+      summary: Download CSV export
+      description: Admin only.
+      responses:
+        "200":
+          description: text/csv payload
+          content:
+            text/csv: {}
+
+  /api/admin/audit:
+    get:
+      tags: [admin]
+      operationId: viewAudit
+      summary: View recent audit log entries
+      description: Super-admin only.
+      responses:
+        "200": { description: Audit entries }
+
+  /api/admin/broadcast:
+    post:
+      tags: [admin]
+      operationId: sendBroadcast
+      summary: Broadcast a platform-wide message
+      description: Super-admin only.
+      responses:
+        "200": { description: Delivery receipt }
+        "400": { description: Missing message }

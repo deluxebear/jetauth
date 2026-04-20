@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Task API Demo</title>
+  <style>
+    :root { color-scheme: light dark; }
+    body { font: 15px/1.55 -apple-system, "Segoe UI", sans-serif; max-width: 780px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin: 0 0 6px; }
+    .muted { color: #64748b; }
+    code, pre { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+    pre { background: rgba(127,127,127,0.1); padding: 12px 14px; border-radius: 8px; overflow-x: auto; }
+    table { border-collapse: collapse; width: 100%; margin: 12px 0 24px; font-size: 14px; }
+    th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid rgba(127,127,127,0.25); }
+    th { font-weight: 600; }
+    .method { display: inline-block; min-width: 58px; padding: 1px 8px; border-radius: 4px; font-size: 12px; font-weight: 600; text-align: center; color: #fff; }
+    .get { background: #0ea5e9; }
+    .post { background: #22c55e; }
+    .put { background: #f59e0b; }
+    .delete { background: #ef4444; }
+    a { color: #2563eb; }
+  </style>
+</head>
+<body>
+  <h1>Task API Demo</h1>
+  <p class="muted">A tiny service for exercising JetAuth WAF URL-level authorization. Deploy behind a site with <code>EnableBizAuthz</code> on, then grant different subsets of the endpoints below to different roles.</p>
+
+  <h2>Endpoints</h2>
+  <table>
+    <thead><tr><th>Method</th><th>Path</th><th>Group</th><th>Intended role</th></tr></thead>
+    <tbody>
+      <tr><td><span class="method get">GET</span></td><td><code>/api/health</code></td><td>health</td><td>bypass</td></tr>
+      <tr><td><span class="method get">GET</span></td><td><code>/api/me</code></td><td>identity</td><td>any authed</td></tr>
+      <tr><td><span class="method get">GET</span></td><td><code>/api/tasks</code></td><td>tasks</td><td>viewer / editor / admin</td></tr>
+      <tr><td><span class="method post">POST</span></td><td><code>/api/tasks</code></td><td>tasks</td><td>editor / admin</td></tr>
+      <tr><td><span class="method get">GET</span></td><td><code>/api/tasks/{id}</code></td><td>tasks</td><td>viewer / editor / admin</td></tr>
+      <tr><td><span class="method put">PUT</span></td><td><code>/api/tasks/{id}</code></td><td>tasks</td><td>editor / admin</td></tr>
+      <tr><td><span class="method delete">DELETE</span></td><td><code>/api/tasks/{id}</code></td><td>tasks</td><td>admin</td></tr>
+      <tr><td><span class="method get">GET</span></td><td><code>/api/reports/summary</code></td><td>reports</td><td>admin</td></tr>
+      <tr><td><span class="method get">GET</span></td><td><code>/api/reports/export</code></td><td>reports</td><td>admin</td></tr>
+      <tr><td><span class="method get">GET</span></td><td><code>/api/admin/audit</code></td><td>admin</td><td>super-admin</td></tr>
+      <tr><td><span class="method post">POST</span></td><td><code>/api/admin/broadcast</code></td><td>admin</td><td>super-admin</td></tr>
+    </tbody>
+  </table>
+
+  <h2>OpenAPI 3.1 spec</h2>
+  <p>Import <a href="/openapi.yaml"><code>/openapi.yaml</code></a> into <strong>Application Authorization → Resources → Import → OpenAPI</strong>. Tags become groups; <code>operationId</code> becomes the resource name so re-imports update existing rows instead of creating duplicates.</p>
+
+  <h2>Try it</h2>
+  <pre>curl http://localhost:8081/api/health
+curl http://localhost:8081/api/me
+curl http://localhost:8081/api/tasks</pre>
+
+  <p class="muted">When the request bypasses the WAF, <code>/api/me</code> returns an empty identity with a note. When routed through the WAF, you will see the <code>X-Forwarded-User</code> / <code>-Email</code> headers the gateway injected after SSO.</p>
+</body>
+</html>

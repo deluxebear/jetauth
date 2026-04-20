@@ -22,7 +22,6 @@ import (
 
 	"github.com/casdoor/casdoor-go-sdk/casdoorsdk"
 	"github.com/deluxebear/jetauth/object"
-	"github.com/deluxebear/jetauth/util"
 )
 
 func getSigninUrl(casdoorClient *casdoorsdk.Client, callbackUrl string, originalPath string) string {
@@ -57,17 +56,25 @@ func handleAuthCallback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	application, err := object.GetApplication(util.GetId(site.Owner, site.CasdoorApplication))
-	if err != nil {
-		responseError(w, "CasWAF error: casdoorClient.GetOAuthToken() error: %s", err.Error())
+	// Applications are owned by the "admin" organization but sites can live
+	// under any tenant, so constructing the lookup from site.Owner is wrong.
+	// refreshSiteMap already attaches the resolved Application to every site
+	// (see object/site_cache.go:102), so prefer that. Fall back to a direct
+	// "admin/<name>" lookup for out-of-band DB edits, and always guard nil
+	// before dereferencing — missing-application must be a 500, not a panic.
+	application := site.ApplicationObj
+	if application == nil {
+		var err error
+		application, err = object.GetApplication("admin/" + site.CasdoorApplication)
+		if err != nil {
+			responseError(w, "CasWAF error: GetApplication() error: %s", err.Error())
+			return
+		}
+	}
+	if application == nil {
+		responseError(w, "CasWAF error: application %q bound to site %s was not found — check site config", site.CasdoorApplication, site.GetId())
 		return
 	}
-
-	//casdoorClient, err := getCasdoorClientFromSite(site)
-	//if err != nil {
-	//	responseError(w, "CasWAF error: getCasdoorClientFromSite() error: %s", err.Error())
-	//	return
-	//}
 
 	token, tokenError, err := object.GetAuthorizationCodeToken(application, application.ClientSecret, code, "", "")
 	if tokenError != nil {

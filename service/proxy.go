@@ -50,6 +50,15 @@ func forwardHandler(targetUrl string, writer http.ResponseWriter, request *http.
 	}
 
 	proxy := &httputil.ReverseProxy{Transport: sharedTransport}
+	proxy.ErrorHandler = func(w http.ResponseWriter, r *http.Request, err error) {
+		// Default ReverseProxy swallows upstream errors into a bare 502 with
+		// no body — useless in a dev loop. Log the real reason and surface it
+		// to the caller (still 502 so HTTP semantics match).
+		logs.Error("forwardHandler: upstream %s failed: %v", targetUrl, err)
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		w.WriteHeader(http.StatusBadGateway)
+		_, _ = fmt.Fprintf(w, "CasWAF: upstream %s unreachable: %v\n", targetUrl, err)
+	}
 	proxy.Director = func(r *http.Request) {
 		r.URL = target
 
