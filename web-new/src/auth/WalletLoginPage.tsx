@@ -141,12 +141,16 @@ export default function WalletLoginPage() {
         rawMethod === "signup" || rawMethod === "signin" || rawMethod === "link"
           ? rawMethod
           : "signup";
+      // Carry the invite link's ?invitationCode=... through to the backend so
+      // apps that require an invitation code for signup can still gate Web3.
+      const invitationCode = inner.get("invitationCode") ?? "";
 
       const res = await submitProviderLogin({
         applicationName,
         providerName,
         code: JSON.stringify({ message: siweMessage, signature }),
         method,
+        invitationCode,
       });
 
       if (res.status === "ok") {

@@ -47,6 +47,10 @@ export default function AuthCallback() {
     const applicationName = inner.get("application") ?? "";
     const organizationName = inner.get("organization") ?? "";
     const providerName = inner.get("provider") ?? "";
+    // The original login URL (e.g. /login/jetems/ERP?invitationCode=ABC)
+    // had its query string packed into state by encodeState, so the code
+    // the user typed into the invite link round-trips through GitHub.
+    const invitationCode = inner.get("invitationCode") ?? "";
     // Whitelist the method before forwarding — an attacker who could both
     // forge state (bypassing the verifier check below) and inject a custom
     // method would otherwise drive whichever backend branch they wanted.
@@ -69,7 +73,7 @@ export default function AuthCallback() {
       return;
     }
 
-    submitProviderLogin({ applicationName, providerName, code, method, codeVerifier: verifier })
+    submitProviderLogin({ applicationName, providerName, code, method, codeVerifier: verifier, invitationCode })
       .then((res) => {
         if (res.status === "ok") {
           // Hard navigation so App re-runs getAccount() against the fresh

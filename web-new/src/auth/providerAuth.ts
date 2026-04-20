@@ -333,6 +333,15 @@ export async function submitProviderLogin(args: {
   code: string;
   method: string;
   codeVerifier?: string;
+  /**
+   * Forwarded to AuthForm.InvitationCode on the backend. Required when the
+   * app has `Invitation code` as a required signupItem — without it, the
+   * first-time OAuth/Web3 signup fails CheckInvitationCode with "cannot be
+   * blank" and there's no UI to recover. Originating login URL carries it
+   * as `?invitationCode=...`; encodeState bakes window.location.search into
+   * state, so the callback can read it back via decodeState.
+   */
+  invitationCode?: string;
 }): Promise<{ status: string; msg?: string; data?: unknown }> {
   return api.post<{ status: string; msg?: string; data?: unknown }>("/api/login", {
     type: "login",
@@ -344,5 +353,6 @@ export async function submitProviderLogin(args: {
     redirectUri: `${window.location.origin}/callback`,
     method: args.method,
     codeVerifier: args.codeVerifier ?? "",
+    invitationCode: args.invitationCode ?? "",
   });
 }
