@@ -2563,6 +2563,19 @@ const en = {
   "sites.status.active": "Active",
   "sites.status.inactive": "Inactive",
 
+  // Sites — biz authz (URL-level access control via Application Authorization)
+  "sites.field.enableBizAuthz": "URL-level authorization",
+  "sites.field.bizAuthzFailMode": "Engine failure policy",
+  "sites.field.bizAuthzBypass": "Bypass paths",
+  "sites.tooltip.enableBizAuthz": "When enabled, every request is checked against the roles and permissions in the Application Authorization module by URL and HTTP method.",
+  "sites.tooltip.bizAuthzFailMode": "Closed: return 503 when the authz engine errors (e.g. Redis down). Open: allow the request but log a warning — suitable only for non-sensitive sites.",
+  "sites.tooltip.bizAuthzBypass": "Requests matching any entry skip authorization. Uses Casbin KeyMatch5 syntax: /api/public/* for recursive, /api/users/{id} for a single segment.",
+  "sites.helper.enableBizAuthz": "Requires an application to be bound. Disabled automatically when the application is cleared.",
+  "sites.helper.bizAuthzBypass": "Common: /health, /.well-known/*, /static/*",
+  "sites.placeholder.bizAuthzBypass": "Enter a path and press Enter (e.g. /health)",
+  "sites.failMode.closed": "Deny (fail-closed, recommended)",
+  "sites.failMode.open": "Allow (fail-open)",
+
   // Subscriptions (missing keys with full prefix)
   "subscriptions.title": "Subscriptions",
   "subscriptions.subtitle": "Manage user subscriptions",

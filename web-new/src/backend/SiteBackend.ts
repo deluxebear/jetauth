@@ -38,6 +38,17 @@ export interface Site {
   status: string;
   nodes: NodeItem[];
   casdoorApplication: string;
+
+  // URL-level authorization via the "Application Authorization" module.
+  // EnableBizAuthz requires casdoorApplication to be set (backend rejects
+  // the combo otherwise). bizAuthzBypass entries use KeyMatch5 syntax
+  // ("/api/public/*", "/api/users/{id}"). bizAuthzFailMode controls what
+  // happens when the enforce engine errors: "closed" (default, reject) or
+  // "open" (allow with a warning log).
+  enableBizAuthz: boolean;
+  bizAuthzBypass: string[];
+  bizAuthzFailMode: string;
+
   [key: string]: unknown;
 }
 
@@ -110,5 +121,8 @@ export function newSite(owner: string): Site {
     status: "Active",
     nodes: [],
     casdoorApplication: "",
+    enableBizAuthz: false,
+    bizAuthzBypass: [],
+    bizAuthzFailMode: "closed",
   };
 }

@@ -2643,6 +2643,19 @@ const zh: Record<string, string> = {
   "sites.status.active": "启用",
   "sites.status.inactive": "停用",
 
+  // Sites — biz authz (URL-level access control via Application Authorization)
+  "sites.field.enableBizAuthz": "URL 级授权",
+  "sites.field.bizAuthzFailMode": "引擎故障策略",
+  "sites.field.bizAuthzBypass": "白名单路径",
+  "sites.tooltip.enableBizAuthz": "开启后，每个请求会按「应用授权」模块里定义的角色与权限，以 URL + HTTP 方法做细粒度控制。",
+  "sites.tooltip.bizAuthzFailMode": "拒绝：授权引擎异常（如 Redis 掉线）时返回 503；放行：允许请求但写警告日志，适合非敏感站点。",
+  "sites.tooltip.bizAuthzBypass": "命中后跳过授权检查。支持 Casbin KeyMatch5 语法：/api/public/* 匹配子路径，/api/users/{id} 匹配单段。",
+  "sites.helper.enableBizAuthz": "需要先绑定应用。关闭应用绑定时会自动关闭此项。",
+  "sites.helper.bizAuthzBypass": "常见：/health、/.well-known/*、/static/*",
+  "sites.placeholder.bizAuthzBypass": "输入路径后按回车（例：/health）",
+  "sites.failMode.closed": "拒绝（fail-closed，推荐）",
+  "sites.failMode.open": "放行（fail-open）",
+
   // Subscriptions (missing keys with full prefix)
   "subscriptions.title": "订阅管理",
   "subscriptions.subtitle": "管理用户订阅",

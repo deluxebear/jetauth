@@ -63,6 +63,25 @@ func forwardHandler(targetUrl string, writer http.ResponseWriter, request *http.
 				r.Header.Set("X-Forwarded-For", clientIP)
 			}
 		}
+
+		// Pass through the authenticated identity so upstream services can
+		// personalize responses without reparsing the JWT. Claims are only
+		// set when the site bound a CasdoorApplication AND the SSO check
+		// passed (see handleRequest), so an unauthenticated request will not
+		// have these headers.
+		//
+		// We explicitly strip any inbound copies first to prevent header
+		// spoofing from clients that might try to impersonate a user.
+		r.Header.Del("X-Forwarded-User")
+		r.Header.Del("X-Forwarded-Email")
+		r.Header.Del("X-Forwarded-Roles")
+		r.Header.Del("X-Forwarded-App")
+		if claims := getClaims(request.Context()); claims != nil {
+			r.Header.Set("X-Forwarded-User", util.GetId(claims.User.Owner, claims.User.Name))
+			if claims.User.Email != "" {
+				r.Header.Set("X-Forwarded-Email", claims.User.Email)
+			}
+		}
 	}
 
 	proxy.ModifyResponse = func(resp *http.Response) error {
@@ -224,9 +243,10 @@ func handleRequest(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// oAuth proxy
+	// SSO + (optional) URL-level authorization. Claims are stashed on the
+	// request context so forwardHandler can set X-Forwarded-* headers
+	// without reparsing the cookie.
 	if site.CasdoorApplication != "" {
-		// handle oAuth proxy
 		cookie, err := r.Cookie("casdoor_access_token")
 		if err != nil && err != http.ErrNoCookie {
 			responseError(w, "CasWAF error: cookie parsing failed: %s", err.Error())
@@ -240,16 +260,27 @@ func handleRequest(w http.ResponseWriter, r *http.Request) {
 		}
 
 		if cookie == nil {
-			// not logged in
 			redirectToCasdoor(casdoorClient, w, r)
 			return
-		} else {
-			_, err = casdoorClient.ParseJwtToken(cookie.Value)
-			if err != nil {
-				responseError(w, "CasWAF error: casdoorClient.ParseJwtToken() error: %s", err.Error())
-				return
-			}
 		}
+
+		claims, err := casdoorClient.ParseJwtToken(cookie.Value)
+		if err != nil {
+			responseError(w, "CasWAF error: casdoorClient.ParseJwtToken() error: %s", err.Error())
+			return
+		}
+		if claims == nil || claims.User.Owner == "" || claims.User.Name == "" {
+			// Token parsed as valid JWT but carried no user identity — refuse
+			// rather than fall through with an empty subject.
+			responseError(w, "CasWAF error: JWT parsed but user claims are missing")
+			return
+		}
+
+		if !handleBizAuthz(w, r, site, claims, clientIp) {
+			return
+		}
+
+		r = r.WithContext(withClaims(r.Context(), claims))
 	}
 
 	host := site.GetHost()

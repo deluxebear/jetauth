@@ -456,10 +456,48 @@ export default function SiteEditPage() {
           <SingleSearchSelect
             value={site.casdoorApplication ?? ""}
             options={appOptions}
-            onChange={(v) => set("casdoorApplication", v)}
+            onChange={(v) => {
+              // Clearing the application implicitly turns off URL authz so
+              // the site can never persist an invalid state (backend would
+              // reject it anyway — belt and suspenders).
+              if (!v && site.enableBizAuthz) {
+                set("enableBizAuthz", false);
+              }
+              set("casdoorApplication", v);
+            }}
             placeholder={t("common.search" as any)}
           />
         </FormField>
+
+        {/* URL-level authorization sub-panel — only available once an
+            application is bound, since the enforcer needs an identity source. */}
+        {site.casdoorApplication && (
+          <FormField label={t("sites.field.enableBizAuthz" as any)} span="full" tooltip={t("sites.tooltip.enableBizAuthz" as any)} help={t("sites.helper.enableBizAuthz" as any)}>
+            <Switch checked={!!site.enableBizAuthz} onChange={(checked) => set("enableBizAuthz", checked)} />
+          </FormField>
+        )}
+        {site.casdoorApplication && site.enableBizAuthz && (
+          <>
+            <FormField label={t("sites.field.bizAuthzFailMode" as any)} tooltip={t("sites.tooltip.bizAuthzFailMode" as any)}>
+              <SimpleSelect
+                value={site.bizAuthzFailMode || "closed"}
+                options={[
+                  { value: "closed", label: t("sites.failMode.closed" as any) },
+                  { value: "open", label: t("sites.failMode.open" as any) },
+                ]}
+                onChange={(v) => set("bizAuthzFailMode", v)}
+              />
+            </FormField>
+            <FormField label={t("sites.field.bizAuthzBypass" as any)} span="full" tooltip={t("sites.tooltip.bizAuthzBypass" as any)} help={t("sites.helper.bizAuthzBypass" as any)}>
+              <TagListInput
+                values={site.bizAuthzBypass || []}
+                onChange={(v) => set("bizAuthzBypass", v)}
+                placeholder={t("sites.placeholder.bizAuthzBypass" as any)}
+              />
+            </FormField>
+          </>
+        )}
+
         <FormField label={t("sites.field.rules" as any)} span="full" tooltip={t("sites.tooltip.rules" as any)}>
           {ruleOptions.length > 0 ? (
             <div className="space-y-1.5">

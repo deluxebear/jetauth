@@ -157,23 +157,52 @@ func ClearBizEnforcerCache(owner, appName string) {
 // BizEnforce checks if the request is allowed for the given app.
 // Returns false immediately if the app config is disabled.
 func BizEnforce(owner, appName string, request []interface{}) (bool, error) {
+	allowed, _, err := BizEnforceWithKind(owner, appName, request)
+	return allowed, err
+}
+
+// BizAuthzKind classifies the outcome of a biz authz check so callers can
+// pick the right HTTP status (403 deny vs 503 misconfigured vs fail-mode
+// branch) without sniffing error strings. Gateways on the hot path can't
+// afford to pattern-match on error messages.
+type BizAuthzKind string
+
+const (
+	BizAuthzKindAllowed     BizAuthzKind = "allowed"
+	BizAuthzKindDenied      BizAuthzKind = "denied"
+	BizAuthzKindNotFound    BizAuthzKind = "not_found"
+	BizAuthzKindDisabled    BizAuthzKind = "disabled"
+	BizAuthzKindEngineError BizAuthzKind = "engine_error"
+)
+
+// BizEnforceWithKind runs BizEnforce and reports the outcome kind so callers
+// can pick the right HTTP status / log level / fail-mode behavior without
+// having to match on error strings.
+func BizEnforceWithKind(owner, appName string, request []interface{}) (bool, BizAuthzKind, error) {
 	config, err := getBizAppConfig(owner, appName)
 	if err != nil {
-		return false, err
+		return false, BizAuthzKindEngineError, err
 	}
 	if config == nil {
-		return false, fmt.Errorf("biz app config not found: %s/%s", owner, appName)
+		return false, BizAuthzKindNotFound, fmt.Errorf("biz app config not found: %s/%s", owner, appName)
 	}
 	if !config.IsEnabled {
-		return false, fmt.Errorf("biz app is disabled: %s/%s", owner, appName)
+		return false, BizAuthzKindDisabled, fmt.Errorf("biz app is disabled: %s/%s", owner, appName)
 	}
 
 	e, err := GetBizEnforcer(owner, appName)
 	if err != nil {
-		return false, err
+		return false, BizAuthzKindEngineError, err
 	}
 
-	return e.Enforce(request...)
+	allowed, err := e.Enforce(request...)
+	if err != nil {
+		return false, BizAuthzKindEngineError, err
+	}
+	if allowed {
+		return true, BizAuthzKindAllowed, nil
+	}
+	return false, BizAuthzKindDenied, nil
 }
 
 // BizBatchEnforce checks multiple requests at once.

@@ -63,6 +63,54 @@ type Site struct {
 
 	CasdoorApplication string       `xorm:"varchar(100)" json:"casdoorApplication"`
 	ApplicationObj     *Application `xorm:"-" json:"applicationObj"`
+
+	// URL-level authorization via the Application Authorization module. See
+	// validateBizAuthz for invariants. Multi-instance caveat: the enforcer
+	// cache is per-process; see TODO.md "Redis 缓存 — 多实例部署支持".
+	EnableBizAuthz   bool     `xorm:"" json:"enableBizAuthz"`
+	BizAuthzBypass   []string `xorm:"varchar(1000)" json:"bizAuthzBypass"`
+	BizAuthzFailMode string   `xorm:"varchar(20)" json:"bizAuthzFailMode"`
+}
+
+// Valid values for Site.BizAuthzFailMode. The enforce layer short-circuits on
+// these constants, not raw strings, so a typo in validation or UI code surfaces
+// at compile time.
+const (
+	BizAuthzFailClosed = "closed"
+	BizAuthzFailOpen   = "open"
+)
+
+// validateBizAuthz rejects configurations that would wedge the gateway into
+// denying every request (authz on, no identity source) or into reading a
+// garbage fail mode. Also normalizes: trims/drops empty bypass entries and
+// defaults an empty FailMode to "closed" so the enforce hot path never has
+// to handle either condition at runtime.
+func validateBizAuthz(site *Site) error {
+	if site == nil {
+		return nil
+	}
+
+	trimmed := site.BizAuthzBypass[:0]
+	for _, p := range site.BizAuthzBypass {
+		if p = strings.TrimSpace(p); p != "" {
+			trimmed = append(trimmed, p)
+		}
+	}
+	site.BizAuthzBypass = trimmed
+
+	if site.BizAuthzFailMode == "" {
+		site.BizAuthzFailMode = BizAuthzFailClosed
+	}
+
+	if site.EnableBizAuthz && site.CasdoorApplication == "" {
+		return fmt.Errorf("cannot enable biz authz without selecting a CasdoorApplication: there is no identity source")
+	}
+	switch site.BizAuthzFailMode {
+	case BizAuthzFailClosed, BizAuthzFailOpen:
+	default:
+		return fmt.Errorf("invalid bizAuthzFailMode %q: expected %q or %q", site.BizAuthzFailMode, BizAuthzFailClosed, BizAuthzFailOpen)
+	}
+	return nil
 }
 
 func GetGlobalSites() ([]*Site, error) {
@@ -147,6 +195,10 @@ func GetMaskedSites(sites []*Site, node string) []*Site {
 }
 
 func UpdateSite(id string, site *Site) (bool, error) {
+	if err := validateBizAuthz(site); err != nil {
+		return false, err
+	}
+
 	owner, name := util.GetOwnerAndNameFromIdNoCheck(id)
 	if s, err := getSite(owner, name); err != nil {
 		return false, err
@@ -186,6 +238,10 @@ func UpdateSiteNoRefresh(id string, site *Site) (bool, error) {
 }
 
 func AddSite(site *Site) (bool, error) {
+	if err := validateBizAuthz(site); err != nil {
+		return false, err
+	}
+
 	affected, err := ormer.Engine.Insert(site)
 	if err != nil {
 		return false, err

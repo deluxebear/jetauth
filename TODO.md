@@ -342,6 +342,12 @@ Permission 系统依赖 xorm-adapter 的 V5 列（第 6 位）存储 `permission
 
 **当前状态：`sync.Map` 内存缓存，单实例有效，多实例部署时节点间缓存不一致**
 
+> **⚠️ 2026-04-20 起此问题升级为热路径依赖。** WAF 网关的"URL 级授权"功能上线后,`GetBizEnforcer` 从"后台/SDK 偶发调用"变成"每个 HTTP 请求必经路径"。多实例部署时节点间策略陈旧不再是"管理员改完权限稍等片刻再生效",而是"Node B 会按旧策略拦/放流量"—— 直接影响线上安全正确性。
+>
+> 修复前建议继续单实例部署,或关闭 `Site.EnableBizAuthz`。
+>
+> 现有的 `/api/biz-get-policies` 已返回 `version`(基于 `BizAppConfig.UpdatedTime`),业务 SDK 自己轮询时安全;但进程内直调 `object.BizEnforce` 的网关路径**未接入**此 version 对账。阶段 1 的 Redis Watcher 方案正是补上这一步。
+
 #### 问题描述
 
 `bizEnforcerCache sync.Map` 在每个进程内独立维护。当 Node A 调用 `SyncAppPolicies` 更新策略后，Node B 的缓存仍是旧的，直到该缓存条目被手动清除或进程重启。
@@ -874,7 +880,9 @@ Site 模块是 JetAuth 内置的反向代理网关 + WAF，拦截所有 HTTP(S) 
 
 ## 网关集成 Casbin 应用授权（API 级权限控制）
 
-**状态：待开发** | **优先级：高** | **预估工作量：1-2 天**
+**状态：✅ 已完成（2026-04-20）** | **相关 PR：feat/auth-ui-revamp 分支**
+
+> 多实例部署下仍有策略陈旧风险 —— 详见 **[业务权限模块改进计划 → 一、Redis 缓存 — 多实例部署支持](#一redis-缓存--多实例部署支持)**。本次交付默认单实例部署。
 
 ### 背景
 
@@ -912,11 +920,12 @@ if site.CasdoorApplication != "" && claims != nil {
 
 ### 任务清单
 
-- [ ] `service/proxy.go:236` — 修改 `ParseJwtToken` 接收 claims（当前用 `_` 丢弃了返回值）
-- [ ] `service/proxy.go:241` 后 — 插入 BizEnforce 调用，构造 `[userId, path, method]` 请求
-- [ ] 向后兼容：`getBizAppConfig` 返回 nil 时跳过鉴权（不拒绝），已配置但 `IsEnabled=false` 也跳过
-- [ ] 性能验证：BizEnforce 走 sync.Map 内存缓存，确认不引入额外 DB 查询
-- [ ] 前端站点编辑页增加提示：关联应用后可在「应用授权」中配置 API 级权限
+- [x] `service/proxy.go` — 捕获 `ParseJwtToken` 返回的 claims,通过 `context.WithValue` 传递
+- [x] `service/authz.go`（新） — `handleBizAuthz` 封装:bypass 列表 + `BizEnforce` 调用 + 失败模式分支 + 审计日志
+- [x] `object/biz_enforcer_cache.go` — 新增 `BizEnforceWithKind` + `BizAuthzKind` 枚举区分 allowed/denied/not_found/disabled/engine_error
+- [x] Site 新增 3 字段:`EnableBizAuthz` / `BizAuthzBypass[]` / `BizAuthzFailMode`,Add/Update 双重校验
+- [x] 前端站点编辑页:访问控制区块内的子面板(toggle + 失败模式 + 白名单路径)
+- [x] 测试:`service/authz_test.go`(bypass/deny/unavailable)+ `object/biz_enforcer_kind_test.go`(not_found/disabled 分类)
 
 ### 设计要点
 
