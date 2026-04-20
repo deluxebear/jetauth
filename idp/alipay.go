@@ -23,6 +23,8 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"encoding/pem"
+	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"net/url"
@@ -242,19 +244,23 @@ func rsaSignWithRSA256(signContent string, privateKey string) (string, error) {
 	privateKey = formatPrivateKey(privateKey)
 	block, _ := pem.Decode([]byte(privateKey))
 	if block == nil {
-		panic("fail to parse privateKey")
+		return "", errors.New("alipay: failed to PEM-decode the Client Secret — expected a PKCS#8 RSA private key (header `-----BEGIN PRIVATE KEY-----`). Paste either the whole .pem file or just its base64 body, no stray whitespace")
 	}
 
 	h := sha256.New()
 	h.Write([]byte(signContent))
 	hashed := h.Sum(nil)
 
-	privateKeyRSA, err := x509.ParsePKCS8PrivateKey(block.Bytes)
+	privateKeyPKCS8, err := x509.ParsePKCS8PrivateKey(block.Bytes)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("alipay: PKCS#8 parse failed — if you pasted a PKCS#1 key (header `-----BEGIN RSA PRIVATE KEY-----`) convert it first with `openssl pkcs8 -topk8 -in old.pem -out new.pem -nocrypt`: %w", err)
+	}
+	privateKeyRSA, ok := privateKeyPKCS8.(*rsa.PrivateKey)
+	if !ok {
+		return "", errors.New("alipay: parsed key is not RSA — Alipay requires RSA2 (2048-bit RSA)")
 	}
 
-	signature, err := rsa.SignPKCS1v15(rand.Reader, privateKeyRSA.(*rsa.PrivateKey), crypto.SHA256, hashed)
+	signature, err := rsa.SignPKCS1v15(rand.Reader, privateKeyRSA, crypto.SHA256, hashed)
 	if err != nil {
 		return "", err
 	}
@@ -262,33 +268,95 @@ func rsaSignWithRSA256(signContent string, privateKey string) (string, error) {
 	return base64.StdEncoding.EncodeToString(signature), nil
 }
 
-// privateKey in database is a string, format it to PEM style
+// formatPrivateKey normalises whatever the admin pasted into Client Secret
+// into a well-formed PEM block. Accepts:
+//   - full PKCS#8 PEM (header + base64 body + footer, any surrounding whitespace)
+//   - full PKCS#1 PEM (RSA PRIVATE KEY) — passed through; parse step will reject
+//     with an actionable message pointing at `openssl pkcs8 -topk8`
+//   - raw base64 body (no header/footer) — wrapped as PKCS#8
+//
+// A prior bug: the prefix check ran on the untrimmed string, so a leading
+// space / newline / BOM caused it to fall into the strip branch, which then
+// mangled the `-----BEGIN PRIVATE KEY-----` header itself (stripping the
+// internal spaces), producing a garbage PEM that pem.Decode choked on and
+// the caller panicked.
+// pemWhitespaceStripper removes every whitespace / control char that can
+// legally appear between PEM markers or inside a base64 body. Keeping this
+// broader than strings.TrimSpace matters because some admin UIs collapse the
+// pasted PEM into a single line with spaces between the header, body, and
+// footer — pem.Decode rejects those, but the bytes are recoverable.
+func stripPEMWhitespace(s string) string {
+	var b strings.Builder
+	b.Grow(len(s))
+	for _, ch := range s {
+		if ch == '\n' || ch == '\r' || ch == ' ' || ch == '\t' || ch == '\v' || ch == '\f' {
+			continue
+		}
+		b.WriteRune(ch)
+	}
+	return b.String()
+}
+
+// wrapPEM rebuilds a canonical PEM block: `-----BEGIN <type>-----\n`, body
+// chunked at 64 chars per line, `-----END <type>-----`.
+func wrapPEM(keyType, body string) string {
+	var b strings.Builder
+	b.WriteString("-----BEGIN ")
+	b.WriteString(keyType)
+	b.WriteString("-----\n")
+	for i := 0; i < len(body); i += 64 {
+		end := i + 64
+		if end > len(body) {
+			end = len(body)
+		}
+		b.WriteString(body[i:end])
+		b.WriteString("\n")
+	}
+	b.WriteString("-----END ")
+	b.WriteString(keyType)
+	b.WriteString("-----")
+	return b.String()
+}
+
+// formatPrivateKey accepts whatever the admin pasted into Client Secret and
+// emits a pem.Decode-friendly PKCS-style PEM block. Handles:
+//   - canonical multi-line PEM (identity)
+//   - single-line PEM where the admin form collapsed newlines to spaces
+//     (observed with beego's default single-line input + some browser autofills)
+//   - raw base64 body (no header / footer) — wrapped as PKCS#8
+//   - PKCS#1 (`RSA PRIVATE KEY`) — preserved; parse step surfaces a targeted
+//     "convert with openssl pkcs8 -topk8" message
+//   - wrong key type (PUBLIC KEY / CERTIFICATE) — preserved so the parse
+//     step errors out cleanly instead of silently becoming a PRIVATE KEY
+//   - stray UTF-8 BOM at start (common when pasted through Windows tools)
 func formatPrivateKey(privateKey string) string {
-	// Check if the key is already in PEM format
-	if strings.HasPrefix(privateKey, "-----BEGIN PRIVATE KEY-----") ||
-		strings.HasPrefix(privateKey, "-----BEGIN RSA PRIVATE KEY-----") {
-		// Key is already in PEM format, return as is
+	privateKey = strings.TrimPrefix(privateKey, "\ufeff")
+	privateKey = strings.TrimSpace(privateKey)
+
+	// PEM-shaped input. Extract key type + body, rebuild cleanly. Handles
+	// the "single line with spaces" case by stripping all whitespace from
+	// between the BEGIN and END markers.
+	if strings.HasPrefix(privateKey, "-----BEGIN ") {
+		afterBegin := privateKey[len("-----BEGIN "):]
+		typeEnd := strings.Index(afterBegin, "-----")
+		if typeEnd > 0 {
+			keyType := strings.TrimSpace(afterBegin[:typeEnd])
+			endMarker := "-----END " + keyType + "-----"
+			// The body lives between the closing dashes of BEGIN and the
+			// opening dashes of END. Accept whitespace between "TYPE" and
+			// the trailing "-----" (some tools emit "BEGIN PRIVATE KEY -----").
+			bodyStart := strings.Index(privateKey, "-----") + len("-----")
+			bodyStart = strings.Index(privateKey[bodyStart:], "-----") + bodyStart + len("-----")
+			endIdx := strings.Index(privateKey, endMarker)
+			if endIdx > bodyStart {
+				body := stripPEMWhitespace(privateKey[bodyStart:endIdx])
+				return wrapPEM(keyType, body)
+			}
+		}
+		// Malformed — let pem.Decode surface the native error.
 		return privateKey
 	}
 
-	// Remove any whitespace from the key
-	privateKey = strings.ReplaceAll(privateKey, "\n", "")
-	privateKey = strings.ReplaceAll(privateKey, "\r", "")
-	privateKey = strings.ReplaceAll(privateKey, " ", "")
-
-	// Format the key with line breaks every 64 characters using strings.Builder
-	var builder strings.Builder
-	for i := 0; i < len(privateKey); i += 64 {
-		end := i + 64
-		if end > len(privateKey) {
-			end = len(privateKey)
-		}
-		builder.WriteString(privateKey[i:end])
-		if end < len(privateKey) {
-			builder.WriteString("\n")
-		}
-	}
-
-	// add pkcs#8 BEGIN and END
-	return "-----BEGIN PRIVATE KEY-----\n" + builder.String() + "\n-----END PRIVATE KEY-----"
+	// Raw base64 body. Strip whitespace, wrap as PKCS#8.
+	return wrapPEM("PRIVATE KEY", stripPEMWhitespace(privateKey))
 }

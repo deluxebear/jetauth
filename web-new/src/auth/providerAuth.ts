@@ -113,6 +113,10 @@ const authInfo: Record<string, ProviderAuthInfo> = {
   QQ:           { endpoint: "https://graph.qq.com/oauth2.0/authorize",            scope: "get_user_info" },
   DingTalk:     { endpoint: "https://login.dingtalk.com/oauth2/auth",             scope: "openid" },
   Baidu:        { endpoint: "https://openapi.baidu.com/oauth/2.0/authorize",      scope: "basic" },
+  // Alipay webpage login (EIP-like OAuth2). Uses `app_id` + `scope=auth_user`
+  // (auth_base = silent login, no nickname/avatar). See per-type branch below
+  // for the URL shape — can't reuse the generic client_id= template.
+  Alipay:       { endpoint: "https://openauth.alipay.com/oauth2/publicAppAuthorize.htm", scope: "auth_user" },
   // Lark's actual endpoint + param shape is handled by the per-type branch in
   // getAuthUrl (switches Feishu China vs Lark Suite via DisableSsl). Entry here
   // is only present to satisfy the "known type" check.
@@ -206,6 +210,12 @@ export async function getAuthUrl(
 
   if (provider.type === "DingTalk") {
     return `${info.endpoint}?client_id=${provider.clientId}&redirect_uri=${redirectUri}&scope=${info.scope}&response_type=code&prompt=login%20consent&state=${state}`;
+  }
+
+  if (provider.type === "Alipay") {
+    // Alipay uses `app_id` not `client_id`; `response_type` is implicit (code).
+    // https://opendocs.alipay.com/open/284/web
+    return `${info.endpoint}?app_id=${provider.clientId}&scope=${info.scope}&redirect_uri=${encodeURIComponent(redirectUri)}&state=${encodeURIComponent(state)}`;
   }
 
   if (provider.type === "AzureADB2C") {
