@@ -656,7 +656,7 @@ export default function ApplicationEditPage() {
         <FormField label={t("apps.field.signupUrl")} span="full">
           <input value={String(app.signupUrl ?? "")} onChange={(e) => set("signupUrl", e.target.value)} className={inputClass} placeholder={t("help.placeholder.signupUrl" as any)} />
         </FormField>
-        <FormField label={t("apps.field.signinUrl")} span="full">
+        <FormField label={t("apps.field.signinUrl")} span="full" help={t("help.signinUrl" as any)}>
           <input value={String(app.signinUrl ?? "")} onChange={(e) => set("signinUrl", e.target.value)} className={inputClass} placeholder={t("help.placeholder.signinUrl" as any)} />
         </FormField>
         <FormField label={t("apps.field.forgetUrl")} span="full">

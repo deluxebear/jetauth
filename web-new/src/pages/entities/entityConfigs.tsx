@@ -1,6 +1,7 @@
 import StatusBadge from "../../components/StatusBadge";
 import type { ListPageColumn } from "../../components/GenericListPage";
 import type { FieldConfig } from "../../components/GenericEditPage";
+import { safeExternalUrl } from "../../utils/safeUrl";
 
 // ─── Helper renderers ───
 const linkName = (_: unknown, r: Record<string, unknown>) => (
@@ -69,7 +70,7 @@ export const entityConfigs: Record<string, EntityConfig> = {
         r.favicon ? <img src={String(r.favicon)} alt="" className="h-6 w-6 object-contain" /> : <span className="text-text-muted">—</span>
       },
       { key: "websiteUrl", title: "col.website", render: (_: unknown, r: Record<string, unknown>) =>
-        r.websiteUrl ? <a href={String(r.websiteUrl)} target="_blank" rel="noreferrer" className="text-accent hover:underline text-[12px] truncate block max-w-[200px]">{String(r.websiteUrl)}</a> : <span className="text-text-muted">—</span>
+        r.websiteUrl ? <a href={safeExternalUrl(String(r.websiteUrl))} target="_blank" rel="noreferrer" className="text-accent hover:underline text-[12px] truncate block max-w-[200px]">{String(r.websiteUrl)}</a> : <span className="text-text-muted">—</span>
       },
       { key: "passwordType", title: "col.passwordType", render: monoMuted("passwordType") },
       { key: "defaultAvatar", title: "col.defaultAvatar", width: "90px", render: (_: unknown, r: Record<string, unknown>) =>

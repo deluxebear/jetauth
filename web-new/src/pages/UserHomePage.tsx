@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "../i18n";
 import * as AppBackend from "../backend/ApplicationBackend";
 import type { Application } from "../backend/ApplicationBackend";
+import { safeExternalUrl } from "../utils/safeUrl";
 
 interface UserHomePageProps {
   userOrg: string;
@@ -44,7 +45,7 @@ export default function UserHomePage({ userOrg }: UserHomePageProps) {
         {apps.map((app) => (
           <a
             key={app.name}
-            href={app.homepageUrl || "#"}
+            href={safeExternalUrl(app.signinUrl || app.homepageUrl)}
             target="_blank"
             rel="noreferrer"
             className="group flex flex-col items-center gap-4 rounded-xl border border-border bg-surface-1 p-6 hover:border-accent/40 hover:shadow-lg transition-all"

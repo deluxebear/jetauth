@@ -12,6 +12,7 @@ import { useEntityList } from "../hooks/useEntityList";
 import { useOrganization } from "../OrganizationContext";
 import * as OrgBackend from "../backend/OrganizationBackend";
 import type { Organization } from "../backend/OrganizationBackend";
+import { safeExternalUrl } from "../utils/safeUrl";
 
 export default function OrganizationListPage() {
   const navigate = useNavigate();
@@ -118,7 +119,7 @@ export default function OrganizationListPage() {
       render: (_, r) =>
         r.websiteUrl ? (
           <a
-            href={r.websiteUrl}
+            href={safeExternalUrl(r.websiteUrl)}
             target="_blank"
             rel="noreferrer"
             className="text-accent hover:underline text-[12px] truncate block max-w-[180px]"
