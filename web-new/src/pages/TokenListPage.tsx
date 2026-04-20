@@ -10,6 +10,7 @@ import { useEntityList } from "../hooks/useEntityList";
 import { useOrganization } from "../OrganizationContext";
 import * as TokenBackend from "../backend/TokenBackend";
 import type { Token } from "../backend/TokenBackend";
+import { entityEditPath } from "../utils/entityPath";
 
 export default function TokenListPage() {
   const navigate = useNavigate();
@@ -28,7 +29,7 @@ export default function TokenListPage() {
     const token = TokenBackend.newToken(getNewEntityOwner(), "");
     const res = await TokenBackend.addToken(token);
     if (res.status === "ok") {
-      navigate(`/tokens/${token.name}`, { state: { mode: "add" } });
+      navigate(entityEditPath("tokens", token), { state: { mode: "add" } });
     } else {
       modal.toast(res.msg || t("common.addFailed" as any), "error");
     }
@@ -49,7 +50,7 @@ export default function TokenListPage() {
   const columns: Column<Token>[] = [
     {
       key: "name", title: t("col.name" as any), sortable: true, filterable: true, fixed: "left" as const, width: "300px",
-      render: (_, r) => <Link to={`/tokens/${r.name}`} className="font-mono font-medium text-accent hover:underline" onClick={(e) => e.stopPropagation()}>{r.name}</Link>,
+      render: (_, r) => <Link to={entityEditPath("tokens", r)} className="font-mono font-medium text-accent hover:underline" onClick={(e) => e.stopPropagation()}>{r.name}</Link>,
     },
     {
       key: "createdTime", title: t("col.created" as any), sortable: true, width: "160px",
@@ -85,7 +86,7 @@ export default function TokenListPage() {
       key: "__actions", fixed: "right" as const, title: t("common.action" as any), width: "120px",
       render: (_, r) => (
         <div className="flex items-center gap-1">
-          <Link to={`/tokens/${r.name}`} className="rounded p-1.5 text-text-muted hover:text-warning hover:bg-warning/10 transition-colors" title={t("common.edit")} onClick={(e) => e.stopPropagation()}><Pencil size={14} /></Link>
+          <Link to={entityEditPath("tokens", r)} className="rounded p-1.5 text-text-muted hover:text-warning hover:bg-warning/10 transition-colors" title={t("common.edit")} onClick={(e) => e.stopPropagation()}><Pencil size={14} /></Link>
           <button onClick={(e) => handleDelete(r, e)} className="rounded p-1.5 text-text-muted hover:text-danger hover:bg-danger/10 transition-colors" title={t("common.delete")}><Trash2 size={14} /></button>
         </div>
       ),

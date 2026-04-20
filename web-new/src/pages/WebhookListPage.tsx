@@ -11,6 +11,7 @@ import { useEntityList } from "../hooks/useEntityList";
 import { useOrganization } from "../OrganizationContext";
 import * as WebhookBackend from "../backend/WebhookBackend";
 import type { Webhook } from "../backend/WebhookBackend";
+import { entityEditPath } from "../utils/entityPath";
 
 export default function WebhookListPage() {
   const navigate = useNavigate();
@@ -29,7 +30,7 @@ export default function WebhookListPage() {
     const webhook = WebhookBackend.newWebhook(getNewEntityOwner());
     const res = await WebhookBackend.addWebhook(webhook);
     if (res.status === "ok") {
-      navigate(`/webhooks/${webhook.name}`, { state: { mode: "add" } });
+      navigate(entityEditPath("webhooks", webhook), { state: { mode: "add" } });
     } else {
       modal.toast(res.msg || t("common.addFailed" as any), "error");
     }
@@ -50,7 +51,7 @@ export default function WebhookListPage() {
   const columns: Column<Webhook>[] = [
     {
       key: "name", title: t("col.name" as any), sortable: true, filterable: true, fixed: "left" as const, width: "150px",
-      render: (_, r) => <Link to={`/webhooks/${encodeURIComponent(r.name)}`} className="font-mono font-medium text-accent hover:underline" onClick={(e) => e.stopPropagation()}>{r.name}</Link>,
+      render: (_, r) => <Link to={entityEditPath("webhooks", r)} className="font-mono font-medium text-accent hover:underline" onClick={(e) => e.stopPropagation()}>{r.name}</Link>,
     },
     {
       key: "organization", title: t("col.organization" as any), sortable: true, filterable: true, width: "110px",
@@ -96,7 +97,7 @@ export default function WebhookListPage() {
       key: "__actions", fixed: "right" as const, title: t("common.action" as any), width: "110px",
       render: (_, r) => (
         <div className="flex items-center gap-1">
-          <Link to={`/webhooks/${encodeURIComponent(r.name)}`} className="rounded p-1.5 text-text-muted hover:text-warning hover:bg-warning/10 transition-colors" title={t("common.edit")} onClick={(e) => e.stopPropagation()}><Pencil size={14} /></Link>
+          <Link to={entityEditPath("webhooks", r)} className="rounded p-1.5 text-text-muted hover:text-warning hover:bg-warning/10 transition-colors" title={t("common.edit")} onClick={(e) => e.stopPropagation()}><Pencil size={14} /></Link>
           <button onClick={(e) => handleDelete(r, e)} className="rounded p-1.5 text-text-muted hover:text-danger hover:bg-danger/10 transition-colors" title={t("common.delete")}><Trash2 size={14} /></button>
         </div>
       ),

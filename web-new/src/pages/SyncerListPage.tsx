@@ -11,6 +11,7 @@ import { useEntityList } from "../hooks/useEntityList";
 import { useOrganization } from "../OrganizationContext";
 import * as SyncerBackend from "../backend/SyncerBackend";
 import type { Syncer } from "../backend/SyncerBackend";
+import { entityEditPath } from "../utils/entityPath";
 
 export default function SyncerListPage() {
   const navigate = useNavigate();
@@ -29,7 +30,7 @@ export default function SyncerListPage() {
     const syncer = SyncerBackend.newSyncer(getNewEntityOwner());
     const res = await SyncerBackend.addSyncer(syncer);
     if (res.status === "ok") {
-      navigate(`/syncers/${syncer.name}`, { state: { mode: "add" } });
+      navigate(entityEditPath("syncers", syncer), { state: { mode: "add" } });
     } else {
       modal.toast(res.msg || t("common.addFailed" as any), "error");
     }
@@ -49,7 +50,7 @@ export default function SyncerListPage() {
 
   const handleSync = async (record: Syncer, e: React.MouseEvent) => {
     e.stopPropagation();
-    const res = await SyncerBackend.runSyncer("admin", record.name);
+    const res = await SyncerBackend.runSyncer(record.owner, record.name);
     if (res.status === "ok") {
       modal.toast(t("syncers.field.syncSuccess" as any));
     } else {
@@ -60,7 +61,7 @@ export default function SyncerListPage() {
   const columns: Column<Syncer>[] = [
     {
       key: "name", title: t("col.name" as any), sortable: true, filterable: true, fixed: "left" as const, width: "150px",
-      render: (_, r) => <Link to={`/syncers/${encodeURIComponent(r.name)}`} className="font-mono font-medium text-accent hover:underline" onClick={(e) => e.stopPropagation()}>{r.name}</Link>,
+      render: (_, r) => <Link to={entityEditPath("syncers", r)} className="font-mono font-medium text-accent hover:underline" onClick={(e) => e.stopPropagation()}>{r.name}</Link>,
     },
     {
       key: "organization", title: t("col.organization" as any), sortable: true, filterable: true, width: "120px",
@@ -106,7 +107,7 @@ export default function SyncerListPage() {
       render: (_, r) => (
         <div className="flex items-center gap-1">
           <button onClick={(e) => handleSync(r, e)} className="rounded p-1.5 text-text-muted hover:text-accent hover:bg-accent/10 transition-colors" title={t("syncers.field.sync" as any)}><Play size={14} /></button>
-          <Link to={`/syncers/${encodeURIComponent(r.name)}`} className="rounded p-1.5 text-text-muted hover:text-warning hover:bg-warning/10 transition-colors" title={t("common.edit")} onClick={(e) => e.stopPropagation()}><Pencil size={14} /></Link>
+          <Link to={entityEditPath("syncers", r)} className="rounded p-1.5 text-text-muted hover:text-warning hover:bg-warning/10 transition-colors" title={t("common.edit")} onClick={(e) => e.stopPropagation()}><Pencil size={14} /></Link>
           <button onClick={(e) => handleDelete(r, e)} className="rounded p-1.5 text-text-muted hover:text-danger hover:bg-danger/10 transition-colors" title={t("common.delete")}><Trash2 size={14} /></button>
         </div>
       ),

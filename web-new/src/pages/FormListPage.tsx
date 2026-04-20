@@ -10,6 +10,7 @@ import { useEntityList } from "../hooks/useEntityList";
 import { useOrganization } from "../OrganizationContext";
 import * as FormBackend from "../backend/FormBackend";
 import type { Form } from "../backend/FormBackend";
+import { entityEditPath } from "../utils/entityPath";
 
 export default function FormListPage() {
   const navigate = useNavigate();
@@ -28,7 +29,7 @@ export default function FormListPage() {
     const form = FormBackend.newForm(getNewEntityOwner());
     const res = await FormBackend.addForm(form);
     if (res.status === "ok") {
-      navigate(`/forms/${form.name}`, { state: { mode: "add" } });
+      navigate(entityEditPath("forms", form), { state: { mode: "add" } });
     } else {
       modal.toast(res.msg || t("common.addFailed" as any), "error");
     }
@@ -49,7 +50,7 @@ export default function FormListPage() {
   const columns: Column<Form>[] = [
     {
       key: "name", title: t("col.name" as any), sortable: true, fixed: "left" as const, width: "160px",
-      render: (_, r) => <Link to={`/forms/${encodeURIComponent(r.name)}`} className="font-mono font-medium text-accent hover:underline" onClick={(e) => e.stopPropagation()}>{r.name}</Link>,
+      render: (_, r) => <Link to={entityEditPath("forms", r)} className="font-mono font-medium text-accent hover:underline" onClick={(e) => e.stopPropagation()}>{r.name}</Link>,
     },
     {
       key: "displayName", title: t("col.displayName" as any), sortable: true, width: "200px",
@@ -77,7 +78,7 @@ export default function FormListPage() {
       key: "__actions", fixed: "right" as const, title: t("common.action" as any), width: "110px",
       render: (_, r) => (
         <div className="flex items-center gap-1">
-          <Link to={`/forms/${encodeURIComponent(r.name)}`} className="rounded p-1.5 text-text-muted hover:text-warning hover:bg-warning/10 transition-colors" title={t("common.edit")} onClick={(e) => e.stopPropagation()}><Pencil size={14} /></Link>
+          <Link to={entityEditPath("forms", r)} className="rounded p-1.5 text-text-muted hover:text-warning hover:bg-warning/10 transition-colors" title={t("common.edit")} onClick={(e) => e.stopPropagation()}><Pencil size={14} /></Link>
           <button onClick={(e) => handleDelete(r, e)} className="rounded p-1.5 text-text-muted hover:text-danger hover:bg-danger/10 transition-colors" title={t("common.delete")}><Trash2 size={14} /></button>
         </div>
       ),

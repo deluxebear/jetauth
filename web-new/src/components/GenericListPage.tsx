@@ -20,7 +20,6 @@ interface GenericListPageProps {
   columns: ListPageColumn[];
   rowKey?: string | ((r: Record<string, unknown>) => string);
   owner?: string;
-  editPath?: (record: Record<string, unknown>) => string;
   canAdd?: boolean;
   canDelete?: boolean;
   pageSize?: number;
@@ -41,7 +40,6 @@ export default function GenericListPage({
   columns,
   rowKey = "name",
   owner = "built-in",
-  editPath: _editPath,
   canAdd = true,
   canDelete = true,
   pageSize = 20,
