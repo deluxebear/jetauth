@@ -38,7 +38,28 @@ export default function SignupPage({ application, providers }: SignupPageProps) 
     [application.signupItems, t]
   );
 
-  const [values, setValues] = useState<Record<string, unknown>>({});
+  // Prefill + lock the "Invitation code" field when the invite link carried
+  // ?invitationCode=... The user shouldn't be able to swap it out — the
+  // link IS the invitation. If the URL has no code, the field stays empty
+  // and editable so users with a code but no link can still paste theirs.
+  // Matching is case-insensitive on field name to tolerate admin renames.
+  const urlInvitationCode = searchParams.get("invitationCode") ?? "";
+  const invitationCodeFieldName = useMemo(() => {
+    for (const step of schema.steps) {
+      for (const f of step) {
+        if (f.type === "invitation-code" || f.name.toLowerCase() === "invitation code") {
+          return f.name;
+        }
+      }
+    }
+    return "";
+  }, [schema]);
+
+  const [values, setValues] = useState<Record<string, unknown>>(() =>
+    urlInvitationCode && invitationCodeFieldName
+      ? { [invitationCodeFieldName]: urlInvitationCode }
+      : {}
+  );
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [currentStep, setCurrentStep] = useState(0);
   const [submitting, setSubmitting] = useState(false);
@@ -278,6 +299,9 @@ export default function SignupPage({ application, providers }: SignupPageProps) 
                   onChange={(v) => updateValue(field.name, v)}
                   error={errors[field.name]}
                   disabled={submitting}
+                  readOnly={
+                    !!urlInvitationCode && field.name === invitationCodeFieldName
+                  }
                   context={{
                     termsOfUse,
                     providers,

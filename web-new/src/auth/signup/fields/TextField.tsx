@@ -2,7 +2,7 @@ import { useId } from "react";
 import type { FieldProps } from "../DynamicField";
 import { fieldWrapperClass, inputClass, labelClass, helperClass, errorClass } from "./shared";
 
-export default function TextField({ schema, value, onChange, error, disabled }: FieldProps) {
+export default function TextField({ schema, value, onChange, error, disabled, readOnly }: FieldProps) {
   const inputId = useId();
   return (
     <div className={fieldWrapperClass}>
@@ -17,6 +17,7 @@ export default function TextField({ schema, value, onChange, error, disabled }: 
         onChange={(e) => onChange(e.target.value)}
         placeholder={schema.placeholder}
         disabled={disabled}
+        readOnly={readOnly}
         required={schema.required}
         autoComplete={schema.name.toLowerCase() === "username" ? "username" : undefined}
         className={inputClass}

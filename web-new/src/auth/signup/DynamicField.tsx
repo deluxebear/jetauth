@@ -17,6 +17,13 @@ export interface FieldProps {
   onChange: (v: unknown) => void;
   error?: string;
   disabled?: boolean;
+  /**
+   * Locked but still submitted. Used when the value is authoritative from a
+   * URL param (e.g. `?invitationCode=...`) and the user must not edit it. The
+   * field stays in the form body; the input is visually greyed and the HTML
+   * `readOnly` attribute blocks typing.
+   */
+  readOnly?: boolean;
   context?: {
     termsOfUse?: string;
     /**
