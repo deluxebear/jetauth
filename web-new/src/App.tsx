@@ -547,6 +547,8 @@ export default function App() {
               />
             );
           })()} />
+          <Route path="/login/saml/authorize/:organizationName/:applicationName" element={<SamlAuthorizePage />} />
+          <Route path="/login/oauth/authorize" element={<OAuthAuthorizePage authed={true} />} />
           <Route path="/login" element={<Navigate to="/" replace />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
