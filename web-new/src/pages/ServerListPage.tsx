@@ -1,7 +1,6 @@
-import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Plus, RefreshCw, Trash2, Pencil, Radar, Store } from "lucide-react";
+import { Plus, RefreshCw, Trash2, Pencil, Store } from "lucide-react";
 import DataTable, { type Column, useTablePrefs, ColumnsMenu } from "../components/DataTable";
 import { BulkDeleteBar } from "../components/BulkDeleteBar";
 import { useBulkDelete } from "../hooks/useBulkDelete";
@@ -10,15 +9,13 @@ import { useModal } from "../components/Modal";
 import { useEntityList } from "../hooks/useEntityList";
 import { useOrganization } from "../OrganizationContext";
 import * as ServerBackend from "../backend/ServerBackend";
-import type { Server, ScannedServer } from "../backend/ServerBackend";
-import ScanServerModal from "../components/ScanServerModal";
+import type { Server } from "../backend/ServerBackend";
 
 export default function ServerListPage() {
   const navigate = useNavigate();
   const { t } = useTranslation();
   const modal = useModal();
   const { getNewEntityOwner } = useOrganization();
-  const [showScan, setShowScan] = useState(false);
 
   const list = useEntityList<Server>({
     queryKey: "servers",
@@ -47,23 +44,6 @@ export default function ServerListPage() {
         else modal.toast(res.msg || t("common.deleteFailed" as any), "error");
       }
     );
-  };
-
-  const handleAddScannedServer = async (scanned: ScannedServer) => {
-    const ownerVal = getNewEntityOwner();
-    const rand = Math.random().toString(36).substring(2, 8);
-    const newServer = ServerBackend.newServer(ownerVal);
-    newServer.name = `scanned_${rand}`;
-    newServer.displayName = `Scanned MCP ${scanned.host}:${scanned.port}`;
-    newServer.url = scanned.url;
-
-    const res = await ServerBackend.addServer(newServer);
-    if (res.status === "ok") {
-      modal.toast(t("common.addSuccess" as any));
-      list.refetch();
-    } else {
-      modal.toast(res.msg || t("common.addFailed" as any), "error");
-    }
   };
 
   const columns: Column<Server>[] = [
@@ -111,9 +91,6 @@ export default function ServerListPage() {
         </div>
         <div className="flex items-center gap-2">
           <motion.button whileHover={{ rotate: 180 }} transition={{ duration: 0.3 }} onClick={list.refetch} className="rounded-lg border border-border p-2 text-text-muted hover:bg-surface-2 transition-colors" title={t("common.refresh")}><RefreshCw size={15} /></motion.button>
-          <button onClick={() => setShowScan(true)} className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-[13px] font-medium text-text-secondary hover:bg-surface-2 transition-colors" title={t("scanServer.title" as any)}>
-            <Radar size={15} /> {t("scanServer.title" as any)}
-          </button>
           <button onClick={() => navigate("/server-store")} className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-[13px] font-medium text-text-secondary hover:bg-surface-2 transition-colors" title={t("serverStore.title" as any)}>
             <Store size={15} /> {t("serverStore.title" as any)}
           </button>
@@ -143,8 +120,6 @@ export default function ServerListPage() {
           <BulkDeleteBar selected={selected} clear={clear} onDelete={bulkDelete} />
         )}
       />
-
-      <ScanServerModal open={showScan} onClose={() => setShowScan(false)} onAddServer={handleAddScannedServer} />
     </div>
   );
 }

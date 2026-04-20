@@ -40,19 +40,29 @@ export function FormField({
 // Form section card with optional title
 export function FormSection({
   title,
+  description,
+  icon,
   action,
   children,
 }: {
   title?: string;
+  description?: string;
+  icon?: ReactNode;
   action?: ReactNode;
   children: ReactNode;
 }) {
   return (
     <div className="rounded-xl border border-border bg-surface-1 overflow-visible">
       {title && (
-        <div className="px-5 py-3 border-b border-border-subtle bg-surface-2/30 flex items-center justify-between">
-          <h3 className="text-[13px] font-semibold text-text-primary">{title}</h3>
-          {action}
+        <div className="px-5 py-3 border-b border-border-subtle bg-surface-2/30 flex items-start justify-between gap-3">
+          <div className="flex items-start gap-2.5 min-w-0">
+            {icon && <span className="mt-0.5 text-accent shrink-0">{icon}</span>}
+            <div className="min-w-0">
+              <h3 className="text-[13px] font-semibold text-text-primary">{title}</h3>
+              {description && <p className="text-[11px] text-text-muted mt-0.5">{description}</p>}
+            </div>
+          </div>
+          {action && <div className="shrink-0">{action}</div>}
         </div>
       )}
       <div className="p-5 grid grid-cols-2 gap-x-6 gap-y-4">{children}</div>

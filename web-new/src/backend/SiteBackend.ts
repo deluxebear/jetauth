@@ -89,7 +89,7 @@ export function newSite(owner: string): Site {
     updatedTime: "",
     displayName: `New Site - ${rand}`,
     tag: "",
-    domain: "door.casdoor.com",
+    domain: "app.jetauth.com",
     otherDomains: [],
     needRedirect: false,
     disableVerbose: false,
