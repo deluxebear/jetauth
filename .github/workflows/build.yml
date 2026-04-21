@@ -21,6 +21,11 @@ on:
 env:
   GO_VERSION: "1.25.8"
   NODE_VERSION: "22"
+  # Opt into Node.js 24 for all JavaScript-based actions. GitHub plans to
+  # force this on 2026-06-02 and remove Node 20 from runners on 2026-09-16;
+  # flipping the switch now silences the deprecation warnings and catches
+  # any incompatibility early.
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 
 permissions:
   contents: read
