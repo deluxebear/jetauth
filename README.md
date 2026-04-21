@@ -38,6 +38,18 @@ go build -o jetauth .
 ./jetauth
 ```
 
+On first run, `jetauth` seeds `conf/app.conf` from an embedded default (with a randomized `authState`) and boots on port `8000` with a local SQLite database. Edit the file and restart to customize — see [`docs/configuration-reference.md`](docs/configuration-reference.md) for all options.
+
+### macOS: unblock the downloaded binary
+
+macOS Gatekeeper will block pre-built darwin binaries because they are not signed with an Apple Developer ID. After unzipping a release asset, clear the quarantine attribute once:
+
+```bash
+xattr -cr ./jetauth
+chmod +x ./jetauth
+./jetauth
+```
+
 ## License
 
 This project is licensed under the [Apache License 2.0](LICENSE).

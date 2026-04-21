@@ -61,8 +61,19 @@ func InitFlag() {
 	exportData = *exportDataPtr
 	exportFilePath = *exportFilePathPtr
 
+	// First-run ergonomics: if the config file is missing, seed it from
+	// the embedded default so a freshly extracted binary boots without a
+	// manual step. Operators can edit conf/app.conf and restart.
+	created, err := conf.EnsureConfigFile(configPath)
+	if err != nil {
+		panic(fmt.Sprintf("failed to prepare config file %s: %v", configPath, err))
+	}
+	if created {
+		fmt.Printf("first run: wrote default config to %s — edit and restart to customize\n", configPath)
+	}
+
 	// Load beego config from the specified config path
-	err := web.LoadAppConfig("ini", configPath)
+	err = web.LoadAppConfig("ini", configPath)
 	if err != nil {
 		panic(fmt.Sprintf("failed to load config from %s: %v", configPath, err))
 	}
@@ -96,7 +107,7 @@ func InitAdapter() {
 				panic(err)
 			}
 			dir = strings.ReplaceAll(dir, "\\", "/")
-			panic(fmt.Sprintf("The Casdoor config file: \"app.conf\" was not found, it should be placed at: \"%s/conf/app.conf\"", dir))
+			panic(fmt.Sprintf("The JetAuth config file: \"app.conf\" was not found, it should be placed at: \"%s/conf/app.conf\"", dir))
 		}
 	}
 

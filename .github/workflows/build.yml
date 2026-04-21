@@ -349,3 +349,20 @@ jobs:
             | `jetauth-embedded_<version>_<os>_<arch>.zip` | Single binary with frontend + swagger compiled in | You want one file and done |
 
             Both binaries read `conf/app.conf` on startup if it's in the working directory (the embedded build ships a built-in copy as fallback). Override any config key via environment variables — see `docs/configuration-reference.md`.
+
+            ### macOS: unblock the binary on first run
+
+            The darwin binaries are **not signed or notarized** (JetAuth is OSS, no Apple Developer ID). When you download the zip through a browser, macOS Gatekeeper adds a quarantine flag and blocks execution with "cannot verify developer".
+
+            Strip the quarantine attribute after unzipping:
+
+            ```bash
+            unzip jetauth_${{ github.ref_name }}_darwin_arm64.zip
+            xattr -cr ./jetauth      # clear all extended attributes
+            chmod +x ./jetauth
+            ./jetauth
+            ```
+
+            Alternatively: right-click the binary in Finder → **Open** → **Open** again in the confirmation dialog. You only need to do this once per download.
+
+            Linux and Windows binaries have no equivalent restriction.
