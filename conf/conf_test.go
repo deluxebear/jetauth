@@ -115,7 +115,10 @@ func TestGetConfigLogs(t *testing.T) {
 		description string
 		expected    string
 	}{
-		{"Default log config", `{"adapter":"file", "filename": "logs/casdoor.log", "maxdays":99999, "perm":"0770"}`},
+		// Must match conf/app.conf's `logConfig` line. See also the
+		// auto-computed fallback in conf/conf.go:GetConfigString when
+		// no explicit value is set.
+		{"Default log config", `{"adapter":"console"}`},
 	}
 
 	err := web.LoadAppConfig("ini", "app.conf")

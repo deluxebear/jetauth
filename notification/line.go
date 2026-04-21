@@ -15,9 +15,9 @@
 package notification
 
 import (
-	"github.com/deluxebear/jetauth/proxy"
 	notify "github.com/casdoor/notify2"
 	"github.com/casdoor/notify2/service/line"
+	"github.com/deluxebear/jetauth/proxy"
 )
 
 func NewLineProvider(channelSecret string, accessToken string, receiver string) (*notify.Notify, error) {

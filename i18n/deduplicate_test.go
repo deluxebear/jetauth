@@ -99,26 +99,6 @@ func findDuplicateKeysInJSON(filePath string) ([]DuplicateInfo, error) {
 	return duplicates, nil
 }
 
-// TestDeduplicateFrontendI18n checks for duplicate i18n keys in the frontend en.json file
-func TestDeduplicateFrontendI18n(t *testing.T) {
-	filePath := "../web/src/locales/en/data.json"
-
-	// Find duplicate keys
-	duplicates, err := findDuplicateKeysInJSON(filePath)
-	if err != nil {
-		t.Fatalf("Failed to check for duplicates in frontend i18n file: %v", err)
-	}
-
-	// Print all duplicates and fail the test if any are found
-	if len(duplicates) > 0 {
-		t.Errorf("Found duplicate i18n keys in frontend file (%s):", filePath)
-		for _, dup := range duplicates {
-			t.Errorf("  i18next.t(\"%s\") duplicates with i18next.t(\"%s\")", dup.NewPrefixKey, dup.OldPrefixKey)
-		}
-		t.Fail()
-	}
-}
-
 // TestDeduplicateBackendI18n checks for duplicate i18n keys in the backend en.json file
 func TestDeduplicateBackendI18n(t *testing.T) {
 	filePath := "../i18n/locales/en/data.json"

@@ -15,9 +15,9 @@
 package notification
 
 import (
-	"github.com/deluxebear/jetauth/proxy"
 	notify "github.com/casdoor/notify2"
 	"github.com/casdoor/notify2/service/matrix"
+	"github.com/deluxebear/jetauth/proxy"
 	"maunium.net/go/mautrix/id"
 )
 

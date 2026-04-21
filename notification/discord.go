@@ -15,9 +15,9 @@
 package notification
 
 import (
-	"github.com/deluxebear/jetauth/proxy"
 	notify "github.com/casdoor/notify2"
 	"github.com/casdoor/notify2/service/discord"
+	"github.com/deluxebear/jetauth/proxy"
 )
 
 func NewDiscordProvider(token string, channelId string) (*notify.Notify, error) {
