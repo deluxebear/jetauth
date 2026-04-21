@@ -108,6 +108,104 @@ type document
 	}
 }
 
+// TestSaveAuthorizationModel_DestructiveChange_Rejected verifies that a
+// schema save attempting to remove a relation still referenced by tuples
+// is blocked — outcome=conflict, the offending tuple is surfaced, and
+// the app's current model pointer is NOT advanced. This is spec §4.2
+// "schema 变更前的 tuple 校验 (OQ-3 = 拒绝保存并返回冲突列表)".
+func TestSaveAuthorizationModel_DestructiveChange_Rejected(t *testing.T) {
+	if ormer == nil {
+		t.Skip("ormer not initialised (test needs DB)")
+	}
+
+	owner := "rebac-it-" + util.GenerateUUID()[:8]
+	appName := "app_destr"
+	seedRebacAppConfigForTest(t, owner, appName)
+
+	// v1: document has viewer + editor.
+	dslV1 := `model
+  schema 1.1
+
+type user
+
+type document
+  relations
+    define viewer: [user]
+    define editor: [user]
+`
+
+	v1Result, err := SaveAuthorizationModel(owner, appName, dslV1, "test-user")
+	if err != nil {
+		t.Fatalf("v1 save failed: %v", err)
+	}
+	if v1Result.Outcome != SaveOutcomeAdvanced {
+		t.Fatalf("v1 save did not advance: %+v", v1Result)
+	}
+	v1ModelId := v1Result.AuthorizationModelId
+
+	// Write a tuple referencing document#editor directly, bound to v1.
+	tuple := &BizTuple{
+		Owner:                owner,
+		AppName:              appName,
+		Object:               "document:d1",
+		Relation:             "editor",
+		User:                 "user:alice",
+		AuthorizationModelId: v1ModelId,
+	}
+	if _, err := AddBizTuples([]*BizTuple{tuple}); err != nil {
+		t.Fatalf("seed tuple: %v", err)
+	}
+
+	// v2: drop the editor relation.
+	dslV2 := `model
+  schema 1.1
+
+type user
+
+type document
+  relations
+    define viewer: [user]
+`
+
+	v2Result, err := SaveAuthorizationModel(owner, appName, dslV2, "test-user")
+	if err != nil {
+		t.Fatalf("v2 save returned unexpected error: %v", err)
+	}
+	if v2Result.Outcome != SaveOutcomeConflict {
+		t.Fatalf("want outcome=conflict, got %s (result=%+v)", v2Result.Outcome, v2Result)
+	}
+	if len(v2Result.Conflicts) != 1 {
+		t.Fatalf("want 1 conflict, got %d: %+v", len(v2Result.Conflicts), v2Result.Conflicts)
+	}
+	conflict := v2Result.Conflicts[0]
+	if conflict.Reason != "relation document#editor no longer exists" {
+		t.Fatalf("unexpected conflict reason: %s", conflict.Reason)
+	}
+	if conflict.Object != "document:d1" || conflict.Relation != "editor" || conflict.User != "user:alice" {
+		t.Fatalf("unexpected conflict fields: obj=%q rel=%q user=%q",
+			conflict.Object, conflict.Relation, conflict.User)
+	}
+
+	// Current model pointer must NOT advance after a conflict.
+	config, err := GetBizAppConfig(util.GetId(owner, appName))
+	if err != nil || config == nil {
+		t.Fatalf("config reread failed: err=%v config=%v", err, config)
+	}
+	if config.CurrentAuthorizationModelId != v1ModelId {
+		t.Fatalf("conflict should not advance pointer; got %q want %q",
+			config.CurrentAuthorizationModelId, v1ModelId)
+	}
+
+	// No new model row should have been inserted.
+	models, err := ListBizAuthorizationModels(owner, appName)
+	if err != nil {
+		t.Fatalf("list models failed: %v", err)
+	}
+	if len(models) != 1 {
+		t.Fatalf("want exactly 1 model (v1) after rejected v2, got %d", len(models))
+	}
+}
+
 // seedRebacAppConfigForTest creates a BizAppConfig row for the test and
 // registers a t.Cleanup to tear down all derived rows (tuples, models,
 // and the config itself) even if the test panics.
