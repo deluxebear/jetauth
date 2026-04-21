@@ -1,0 +1,149 @@
+// Copyright 2026 The JetAuth Authors. All Rights Reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+
+package object
+
+import (
+	"crypto/sha256"
+	"encoding/hex"
+	"fmt"
+
+	"github.com/deluxebear/jetauth/util"
+)
+
+// BizAuthorizationModel stores a single immutable snapshot of an OpenFGA-compatible
+// authorization schema (DSL + JSON representation) for a given application.
+//
+// Per spec §4.2 "永远不 UPDATE 或 DELETE individual model rows": this table is
+// append-only. Historical models are preserved so that tuple writes and checks
+// that reference a past model_id remain auditable. The only sanctioned delete
+// path is DeleteBizAuthorizationModelsForApp, which removes ALL models for an
+// app as part of a cascading app teardown.
+type BizAuthorizationModel struct {
+	Id          string `xorm:"varchar(40) pk" json:"id"`
+	Owner       string `xorm:"varchar(100) notnull index(idx_store)" json:"owner"`
+	AppName     string `xorm:"varchar(100) notnull index(idx_store)" json:"appName"`
+	SchemaDSL   string `xorm:"mediumtext" json:"schemaDsl"`
+	SchemaJSON  string `xorm:"mediumtext" json:"schemaJson"`
+	SchemaHash  string `xorm:"varchar(64) index" json:"schemaHash"`
+	CreatedTime string `xorm:"varchar(100)" json:"createdTime"`
+	CreatedBy   string `xorm:"varchar(200)" json:"createdBy"`
+}
+
+// GetId returns the primary-key string for the model. Satisfies the JetAuth
+// entity interface used by generic controller helpers.
+func (m *BizAuthorizationModel) GetId() string {
+	return m.Id
+}
+
+// computeSchemaHash returns the lowercase hex-encoded SHA-256 digest of the
+// raw DSL bytes. Using the DSL (not the JSON) as the canonical input keeps the
+// hash stable across JSON re-serialisations that may reorder keys.
+// The 64-character hex output maps directly to the SchemaHash column
+// (varchar(64)).
+func computeSchemaHash(dsl string) string {
+	sum := sha256.Sum256([]byte(dsl))
+	return hex.EncodeToString(sum[:])
+}
+
+// AddBizAuthorizationModel inserts a new, immutable authorization model row.
+// It auto-assigns Id (UUID v4) when the caller leaves it empty, and
+// auto-computes SchemaHash from SchemaDSL when left empty.
+//
+// There is no UpdateBizAuthorizationModel — see spec §4.2. Callers who want
+// to "change" the schema must call AddBizAuthorizationModel again and update
+// BizAppConfig.CurrentAuthorizationModelId to point at the new row.
+func AddBizAuthorizationModel(m *BizAuthorizationModel) (bool, error) {
+	if m.Id == "" {
+		m.Id = util.GenerateUUID()
+	}
+	if m.SchemaHash == "" {
+		m.SchemaHash = computeSchemaHash(m.SchemaDSL)
+	}
+	affected, err := ormer.Engine.Insert(m)
+	if err != nil {
+		return false, err
+	}
+	return affected != 0, nil
+}
+
+// GetBizAuthorizationModel retrieves a single model by its primary key.
+// Returns (nil, nil) for empty id or a row that no longer exists, so callers
+// can distinguish "missing" from a real DB error without an errors.Is dance.
+func GetBizAuthorizationModel(id string) (*BizAuthorizationModel, error) {
+	if id == "" {
+		return nil, nil
+	}
+	m := BizAuthorizationModel{Id: id}
+	existed, err := ormer.Engine.Get(&m)
+	if err != nil {
+		return nil, err
+	}
+	if !existed {
+		return nil, nil
+	}
+	return &m, nil
+}
+
+// FindLatestBizAuthorizationModelByHash looks up the most-recently-created model
+// for (owner, appName) whose SchemaDSL hashes to hash. This is used by the
+// save-path idempotence check (spec §4.3): if the proposed DSL is identical to
+// an existing model for this app, return the existing model instead of inserting
+// a duplicate.
+//
+// Returns (nil, nil) when no matching row exists.
+func FindLatestBizAuthorizationModelByHash(owner, appName, hash string) (*BizAuthorizationModel, error) {
+	if owner == "" || appName == "" || hash == "" {
+		return nil, fmt.Errorf("owner, appName and hash are all required")
+	}
+	models := []*BizAuthorizationModel{}
+	err := ormer.Engine.
+		Where("owner = ? AND app_name = ? AND schema_hash = ?", owner, appName, hash).
+		Desc("created_time").
+		Limit(1).
+		Find(&models)
+	if err != nil {
+		return nil, err
+	}
+	if len(models) == 0 {
+		return nil, nil
+	}
+	return models[0], nil
+}
+
+// ListBizAuthorizationModels returns all models stored for (owner, appName),
+// newest first. The list is intentionally unbounded — model rows are small
+// (mostly text hashes) and the count is bounded by how often an admin changes
+// the schema, which is expected to be infrequent.
+func ListBizAuthorizationModels(owner, appName string) ([]*BizAuthorizationModel, error) {
+	models := []*BizAuthorizationModel{}
+	err := ormer.Engine.
+		Where("owner = ? AND app_name = ?", owner, appName).
+		Desc("created_time").
+		Find(&models)
+	if err != nil {
+		return nil, err
+	}
+	return models, nil
+}
+
+// DeleteBizAuthorizationModelsForApp is THE ONLY delete path for authorization
+// model rows (spec §13 Never: "提供 DeleteBizAuthorizationModel API 或前端删除入口").
+//
+// It removes ALL models for the given (owner, appName) — it is called
+// exclusively as a cascade from DeleteBizAppConfig when an entire application
+// is torn down. Individual model rows are never exposed to single-row deletion.
+func DeleteBizAuthorizationModelsForApp(owner, appName string) (int64, error) {
+	affected, err := ormer.Engine.
+		Where("owner = ? AND app_name = ?", owner, appName).
+		Delete(&BizAuthorizationModel{})
+	if err != nil {
+		return 0, err
+	}
+	return affected, nil
+}
