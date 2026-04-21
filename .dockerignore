@@ -1,1 +1,58 @@
+# Build outputs / dependencies — regenerated inside the image
 web/node_modules/
+web/build/
+web/.vite/
+node_modules/
+
+# Editor / IDE
+.idea/
+.vscode/
+*.swp
+*.iml
+
+# Git / VCS
+# NOTE: .git/ must stay in the build context — TestGetVersionInfo in the
+# backend build stage reads it to bake Version/CommitId into the binary.
+.gitignore
+.gitattributes
+.github/
+
+# Local databases / runtime artifacts
+*.db
+*.db-shm
+*.db-wal
+logs/
+tmp/
+tmpFiles/
+files/
+
+# Local dev binaries
+server
+server_*
+jetauth
+jetauth_server
+/task-api
+
+# Tests / CI artefacts
+web/test-results/
+web/playwright-report/
+web/blob-report/
+web/playwright/.cache/
+
+# Docs / design not needed at runtime
+docs/
+design-concepts/
+*.md
+!README.md
+
+# Dump output from init_data_dump_test.go
+object/init_data_dump.json
+
+# docker-compose.yml is only used by `docker compose`, not the build itself.
+# Dockerfile / .dockerignore must stay in the context — buildx reads them
+# from the transferred context, not the host filesystem directly.
+docker-compose.yml
+
+# Worktrees / scratch
+.worktrees/
+.gstack/

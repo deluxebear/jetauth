@@ -1,134 +1,252 @@
-name: Build
+name: Build & Release
 
-env:
-  GO_VERSION: "1.25.8"
+# Trigger model:
+#   - push to main  → CI only (lint + tests + build smoke check)
+#   - tag v*        → full release pipeline (binaries + docker + GitHub Release)
+#   - pull_request  → CI only
+#
+# Release how-to:
+#   git tag v0.1.0
+#   git push origin v0.1.0
+# The tag name becomes the version: the workflow reads ${{ github.ref_name }}
+# as "v0.1.0" and propagates it into binaries (via TestGetVersionInfo → git
+# tag lookup) and docker tags (via docker/metadata-action semver parsing).
 
 on:
   push:
-    branches:
-      - master
+    branches: [main]
+    tags: ["v*"]
   pull_request:
 
+env:
+  GO_VERSION: "1.25.8"
+  NODE_VERSION: "22"
+
+permissions:
+  contents: read
+
 jobs:
-  go-tests:
-    name: Running Go tests
-    runs-on: ubuntu-latest
-    services:
-      mysql:
-        image: mysql:5.7
-        env:
-          MYSQL_DATABASE: jetauth
-          MYSQL_ROOT_PASSWORD: 123456
-        ports:
-          - 3306:3306
-        options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
-    steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-go@v4
-        with:
-          go-version: ${{ env.GO_VERSION }}
-          cache-dependency-path: ./go.mod
-      - name: Tests
-        run: |
-          go test -v $(go list ./...) -tags skipCi
-        working-directory: ./
+  # ===========================================================================
+  # CI lane — runs for every push and PR
+  # ===========================================================================
 
-  frontend:
-    name: Front-end
+  lint:
+    name: Go lint
     runs-on: ubuntu-latest
-    needs: [go-tests]
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-node@v3
-        with:
-          node-version: 20
-          cache: "npm"
-          cache-dependency-path: ./web/package-lock.json
-      - run: npm ci && CI=false npm run build
-        working-directory: ./web
-      - name: Upload build artifacts
-        if: github.repository == 'deluxebear/jetauth' && github.event_name == 'push'
-        uses: actions/upload-artifact@v4
-        with:
-          name: frontend-build-${{ github.run_id }}
-          path: ./web/build
-
-  backend:
-    name: Back-end
-    runs-on: ubuntu-latest
-    needs: [go-tests]
-    steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-go@v4
-        with:
-          go-version: ${{ env.GO_VERSION }}
-          cache-dependency-path: ./go.mod
-      - run: go version
-      - name: Build
-        run: |
-          go build -race -ldflags "-extldflags '-static'"
-        working-directory: ./
-
-  linter:
-    name: Go-Linter
-    runs-on: ubuntu-latest
-    needs: [go-tests]
-    steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-go@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
         with:
           go-version: ${{ env.GO_VERSION }}
           cache: false
-
       - name: Sync vendor tree
         run: go mod vendor
-
-      # CI and local `make lint` both use the repo's gofumpt-only golangci-lint config.
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v9.2.0
         with:
           version: v2.11.4
           args: --config .golangci.yml ./...
 
-  tag-release:
-    name: Create Tag
+  test:
+    name: Go tests
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      issues: write
-    if: github.repository == 'deluxebear/jetauth' && github.event_name == 'push'
-    needs: [frontend, backend, linter]
-    outputs:
-      new-release-published: ${{ steps.semantic.outputs.new_release_published }}
-      new-release-version: ${{ steps.semantic.outputs.new_release_version }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Create Tag with Semantic Release
-        id: semantic
-        uses: cycjimmy/semantic-release-action@v4
+    services:
+      mysql:
+        image: mysql:8.0
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-  github-release:
-    name: GitHub Release
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      issues: write
-    if: github.repository == 'deluxebear/jetauth' && github.event_name == 'push' && needs.tag-release.outputs.new-release-published == 'true'
-    needs: [tag-release]
+          MYSQL_DATABASE: jetauth
+          MYSQL_ROOT_PASSWORD: "123456"
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=3
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - uses: actions/setup-go@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
         with:
           go-version: ${{ env.GO_VERSION }}
           cache-dependency-path: ./go.mod
+      - name: Run tests
+        run: go test -v $(go list ./...) -tags skipCi
+
+  frontend:
+    name: Frontend build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+          cache-dependency-path: ./web/package-lock.json
+      - run: npm ci --no-audit --no-fund
+        working-directory: ./web
+      - run: npm run build
+        working-directory: ./web
+      # Re-used by the two release-build jobs via actions/download-artifact
+      - uses: actions/upload-artifact@v4
+        with:
+          name: frontend-build-${{ github.run_id }}
+          path: ./web/build
+          retention-days: 3
+
+  # ===========================================================================
+  # Release lane — only runs on tag pushes (v*)
+  # ===========================================================================
+
+  # 1. SEPARATE MODE — backend binary + web/build/ + conf/ bundled as one zip
+  #    per (OS, arch). The operator extracts the zip and runs `./jetauth`
+  #    with `web/build/` and `conf/app.conf` in neighbouring directories.
+  build-separate:
+    name: Binary (separate) ${{ matrix.goos }}/${{ matrix.goarch }}
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [lint, test, frontend]
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { goos: linux,   goarch: amd64, suffix: linux_amd64,   ext: "" }
+          - { goos: linux,   goarch: arm64, suffix: linux_arm64,   ext: "" }
+          - { goos: darwin,  goarch: amd64, suffix: darwin_amd64,  ext: "" }
+          - { goos: darwin,  goarch: arm64, suffix: darwin_arm64,  ext: "" }
+          - { goos: windows, goarch: amd64, suffix: windows_amd64, ext: ".exe" }
+          - { goos: windows, goarch: arm64, suffix: windows_arm64, ext: ".exe" }
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # TestGetVersionInfo walks the full tag history
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache-dependency-path: ./go.mod
+
+      - name: Bake version into util/variable.go
+        # TestGetVersionInfo rewrites Version/CommitId from git metadata so
+        # the subsequent `go build` picks them up — this is how the admin
+        # UI's "About JetAuth" card shows the real tag instead of "dev".
+        run: |
+          go test -v -run TestGetVersionInfo ./util/system_test.go ./util/system.go ./util/variable.go
+
+      - name: Build server binary
+        env:
+          CGO_ENABLED: "0"
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+        run: |
+          mkdir -p stage
+          go build -trimpath -ldflags="-w -s" -o stage/jetauth${{ matrix.ext }} .
+
+      - name: Pull frontend build
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-build-${{ github.run_id }}
+          path: stage/web/build
+
+      - name: Stage release contents
+        run: |
+          mkdir -p stage/conf
+          cp conf/app.conf  stage/conf/app.conf
+          cp -r swagger     stage/swagger
+          for f in README.md LICENSE NOTICE; do
+            [ -f "$f" ] && cp "$f" stage/ || true
+          done
+
+      - name: Zip
+        run: |
+          cd stage
+          zip -r "../jetauth_${{ github.ref_name }}_${{ matrix.suffix }}.zip" .
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-separate-${{ matrix.suffix }}
+          path: jetauth_${{ github.ref_name }}_${{ matrix.suffix }}.zip
+          retention-days: 3
+
+  # 2. EMBEDDED MODE — single-file distribution. `-tags embed` activates
+  #    embed_static.go which bakes web/build/ + swagger/ into the binary
+  #    via `//go:embed`. The resulting binary is self-contained — no
+  #    neighbouring directories needed.
+  build-embedded:
+    name: Binary (embedded) ${{ matrix.goos }}/${{ matrix.goarch }}
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [lint, test, frontend]
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { goos: linux,   goarch: amd64, suffix: linux_amd64,   ext: "" }
+          - { goos: linux,   goarch: arm64, suffix: linux_arm64,   ext: "" }
+          - { goos: darwin,  goarch: amd64, suffix: darwin_amd64,  ext: "" }
+          - { goos: darwin,  goarch: arm64, suffix: darwin_arm64,  ext: "" }
+          - { goos: windows, goarch: amd64, suffix: windows_amd64, ext: ".exe" }
+          - { goos: windows, goarch: arm64, suffix: windows_arm64, ext: ".exe" }
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache-dependency-path: ./go.mod
+
+      # web/build/ MUST exist at Go build time — //go:embed evaluates at
+      # compile. Download the artifact produced by the `frontend` job so we
+      # don't pay the npm cost twice.
+      - name: Pull frontend build
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-build-${{ github.run_id }}
+          path: ./web/build
+
+      - name: Bake version into util/variable.go
+        run: |
+          go test -v -run TestGetVersionInfo ./util/system_test.go ./util/system.go ./util/variable.go
+
+      - name: Build embedded binary
+        env:
+          CGO_ENABLED: "0"
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+        run: |
+          mkdir -p stage
+          go build -tags embed -trimpath -ldflags="-w -s" \
+                   -o stage/jetauth${{ matrix.ext }} .
+
+      - name: Zip
+        run: |
+          cd stage
+          zip "../jetauth-embedded_${{ github.ref_name }}_${{ matrix.suffix }}.zip" \
+              jetauth${{ matrix.ext }}
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-embedded-${{ matrix.suffix }}
+          path: jetauth-embedded_${{ github.ref_name }}_${{ matrix.suffix }}.zip
+          retention-days: 3
+
+  # 3. DOCKER IMAGE — multi-arch (amd64 + arm64), alpine-based, non-root.
+  #    Published to GitHub Container Registry under the repository's
+  #    namespace. To mirror to Docker Hub, add DOCKERHUB_USERNAME +
+  #    DOCKERHUB_TOKEN secrets and a `docker/login-action@v3` step here.
+  build-docker:
+    name: Docker image
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [lint, test]
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Free disk space
         uses: jlumbroso/free-disk-space@v1.3.1
@@ -137,129 +255,97 @@ jobs:
           android: true
           dotnet: true
           haskell: true
-          large-packages: true
+          large-packages: false
           swap-storage: true
 
-      - name: Download frontend build artifacts
-        uses: actions/download-artifact@v4
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
         with:
-          name: frontend-build-${{ github.run_id }}
-          path: ./web/build
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Prepare Go caches
-        run: |
-          echo "GOMODCACHE=$RUNNER_TEMP/gomod" >> $GITHUB_ENV
-          echo "GOCACHE=$RUNNER_TEMP/gocache" >> $GITHUB_ENV
-          go clean -cache -modcache -testcache -fuzzcache
-
-      - name: Run GoReleaser
-        uses: goreleaser/goreleaser-action@v6
+      # ---- STANDARD target: the lean alpine + static-binary production image
+      - name: Extract metadata (standard)
+        id: meta_standard
+        uses: docker/metadata-action@v5
         with:
-          distribution: goreleaser
-          version: "~> v2"
-          args: release --clean
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          images: ghcr.io/${{ github.repository }}
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
+            type=raw,value=latest
 
-  docker-release:
-    name: Docker Release
+      - name: Build & push (standard)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          target: standard
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta_standard.outputs.tags }}
+          labels: ${{ steps.meta_standard.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # 4. RELEASE — collect zips, create a GitHub Release with auto-generated
+  #    notes. Relies on the conventional-commits style the repo already
+  #    uses in commit messages, which softprops/action-gh-release will
+  #    translate into the release body.
+  release:
+    name: GitHub Release
     runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [build-separate, build-embedded, build-docker]
     permissions:
       contents: write
-      issues: write
-    if: github.repository == 'deluxebear/jetauth' && github.event_name == 'push' && needs.tag-release.outputs.new-release-published == 'true'
-    needs: [tag-release]
     steps:
-      - name: Checkout
-        uses: actions/checkout@v3
+      - uses: actions/checkout@v4
+
+      - name: Gather release zips
+        uses: actions/download-artifact@v4
         with:
-          fetch-depth: -1
+          pattern: release-*
+          merge-multiple: true
+          path: artifacts
 
-      - name: Fetch Previous version
-        id: get-previous-tag
-        uses: actions-ecosystem/action-get-latest-tag@v1.6.0
+      - name: List artifacts
+        run: ls -la artifacts/
 
-      - name: Decide Should_Push Or Not
-        id: should_push
-        run: |
-          old_version=${{steps.get-previous-tag.outputs.tag}}
-          new_version=${{ needs.tag-release.outputs.new-release-version }}
-
-          old_array=(${old_version//\./ })
-          new_array=(${new_version//\./ })
-
-          if [ ${old_array[0]} != ${new_array[0]} ]
-          then 
-              echo ::set-output name=push::'true'
-          elif [ ${old_array[1]} != ${new_array[1]} ]
-          then 
-              echo ::set-output name=push::'true'
-          else
-              echo ::set-output name=push::'false'
-          fi
-
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v2
-
-      - name: Set up buildx
-        id: buildx
-        uses: docker/setup-buildx-action@v2
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
         with:
-          version: latest
+          tag_name: ${{ github.ref_name }}
+          name: ${{ github.ref_name }}
+          generate_release_notes: true
+          prerelease: ${{ contains(github.ref_name, '-rc') || contains(github.ref_name, '-beta') || contains(github.ref_name, '-alpha') }}
+          files: artifacts/*.zip
+          body: |
+            ## Docker image
 
-      - name: Log in to Docker Hub
-        uses: docker/login-action@v1
-        if: github.repository == 'deluxebear/jetauth' && github.event_name == 'push' && steps.should_push.outputs.push=='true'
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_PASSWORD }}
+            Multi-arch (amd64 + arm64) alpine-based image, non-root, ~155 MB.
+            Pushed to GitHub Container Registry on every tag.
 
-      - name: Push to Docker Hub
-        uses: docker/build-push-action@v3
-        if: github.repository == 'deluxebear/jetauth' && github.event_name == 'push' && steps.should_push.outputs.push=='true'
-        with:
-          context: .
-          target: STANDARD
-          platforms: linux/amd64,linux/arm64
-          push: true
-          tags: your-registry/jetauth:${{ needs.tag-release.outputs.new-release-version }},your-registry/jetauth:latest
+            ```bash
+            docker pull ghcr.io/${{ github.repository }}:${{ github.ref_name }}
 
-      - name: Push All In One Version to Docker Hub
-        uses: docker/build-push-action@v3
-        if: github.repository == 'deluxebear/jetauth' && github.event_name == 'push' && steps.should_push.outputs.push=='true'
-        with:
-          context: .
-          target: ALLINONE
-          platforms: linux/amd64,linux/arm64
-          push: true
-          tags: your-registry/jetauth-all-in-one:${{ needs.tag-release.outputs.new-release-version }},your-registry/jetauth-all-in-one:latest
+            docker run -d -p 8000:8000 \
+              -v jetauth-data:/data \
+              -e dataSourceName="file:/data/jetauth.db?cache=shared" \
+              ghcr.io/${{ github.repository }}:${{ github.ref_name }}
+            ```
 
-      - uses: actions/checkout@v3
-        if: steps.should_push.outputs.push=='true'
-        with:
-          repository: casdoor/casdoor-helm
-          ref: "master"
-          token: ${{ secrets.GH_BOT_TOKEN }}
+            ## Binary downloads
 
-      - name: Update Helm Chart
-        if: steps.should_push.outputs.push=='true'
-        run: |
-          # Set the appVersion and version of the chart to the current tag
-          sed -i "s/appVersion: .*/appVersion: ${{ needs.tag-release.outputs.new-release-version }}/g" ./charts/casdoor/Chart.yaml
-          sed -i "s/version: .*/version: ${{ needs.tag-release.outputs.new-release-version }}/g" ./charts/casdoor/Chart.yaml
+            Two flavors, each available for **linux / darwin / windows × amd64 / arm64**:
 
-          REGISTRY=oci://registry-1.docker.io/casbin
-          cd charts/casdoor
-          helm package .
-          PKG_NAME=$(ls *.tgz)
-          helm repo index . --url $REGISTRY --merge index.yaml
-          helm push $PKG_NAME $REGISTRY
-          rm $PKG_NAME
+            | Bundle | Contents | When to use |
+            |---|---|---|
+            | `jetauth_<version>_<os>_<arch>.zip` | `jetauth` binary + `web/build/` + `conf/app.conf` + `swagger/` | You want to tweak the frontend or swap in a custom `app.conf` |
+            | `jetauth-embedded_<version>_<os>_<arch>.zip` | Single binary with frontend + swagger compiled in | You want one file and done |
 
-          # Commit and push the changes back to the repository
-          git config --global user.name "casbin-bot"
-          git config --global user.email "bot@casbin.org"
-          git add Chart.yaml index.yaml
-          git commit -m "chore(helm): bump helm charts appVersion to ${{ needs.tag-release.outputs.new-release-version }}"
-          git tag ${{ needs.tag-release.outputs.new-release-version }}
-          git push origin HEAD:master --follow-tags
+            Both binaries read `conf/app.conf` on startup if it's in the working directory (the embedded build ships a built-in copy as fallback). Override any config key via environment variables — see `docs/configuration-reference.md`.
