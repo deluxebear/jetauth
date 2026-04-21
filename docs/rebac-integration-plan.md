@@ -1,5 +1,8 @@
 # ReBAC (Zanzibar) 集成方案
 
+> **Superseded by [`rebac-spec.md`](rebac-spec.md)** — 这是早期设计稿,保留仅供参考。
+> 对齐方向已转向 OpenFGA DSL 兼容 + 模型版本化 + 条件 + 产品级 ListObjects,详见新 spec。
+
 ## 概述
 
 在现有"应用授权"模块（`biz_*` 系列）中引入 Zanzibar 风格的 ReBAC（关系型授权），使用户创建应用时可选择 RBAC（Casbin）或 ReBAC 模型。两套引擎在同一模块中并存，对外暴露统一的 Enforce API。
