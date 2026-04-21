@@ -87,7 +87,7 @@ jobs:
       - run: npm run build
         working-directory: ./web
       # Re-used by the two release-build jobs via actions/download-artifact
-      - uses: actions/upload-artifact@v5
+      - uses: actions/upload-artifact@v7
         with:
           name: frontend-build-${{ github.run_id }}
           path: ./web/build
@@ -142,7 +142,7 @@ jobs:
           go build -trimpath -ldflags="-w -s" -o stage/jetauth${{ matrix.ext }} .
 
       - name: Pull frontend build
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v7
         with:
           name: frontend-build-${{ github.run_id }}
           path: stage/web/build
@@ -161,7 +161,7 @@ jobs:
           cd stage
           zip -r "../jetauth_${{ github.ref_name }}_${{ matrix.suffix }}.zip" .
 
-      - uses: actions/upload-artifact@v5
+      - uses: actions/upload-artifact@v7
         with:
           name: release-separate-${{ matrix.suffix }}
           path: jetauth_${{ github.ref_name }}_${{ matrix.suffix }}.zip
@@ -200,7 +200,7 @@ jobs:
       # compile. Download the artifact produced by the `frontend` job so we
       # don't pay the npm cost twice.
       - name: Pull frontend build
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v7
         with:
           name: frontend-build-${{ github.run_id }}
           path: ./web/build
@@ -225,7 +225,7 @@ jobs:
           zip "../jetauth-embedded_${{ github.ref_name }}_${{ matrix.suffix }}.zip" \
               jetauth${{ matrix.ext }}
 
-      - uses: actions/upload-artifact@v5
+      - uses: actions/upload-artifact@v7
         with:
           name: release-embedded-${{ matrix.suffix }}
           path: jetauth-embedded_${{ github.ref_name }}_${{ matrix.suffix }}.zip
@@ -307,7 +307,7 @@ jobs:
       - uses: actions/checkout@v5
 
       - name: Gather release zips
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v7
         with:
           pattern: release-*
           merge-multiple: true
