@@ -147,3 +147,96 @@ func DeleteBizAuthorizationModelsForApp(owner, appName string) (int64, error) {
 	}
 	return affected, nil
 }
+
+// SaveAuthorizationModelOutcome distinguishes the three outcomes of a
+// schema-save call so the HTTP layer can return the right response shape
+// without sniffing error strings.
+type SaveAuthorizationModelOutcome string
+
+const (
+	// Same DSL bytes as the current model — no-op, no insert.
+	SaveOutcomeUnchanged SaveAuthorizationModelOutcome = "unchanged"
+	// New row inserted, App's CurrentAuthorizationModelId advanced.
+	SaveOutcomeAdvanced SaveAuthorizationModelOutcome = "advanced"
+	// Candidate schema drops types/relations still referenced by tuples;
+	// no insert, caller must clean up tuples first.
+	SaveOutcomeConflict SaveAuthorizationModelOutcome = "conflict"
+)
+
+// SaveAuthorizationModelResult bundles the outcome with the resulting
+// model id (on advance / unchanged) or the conflict list (on conflict).
+type SaveAuthorizationModelResult struct {
+	Outcome              SaveAuthorizationModelOutcome `json:"outcome"`
+	AuthorizationModelId string                        `json:"authorizationModelId,omitempty"`
+	Conflicts            []SchemaConflict              `json:"conflicts,omitempty"`
+}
+
+// SaveAuthorizationModel parses the DSL, scans for tuple conflicts, and
+// (if clean) inserts a new model row + advances the app's pointer. Wraps
+// the spec §4.2 "写入规则" as a single atomic op from the caller's
+// perspective — the DB-level transaction boundary is per-statement, but
+// since we never UPDATE or DELETE models, partial failure can only strand
+// a model row that's never referenced (acceptable: §4.2 "永远不 UPDATE 或
+// DELETE" invariant).
+//
+// PR2 note: compare-and-swap on the previous CurrentAuthorizationModelId
+// will be added then; for PR1 the conflict scan already blocks the
+// destructive-change race that matters most.
+func SaveAuthorizationModel(owner, appName, dsl, createdBy string) (*SaveAuthorizationModelResult, error) {
+	config, err := getBizAppConfigOrError(owner, appName)
+	if err != nil {
+		return nil, err
+	}
+
+	parsed, err := ParseSchemaDSL(dsl)
+	if err != nil {
+		return nil, fmt.Errorf("schema parse: %w", err)
+	}
+
+	hash := computeSchemaHash(dsl)
+
+	// Short-circuit: identical DSL already saved → no-op.
+	if existing, err := FindLatestBizAuthorizationModelByHash(owner, appName, hash); err != nil {
+		return nil, fmt.Errorf("lookup by hash: %w", err)
+	} else if existing != nil {
+		return &SaveAuthorizationModelResult{
+			Outcome:              SaveOutcomeUnchanged,
+			AuthorizationModelId: existing.Id,
+		}, nil
+	}
+
+	// Conflict scan — only matters if we're about to ADVANCE.
+	conflicts, err := ScanSchemaConflictsForApp(owner, appName, parsed)
+	if err != nil {
+		return nil, fmt.Errorf("scan conflicts: %w", err)
+	}
+	if len(conflicts) > 0 {
+		return &SaveAuthorizationModelResult{
+			Outcome:   SaveOutcomeConflict,
+			Conflicts: conflicts,
+		}, nil
+	}
+
+	m := &BizAuthorizationModel{
+		Owner:       owner,
+		AppName:     appName,
+		SchemaDSL:   dsl,
+		SchemaJSON:  parsed.JSON,
+		SchemaHash:  hash,
+		CreatedTime: util.GetCurrentTime(),
+		CreatedBy:   createdBy,
+	}
+	if _, err := AddBizAuthorizationModel(m); err != nil {
+		return nil, fmt.Errorf("insert authorization model: %w", err)
+	}
+
+	config.CurrentAuthorizationModelId = m.Id
+	if _, err := UpdateBizAppConfig(config.GetId(), config); err != nil {
+		return nil, fmt.Errorf("advance current model pointer: %w", err)
+	}
+
+	return &SaveAuthorizationModelResult{
+		Outcome:              SaveOutcomeAdvanced,
+		AuthorizationModelId: m.Id,
+	}, nil
+}
