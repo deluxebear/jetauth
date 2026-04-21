@@ -186,3 +186,24 @@ func TestComplexDSL_RoundTrip(t *testing.T) {
 		t.Fatalf("want ≥8 relations after roundtrip, got %d: %v", len(keys), keys)
 	}
 }
+
+func TestParseSchemaJSON_EmptyRejected(t *testing.T) {
+	_, err := ParseSchemaJSON("")
+	if err == nil || !strings.Contains(err.Error(), "empty") {
+		t.Fatalf("want 'empty' error, got: %v", err)
+	}
+}
+
+func TestExtractRelationKeys_NilReturnsNil(t *testing.T) {
+	keys := ExtractRelationKeys(nil)
+	if keys != nil {
+		t.Fatalf("want nil, got %v", keys)
+	}
+}
+
+func TestExtractTypeNames_NilReturnsNil(t *testing.T) {
+	names := ExtractTypeNames(nil)
+	if names != nil {
+		t.Fatalf("want nil, got %v", names)
+	}
+}
