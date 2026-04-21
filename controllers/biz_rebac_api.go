@@ -23,8 +23,8 @@ type writeAuthorizationModelRequest struct {
 }
 
 // BizWriteAuthorizationModel
-// @Title BizWriteAuthorizationModel
-// @Tag Business Permission API (ReBAC)
+// @Summary BizWriteAuthorizationModel
+// @Tags Business Permission API
 // @Description Save a ReBAC authorization model from DSL. If the DSL is
 // identical to the current model, returns outcome=unchanged. If the new
 // schema drops types or relations still referenced by existing tuples,
@@ -34,7 +34,7 @@ type writeAuthorizationModelRequest struct {
 // @Param   appId   query    string  true  "The app id (owner/appName)"
 // @Param   body    body     controllers.writeAuthorizationModelRequest  true  "Schema DSL payload"
 // @Success 200 {object} object.SaveAuthorizationModelResult "outcome + model id or conflict list"
-// @router /biz-write-authorization-model [post]
+// @Router /biz-write-authorization-model [post]
 func (c *ApiController) BizWriteAuthorizationModel() {
 	appId := c.Ctx.Input.Query("appId")
 	owner, appName, err := util.GetOwnerAndNameFromIdWithError(appId)
@@ -67,8 +67,8 @@ func (c *ApiController) BizWriteAuthorizationModel() {
 }
 
 // BizReadAuthorizationModel
-// @Title BizReadAuthorizationModel
-// @Tag Business Permission API (ReBAC)
+// @Summary BizReadAuthorizationModel
+// @Tags Business Permission API
 // @Description Read an authorization model by id, or the current model if id
 // is omitted. Cross-tenant lookups (id belongs to a different app) return
 // "not found" rather than 403 so the API doesn't leak model existence
@@ -76,7 +76,7 @@ func (c *ApiController) BizWriteAuthorizationModel() {
 // @Param   appId   query    string  true   "The app id (owner/appName)"
 // @Param   id      query    string  false  "Authorization model id; if empty, uses the app's current model"
 // @Success 200 {object} object.BizAuthorizationModel "The authorization model"
-// @router /biz-read-authorization-model [get]
+// @Router /biz-read-authorization-model [get]
 func (c *ApiController) BizReadAuthorizationModel() {
 	appId := c.Ctx.Input.Query("appId")
 	id := c.Ctx.Input.Query("id")
@@ -122,12 +122,12 @@ func (c *ApiController) BizReadAuthorizationModel() {
 }
 
 // BizListAuthorizationModels
-// @Title BizListAuthorizationModels
-// @Tag Business Permission API (ReBAC)
+// @Summary BizListAuthorizationModels
+// @Tags Business Permission API
 // @Description List all authorization models for an app, newest first.
 // @Param   appId   query    string  true  "The app id (owner/appName)"
 // @Success 200 {array} object.BizAuthorizationModel "Array of authorization models, newest first"
-// @router /biz-list-authorization-models [get]
+// @Router /biz-list-authorization-models [get]
 func (c *ApiController) BizListAuthorizationModels() {
 	appId := c.Ctx.Input.Query("appId")
 	owner, appName, err := util.GetOwnerAndNameFromIdWithError(appId)
