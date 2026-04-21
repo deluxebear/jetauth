@@ -20,10 +20,10 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/casdoor/oss"
 	"github.com/deluxebear/jetauth/object"
 	"github.com/deluxebear/jetauth/storage"
 	"github.com/deluxebear/jetauth/util"
-	"github.com/casdoor/oss"
 )
 
 func deployStaticFiles(provider *object.Provider) {

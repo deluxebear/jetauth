@@ -32,11 +32,10 @@ type RoleListResponse struct {
 
 // RoleResponse represents the response for single role APIs
 type RoleResponse struct {
-	Status string       `json:"status" example:"ok"`
-	Msg    string       `json:"msg" example:""`
-	Data   object.Role  `json:"data"`
+	Status string      `json:"status" example:"ok"`
+	Msg    string      `json:"msg" example:""`
+	Data   object.Role `json:"data"`
 }
-
 
 // GetRoles
 // @Summary GetRoles

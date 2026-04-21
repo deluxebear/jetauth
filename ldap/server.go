@@ -21,9 +21,9 @@ import (
 	"log"
 	"strings"
 
+	ldap "github.com/casdoor/ldapserver"
 	"github.com/deluxebear/jetauth/conf"
 	"github.com/deluxebear/jetauth/object"
-	ldap "github.com/casdoor/ldapserver"
 	"github.com/lor00x/goldap/message"
 )
 

@@ -25,19 +25,18 @@ import (
 
 // SyncerListResponse represents the response for syncer list APIs
 type SyncerListResponse struct {
-	Status string        `json:"status" example:"ok"`
-	Msg    string        `json:"msg" example:""`
+	Status string          `json:"status" example:"ok"`
+	Msg    string          `json:"msg" example:""`
 	Data   []object.Syncer `json:"data"`
-	Data2  int           `json:"data2" example:"10"`
+	Data2  int             `json:"data2" example:"10"`
 }
 
 // SyncerResponse represents the response for single syncer APIs
 type SyncerResponse struct {
-	Status string       `json:"status" example:"ok"`
-	Msg    string       `json:"msg" example:""`
-	Data   object.Syncer  `json:"data"`
+	Status string        `json:"status" example:"ok"`
+	Msg    string        `json:"msg" example:""`
+	Data   object.Syncer `json:"data"`
 }
-
 
 // GetSyncers
 // @Summary GetSyncers

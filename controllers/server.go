@@ -24,19 +24,18 @@ import (
 
 // ServerListResponse represents the response for server list APIs
 type ServerListResponse struct {
-	Status string        `json:"status" example:"ok"`
-	Msg    string        `json:"msg" example:""`
+	Status string          `json:"status" example:"ok"`
+	Msg    string          `json:"msg" example:""`
 	Data   []object.Server `json:"data"`
-	Data2  int           `json:"data2" example:"10"`
+	Data2  int             `json:"data2" example:"10"`
 }
 
 // ServerResponse represents the response for single server APIs
 type ServerResponse struct {
-	Status string       `json:"status" example:"ok"`
-	Msg    string       `json:"msg" example:""`
-	Data   object.Server  `json:"data"`
+	Status string        `json:"status" example:"ok"`
+	Msg    string        `json:"msg" example:""`
+	Data   object.Server `json:"data"`
 }
-
 
 // GetServers
 // @Summary GetServers

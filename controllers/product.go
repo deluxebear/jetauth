@@ -26,19 +26,18 @@ import (
 
 // ProductListResponse represents the response for product list APIs
 type ProductListResponse struct {
-	Status string        `json:"status" example:"ok"`
-	Msg    string        `json:"msg" example:""`
+	Status string           `json:"status" example:"ok"`
+	Msg    string           `json:"msg" example:""`
 	Data   []object.Product `json:"data"`
-	Data2  int           `json:"data2" example:"10"`
+	Data2  int              `json:"data2" example:"10"`
 }
 
 // ProductResponse represents the response for single product APIs
 type ProductResponse struct {
-	Status string       `json:"status" example:"ok"`
-	Msg    string       `json:"msg" example:""`
-	Data   object.Product  `json:"data"`
+	Status string         `json:"status" example:"ok"`
+	Msg    string         `json:"msg" example:""`
+	Data   object.Product `json:"data"`
 }
-
 
 // GetProducts
 // @Summary GetProducts

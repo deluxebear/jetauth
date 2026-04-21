@@ -24,19 +24,18 @@ import (
 
 // WebhookListResponse represents the response for webhook list APIs
 type WebhookListResponse struct {
-	Status string        `json:"status" example:"ok"`
-	Msg    string        `json:"msg" example:""`
+	Status string           `json:"status" example:"ok"`
+	Msg    string           `json:"msg" example:""`
 	Data   []object.Webhook `json:"data"`
-	Data2  int           `json:"data2" example:"10"`
+	Data2  int              `json:"data2" example:"10"`
 }
 
 // WebhookResponse represents the response for single webhook APIs
 type WebhookResponse struct {
-	Status string       `json:"status" example:"ok"`
-	Msg    string       `json:"msg" example:""`
-	Data   object.Webhook  `json:"data"`
+	Status string         `json:"status" example:"ok"`
+	Msg    string         `json:"msg" example:""`
+	Data   object.Webhook `json:"data"`
 }
-
 
 // GetWebhooks
 // @Summary GetWebhooks

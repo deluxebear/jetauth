@@ -24,19 +24,18 @@ import (
 
 // RecordListResponse represents the response for record list APIs
 type RecordListResponse struct {
-	Status string        `json:"status" example:"ok"`
-	Msg    string        `json:"msg" example:""`
+	Status string          `json:"status" example:"ok"`
+	Msg    string          `json:"msg" example:""`
 	Data   []object.Record `json:"data"`
-	Data2  int           `json:"data2" example:"10"`
+	Data2  int             `json:"data2" example:"10"`
 }
 
 // RecordResponse represents the response for single record APIs
 type RecordResponse struct {
-	Status string       `json:"status" example:"ok"`
-	Msg    string       `json:"msg" example:""`
-	Data   object.Record  `json:"data"`
+	Status string        `json:"status" example:"ok"`
+	Msg    string        `json:"msg" example:""`
+	Data   object.Record `json:"data"`
 }
-
 
 // GetRecords
 // @Summary GetRecords

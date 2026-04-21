@@ -23,12 +23,12 @@ type BizRoleInheritance struct {
 }
 
 // AddBizRoleInheritance enforces:
-// 1. parent and child exist + same organization
-// 2. No self-inheritance
-// 3. No cycle (DFS from parent upward; if child appears, reject)
-// 4. Depth ≤ MaxBizRoleInheritanceDepth
-// 5. Scope rule: child may inherit from parent whose scope is 'org' (app→org OK,
-//    org→app BLOCKED to prevent permission leakage to sibling apps)
+//  1. parent and child exist + same organization
+//  2. No self-inheritance
+//  3. No cycle (DFS from parent upward; if child appears, reject)
+//  4. Depth ≤ MaxBizRoleInheritanceDepth
+//  5. Scope rule: child may inherit from parent whose scope is 'org' (app→org OK,
+//     org→app BLOCKED to prevent permission leakage to sibling apps)
 func AddBizRoleInheritance(parentRoleId, childRoleId int64) (bool, error) {
 	if parentRoleId == childRoleId {
 		return false, fmt.Errorf("role cannot inherit from itself")

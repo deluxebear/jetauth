@@ -26,19 +26,18 @@ import (
 
 // TokenListResponse represents the response for token list APIs
 type TokenListResponse struct {
-	Status string        `json:"status" example:"ok"`
-	Msg    string        `json:"msg" example:""`
+	Status string         `json:"status" example:"ok"`
+	Msg    string         `json:"msg" example:""`
 	Data   []object.Token `json:"data"`
-	Data2  int           `json:"data2" example:"10"`
+	Data2  int            `json:"data2" example:"10"`
 }
 
 // TokenResponse represents the response for single token APIs
 type TokenResponse struct {
 	Status string       `json:"status" example:"ok"`
 	Msg    string       `json:"msg" example:""`
-	Data   object.Token  `json:"data"`
+	Data   object.Token `json:"data"`
 }
-
 
 // GetTokens
 // @Summary GetTokens

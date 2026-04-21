@@ -17,8 +17,8 @@ type Context struct {
 	ToAddress   string   // first recipient (string placeholder)
 	ToAddresses []string // all recipients (array placeholder)
 	Subject     string
-	Content     string  // HTML body
-	ContentText string  // plain text body (optional)
+	Content     string // HTML body
+	ContentText string // plain text body (optional)
 }
 
 var placeholderRe = regexp.MustCompile(`\$\{([a-zA-Z][a-zA-Z0-9_]*)\}`)

@@ -470,12 +470,12 @@ func SyncAfterUserGroupsChanged(org string, affectedGroups []string) {
 
 // findAppsReferencingGroups returns the distinct app names whose Casbin
 // policies would embed any of the given groups' user lists. Two sources:
-//   1. biz_permission_grantee rows where subject is one of the groups → the
-//      app owning the permission.
-//   2. biz_role_member rows where subject is one of the groups → the role,
-//      plus every descendant role (inheritance flattens ancestor members into
-//      descendant policies), then the apps those roles belong to (app-scope)
-//      or the apps granting those roles (org-scope).
+//  1. biz_permission_grantee rows where subject is one of the groups → the
+//     app owning the permission.
+//  2. biz_role_member rows where subject is one of the groups → the role,
+//     plus every descendant role (inheritance flattens ancestor members into
+//     descendant policies), then the apps those roles belong to (app-scope)
+//     or the apps granting those roles (org-scope).
 func findAppsReferencingGroups(org string, groupIds []string) ([]string, error) {
 	if len(groupIds) == 0 {
 		return nil, nil

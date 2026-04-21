@@ -35,11 +35,10 @@ type UserListResponse struct {
 
 // UserResponse represents the response for single user APIs
 type UserResponse struct {
-	Status string       `json:"status" example:"ok"`
-	Msg    string       `json:"msg" example:""`
-	Data   object.User  `json:"data"`
+	Status string      `json:"status" example:"ok"`
+	Msg    string      `json:"msg" example:""`
+	Data   object.User `json:"data"`
 }
-
 
 // GetGlobalUsers
 // @Summary GetGlobalUsers

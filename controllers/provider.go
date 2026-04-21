@@ -24,19 +24,18 @@ import (
 
 // ProviderListResponse represents the response for provider list APIs
 type ProviderListResponse struct {
-	Status string        `json:"status" example:"ok"`
-	Msg    string        `json:"msg" example:""`
+	Status string            `json:"status" example:"ok"`
+	Msg    string            `json:"msg" example:""`
 	Data   []object.Provider `json:"data"`
-	Data2  int           `json:"data2" example:"10"`
+	Data2  int               `json:"data2" example:"10"`
 }
 
 // ProviderResponse represents the response for single provider APIs
 type ProviderResponse struct {
-	Status string       `json:"status" example:"ok"`
-	Msg    string       `json:"msg" example:""`
-	Data   object.Provider  `json:"data"`
+	Status string          `json:"status" example:"ok"`
+	Msg    string          `json:"msg" example:""`
+	Data   object.Provider `json:"data"`
 }
-
 
 // GetProviders
 // @Summary GetProviders

@@ -18,8 +18,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/deluxebear/jetauth/conf"
 	sender "github.com/casdoor/go-sms-sender"
+	"github.com/deluxebear/jetauth/conf"
 )
 
 func getSmsClient(provider *Provider) (sender.SmsClient, error) {

@@ -44,7 +44,6 @@ func TestThemeData_NewFieldsSerialize(t *testing.T) {
 	}
 }
 
-
 func TestApplication_SigninMethodMode_BackwardCompatibleJSON(t *testing.T) {
 	oldJSON := `{"owner":"admin","name":"app-test","orgChoiceMode":"None"}`
 	var app Application
@@ -140,10 +139,10 @@ func TestSignupItem_BackwardCompatibleJSON(t *testing.T) {
 
 func TestSignupItem_NewFieldsSerialize(t *testing.T) {
 	si := SignupItem{
-		Name: "EmployeeId",
-		Helper: "Your assigned employee number",
-		Group: "work",
-		Step: 2,
+		Name:              "EmployeeId",
+		Helper:            "Your assigned employee number",
+		Group:             "work",
+		Step:              2,
 		ValidationMessage: map[string]string{"en": "Invalid format", "zh": "格式错误"},
 	}
 	b, err := json.Marshal(si)

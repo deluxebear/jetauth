@@ -19,8 +19,8 @@ import (
 	"slices"
 
 	"github.com/casbin/casbin/v3"
-	"github.com/deluxebear/jetauth/util"
 	xormadapter "github.com/deluxebear/jetauth/adapters/xormadapter"
+	"github.com/deluxebear/jetauth/util"
 	"github.com/xorm-io/core"
 )
 

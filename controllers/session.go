@@ -26,19 +26,18 @@ import (
 
 // SessionListResponse represents the response for session list APIs
 type SessionListResponse struct {
-	Status string        `json:"status" example:"ok"`
-	Msg    string        `json:"msg" example:""`
+	Status string           `json:"status" example:"ok"`
+	Msg    string           `json:"msg" example:""`
 	Data   []object.Session `json:"data"`
-	Data2  int           `json:"data2" example:"10"`
+	Data2  int              `json:"data2" example:"10"`
 }
 
 // SessionResponse represents the response for single session APIs
 type SessionResponse struct {
-	Status string       `json:"status" example:"ok"`
-	Msg    string       `json:"msg" example:""`
-	Data   object.Session  `json:"data"`
+	Status string         `json:"status" example:"ok"`
+	Msg    string         `json:"msg" example:""`
+	Data   object.Session `json:"data"`
 }
-
 
 // GetSessions
 // @Summary GetSessions

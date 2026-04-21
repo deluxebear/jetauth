@@ -26,8 +26,8 @@ type ResolveSigninRequest struct {
 // ResolveSigninPayload is the data envelope returned on success.
 type ResolveSigninPayload struct {
 	Methods     []SigninMethodInfo `json:"methods"`
-	Recommended string            `json:"recommended"` // Name of the suggested method, or ""
-	UserHint    string            `json:"userHint"`    // masked display (e.g. "a***@example.com") or ""
+	Recommended string             `json:"recommended"` // Name of the suggested method, or ""
+	UserHint    string             `json:"userHint"`    // masked display (e.g. "a***@example.com") or ""
 }
 
 // ResolveSigninResponse is the outer envelope.

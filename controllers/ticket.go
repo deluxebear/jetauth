@@ -24,19 +24,18 @@ import (
 
 // TicketListResponse represents the response for ticket list APIs
 type TicketListResponse struct {
-	Status string        `json:"status" example:"ok"`
-	Msg    string        `json:"msg" example:""`
+	Status string          `json:"status" example:"ok"`
+	Msg    string          `json:"msg" example:""`
 	Data   []object.Ticket `json:"data"`
-	Data2  int           `json:"data2" example:"10"`
+	Data2  int             `json:"data2" example:"10"`
 }
 
 // TicketResponse represents the response for single ticket APIs
 type TicketResponse struct {
-	Status string       `json:"status" example:"ok"`
-	Msg    string       `json:"msg" example:""`
-	Data   object.Ticket  `json:"data"`
+	Status string        `json:"status" example:"ok"`
+	Msg    string        `json:"msg" example:""`
+	Data   object.Ticket `json:"data"`
 }
-
 
 // GetTickets
 // @Summary GetTickets

@@ -69,7 +69,9 @@ func TestHttpSender_ErrorPropagatesBody(t *testing.T) {
 func TestHttpSender_CloudflarePreset(t *testing.T) {
 	var got map[string]any
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != "POST" { t.Fatalf("method=%s", r.Method) }
+		if r.Method != "POST" {
+			t.Fatalf("method=%s", r.Method)
+		}
 		b, _ := io.ReadAll(r.Body)
 		_ = json.Unmarshal(b, &got)
 		w.WriteHeader(200)

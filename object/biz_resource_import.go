@@ -410,8 +410,8 @@ func isBlank(row []string) bool {
 // ── JSON / YAML template parser ──────────────────────────────────────
 
 type resourceTemplateFile struct {
-	Version   int                      `yaml:"version" json:"version"`
-	Resources []resourceTemplateRow    `yaml:"resources" json:"resources"`
+	Version   int                   `yaml:"version" json:"version"`
+	Resources []resourceTemplateRow `yaml:"resources" json:"resources"`
 }
 
 // resourceTemplateRow accepts method as either a comma-string or a list.
@@ -486,9 +486,11 @@ func coerceMethodField(v interface{}) string {
 //   (2) "METHOD /path [displayName]" where METHOD is a standard HTTP verb
 //   (3) "group/displayName  METHOD  /path" (tab or multi-space separated)
 
-var curlMethodRe = regexp.MustCompile(`(?i)-X\s+([A-Z]+)`)
-var curlURLRe = regexp.MustCompile(`https?://[^\s"']+`)
-var httpMethodRe = regexp.MustCompile(`(?i)^(GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS|TRACE)\b`)
+var (
+	curlMethodRe = regexp.MustCompile(`(?i)-X\s+([A-Z]+)`)
+	curlURLRe    = regexp.MustCompile(`https?://[^\s"']+`)
+	httpMethodRe = regexp.MustCompile(`(?i)^(GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS|TRACE)\b`)
+)
 
 func parsePaste(content string, opts *BizResourceImportOptions) ([]BizAppResource, error) {
 	lines := strings.Split(content, "\n")

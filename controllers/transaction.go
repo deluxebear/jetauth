@@ -24,19 +24,18 @@ import (
 
 // TransactionListResponse represents the response for transaction list APIs
 type TransactionListResponse struct {
-	Status string        `json:"status" example:"ok"`
-	Msg    string        `json:"msg" example:""`
+	Status string               `json:"status" example:"ok"`
+	Msg    string               `json:"msg" example:""`
 	Data   []object.Transaction `json:"data"`
-	Data2  int           `json:"data2" example:"10"`
+	Data2  int                  `json:"data2" example:"10"`
 }
 
 // TransactionResponse represents the response for single transaction APIs
 type TransactionResponse struct {
-	Status string       `json:"status" example:"ok"`
-	Msg    string       `json:"msg" example:""`
-	Data   object.Transaction  `json:"data"`
+	Status string             `json:"status" example:"ok"`
+	Msg    string             `json:"msg" example:""`
+	Data   object.Transaction `json:"data"`
 }
-
 
 // GetTransactions
 // @Summary GetTransactions

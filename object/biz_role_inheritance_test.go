@@ -287,8 +287,8 @@ func TestBizRoleInheritanceAppInheritsFromOrg_Allowed(t *testing.T) {
 	org := newBizRoleTestOrg(t)
 
 	// org-scope parent, app-scope child
-	parent := mustCreateBizRole(t, org, "", "employee")         // org-scope
-	child := mustCreateBizRole(t, org, "appFoo", "senior-dev")  // app-scope
+	parent := mustCreateBizRole(t, org, "", "employee")        // org-scope
+	child := mustCreateBizRole(t, org, "appFoo", "senior-dev") // app-scope
 
 	ok, err := AddBizRoleInheritance(parent.Id, child.Id)
 	if err != nil {

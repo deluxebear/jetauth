@@ -21,7 +21,7 @@ import (
 )
 
 var (
-	bizEnforcerCache sync.Map          // key: "owner/appName" → value: *casbin.Enforcer
+	bizEnforcerCache sync.Map           // key: "owner/appName" → value: *casbin.Enforcer
 	bizEnforcerGroup singleflight.Group // dedup concurrent cache-fill for the same key
 )
 

@@ -31,19 +31,18 @@ import (
 
 // ResourceListResponse represents the response for resource list APIs
 type ResourceListResponse struct {
-	Status string        `json:"status" example:"ok"`
-	Msg    string        `json:"msg" example:""`
+	Status string            `json:"status" example:"ok"`
+	Msg    string            `json:"msg" example:""`
 	Data   []object.Resource `json:"data"`
-	Data2  int           `json:"data2" example:"10"`
+	Data2  int               `json:"data2" example:"10"`
 }
 
 // ResourceResponse represents the response for single resource APIs
 type ResourceResponse struct {
-	Status string       `json:"status" example:"ok"`
-	Msg    string       `json:"msg" example:""`
-	Data   object.Resource  `json:"data"`
+	Status string          `json:"status" example:"ok"`
+	Msg    string          `json:"msg" example:""`
+	Data   object.Resource `json:"data"`
 }
-
 
 // GetResources
 // @Tags Resource API

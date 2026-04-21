@@ -12,20 +12,20 @@ import (
 )
 
 var blockedCIDRs = mustParseCIDRs([]string{
-	"0.0.0.0/8",       // current network
-	"10.0.0.0/8",      // RFC1918
-	"100.64.0.0/10",   // CGNAT
-	"127.0.0.0/8",     // loopback
-	"169.254.0.0/16",  // link-local + metadata
-	"172.16.0.0/12",   // RFC1918
-	"192.0.0.0/24",    // IETF
-	"192.168.0.0/16",  // RFC1918
-	"198.18.0.0/15",   // benchmark
-	"224.0.0.0/4",     // multicast
-	"240.0.0.0/4",     // reserved
-	"::1/128",         // IPv6 loopback
-	"fc00::/7",        // IPv6 ULA
-	"fe80::/10",       // IPv6 link-local
+	"0.0.0.0/8",      // current network
+	"10.0.0.0/8",     // RFC1918
+	"100.64.0.0/10",  // CGNAT
+	"127.0.0.0/8",    // loopback
+	"169.254.0.0/16", // link-local + metadata
+	"172.16.0.0/12",  // RFC1918
+	"192.0.0.0/24",   // IETF
+	"192.168.0.0/16", // RFC1918
+	"198.18.0.0/15",  // benchmark
+	"224.0.0.0/4",    // multicast
+	"240.0.0.0/4",    // reserved
+	"::1/128",        // IPv6 loopback
+	"fc00::/7",       // IPv6 ULA
+	"fe80::/10",      // IPv6 link-local
 })
 
 // isBlockedIP returns true when ip is in a dangerous private/metadata range,

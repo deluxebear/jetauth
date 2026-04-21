@@ -201,8 +201,8 @@ func (s *server) handleMe(w http.ResponseWriter, r *http.Request) {
 	id := identityOf(r)
 	if id.User == "" {
 		writeJSON(w, http.StatusOK, map[string]interface{}{
-			"identity":     id,
-			"gatewayNote":  "no X-Forwarded-User header — request did not pass through the JetAuth WAF",
+			"identity":    id,
+			"gatewayNote": "no X-Forwarded-User header — request did not pass through the JetAuth WAF",
 		})
 		return
 	}

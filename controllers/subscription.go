@@ -25,19 +25,18 @@ import (
 
 // SubscriptionListResponse represents the response for subscription list APIs
 type SubscriptionListResponse struct {
-	Status string        `json:"status" example:"ok"`
-	Msg    string        `json:"msg" example:""`
+	Status string                `json:"status" example:"ok"`
+	Msg    string                `json:"msg" example:""`
 	Data   []object.Subscription `json:"data"`
-	Data2  int           `json:"data2" example:"10"`
+	Data2  int                   `json:"data2" example:"10"`
 }
 
 // SubscriptionResponse represents the response for single subscription APIs
 type SubscriptionResponse struct {
-	Status string       `json:"status" example:"ok"`
-	Msg    string       `json:"msg" example:""`
-	Data   object.Subscription  `json:"data"`
+	Status string              `json:"status" example:"ok"`
+	Msg    string              `json:"msg" example:""`
+	Data   object.Subscription `json:"data"`
 }
-
 
 // GetSubscriptions
 // @Summary GetSubscriptions

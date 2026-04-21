@@ -24,19 +24,18 @@ import (
 
 // WebhookEventListResponse represents the response for webhookevent list APIs
 type WebhookEventListResponse struct {
-	Status string        `json:"status" example:"ok"`
-	Msg    string        `json:"msg" example:""`
+	Status string                `json:"status" example:"ok"`
+	Msg    string                `json:"msg" example:""`
 	Data   []object.WebhookEvent `json:"data"`
-	Data2  int           `json:"data2" example:"10"`
+	Data2  int                   `json:"data2" example:"10"`
 }
 
 // WebhookEventResponse represents the response for single webhookevent APIs
 type WebhookEventResponse struct {
-	Status string       `json:"status" example:"ok"`
-	Msg    string       `json:"msg" example:""`
-	Data   object.WebhookEvent  `json:"data"`
+	Status string              `json:"status" example:"ok"`
+	Msg    string              `json:"msg" example:""`
+	Data   object.WebhookEvent `json:"data"`
 }
-
 
 const defaultWebhookEventListLimit = 100
 

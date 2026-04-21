@@ -166,4 +166,3 @@ func serveProviderHintRedirectPage(ctx *context.Context) bool {
 	http.ServeContent(ctx.ResponseWriter, ctx.Request, "provider-hint-redirect.html", time.Now(), strings.NewReader(providerHintRedirectHtml))
 	return true
 }
-

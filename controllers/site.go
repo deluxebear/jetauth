@@ -32,11 +32,10 @@ type SiteListResponse struct {
 
 // SiteResponse represents the response for single site APIs
 type SiteResponse struct {
-	Status string       `json:"status" example:"ok"`
-	Msg    string       `json:"msg" example:""`
-	Data   object.Site  `json:"data"`
+	Status string      `json:"status" example:"ok"`
+	Msg    string      `json:"msg" example:""`
+	Data   object.Site `json:"data"`
 }
-
 
 // GetGlobalSites
 // @Summary GetGlobalSites

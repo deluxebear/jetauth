@@ -15,9 +15,9 @@
 package notification
 
 import (
-	"github.com/deluxebear/jetauth/proxy"
 	notify "github.com/casdoor/notify2"
 	"github.com/casdoor/notify2/service/twitter"
+	"github.com/deluxebear/jetauth/proxy"
 )
 
 func NewTwitterProvider(consumerKey string, consumerSecret string, accessToken string, accessTokenSecret string, twitterId string) (*notify.Notify, error) {

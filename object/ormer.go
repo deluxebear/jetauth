@@ -24,9 +24,9 @@ import (
 	"strings"
 
 	"github.com/beego/beego/v2/server/web"
+	xormadapter "github.com/deluxebear/jetauth/adapters/xormadapter"
 	"github.com/deluxebear/jetauth/conf"
 	"github.com/deluxebear/jetauth/util"
-	xormadapter "github.com/deluxebear/jetauth/adapters/xormadapter"
 	_ "github.com/go-sql-driver/mysql"  // db = mysql
 	_ "github.com/lib/pq"               // db = postgres
 	_ "github.com/microsoft/go-mssqldb" // db = mssql

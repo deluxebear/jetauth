@@ -17,8 +17,8 @@ package email
 import (
 	"crypto/tls"
 
-	"github.com/deluxebear/jetauth/conf"
 	"github.com/casdoor/gomail/v2"
+	"github.com/deluxebear/jetauth/conf"
 )
 
 type SmtpEmailProvider struct {

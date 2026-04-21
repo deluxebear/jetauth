@@ -17,9 +17,9 @@ package notification
 import (
 	"strconv"
 
-	"github.com/deluxebear/jetauth/proxy"
 	notify "github.com/casdoor/notify2"
 	"github.com/casdoor/notify2/service/telegram"
+	"github.com/deluxebear/jetauth/proxy"
 	api "github.com/go-telegram-bot-api/telegram-bot-api"
 )
 

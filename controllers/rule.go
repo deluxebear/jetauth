@@ -36,11 +36,10 @@ type RuleListResponse struct {
 
 // RuleResponse represents the response for single rule APIs
 type RuleResponse struct {
-	Status string       `json:"status" example:"ok"`
-	Msg    string       `json:"msg" example:""`
-	Data   object.Rule  `json:"data"`
+	Status string      `json:"status" example:"ok"`
+	Msg    string      `json:"msg" example:""`
+	Data   object.Rule `json:"data"`
 }
-
 
 // GetRules
 // @Summary GetRules

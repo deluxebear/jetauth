@@ -76,11 +76,11 @@ func TestBizRoleResolveScopedRoles_OrgRoleVisibleFromAnyApp(t *testing.T) {
 func TestGetBizRoles_VisibilityFromApp(t *testing.T) {
 	org := newBizRoleTestOrg(t)
 
-	orgOnly := mustCreateBizRole(t, org, "", "employee")           // org-scope
-	orgAdmin := mustCreateBizRole(t, org, "", "admin")             // org-scope
-	appAdmin := mustCreateBizRole(t, org, "appFoo", "admin")       // app-scope
-	appMgr := mustCreateBizRole(t, org, "appFoo", "manager")       // app-scope
-	_ = mustCreateBizRole(t, org, "appBar", "unrelated")           // different app
+	orgOnly := mustCreateBizRole(t, org, "", "employee")     // org-scope
+	orgAdmin := mustCreateBizRole(t, org, "", "admin")       // org-scope
+	appAdmin := mustCreateBizRole(t, org, "appFoo", "admin") // app-scope
+	appMgr := mustCreateBizRole(t, org, "appFoo", "manager") // app-scope
+	_ = mustCreateBizRole(t, org, "appBar", "unrelated")     // different app
 
 	// Case 1: appName == "appFoo" → expect orgOnly, orgAdmin, appAdmin, appMgr.
 	fromApp, err := GetBizRoles(org, "appFoo")

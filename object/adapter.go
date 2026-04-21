@@ -18,9 +18,9 @@ import (
 	"fmt"
 	"strings"
 
+	xormadapter "github.com/deluxebear/jetauth/adapters/xormadapter"
 	"github.com/deluxebear/jetauth/conf"
 	"github.com/deluxebear/jetauth/util"
-	xormadapter "github.com/deluxebear/jetauth/adapters/xormadapter"
 	"github.com/xorm-io/core"
 	"github.com/xorm-io/xorm"
 )

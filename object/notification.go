@@ -21,9 +21,9 @@ import (
 	"strings"
 	"time"
 
+	notify "github.com/casdoor/notify2"
 	"github.com/deluxebear/jetauth/notification"
 	"github.com/deluxebear/jetauth/util"
-	notify "github.com/casdoor/notify2"
 )
 
 func getNotificationClient(provider *Provider) (notify.Notifier, error) {

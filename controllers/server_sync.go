@@ -55,9 +55,9 @@ type SyncInnerServersResult struct {
 
 // SyncInnerServersResponse is the response for SyncIntranetServers API.
 type SyncInnerServersResponse struct {
-	Status string                   `json:"status" example:"ok"`
-	Msg    string                   `json:"msg" example:""`
-	Data   SyncInnerServersResult   `json:"data"`
+	Status string                 `json:"status" example:"ok"`
+	Msg    string                 `json:"msg" example:""`
+	Data   SyncInnerServersResult `json:"data"`
 }
 
 // SyncIntranetServers
