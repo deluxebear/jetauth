@@ -24,6 +24,7 @@ import (
 	"github.com/deluxebear/jetauth/authz"
 	"github.com/deluxebear/jetauth/conf"
 	"github.com/deluxebear/jetauth/controllers"
+	"github.com/deluxebear/jetauth/embedded"
 	"github.com/deluxebear/jetauth/ldap"
 	"github.com/deluxebear/jetauth/object"
 	"github.com/deluxebear/jetauth/proxy"
@@ -90,7 +91,11 @@ func main() {
 	// framework identity and version are not useful to legitimate clients
 	// and help attackers fingerprint vulnerable endpoints.
 	web.BConfig.ServerName = ""
-	web.SetStaticPath("/swagger", "swagger")
+	swaggerDir := "swagger"
+	if !util.FileExist(swaggerDir) && embedded.SwaggerDir != "" {
+		swaggerDir = embedded.SwaggerDir
+	}
+	web.SetStaticPath("/swagger", swaggerDir)
 	web.SetStaticPath("/files", "files")
 	// Replace beego's default "Not Found / Powered by beego" page so we
 	// don't leak the framework version and so /api/* clients get JSON

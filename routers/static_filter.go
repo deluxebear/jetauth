@@ -28,6 +28,7 @@ import (
 	"github.com/beego/beego/v2/core/logs"
 	"github.com/beego/beego/v2/server/web/context"
 	"github.com/deluxebear/jetauth/conf"
+	"github.com/deluxebear/jetauth/embedded"
 	"github.com/deluxebear/jetauth/object"
 	"github.com/deluxebear/jetauth/util"
 )
@@ -41,7 +42,18 @@ var (
 
 func getWebBuildFolder() string {
 	path := "web/build"
-	if util.FileExist(filepath.Join(path, "index.html")) || frontendBaseDir == "" {
+	if util.FileExist(filepath.Join(path, "index.html")) {
+		return path
+	}
+
+	// Embedded build: assets were extracted to a temp dir at startup.
+	// Prefer them over the other fallbacks so a single-file binary works
+	// regardless of the working directory.
+	if embedded.WebBuildDir != "" {
+		return embedded.WebBuildDir
+	}
+
+	if frontendBaseDir == "" {
 		return path
 	}
 

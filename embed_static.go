@@ -1,4 +1,4 @@
-// Copyright 2024 The Casdoor Authors. All Rights Reserved.
+// Copyright 2024 The JetAuth Authors. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -18,7 +18,10 @@ package main
 
 import (
 	"embed"
+	"fmt"
 	"io/fs"
+	"os"
+	"path/filepath"
 
 	"github.com/deluxebear/jetauth/embedded"
 )
@@ -30,15 +33,55 @@ var embeddedWebFS embed.FS
 var embeddedSwaggerFS embed.FS
 
 func init() {
-	sub, err := fs.Sub(embeddedWebFS, "web/build")
-	if err != nil {
-		panic(err)
+	if sub, err := fs.Sub(embeddedWebFS, "web/build"); err == nil {
+		embedded.WebFS = sub
 	}
-	embedded.WebFS = sub
+	if sub, err := fs.Sub(embeddedSwaggerFS, "swagger"); err == nil {
+		embedded.SwaggerFS = sub
+	}
 
-	sub, err = fs.Sub(embeddedSwaggerFS, "swagger")
+	// Extract the embedded trees to a temp dir so the disk-reading code
+	// paths (routers/static_filter.go, beego's SetStaticPath) work without
+	// a neighbouring web/build/. The extraction happens once per process
+	// and is cheap on every platform we ship.
+	base, err := os.MkdirTemp("", "jetauth-embedded-*")
 	if err != nil {
-		panic(err)
+		panic(fmt.Sprintf("jetauth embed: create temp dir: %v", err))
 	}
-	embedded.SwaggerFS = sub
+
+	webDir := filepath.Join(base, "web", "build")
+	if err := extractEmbed(embeddedWebFS, "web/build", webDir); err != nil {
+		panic(fmt.Sprintf("jetauth embed: extract web/build: %v", err))
+	}
+	embedded.WebBuildDir = webDir
+
+	swDir := filepath.Join(base, "swagger")
+	if err := extractEmbed(embeddedSwaggerFS, "swagger", swDir); err != nil {
+		panic(fmt.Sprintf("jetauth embed: extract swagger: %v", err))
+	}
+	embedded.SwaggerDir = swDir
+}
+
+func extractEmbed(src embed.FS, srcRoot, destRoot string) error {
+	if err := os.MkdirAll(destRoot, 0o755); err != nil {
+		return err
+	}
+	return fs.WalkDir(src, srcRoot, func(p string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		rel, err := filepath.Rel(srcRoot, p)
+		if err != nil {
+			return err
+		}
+		target := filepath.Join(destRoot, rel)
+		if d.IsDir() {
+			return os.MkdirAll(target, 0o755)
+		}
+		data, err := src.ReadFile(p)
+		if err != nil {
+			return err
+		}
+		return os.WriteFile(target, data, 0o644)
+	})
 }
