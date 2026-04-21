@@ -2735,8 +2735,6 @@ const en = {
   "sysinfo.description": "An Identity and Access Management (IAM) / Single-Sign-On (SSO) platform with web UI supporting OAuth 2.0, OIDC, SAML and CAS",
   "sysinfo.version": "Version",
   "sysinfo.unknownVersion": "Unknown version",
-  "sysinfo.website": "Official website",
-  "sysinfo.community": "Community",
   "sysinfo.noData": "No data available",
 
   // Swagger

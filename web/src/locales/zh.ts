@@ -2815,8 +2815,6 @@ const zh: Record<string, string> = {
   "sysinfo.description": "一个支持 OAuth 2.0、OIDC、SAML 和 CAS 的身份和访问管理 (IAM) / 单点登录 (SSO) 平台",
   "sysinfo.version": "版本",
   "sysinfo.unknownVersion": "未知版本",
-  "sysinfo.website": "官方网站",
-  "sysinfo.community": "社区",
   "sysinfo.noData": "暂无数据",
 
   // Swagger

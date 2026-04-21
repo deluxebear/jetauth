@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { motion, type Variants } from "framer-motion";
-import { Cpu, HardDrive, MemoryStick, Network, ExternalLink, Globe, MessageSquare } from "lucide-react";
+import { Cpu, HardDrive, MemoryStick, Network, ExternalLink } from "lucide-react";
 import { useTranslation } from "../i18n";
 import * as SystemBackend from "../backend/SystemBackend";
 import type { SystemInfo, VersionInfo, PrometheusInfo } from "../backend/SystemBackend";
@@ -232,34 +232,59 @@ export default function SystemInfoPage() {
           )}
 
           {/* About JetAuth */}
-          <motion.div variants={fadeUp} initial="hidden" animate="show" className="rounded-xl border border-border bg-surface-1 p-5">
-            <h2 className="text-sm font-semibold mb-4">{t("sysinfo.aboutJetauth" as any)}</h2>
-            <p className="text-[13px] text-text-secondary mb-4">{t("sysinfo.description" as any)}</p>
-            <div className="space-y-2 text-[13px]">
-              <div className="flex items-center gap-2">
-                <ExternalLink size={14} className="text-text-muted" />
-                <span className="text-text-muted">GitHub:</span>
-                <a href="https://github.com/deluxebear/jetauth" target="_blank" rel="noreferrer" className="text-accent hover:underline">JetAuth</a>
+          <motion.div
+            variants={fadeUp}
+            initial="hidden"
+            animate="show"
+            className="relative overflow-hidden rounded-xl border border-border bg-gradient-to-br from-surface-1 to-surface-2 p-6"
+          >
+            <div className="absolute -top-24 -right-24 h-48 w-48 rounded-full bg-accent/5 blur-3xl pointer-events-none" aria-hidden />
+
+            <div className="relative flex flex-wrap items-start justify-between gap-5">
+              {/* identity */}
+              <div className="flex items-start gap-4 min-w-0">
+                <div className="shrink-0 h-12 w-12 rounded-xl bg-gradient-to-br from-accent to-accent-hover shadow-md flex items-center justify-center">
+                  <span className="text-white font-bold text-xl leading-none">J</span>
+                </div>
+                <div className="min-w-0 space-y-1.5">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h2 className="text-lg font-semibold text-text-primary leading-none">JetAuth</h2>
+                    {versionLink ? (
+                      <a
+                        href={versionLink}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center text-[11px] font-mono px-2 py-0.5 rounded-md bg-accent/10 text-accent border border-accent/20 hover:bg-accent/20 transition-colors"
+                        title={t("sysinfo.version" as any)}
+                      >
+                        {versionText}
+                      </a>
+                    ) : (
+                      <span
+                        className="inline-flex items-center text-[11px] font-mono px-2 py-0.5 rounded-md bg-surface-3 text-text-muted border border-border"
+                        title={t("sysinfo.version" as any)}
+                      >
+                        {versionText}
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-[13px] leading-relaxed text-text-secondary max-w-lg">
+                    {t("sysinfo.description" as any)}
+                  </p>
+                </div>
               </div>
-              <div className="flex items-center gap-2">
-                <span className="w-3.5" />
-                <span className="text-text-muted">{t("sysinfo.version" as any)}:</span>
-                {versionLink ? (
-                  <a href={versionLink} target="_blank" rel="noreferrer" className="text-accent hover:underline font-mono">{versionText}</a>
-                ) : (
-                  <span className="font-mono text-text-secondary">{versionText}</span>
-                )}
-              </div>
-              <div className="flex items-center gap-2">
-                <Globe size={14} className="text-text-muted" />
-                <span className="text-text-muted">{t("sysinfo.website" as any)}:</span>
-                <a href="https://github.com/deluxebear/jetauth" target="_blank" rel="noreferrer" className="text-accent hover:underline">https://github.com/deluxebear/jetauth</a>
-              </div>
-              <div className="flex items-center gap-2">
-                <MessageSquare size={14} className="text-text-muted" />
-                <span className="text-text-muted">{t("sysinfo.community" as any)}:</span>
-                <a href="https://github.com/deluxebear/jetauth/discussions" target="_blank" rel="noreferrer" className="text-accent hover:underline">Get in Touch!</a>
-              </div>
+
+              {/* actions */}
+              <a
+                href="https://github.com/deluxebear/jetauth"
+                target="_blank"
+                rel="noreferrer"
+                className="shrink-0 inline-flex items-center gap-1.5 text-[12px] font-medium px-3 py-1.5 rounded-lg border border-border bg-surface-1 text-text-primary hover:bg-surface-3 hover:border-accent/40 transition-colors"
+              >
+                <img src="/providers/github.svg" alt="" className="h-3.5 w-3.5 dark:invert" />
+                GitHub
+                <ExternalLink size={12} className="text-text-muted" />
+              </a>
             </div>
           </motion.div>
         </>
