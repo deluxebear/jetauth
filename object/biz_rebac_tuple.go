@@ -29,13 +29,13 @@ import (
 // reverse look-ups and userset expansion.
 type BizTuple struct {
 	Id      int64  `xorm:"pk autoincr" json:"-"`
-	StoreId string `xorm:"varchar(200) notnull index(idx_forward) index(idx_reverse)" json:"storeId"`
+	StoreId string `xorm:"varchar(200) notnull index(idx_forward) index(idx_reverse) unique(uq_tuple)" json:"storeId"`
 	Owner   string `xorm:"varchar(100) notnull" json:"owner"`
 	AppName string `xorm:"varchar(100) notnull" json:"appName"`
 
-	Object   string `xorm:"varchar(256) notnull index(idx_forward)" json:"object"`
-	Relation string `xorm:"varchar(100) notnull index(idx_forward)" json:"relation"`
-	User     string `xorm:"varchar(256) notnull index(idx_reverse)" json:"user"`
+	Object   string `xorm:"varchar(256) notnull index(idx_forward) unique(uq_tuple)" json:"object"`
+	Relation string `xorm:"varchar(100) notnull index(idx_forward) unique(uq_tuple)" json:"relation"`
+	User     string `xorm:"varchar(256) notnull index(idx_reverse) unique(uq_tuple)" json:"user"`
 
 	// Derived from Object/User by PopulateDerived; stored for query performance.
 	ObjectType   string `xorm:"varchar(100) notnull index(idx_reverse)" json:"-"`
