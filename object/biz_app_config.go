@@ -28,6 +28,16 @@ type BizAppConfig struct {
 	PolicyTable string `xorm:"varchar(100)" json:"policyTable"`
 	IsEnabled   bool   `json:"isEnabled"`
 
+	// ModelType selects the authorization engine. Defaults to "casbin"
+	// for backward compatibility; "rebac" routes BizEnforce to the
+	// OpenFGA-compatible graph engine. See docs/rebac-spec.md §4.1.
+	ModelType string `xorm:"varchar(20) default 'casbin'" json:"modelType"`
+
+	// CurrentAuthorizationModelId points at the latest BizAuthorizationModel
+	// row for this app. Writes and Checks default to this model; historical
+	// models are preserved (spec §4.2) and can be addressed explicitly.
+	CurrentAuthorizationModelId string `xorm:"varchar(40)" json:"currentAuthorizationModelId"`
+
 	// SupportsDeny is a computed field (not persisted) that reports whether
 	// the current ModelText has both a p_eft field and a policy_effect that
 	// references p.eft == deny. The frontend uses this to hide or disable
