@@ -289,6 +289,12 @@ func InitAPI() {
 	web.Router("/api/biz-get-policies", &controllers.ApiController{}, "GET:BizGetPolicies")
 	web.Router("/api/biz-get-user-roles", &controllers.ApiController{}, "GET:BizGetUserRoles")
 	web.Router("/api/biz-get-user-permissions", &controllers.ApiController{}, "GET:BizGetUserPermissions")
+
+	// ReBAC Authorization Model routes (spec §7.1).
+	web.Router("/api/biz-write-authorization-model", &controllers.ApiController{}, "POST:BizWriteAuthorizationModel")
+	web.Router("/api/biz-read-authorization-model", &controllers.ApiController{}, "GET:BizReadAuthorizationModel")
+	web.Router("/api/biz-list-authorization-models", &controllers.ApiController{}, "GET:BizListAuthorizationModels")
+
 	web.Router("/api/biz-sync-policies", &controllers.ApiController{}, "POST:BizSyncPolicies")
 
 	web.Router("/api/run-casbin-command", &controllers.ApiController{}, "GET:RunCasbinCommand")
