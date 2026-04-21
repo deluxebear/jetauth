@@ -28,7 +28,7 @@
 ### 2.1 文件结构
 
 ```
-web-new/src/auth/templates/
+web/src/auth/templates/
 ├── index.ts                    # 注册表（Vite glob 自动发现）
 ├── types.ts                    # TemplateMeta / TemplateProps / SlotContract
 ├── registry.ts                 # 工厂函数 + 默认回退
@@ -54,7 +54,7 @@ web-new/src/auth/templates/
 每个模板声明它会渲染哪些槽位，调用方（`SigninPage` / `SignupPage` / `ForgotPasswordPage`）把已组装好的原子组件塞进去。模板只负责**布局**，不负责业务逻辑。
 
 ```ts
-// web-new/src/auth/templates/types.ts
+// web/src/auth/templates/types.ts
 
 export type SlotId =
   | "branding"        // BrandingLayer（logo + displayName + title）
@@ -91,7 +91,7 @@ export interface TemplateProps {
 ### 2.3 注册表（自动发现）
 
 ```ts
-// web-new/src/auth/templates/index.ts
+// web/src/auth/templates/index.ts
 import type { ComponentType } from "react";
 import type { TemplateMeta, TemplateProps } from "./types";
 
@@ -390,7 +390,7 @@ SigninPage / SignupPage / ForgotPasswordPage
 2. **改** `index.tsx` 里的 `meta.id` / `meta.name` / `meta.preview`，布局按需调整
 3. **声明** `requiredSlots` / `optionalSlots` / `defaultOptions`
 4. **（可选）** 如果模板有特殊参数（hero 图 / 侧栏文案），写 `optionsSchema` 并在 `options.tsx` 里写管理员表单（或让系统按 schema 自动生成）
-5. **放缩略图** `preview.png`（1200×800，浅色背景）到 `web-new/public/templates/<new-id>.png`
+5. **放缩略图** `preview.png`（1200×800，浅色背景）到 `web/public/templates/<new-id>.png`
 6. **自测**：`/template-preview?id=<new-id>&variant=signin` 能渲染
 7. **提交 PR** —— 注册表靠 `import.meta.glob` 自动发现，**无需修改任何中心文件**
 

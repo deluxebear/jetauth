@@ -168,7 +168,7 @@ New string field; values:
 
 ## New dependencies
 
-### npm (web-new/)
+### npm (web/)
 
 | Package | Version | Purpose |
 |---|---|---|
@@ -210,7 +210,7 @@ New string field; values:
 
 ## W6 session deliverables (2026-04-18)
 
-- a11y audit via `axe-core` (`web-new/src/__tests__/a11y.test.tsx`): 5 surfaces
+- a11y audit via `axe-core` (`web/src/__tests__/a11y.test.tsx`): 5 surfaces
   asserted violation-free (SigninPage, ClassicSigninPage, SignupPage,
   ForgotPasswordPage, AdminPreviewPane).
 - Real a11y fixes: 7 signup field components now associate their label

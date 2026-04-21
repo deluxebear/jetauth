@@ -10,7 +10,7 @@ limited to:
 
   - Go module path renamed to github.com/deluxebear/jetauth.
   - Rebranded as JetAuth.
-  - New frontend in web-new/ built with React, Vite, Tailwind CSS v4, and
+  - New frontend in web/ built with React, Vite, Tailwind CSS v4, and
     TanStack Query, replacing the upstream Ant Design frontend.
   - Business-permission (ReBAC) subsystem, including per-application Casbin
     policy tables, role inheritance propagation, and a resource catalog

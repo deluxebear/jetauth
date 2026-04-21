@@ -5,7 +5,7 @@ import "github.com/microcosm-cc/bluemonday"
 // htmlSanitizer is the shared policy used to scrub the five admin-editable
 // HTML fields on Application (headerHtml / footerHtml / signinHtml /
 // signupHtml / forgetHtml) before they're persisted. Paired with the
-// frontend DOMPurify policy in web-new/src/auth/shell/SafeHtml.tsx —
+// frontend DOMPurify policy in web/src/auth/shell/SafeHtml.tsx —
 // defense in depth: admins may paste raw HTML, we strip dangerous
 // constructs both on save and on render.
 var htmlSanitizer = func() *bluemonday.Policy {

@@ -60,16 +60,16 @@ interface MfaProps {
 
 | File | Responsibility |
 |------|---------------|
-| `web-new/src/pages/MfaSetup.tsx` | 3-step MFA setup page (password → verify code → enable) |
-| `web-new/src/pages/MfaVerify.tsx` | MFA verification page (enter code or recovery code) |
+| `web/src/pages/MfaSetup.tsx` | 3-step MFA setup page (password → verify code → enable) |
+| `web/src/pages/MfaVerify.tsx` | MFA verification page (enter code or recovery code) |
 
 ### Modified Files
 
 | File | Changes |
 |------|---------|
-| `web-new/src/App.tsx` | Add routes, store MFA state, navigate to MFA pages on RequiredMfa/NextMfa |
-| `web-new/src/locales/en.ts` | MFA page translations |
-| `web-new/src/locales/zh.ts` | MFA page translations |
+| `web/src/App.tsx` | Add routes, store MFA state, navigate to MFA pages on RequiredMfa/NextMfa |
+| `web/src/locales/en.ts` | MFA page translations |
+| `web/src/locales/zh.ts` | MFA page translations |
 
 ## Path A: MFA Setup Flow (RequiredMfa)
 

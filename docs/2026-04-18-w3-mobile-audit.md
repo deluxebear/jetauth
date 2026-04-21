@@ -1,11 +1,11 @@
 # W3 Mobile Audit (2026-04-18)
 
-Static analysis of web-new/src/auth/ for mobile-viewport issues.
+Static analysis of web/src/auth/ for mobile-viewport issues.
 No browser run — this is a code review pass.
 
 ## Methodology
 
-Reviewed every .tsx/.ts file under web-new/src/auth/ (excluding __tests__)
+Reviewed every .tsx/.ts file under web/src/auth/ (excluding __tests__)
 for the following patterns:
 
 1. Fixed widths without max-w constraint

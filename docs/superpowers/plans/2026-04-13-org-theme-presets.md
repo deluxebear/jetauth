@@ -14,29 +14,29 @@
 
 | File | Responsibility |
 |------|---------------|
-| `web-new/src/lib/theme-utils.ts` | **New** — Color math: hex/HSL conversion, darken, lighten, hueShift, deriveThemeVars |
-| `web-new/src/theme-presets.ts` | **New** — 5 preset definitions + ThemePreset type + helper to match current themeData to a preset |
-| `web-new/src/components/ThemePresetCard.tsx` | **New** — Clickable preset card with mini login page thumbnail |
-| `web-new/src/components/LoginPreview.tsx` | **New** — Live preview of login page reflecting current theme values |
-| `web-new/src/index.css` | **Modify** — Add `--radius`, `--gradient-from`, `--gradient-to`, `--gradient-blob` CSS variables to both light/dark themes |
-| `web-new/src/theme.tsx` | **Modify** — Add `applyOrgTheme(themeData)` and `clearOrgTheme()` to ThemeProvider |
-| `web-new/src/pages/OrganizationEditPage.tsx` | **Modify** — Replace theme tab (lines 515-549) with card selector + custom controls + preview |
-| `web-new/src/pages/Login.tsx` | **Modify** — Apply org theme on mount, replace hardcoded gradient colors with CSS variables |
-| `web-new/src/pages/Signup.tsx` | **Modify** — Same as Login.tsx |
-| `web-new/src/locales/en.ts` | **Modify** — Add preset name + section translations |
-| `web-new/src/locales/zh.ts` | **Modify** — Add preset name + section translations |
+| `web/src/lib/theme-utils.ts` | **New** — Color math: hex/HSL conversion, darken, lighten, hueShift, deriveThemeVars |
+| `web/src/theme-presets.ts` | **New** — 5 preset definitions + ThemePreset type + helper to match current themeData to a preset |
+| `web/src/components/ThemePresetCard.tsx` | **New** — Clickable preset card with mini login page thumbnail |
+| `web/src/components/LoginPreview.tsx` | **New** — Live preview of login page reflecting current theme values |
+| `web/src/index.css` | **Modify** — Add `--radius`, `--gradient-from`, `--gradient-to`, `--gradient-blob` CSS variables to both light/dark themes |
+| `web/src/theme.tsx` | **Modify** — Add `applyOrgTheme(themeData)` and `clearOrgTheme()` to ThemeProvider |
+| `web/src/pages/OrganizationEditPage.tsx` | **Modify** — Replace theme tab (lines 515-549) with card selector + custom controls + preview |
+| `web/src/pages/Login.tsx` | **Modify** — Apply org theme on mount, replace hardcoded gradient colors with CSS variables |
+| `web/src/pages/Signup.tsx` | **Modify** — Same as Login.tsx |
+| `web/src/locales/en.ts` | **Modify** — Add preset name + section translations |
+| `web/src/locales/zh.ts` | **Modify** — Add preset name + section translations |
 
 ---
 
 ### Task 1: Color Derivation Utility
 
 **Files:**
-- Create: `web-new/src/lib/theme-utils.ts`
+- Create: `web/src/lib/theme-utils.ts`
 
 - [ ] **Step 1: Create the color utility file with hex/HSL conversion**
 
 ```typescript
-// web-new/src/lib/theme-utils.ts
+// web/src/lib/theme-utils.ts
 
 /** Convert hex color (#rrggbb) to HSL [h: 0-360, s: 0-100, l: 0-100] */
 export function hexToHsl(hex: string): [number, number, number] {
@@ -150,14 +150,14 @@ export function deriveThemeVars(
 
 - [ ] **Step 2: Verify the file compiles**
 
-Run: `cd /Users/xiongyanlin/projects/jetauth/web-new && npx tsc --noEmit src/lib/theme-utils.ts 2>&1 | head -20`
+Run: `cd /Users/xiongyanlin/projects/jetauth/web && npx tsc --noEmit src/lib/theme-utils.ts 2>&1 | head -20`
 
 Expected: No errors (or only errors about missing tsconfig paths — the functions are self-contained).
 
 - [ ] **Step 3: Commit**
 
 ```bash
-git add web-new/src/lib/theme-utils.ts
+git add web/src/lib/theme-utils.ts
 git commit -m "feat: add color derivation utility for org theme presets"
 ```
 
@@ -166,12 +166,12 @@ git commit -m "feat: add color derivation utility for org theme presets"
 ### Task 2: Theme Presets Definition
 
 **Files:**
-- Create: `web-new/src/theme-presets.ts`
+- Create: `web/src/theme-presets.ts`
 
 - [ ] **Step 1: Create the presets file**
 
 ```typescript
-// web-new/src/theme-presets.ts
+// web/src/theme-presets.ts
 
 export interface ThemeData {
   themeType: string;
@@ -299,7 +299,7 @@ export function matchPreset(themeData: Partial<ThemeData> | null | undefined): s
 - [ ] **Step 2: Commit**
 
 ```bash
-git add web-new/src/theme-presets.ts
+git add web/src/theme-presets.ts
 git commit -m "feat: define 5 organization theme presets"
 ```
 
@@ -308,11 +308,11 @@ git commit -m "feat: define 5 organization theme presets"
 ### Task 3: Add CSS Variables for Gradients and Radius
 
 **Files:**
-- Modify: `web-new/src/index.css`
+- Modify: `web/src/index.css`
 
 - [ ] **Step 1: Add gradient and radius CSS variables to light theme**
 
-In `web-new/src/index.css`, within the `:root, [data-theme="light"]` block, after line 27 (`--glass-bg: rgba(255, 255, 255, 0.8);`), add:
+In `web/src/index.css`, within the `:root, [data-theme="light"]` block, after line 27 (`--glass-bg: rgba(255, 255, 255, 0.8);`), add:
 
 ```css
   --gradient-from: #0891b2;
@@ -323,7 +323,7 @@ In `web-new/src/index.css`, within the `:root, [data-theme="light"]` block, afte
 
 - [ ] **Step 2: Add gradient and radius CSS variables to dark theme**
 
-In `web-new/src/index.css`, within the `[data-theme="dark"]` block, after line 53 (`--glass-bg: rgba(15, 17, 23, 0.7);`), add:
+In `web/src/index.css`, within the `[data-theme="dark"]` block, after line 53 (`--glass-bg: rgba(15, 17, 23, 0.7);`), add:
 
 ```css
   --gradient-from: #06b6d4;
@@ -334,7 +334,7 @@ In `web-new/src/index.css`, within the `[data-theme="dark"]` block, after line 5
 
 - [ ] **Step 3: Add gradient and radius tokens to the @theme block**
 
-In `web-new/src/index.css`, within the `@theme` block, after line 74 (`--color-info: var(--info);`), add:
+In `web/src/index.css`, within the `@theme` block, after line 74 (`--color-info: var(--info);`), add:
 
 ```css
   --color-gradient-from: var(--gradient-from);
@@ -346,7 +346,7 @@ In `web-new/src/index.css`, within the `@theme` block, after line 74 (`--color-i
 - [ ] **Step 4: Commit**
 
 ```bash
-git add web-new/src/index.css
+git add web/src/index.css
 git commit -m "feat: add gradient and radius CSS variables for theme system"
 ```
 
@@ -355,11 +355,11 @@ git commit -m "feat: add gradient and radius CSS variables for theme system"
 ### Task 4: Update ThemeProvider with applyOrgTheme
 
 **Files:**
-- Modify: `web-new/src/theme.tsx`
+- Modify: `web/src/theme.tsx`
 
 - [ ] **Step 1: Rewrite theme.tsx to add org theme application**
 
-Replace the entire content of `web-new/src/theme.tsx` with:
+Replace the entire content of `web/src/theme.tsx` with:
 
 ```typescript
 import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from "react";
@@ -446,14 +446,14 @@ export function useTheme() {
 
 - [ ] **Step 2: Verify compilation**
 
-Run: `cd /Users/xiongyanlin/projects/jetauth/web-new && npx tsc --noEmit 2>&1 | head -20`
+Run: `cd /Users/xiongyanlin/projects/jetauth/web && npx tsc --noEmit 2>&1 | head -20`
 
 Expected: No new errors introduced.
 
 - [ ] **Step 3: Commit**
 
 ```bash
-git add web-new/src/theme.tsx
+git add web/src/theme.tsx
 git commit -m "feat: add applyOrgTheme/clearOrgTheme to ThemeProvider"
 ```
 
@@ -462,12 +462,12 @@ git commit -m "feat: add applyOrgTheme/clearOrgTheme to ThemeProvider"
 ### Task 5: i18n Translations
 
 **Files:**
-- Modify: `web-new/src/locales/en.ts`
-- Modify: `web-new/src/locales/zh.ts`
+- Modify: `web/src/locales/en.ts`
+- Modify: `web/src/locales/zh.ts`
 
 - [ ] **Step 1: Add English translations**
 
-In `web-new/src/locales/en.ts`, find the line containing `"orgs.field.compactMode"` and add after it:
+In `web/src/locales/en.ts`, find the line containing `"orgs.field.compactMode"` and add after it:
 
 ```typescript
   "orgs.section.selectTheme": "Select Theme",
@@ -484,7 +484,7 @@ In `web-new/src/locales/en.ts`, find the line containing `"orgs.field.compactMod
 
 - [ ] **Step 2: Add Chinese translations**
 
-In `web-new/src/locales/zh.ts`, find the line containing `"orgs.field.compactMode"` and add after it:
+In `web/src/locales/zh.ts`, find the line containing `"orgs.field.compactMode"` and add after it:
 
 ```typescript
   "orgs.section.selectTheme": "选择主题",
@@ -502,7 +502,7 @@ In `web-new/src/locales/zh.ts`, find the line containing `"orgs.field.compactMod
 - [ ] **Step 3: Commit**
 
 ```bash
-git add web-new/src/locales/en.ts web-new/src/locales/zh.ts
+git add web/src/locales/en.ts web/src/locales/zh.ts
 git commit -m "feat: add i18n translations for theme presets"
 ```
 
@@ -511,12 +511,12 @@ git commit -m "feat: add i18n translations for theme presets"
 ### Task 6: ThemePresetCard Component
 
 **Files:**
-- Create: `web-new/src/components/ThemePresetCard.tsx`
+- Create: `web/src/components/ThemePresetCard.tsx`
 
 - [ ] **Step 1: Create the preset card component**
 
 ```typescript
-// web-new/src/components/ThemePresetCard.tsx
+// web/src/components/ThemePresetCard.tsx
 import { Check } from "lucide-react";
 import type { ThemePreset } from "../theme-presets";
 import { useTranslation } from "../i18n";
@@ -595,7 +595,7 @@ export default function ThemePresetCard({ preset, selected, onClick }: ThemePres
 - [ ] **Step 2: Commit**
 
 ```bash
-git add web-new/src/components/ThemePresetCard.tsx
+git add web/src/components/ThemePresetCard.tsx
 git commit -m "feat: add ThemePresetCard component"
 ```
 
@@ -604,12 +604,12 @@ git commit -m "feat: add ThemePresetCard component"
 ### Task 7: LoginPreview Component
 
 **Files:**
-- Create: `web-new/src/components/LoginPreview.tsx`
+- Create: `web/src/components/LoginPreview.tsx`
 
 - [ ] **Step 1: Create the login preview component**
 
 ```typescript
-// web-new/src/components/LoginPreview.tsx
+// web/src/components/LoginPreview.tsx
 import { ShieldCheck } from "lucide-react";
 import { useTranslation } from "../i18n";
 import { deriveThemeVars } from "../lib/theme-utils";
@@ -723,7 +723,7 @@ export default function LoginPreview({ colorPrimary, themeType, borderRadius }: 
 - [ ] **Step 2: Commit**
 
 ```bash
-git add web-new/src/components/LoginPreview.tsx
+git add web/src/components/LoginPreview.tsx
 git commit -m "feat: add LoginPreview component for theme editor"
 ```
 
@@ -732,11 +732,11 @@ git commit -m "feat: add LoginPreview component for theme editor"
 ### Task 8: Rewrite Organization Theme Tab
 
 **Files:**
-- Modify: `web-new/src/pages/OrganizationEditPage.tsx` (lines 515-549)
+- Modify: `web/src/pages/OrganizationEditPage.tsx` (lines 515-549)
 
 - [ ] **Step 1: Add imports at the top of OrganizationEditPage.tsx**
 
-At the top of `web-new/src/pages/OrganizationEditPage.tsx`, add these imports after the existing imports (around line 16):
+At the top of `web/src/pages/OrganizationEditPage.tsx`, add these imports after the existing imports (around line 16):
 
 ```typescript
 import { THEME_PRESETS, matchPreset } from "../theme-presets";
@@ -746,7 +746,7 @@ import LoginPreview from "../components/LoginPreview";
 
 - [ ] **Step 2: Replace the theme tab content**
 
-In `web-new/src/pages/OrganizationEditPage.tsx`, replace the entire theme tab block from line 515 (`{`) to line 549 (`},`) with:
+In `web/src/pages/OrganizationEditPage.tsx`, replace the entire theme tab block from line 515 (`{`) to line 549 (`},`) with:
 
 ```typescript
         {
@@ -849,14 +849,14 @@ In `web-new/src/pages/OrganizationEditPage.tsx`, replace the entire theme tab bl
 
 - [ ] **Step 3: Verify the page loads**
 
-Run: `cd /Users/xiongyanlin/projects/jetauth/web-new && npx tsc --noEmit 2>&1 | head -20`
+Run: `cd /Users/xiongyanlin/projects/jetauth/web && npx tsc --noEmit 2>&1 | head -20`
 
 Expected: No new TypeScript errors.
 
 - [ ] **Step 4: Commit**
 
 ```bash
-git add web-new/src/pages/OrganizationEditPage.tsx
+git add web/src/pages/OrganizationEditPage.tsx
 git commit -m "feat: replace theme tab with preset cards, custom controls, and live preview"
 ```
 
@@ -865,11 +865,11 @@ git commit -m "feat: replace theme tab with preset cards, custom controls, and l
 ### Task 9: Update Login.tsx to Apply Org Theme
 
 **Files:**
-- Modify: `web-new/src/pages/Login.tsx`
+- Modify: `web/src/pages/Login.tsx`
 
 - [ ] **Step 1: Replace hardcoded gradient colors with CSS variables**
 
-In `web-new/src/pages/Login.tsx`, make these changes:
+In `web/src/pages/Login.tsx`, make these changes:
 
 1. On line 71, replace:
 ```
@@ -901,7 +901,7 @@ with:
 - [ ] **Step 2: Commit**
 
 ```bash
-git add web-new/src/pages/Login.tsx
+git add web/src/pages/Login.tsx
 git commit -m "feat: use CSS variable gradients on login page for theme support"
 ```
 
@@ -910,11 +910,11 @@ git commit -m "feat: use CSS variable gradients on login page for theme support"
 ### Task 10: Update Signup.tsx to Apply Org Theme
 
 **Files:**
-- Modify: `web-new/src/pages/Signup.tsx`
+- Modify: `web/src/pages/Signup.tsx`
 
 - [ ] **Step 1: Replace hardcoded gradient colors with CSS variables**
 
-In `web-new/src/pages/Signup.tsx`, make these changes:
+In `web/src/pages/Signup.tsx`, make these changes:
 
 1. On line 267, replace:
 ```
@@ -946,7 +946,7 @@ with:
 - [ ] **Step 2: Commit**
 
 ```bash
-git add web-new/src/pages/Signup.tsx
+git add web/src/pages/Signup.tsx
 git commit -m "feat: use CSS variable gradients on signup page for theme support"
 ```
 
@@ -955,14 +955,14 @@ git commit -m "feat: use CSS variable gradients on signup page for theme support
 ### Task 11: Integration — Apply Org Theme on Login/Signup Load
 
 **Files:**
-- Modify: `web-new/src/pages/Login.tsx`
-- Modify: `web-new/src/pages/Signup.tsx`
+- Modify: `web/src/pages/Login.tsx`
+- Modify: `web/src/pages/Signup.tsx`
 
 This task connects the theme application to the actual organization/application data fetched from the API.
 
 - [ ] **Step 1: Add theme application hook to Login.tsx**
 
-In `web-new/src/pages/Login.tsx`, the Login component currently receives organizations as a prop but does not fetch application or organization theme data. The theme application will happen when the parent `App.tsx` passes themeData or when the Login page fetches it.
+In `web/src/pages/Login.tsx`, the Login component currently receives organizations as a prop but does not fetch application or organization theme data. The theme application will happen when the parent `App.tsx` passes themeData or when the Login page fetches it.
 
 Since Login.tsx currently gets organization data from App.tsx (via the `organizations` prop), and the app data is fetched in App.tsx, the cleanest approach is to add an optional `themeData` prop to Login and apply it on mount.
 
@@ -1000,7 +1000,7 @@ And remove the existing `const { theme, toggle: toggleTheme } = useTheme();` lin
 
 - [ ] **Step 2: Add theme application to Signup.tsx**
 
-In `web-new/src/pages/Signup.tsx`, the component already fetches application data. After the application is loaded, apply its theme (or the organization's theme).
+In `web/src/pages/Signup.tsx`, the component already fetches application data. After the application is loaded, apply its theme (or the organization's theme).
 
 After the `useTheme()` call (line 41), replace:
 
@@ -1029,14 +1029,14 @@ Add after the application fetch `useEffect` (after line 88), add a new effect:
 
 - [ ] **Step 3: Verify compilation**
 
-Run: `cd /Users/xiongyanlin/projects/jetauth/web-new && npx tsc --noEmit 2>&1 | head -20`
+Run: `cd /Users/xiongyanlin/projects/jetauth/web && npx tsc --noEmit 2>&1 | head -20`
 
 Expected: No errors.
 
 - [ ] **Step 4: Commit**
 
 ```bash
-git add web-new/src/pages/Login.tsx web-new/src/pages/Signup.tsx
+git add web/src/pages/Login.tsx web/src/pages/Signup.tsx
 git commit -m "feat: apply org/app theme on login and signup page mount"
 ```
 
@@ -1048,7 +1048,7 @@ git commit -m "feat: apply org/app theme on login and signup page mount"
 
 - [ ] **Step 1: Start the dev server**
 
-Run: `cd /Users/xiongyanlin/projects/jetauth/web-new && npm run dev`
+Run: `cd /Users/xiongyanlin/projects/jetauth/web && npm run dev`
 
 - [ ] **Step 2: Test the organization theme tab**
 

@@ -76,7 +76,7 @@ func (c *ApiController) GetResolvedTheme() {
 // We emit two flavors of tokens:
 //   - New semantic names (--color-primary, --color-cta, …) for future components
 //   - Legacy names (--accent, --accent-hover, --accent-subtle) to override the
-//     defaults baked into web-new/src/index.css so existing Tailwind classes
+//     defaults baked into web/src/index.css so existing Tailwind classes
 //     (bg-accent, text-accent) pick up the org theme without refactoring.
 //
 // Any empty optional color falls back to ColorPrimary so a minimal org config

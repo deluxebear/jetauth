@@ -320,14 +320,14 @@ ReBAC 模式 (新增):
 
 | 文件 | 操作 | 说明 |
 |------|------|------|
-| `web-new/src/pages/AuthorizationPage.tsx` | 修改 | 创建向导增加模型类型选择 |
-| `web-new/src/pages/AppAuthorizationPage.tsx` | 修改 | 按 modelType 显示不同 Tab |
-| `web-new/src/components/BizSchemaEditor.tsx` | **新增** | ReBAC 类型/关系定义可视化编辑器 |
-| `web-new/src/components/BizTupleManager.tsx` | **新增** | 元组管理表格组件 |
-| `web-new/src/components/BizReBACTester.tsx` | **新增** | Check 测试器（带路径展示） |
-| `web-new/src/backend/BizBackend.ts` | 修改 | 增加 tuple API + list-objects/list-users |
-| `web-new/src/locales/zh.ts` | 修改 | 增加 ReBAC 相关 i18n |
-| `web-new/src/locales/en.ts` | 修改 | 增加 ReBAC 相关 i18n |
+| `web/src/pages/AuthorizationPage.tsx` | 修改 | 创建向导增加模型类型选择 |
+| `web/src/pages/AppAuthorizationPage.tsx` | 修改 | 按 modelType 显示不同 Tab |
+| `web/src/components/BizSchemaEditor.tsx` | **新增** | ReBAC 类型/关系定义可视化编辑器 |
+| `web/src/components/BizTupleManager.tsx` | **新增** | 元组管理表格组件 |
+| `web/src/components/BizReBACTester.tsx` | **新增** | Check 测试器（带路径展示） |
+| `web/src/backend/BizBackend.ts` | 修改 | 增加 tuple API + list-objects/list-users |
+| `web/src/locales/zh.ts` | 修改 | 增加 ReBAC 相关 i18n |
+| `web/src/locales/en.ts` | 修改 | 增加 ReBAC 相关 i18n |
 
 ## 六、实施分期
 

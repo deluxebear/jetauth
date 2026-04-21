@@ -4,7 +4,7 @@
 
 **Goal:** Build the theme foundation (backend resolver + frontend provider) and retire the legacy `web/` module, so every later week can build on a single, theme-aware auth surface.
 
-**Architecture:** Three concurrent tracks — (1) migrate static serving from `web/` to `web-new/` and delete the old module, (2) extend `ThemeData` + add `/api/get-resolved-theme` merge endpoint, (3) introduce the `web-new/src/auth/` module with a `ThemeProvider` that consumes the resolved theme and injects CSS variables. By end of W1, changing `Application.ThemeData.ColorPrimary` in admin visibly recolors the (still-placeholder) login page.
+**Architecture:** Three concurrent tracks — (1) migrate static serving from `web/` to `web/` and delete the old module, (2) extend `ThemeData` + add `/api/get-resolved-theme` merge endpoint, (3) introduce the `web/src/auth/` module with a `ThemeProvider` that consumes the resolved theme and injects CSS variables. By end of W1, changing `Application.ThemeData.ColorPrimary` in admin visibly recolors the (still-placeholder) login page.
 
 **Tech Stack:** Go 1.25 / Beego v2 / XORM / sqlite+mysql / React 19 / Vite 8 / Vitest / TypeScript / Tailwind 4
 
@@ -25,10 +25,10 @@ Capture everything that depends on `web/` so Task T02 knows exactly what to touc
 cd /Users/xiongyanlin/projects/jetauth
 
 # All Go code referencing web/build
-grep -rn "web/build\|web-new/build" --include="*.go" .
+grep -rn "web/build\|web/build" --include="*.go" .
 
 # All CI + Docker references
-grep -rn "web/\|web-new/" Dockerfile .github/workflows/ Makefile build.sh docker-entrypoint.sh 2>/dev/null
+grep -rn "web/\|web/" Dockerfile .github/workflows/ Makefile build.sh docker-entrypoint.sh 2>/dev/null
 
 # Any code importing/running from web/
 grep -rn '"web"' --include="*.go" --include="*.sh" --include="*.yml" .
@@ -43,7 +43,7 @@ Create `docs/2026-04-18-web-deletion-audit.md` with the exact output of those co
 - `main.go:87` — commented-out reference
 - `routers/static_filter.go:43` — `path := "web/build"`
 - `routers/static_filter.go:52` — fallback `filepath.Join(frontendBaseDir, "web/build")`
-- `routers/static_filter.go:202` — error message mentions `web-new/build`
+- `routers/static_filter.go:202` — error message mentions `web/build`
 - `Dockerfile:1–10` — FRONT build stage
 - `Dockerfile:49,68` — `COPY --from=FRONT /web/build`
 - `.github/workflows/build.yml:54,212` — upload `./web/build`
@@ -57,9 +57,9 @@ git commit -m "docs(auth-revamp): web/ deletion pre-flight audit"
 
 ---
 
-## Task W1-T02: Migrate Static Serving to web-new/
+## Task W1-T02: Migrate Static Serving to web/
 
-Rewrite embed, static filter, Dockerfile, and CI to serve `web-new/build` instead of `web/build`. Keep `web/` intact during this task — T03 deletes it only after we confirm the migration works.
+Rewrite embed, static filter, Dockerfile, and CI to serve `web/build` instead of `web/build`. Keep `web/` intact during this task — T03 deletes it only after we confirm the migration works.
 
 **Files:**
 - Modify: `embed_static.go`
@@ -73,14 +73,14 @@ Rewrite embed, static filter, Dockerfile, and CI to serve `web-new/build` instea
 ```go
 // embed_static.go — replace lines 25-33
 
-//go:embed all:web-new/build
+//go:embed all:web/build
 var embeddedWebFS embed.FS
 
 //go:embed all:swagger
 var embeddedSwaggerFS embed.FS
 
 func init() {
-    sub, err := fs.Sub(embeddedWebFS, "web-new/build")
+    sub, err := fs.Sub(embeddedWebFS, "web/build")
     if err != nil {
         panic(err)
     }
@@ -95,7 +95,7 @@ Replace `getWebBuildFolder()` (lines 42–54) with:
 
 ```go
 func getWebBuildFolder() string {
-    path := "web-new/build"
+    path := "web/build"
     if util.FileExist(filepath.Join(path, "index.html")) || frontendBaseDir == "" {
         return path
     }
@@ -104,12 +104,12 @@ func getWebBuildFolder() string {
         return frontendBaseDir
     }
 
-    path = filepath.Join(frontendBaseDir, "web-new/build")
+    path = filepath.Join(frontendBaseDir, "web/build")
     return path
 }
 ```
 
-Update the error-message string at `routers/static_filter.go:202` to reflect the new path (the existing message already mentions `web-new/build` — verify it still reads correctly).
+Update the error-message string at `routers/static_filter.go:202` to reflect the new path (the existing message already mentions `web/build` — verify it still reads correctly).
 
 - [ ] **Step 3: Remove stale comment in `main.go:87`**
 
@@ -121,29 +121,29 @@ Replace lines 1–10 with:
 
 ```dockerfile
 FROM --platform=$BUILDPLATFORM node:20.20.1 AS FRONT
-WORKDIR /web-new
+WORKDIR /web
 
 # Copy only dependency files first for better caching
-COPY ./web-new/package.json ./web-new/package-lock.json ./
+COPY ./web/package.json ./web/package-lock.json ./
 RUN npm ci --no-audit --no-fund
 
 # Copy source files and build
-COPY ./web-new .
+COPY ./web .
 RUN NODE_OPTIONS="--max-old-space-size=4096" npm run build
 ```
 
-And update lines 49 and 68 — change `/web/build ./web/build` to `/web-new/build ./web-new/build` in both COPY lines.
+And update lines 49 and 68 — change `/web/build ./web/build` to `/web/build ./web/build` in both COPY lines.
 
 - [ ] **Step 5: Update CI workflow**
 
-In `.github/workflows/build.yml`, replace every `./web/build` with `./web-new/build` (line 54 and 212 — there may be more; verify via grep after the edit).
+In `.github/workflows/build.yml`, replace every `./web/build` with `./web/build` (line 54 and 212 — there may be more; verify via grep after the edit).
 
-Also in the CI workflow: whatever step builds the frontend, change `cd web && yarn build` to `cd web-new && npm ci && npm run build`. Search for it in the file.
+Also in the CI workflow: whatever step builds the frontend, change `cd web && yarn build` to `cd web && npm ci && npm run build`. Search for it in the file.
 
 - [ ] **Step 6: Build the frontend locally and verify static serving works**
 
 ```bash
-cd /Users/xiongyanlin/projects/jetauth/web-new
+cd /Users/xiongyanlin/projects/jetauth/web
 npm ci
 npm run build
 ls build/index.html  # must exist
@@ -153,16 +153,16 @@ go build -tags embed -o /tmp/jetauth-test ./
 /tmp/jetauth-test --help 2>&1 | head -3  # should not panic at init()
 ```
 
-Expected: binary builds without embed error; `init()` in `embed_static.go` finds `web-new/build/index.html`.
+Expected: binary builds without embed error; `init()` in `embed_static.go` finds `web/build/index.html`.
 
 - [ ] **Step 7: Commit**
 
 ```bash
 git add embed_static.go main.go routers/static_filter.go Dockerfile .github/workflows/build.yml
-git commit -m "build: migrate static serving from web/ to web-new/
+git commit -m "build: migrate static serving from web/ to web/
 
-The Go binary now embeds web-new/build directly. Dockerfile FRONT stage
-builds web-new with npm instead of web with yarn. CI uploads web-new/build
+The Go binary now embeds web/build directly. Dockerfile FRONT stage
+builds web with npm instead of web with yarn. CI uploads web/build
 as the frontend artifact. Legacy web/ directory still present — deleted
 in next commit."
 ```
@@ -197,7 +197,7 @@ Expected: both succeed with no output.
 - [ ] **Step 3: Verify frontend build still works**
 
 ```bash
-cd web-new
+cd web
 npm run build
 ls build/index.html  # sanity check
 cd ..
@@ -210,22 +210,22 @@ git commit -m "chore: delete legacy Casdoor web/ module
 
 Removes ~1.2 GB / 136K files and resolves 116 npm dependency CVEs
 that were carried solely by web/yarn.lock. All static serving now
-routes to web-new/build via the migration in the previous commit."
+routes to web/build via the migration in the previous commit."
 ```
 
 ---
 
 ## Task W1-T04: i18n Completeness CI Gate
 
-Add a script that fails the build if `web-new/src/locales/en.ts` and `zh.ts` have differing key sets. Prevents the revamp from shipping with half-translated UI.
+Add a script that fails the build if `web/src/locales/en.ts` and `zh.ts` have differing key sets. Prevents the revamp from shipping with half-translated UI.
 
 **Files:**
-- Create: `web-new/scripts/check-i18n.ts`
-- Modify: `web-new/package.json`
+- Create: `web/scripts/check-i18n.ts`
+- Modify: `web/package.json`
 
 - [ ] **Step 1: Write the check script**
 
-Create `web-new/scripts/check-i18n.ts`:
+Create `web/scripts/check-i18n.ts`:
 
 ```typescript
 #!/usr/bin/env tsx
@@ -258,7 +258,7 @@ process.exit(1);
 
 - [ ] **Step 2: Register in package.json**
 
-In `web-new/package.json` under `"scripts"`, add:
+In `web/package.json` under `"scripts"`, add:
 
 ```json
 "check:i18n": "tsx scripts/check-i18n.ts",
@@ -270,7 +270,7 @@ In `web-new/package.json` under `"scripts"`, add:
 - [ ] **Step 3: Run it**
 
 ```bash
-cd web-new
+cd web
 npm install  # picks up tsx
 npm run check:i18n
 ```
@@ -280,8 +280,8 @@ Expected: script runs and reports the current gap (5 missing keys). Non-zero exi
 - [ ] **Step 4: Commit**
 
 ```bash
-git add web-new/scripts/check-i18n.ts web-new/package.json web-new/package-lock.json
-git commit -m "ci(web-new): add i18n parity check blocking build on mismatch"
+git add web/scripts/check-i18n.ts web/package.json web/package-lock.json
+git commit -m "ci(web): add i18n parity check blocking build on mismatch"
 ```
 
 ---
@@ -291,12 +291,12 @@ git commit -m "ci(web-new): add i18n parity check blocking build on mismatch"
 Fix the 5-key gap surfaced by T04 so build stays green.
 
 **Files:**
-- Modify: `web-new/src/locales/zh.ts` (or `en.ts` if that's the side with extras)
+- Modify: `web/src/locales/zh.ts` (or `en.ts` if that's the side with extras)
 
 - [ ] **Step 1: Enumerate the gap**
 
 ```bash
-cd web-new
+cd web
 npm run check:i18n 2>&1 | grep -E "^  - " > /tmp/i18n-gap.txt
 cat /tmp/i18n-gap.txt
 ```
@@ -316,8 +316,8 @@ Expected: `✓ i18n parity: N keys across en and zh`.
 - [ ] **Step 4: Commit**
 
 ```bash
-git add web-new/src/locales/
-git commit -m "i18n(web-new): backfill missing zh/en keys to pass parity check"
+git add web/src/locales/
+git commit -m "i18n(web): backfill missing zh/en keys to pass parity check"
 ```
 
 ---
@@ -1016,7 +1016,7 @@ type ResolvedProvider struct {
 }
 
 // providerLogoMap is the canonical mapping of built-in provider types to
-// static logo URLs. The frontend ships the actual SVGs in web-new/public/
+// static logo URLs. The frontend ships the actual SVGs in web/public/
 // and the backend just returns the path so responses stay cache-friendly.
 var providerLogoMap = map[string]string{
     "GitHub":    "/providers/github.svg",
@@ -1118,7 +1118,7 @@ git commit -m "feat(api): /api/get-app-login returns providersResolved[]
 
 Frontend no longer needs a second roundtrip to render branded OAuth
 buttons — type, displayName, and logoUrl come pre-baked. Logos live
-at /providers/*.svg in web-new/public/ (added in a follow-up commit)."
+at /providers/*.svg in web/public/ (added in a follow-up commit)."
 ```
 
 ---
@@ -1253,20 +1253,20 @@ fill the gap for org admins in W5."
 
 ---
 
-## Task W1-T11: web-new/src/auth/ Module Scaffold
+## Task W1-T11: web/src/auth/ Module Scaffold
 
 Create the folder structure + api client that every later task will build on. Zero UI yet — just types and data-fetchers.
 
 **Files:**
-- Create: `web-new/src/auth/api/types.ts`
-- Create: `web-new/src/auth/api/getResolvedTheme.ts`
-- Create: `web-new/src/auth/api/getAppLogin.ts`
-- Create: `web-new/src/auth/README.md`
+- Create: `web/src/auth/api/types.ts`
+- Create: `web/src/auth/api/getResolvedTheme.ts`
+- Create: `web/src/auth/api/getAppLogin.ts`
+- Create: `web/src/auth/README.md`
 
 - [ ] **Step 1: Create `types.ts`**
 
 ```typescript
-// web-new/src/auth/api/types.ts
+// web/src/auth/api/types.ts
 export interface ResolvedTheme {
   themeType: string;
   colorPrimary: string;
@@ -1383,7 +1383,7 @@ export interface AppLoginResponse {
 - [ ] **Step 2: Create `getResolvedTheme.ts`**
 
 ```typescript
-// web-new/src/auth/api/getResolvedTheme.ts
+// web/src/auth/api/getResolvedTheme.ts
 import { api } from "../../api/client";
 import type { ResolvedThemePayload } from "./types";
 
@@ -1401,7 +1401,7 @@ export async function getResolvedTheme(appId: string): Promise<ResolvedThemePayl
 - [ ] **Step 3: Create `getAppLogin.ts`**
 
 ```typescript
-// web-new/src/auth/api/getAppLogin.ts
+// web/src/auth/api/getAppLogin.ts
 import { api } from "../../api/client";
 import type { AppLoginResponse, AuthApplication, ResolvedProvider } from "./types";
 
@@ -1427,7 +1427,7 @@ export async function getAppLogin(appId: string): Promise<LoadedApp> {
 - [ ] **Step 4: Create `README.md`**
 
 ```markdown
-# web-new/src/auth/
+# web/src/auth/
 
 New data-driven auth surface (Auth UI Revamp, 2026-04).
 
@@ -1447,7 +1447,7 @@ raw hex values or `organizationObj.themeData` directly.
 - [ ] **Step 5: Verify TypeScript compiles**
 
 ```bash
-cd web-new
+cd web
 npx tsc --noEmit
 ```
 
@@ -1456,8 +1456,8 @@ Expected: no errors.
 - [ ] **Step 6: Commit**
 
 ```bash
-git add web-new/src/auth/
-git commit -m "scaffold(web-new): introduce auth/ module with API types + fetchers
+git add web/src/auth/
+git commit -m "scaffold(web): introduce auth/ module with API types + fetchers
 
 New home for login/signup UI. Types mirror backend structs from
 object/application.go and object/theme_resolver.go. Fetchers wrap
@@ -1471,19 +1471,19 @@ the endpoints added in this week's backend tasks (B2, B3)."
 React context + CSS-variable injector. Single source of truth for all auth-UI components.
 
 **Files:**
-- Create: `web-new/src/auth/ThemeProvider.tsx`
-- Create: `web-new/src/auth/__tests__/ThemeProvider.test.tsx`
+- Create: `web/src/auth/ThemeProvider.tsx`
+- Create: `web/src/auth/__tests__/ThemeProvider.test.tsx`
 
 - [ ] **Step 1: Install vitest + testing-library if not present**
 
 ```bash
-cd web-new
+cd web
 grep -q '"vitest"' package.json || npm install --save-dev vitest @testing-library/react @testing-library/jest-dom happy-dom
 ```
 
 Add to `package.json` scripts: `"test": "vitest run"`.
 
-Create `web-new/vitest.config.ts` if it doesn't exist:
+Create `web/vitest.config.ts` if it doesn't exist:
 
 ```typescript
 import { defineConfig } from "vitest/config";
@@ -1500,7 +1500,7 @@ export default defineConfig({
 
 - [ ] **Step 2: Write the failing test**
 
-Create `web-new/src/auth/__tests__/ThemeProvider.test.tsx`:
+Create `web/src/auth/__tests__/ThemeProvider.test.tsx`:
 
 ```typescript
 import { describe, it, expect, vi } from "vitest";
@@ -1564,7 +1564,7 @@ npm test -- ThemeProvider
 - [ ] **Step 4: Implement `ThemeProvider.tsx`**
 
 ```typescript
-// web-new/src/auth/ThemeProvider.tsx
+// web/src/auth/ThemeProvider.tsx
 import {
   createContext,
   useContext,
@@ -1632,7 +1632,7 @@ Expected: 2/2 pass.
 - [ ] **Step 6: Commit**
 
 ```bash
-git add web-new/src/auth/ThemeProvider.tsx web-new/src/auth/__tests__/ThemeProvider.test.tsx web-new/vitest.config.ts web-new/package.json web-new/package-lock.json
+git add web/src/auth/ThemeProvider.tsx web/src/auth/__tests__/ThemeProvider.test.tsx web/vitest.config.ts web/package.json web/package-lock.json
 git commit -m "feat(auth): ThemeProvider loads resolved theme + injects CSS vars
 
 Wraps the auth surface so every component reads a single ResolvedTheme.
@@ -1647,15 +1647,15 @@ head. Children get the theme object via useAuthTheme()."
 Replace the old hardcoded `pages/Login.tsx` and `pages/Signup.tsx` with a minimal `AuthShell` that verifies the theme pipeline works end-to-end. W2 fills in the real auth logic.
 
 **Files:**
-- Create: `web-new/src/auth/AuthShell.tsx`
-- Modify: `web-new/src/App.tsx`
-- Delete: `web-new/src/pages/Login.tsx`
-- Delete: `web-new/src/pages/Signup.tsx`
+- Create: `web/src/auth/AuthShell.tsx`
+- Modify: `web/src/App.tsx`
+- Delete: `web/src/pages/Login.tsx`
+- Delete: `web/src/pages/Signup.tsx`
 
 - [ ] **Step 1: Create the skeleton `AuthShell.tsx`**
 
 ```typescript
-// web-new/src/auth/AuthShell.tsx
+// web/src/auth/AuthShell.tsx
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { ThemeProvider, useAuthTheme } from "./ThemeProvider";
@@ -1753,7 +1753,7 @@ function AuthShellInner({ appId, mode }: { appId: string; mode: Mode }) {
 
 - [ ] **Step 2: Wire routes in `App.tsx`**
 
-Replace the current login/signup imports and route declarations. Find in `web-new/src/App.tsx`:
+Replace the current login/signup imports and route declarations. Find in `web/src/App.tsx`:
 
 ```typescript
 import Login from "./pages/Login";
@@ -1782,13 +1782,13 @@ Remove any `onLogin` / `error` / `themeData` props that used to flow into the ol
 
 ```bash
 cd /Users/xiongyanlin/projects/jetauth
-git rm web-new/src/pages/Login.tsx web-new/src/pages/Signup.tsx
+git rm web/src/pages/Login.tsx web/src/pages/Signup.tsx
 ```
 
 - [ ] **Step 4: TypeScript compile check**
 
 ```bash
-cd web-new
+cd web
 npx tsc --noEmit
 ```
 
@@ -1810,7 +1810,7 @@ cd /Users/xiongyanlin/projects/jetauth
 go run .
 
 # In terminal 2:
-cd web-new
+cd web
 npm run dev
 
 # Open http://localhost:5173/login in a browser.
@@ -1826,8 +1826,8 @@ npm run dev
 - [ ] **Step 7: Commit**
 
 ```bash
-git add web-new/src/App.tsx web-new/src/auth/AuthShell.tsx
-git rm web-new/src/pages/Login.tsx web-new/src/pages/Signup.tsx
+git add web/src/App.tsx web/src/auth/AuthShell.tsx
+git rm web/src/pages/Login.tsx web/src/pages/Signup.tsx
 git commit -m "feat(auth): introduce AuthShell skeleton; retire old Login/Signup pages
 
 AuthShell is the new data-driven root for /login and /signup routes.
@@ -1837,7 +1837,7 @@ W1 placeholder that proves the theme pipeline end-to-end by
 displaying raw theme tokens; W2 replaces it with the real
 identifier-first sign-in flow.
 
-Old web-new/src/pages/Login.tsx and Signup.tsx are deleted — they
+Old web/src/pages/Login.tsx and Signup.tsx are deleted — they
 were ~950 lines of hardcoded UI that ignored every customization
 field."
 ```
@@ -1847,11 +1847,11 @@ field."
 ## Wrap-up
 
 Final W1 state:
-- Old `web/` gone, `web-new/build` is the sole frontend served by the binary
+- Old `web/` gone, `web/build` is the sole frontend served by the binary
 - `ThemeData` extended (9 new fields) + `ResolveTheme` merge engine + `/api/get-resolved-theme`
 - `/api/get-app-login` returns `providersResolved[]`
 - Field-level RBAC blocks non-global-admins from editing HTML injection fields
-- `web-new/src/auth/` module scaffolded; `ThemeProvider` injects CSS vars
+- `web/src/auth/` module scaffolded; `ThemeProvider` injects CSS vars
 - `AuthShell` routes `/login` + `/signup` to a themed placeholder
 - All backend tests + frontend tsc + vitest green; i18n parity enforced by CI
 

@@ -21,7 +21,7 @@ No new bugs surfaced during this smoke round that W2b itself introduced. One pre
 ```bash
 go build ./...                          # clean
 go build -tags embed -o /tmp/smoke .    # clean
-cd web-new && npm run build             # tsc -b ✓ → vite build ✓
+cd web && npm run build             # tsc -b ✓ → vite build ✓
 ```
 
 ### Tests
@@ -57,7 +57,7 @@ The identifier-first method filter correctly returns only Password because jetem
 Start:
 ```bash
 cd /Users/xiongyanlin/projects/jetauth && /tmp/jetauth-bin &    # port 8000
-cd web-new && npm run dev                                         # port 7001
+cd web && npm run dev                                         # port 7001
 ```
 
 Open the appropriate URL per scenario:

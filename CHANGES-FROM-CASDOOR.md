@@ -9,16 +9,16 @@ docs under `docs/` for specifics.
 ## Structural changes
 
 - **Go module path**: `github.com/casdoor/casdoor` → `github.com/deluxebear/jetauth`.
-- **Frontend rewrite (`web-new/`)**: a completely new admin frontend built
+- **Frontend rewrite (`web/`)**: a completely new admin frontend built
   with React 19 + Vite + Tailwind CSS v4 + TanStack Query + React Router v6.
   It replaces — not augments — the upstream Ant Design frontend under `web/`,
   which is scheduled for deletion. Shared UI patterns:
-  - A reusable list-page pattern (`web-new/docs/list-page-pattern.md`) and
+  - A reusable list-page pattern (`web/docs/list-page-pattern.md`) and
     an extended `DataTable` component (selectable rows, `onRowClick`,
     client-side sort, persistent `columnsToggle`, `bulkActions`).
   - Entity-detail layout primitives: `EntityHeader`, `SplitButton`,
     `StatCard`, `DangerZone` (type-to-confirm destructive actions).
-  - Homegrown `useTranslation` in `web-new/src/i18n.tsx` — no
+  - Homegrown `useTranslation` in `web/src/i18n.tsx` — no
     `react-i18next` dependency. Per-file locale in TypeScript.
 - **Product name**: user-visible strings, cookie/session names, the
   built-in admin organization constant, HTTP realm, MCP server name, PayPal
@@ -51,7 +51,7 @@ The rewrite:
 - Adds an SSRF guard that blocks outbound requests to RFC1918, loopback,
   link-local, and cloud-metadata ranges unless explicitly allowlisted via
   `ssrfAllowedHosts`.
-- New editor UI in `web-new/`: `BodyTemplateEditor` (variable chips + live
+- New editor UI in `web/`: `BodyTemplateEditor` (variable chips + live
   preview), `PresetPicker`, typed preset fetcher, and sandbox test-send.
 
 Docs: `docs/http-email-migration.md`, `docs/http-email-presets.md`,
@@ -171,7 +171,7 @@ channel — remains.
   dependencies (`notify2`, `go-sms-sender`, `oss`, `gomail`, `ldapserver`,
   `casdoor-go-sdk`) remain, as they are maintained upstream libraries we
   depend on — renaming would require forking those libraries.
-- **Homegrown i18n** in `web-new/src/i18n.tsx` — see above.
+- **Homegrown i18n** in `web/src/i18n.tsx` — see above.
 
 ## Retained upstream integrations
 

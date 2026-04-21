@@ -9,7 +9,7 @@
 
 ## 1. Goal
 
-Replace the current hardcoded login/signup pages in `web-new/` with a fully data-driven, brand-customizable auth surface that consumes every `Application` + `Organization` customization field the backend already stores — and extend the backend where the current data model is too thin. Delete the legacy `web/` module once feature parity is reached.
+Replace the current hardcoded login/signup pages in `web/` with a fully data-driven, brand-customizable auth surface that consumes every `Application` + `Organization` customization field the backend already stores — and extend the backend where the current data model is too thin. Delete the legacy `web/` module once feature parity is reached.
 
 **Success criteria:**
 - Every field on the "界面定制" admin tab visibly affects the user-facing login/signup page within 300ms of saving (and live-previews within 200ms during editing).
@@ -92,7 +92,7 @@ Merge is **right-to-left**, per-field: unset fields inherit from the level below
 ## 7. Frontend architecture (new)
 
 ```
-web-new/src/auth/                        ← new top-level module
+web/src/auth/                        ← new top-level module
 ├── AuthShell.tsx                        ← layout router (formOffset 1|2|3|4)
 ├── ThemeProvider.tsx                    ← consumes /api/get-resolved-theme, injects CSS vars
 ├── shell/
@@ -138,8 +138,8 @@ web-new/src/auth/                        ← new top-level module
 ```
 
 Old files to **delete in W1**:
-- `web-new/src/pages/Login.tsx`
-- `web-new/src/pages/Signup.tsx`
+- `web/src/pages/Login.tsx`
+- `web/src/pages/Signup.tsx`
 - Entire `web/` directory at root (legacy Casdoor frontend)
 
 ---
@@ -148,7 +148,7 @@ Old files to **delete in W1**:
 
 | Week | Theme | Deliverable | Demo |
 |---|---|---|---|
-| W1 | **Foundation** | B1–B4 backend; `web-new/src/auth/ThemeProvider`; delete old `web/`; new `AuthShell` skeleton that renders placeholders | Admin changes primary color → user login page reflects it |
+| W1 | **Foundation** | B1–B4 backend; `web/src/auth/ThemeProvider`; delete old `web/`; new `AuthShell` skeleton that renders placeholders | Admin changes primary color → user login page reflects it |
 | W2 | **Signin core** | Identifier-first flow; PasswordForm / CodeForm / WebAuthnForm / FaceForm / ProvidersRow; ClassicSigninPage fallback | Real user can sign in with any backend-supported method |
 | W3 | **Signup + layouts** | SignupPage with auto-split; all DynamicField types; formOffset 1/2/3/4; signinItems slots; B5 (SignupItem extensions); B7 (org-level inherit) | Admin configures custom signup fields → user sees them |
 | W4 | **Admin live preview** | Three-column admin layout; URL-token preview iframe; drag-sort for methods/items; B9 (preview token) | Admin drags WebAuthn to top → preview updates <200ms |
@@ -220,7 +220,7 @@ No gradual rollout per-tenant. Full cutover, with `JETAUTH_DISABLE_NEW_AUTH_UI` 
 Captured here so they don't get lost:
 
 - **Dark-mode color derivation**: if admin sets only `ColorPrimary` (light), should dark-mode variant auto-derive (HSL shift) or require explicit `DarkColorPrimary`? → **Decision: auto-derive, with admin override**. Implementation in W1 (B1).
-- **Font loading policy**: load Google Fonts on demand vs self-host? → **Decision: self-host the default fonts (Inter + JetBrains Mono) in `web-new/public/fonts/`; admins referencing Google Fonts by URL load at runtime with `font-display: swap`**.
+- **Font loading policy**: load Google Fonts on demand vs self-host? → **Decision: self-host the default fonts (Inter + JetBrains Mono) in `web/public/fonts/`; admins referencing Google Fonts by URL load at runtime with `font-display: swap`**.
 - **Preview token issuance**: who signs it? → **Decision: existing JWT signing key with a new claim**. Simpler than a dedicated key; the claim scopes the token.
 
 ---
@@ -229,7 +229,7 @@ Captured here so they don't get lost:
 
 - All dates `YYYY-MM-DD`.
 - All file paths absolute from repo root.
-- Backend changes prefixed `B<N>`, frontend files listed with full path under `web-new/src/auth/...`.
+- Backend changes prefixed `B<N>`, frontend files listed with full path under `web/src/auth/...`.
 - Task IDs in sub-plans follow `W<week>-T<task>` (e.g. `W1-T03`).
 
 ---

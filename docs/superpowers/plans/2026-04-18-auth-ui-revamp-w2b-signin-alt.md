@@ -17,13 +17,13 @@
 Three long-standing debts blocking green CI or polluting the branch. Batch them into one commit so W2b itself is on clean ground.
 
 **Files:**
-- Modify: `/Users/xiongyanlin/projects/jetauth/web-new/src/pages/*EditPage.tsx` (remove unused imports surfaced by `tsc -b`)
+- Modify: `/Users/xiongyanlin/projects/jetauth/web/src/pages/*EditPage.tsx` (remove unused imports surfaced by `tsc -b`)
 - Modify: `/Users/xiongyanlin/projects/jetauth/.git/hooks/husky.local.sh` OR `package.json` husky block (fix the `cd web/` warning)
-- Modify: `/Users/xiongyanlin/projects/jetauth/web-new/src/App.tsx` (org-admin landing page)
+- Modify: `/Users/xiongyanlin/projects/jetauth/web/src/App.tsx` (org-admin landing page)
 
 - [ ] **Step 1: Fix pre-existing tsc errors**
 
-Run `cd web-new && npx tsc --noEmit 2>&1 | head -50` and address every error. Prioritized by frequency:
+Run `cd web && npx tsc --noEmit 2>&1 | head -50` and address every error. Prioritized by frequency:
 
 1. Unused `Save` import — many pages: delete the import line.
 2. Unused `imgPreview` in UserEditPage.tsx:263 — delete the variable.
@@ -40,11 +40,11 @@ Run `npx tsc --noEmit` after each fix; goal: zero errors.
 cat /Users/xiongyanlin/projects/jetauth/.git/hooks/husky.local.sh
 ```
 
-If it contains `cd web/`, change to `cd web-new/`. If the command that follows doesn't exist in web-new, remove the hook's body entirely (or comment it out). Test by staging a trivial change and running `git commit --amend --no-edit` — the warning should be gone.
+If it contains `cd web/`, change to `cd web/`. If the command that follows doesn't exist in web, remove the hook's body entirely (or comment it out). Test by staging a trivial change and running `git commit --amend --no-edit` — the warning should be gone.
 
 - [ ] **Step 3: Org-admin landing page**
 
-In `web-new/src/App.tsx`, find the authenticated routing branch (around line 632). Currently it shows `<Dashboard />` for any admin. For org admins (not global admin), redirect to their org's user management page:
+In `web/src/App.tsx`, find the authenticated routing branch (around line 632). Currently it shows `<Dashboard />` for any admin. For org admins (not global admin), redirect to their org's user management page:
 
 ```tsx
 <Route
@@ -68,7 +68,7 @@ Or find where `/users` list page is and route org admins there with the right or
 ```bash
 cd /Users/xiongyanlin/projects/jetauth
 go build ./...
-cd web-new && npm run build && cd ..
+cd web && npm run build && cd ..
 ```
 
 `npm run build` must now complete through `tsc -b && vite build` without tsc failures.
@@ -77,7 +77,7 @@ cd web-new && npm run build && cd ..
 git add -A  # careful — include only intended files
 git commit -m "chore(auth-revamp/W2b): preflight cleanup
 
-- Clears ~12 pre-existing tsc errors in web-new/src/pages/*EditPage.tsx
+- Clears ~12 pre-existing tsc errors in web/src/pages/*EditPage.tsx
   so npm run build completes the tsc -b step. These errors existed
   before the auth revamp but blocked CI green.
 - Fixes husky pre-commit hook that was cd-ing into the deleted web/
@@ -91,10 +91,10 @@ git commit -m "chore(auth-revamp/W2b): preflight cleanup
 
 ## Task W2b-T02: Provider SVG assets + fetch manifest
 
-Drop 12 real provider logos into `web-new/public/providers/` so ProvidersRow (T03) can render them with the URLs the backend already returns. These are the brands the existing `providerLogoMap` references.
+Drop 12 real provider logos into `web/public/providers/` so ProvidersRow (T03) can render them with the URLs the backend already returns. These are the brands the existing `providerLogoMap` references.
 
 **Files:**
-- Create: `web-new/public/providers/{github,google,wechat,dingtalk,lark,gitee,gitlab,apple,microsoft,linkedin,saml,oidc,generic}.svg`
+- Create: `web/public/providers/{github,google,wechat,dingtalk,lark,gitee,gitlab,apple,microsoft,linkedin,saml,oidc,generic}.svg`
 - Create: `docs/2026-04-18-provider-logo-manifest.md` (documents source + license for each)
 
 - [ ] **Step 1: Curate SVGs**
@@ -125,7 +125,7 @@ All SVGs should be:
 - [ ] **Step 2: Document in manifest**
 
 ```markdown
-# Provider Logo Manifest (web-new/public/providers/)
+# Provider Logo Manifest (web/public/providers/)
 
 ## Sources
 | File | Source | License |
@@ -145,10 +145,10 @@ Must 200.
 - [ ] **Step 4: Commit**
 
 ```bash
-git add web-new/public/providers/ docs/2026-04-18-provider-logo-manifest.md
+git add web/public/providers/ docs/2026-04-18-provider-logo-manifest.md
 git commit -m "assets(auth): 13 provider SVG logos for ProvidersRow
 
-Dropped under web-new/public/providers/ so the backend-returned
+Dropped under web/public/providers/ so the backend-returned
 logoUrl paths resolve. All icons are 24×24 currentColor SVG so the
 theme's --color-primary paints them. License/source tracked in
 docs/2026-04-18-provider-logo-manifest.md."
@@ -161,10 +161,10 @@ docs/2026-04-18-provider-logo-manifest.md."
 Render the providersResolved array as a row of branded buttons that redirect to the OAuth authorize endpoint of the respective provider.
 
 **Files:**
-- Create: `web-new/src/auth/signin/ProvidersRow.tsx`
-- Create: `web-new/src/auth/__tests__/ProvidersRow.test.tsx`
-- Modify: `web-new/src/auth/signin/SigninPage.tsx` (mount ProvidersRow below the divider)
-- Modify: `web-new/src/locales/{en,zh}.ts` (3 new keys: divider label, "continue with", more menu label)
+- Create: `web/src/auth/signin/ProvidersRow.tsx`
+- Create: `web/src/auth/__tests__/ProvidersRow.test.tsx`
+- Modify: `web/src/auth/signin/SigninPage.tsx` (mount ProvidersRow below the divider)
+- Modify: `web/src/locales/{en,zh}.ts` (3 new keys: divider label, "continue with", more menu label)
 
 - [ ] **Step 1: Add i18n keys**
 
@@ -275,9 +275,9 @@ After the step-1 `<IdentifierStep>`, render `<ProvidersRow application={applicat
 New method form that sends a 6-digit code to email/phone, then authenticates.
 
 **Files:**
-- Create: `web-new/src/auth/signin/CodeForm.tsx`
-- Create: `web-new/src/auth/__tests__/CodeForm.test.tsx`
-- Modify: `web-new/src/locales/{en,zh}.ts` (~7 keys under `auth.code.*`)
+- Create: `web/src/auth/signin/CodeForm.tsx`
+- Create: `web/src/auth/__tests__/CodeForm.test.tsx`
+- Modify: `web/src/locales/{en,zh}.ts` (~7 keys under `auth.code.*`)
 
 - [ ] **Step 1: i18n keys**
 
@@ -314,10 +314,10 @@ The countdown uses `useEffect` + `setTimeout`; prevent resend until 0.
 Small but critical UX item. Add a "Forgot password?" link on PasswordForm and a standalone page that kicks off the reset flow (email/phone verification → new password).
 
 **Files:**
-- Create: `web-new/src/auth/signin/ForgotPasswordPage.tsx`
-- Modify: `web-new/src/auth/signin/PasswordForm.tsx` (add the link)
-- Modify: `web-new/src/App.tsx` (new route `/forget/:application?`)
-- Modify: `web-new/src/locales/{en,zh}.ts` (~6 keys)
+- Create: `web/src/auth/signin/ForgotPasswordPage.tsx`
+- Modify: `web/src/auth/signin/PasswordForm.tsx` (add the link)
+- Modify: `web/src/App.tsx` (new route `/forget/:application?`)
+- Modify: `web/src/locales/{en,zh}.ts` (~6 keys)
 
 - [ ] **Step 1: Add the link in PasswordForm**
 
@@ -368,14 +368,14 @@ Passkey / platform authenticator signin. Uses `@simplewebauthn/browser`.
 
 **Files:**
 - Install: `@simplewebauthn/browser` as dependency
-- Create: `web-new/src/auth/signin/WebAuthnForm.tsx`
-- Create: `web-new/src/auth/__tests__/WebAuthnForm.test.tsx`
-- Modify: `web-new/src/locales/{en,zh}.ts` (~5 keys)
+- Create: `web/src/auth/signin/WebAuthnForm.tsx`
+- Create: `web/src/auth/__tests__/WebAuthnForm.test.tsx`
+- Modify: `web/src/locales/{en,zh}.ts` (~5 keys)
 
 - [ ] **Step 1: Install**
 
 ```bash
-cd web-new
+cd web
 npm install @simplewebauthn/browser
 ```
 
@@ -415,9 +415,9 @@ Render a single big button that triggers the flow. Show loading spinner during; 
 Face ID login using the already-installed `face-api.js`. Camera-based; user captures their face; frame is sent to `/api/login` with `signinMethod: "Face ID"`.
 
 **Files:**
-- Create: `web-new/src/auth/signin/FaceForm.tsx`
-- Create: `web-new/src/auth/__tests__/FaceForm.test.tsx`
-- Modify: `web-new/src/locales/{en,zh}.ts` (~7 keys)
+- Create: `web/src/auth/signin/FaceForm.tsx`
+- Create: `web/src/auth/__tests__/FaceForm.test.tsx`
+- Modify: `web/src/locales/{en,zh}.ts` (~7 keys)
 
 - [ ] **Step 1: i18n keys**
 
@@ -455,9 +455,9 @@ Alternative mode for admins who want the legacy tabs-style login (Password / Cod
 
 **Files:**
 - Backend: add `SigninMethodMode string` to Application struct (additive, default `""` means `"identifier-first"`)
-- Create: `web-new/src/auth/signin/ClassicSigninPage.tsx`
-- Modify: `web-new/src/auth/AuthShell.tsx` (if mode set to classic, render ClassicSigninPage)
-- Modify: `web-new/src/locales/{en,zh}.ts` (tab labels reuse existing keys)
+- Create: `web/src/auth/signin/ClassicSigninPage.tsx`
+- Modify: `web/src/auth/AuthShell.tsx` (if mode set to classic, render ClassicSigninPage)
+- Modify: `web/src/locales/{en,zh}.ts` (tab labels reuse existing keys)
 
 - [ ] **Step 1: Backend field**
 
@@ -493,8 +493,8 @@ if (mode === "signin") {
 Finalize SigninPage so `selectedMethod !== "Password"` no longer shows a placeholder. MethodStep dispatches to the right form per recommended method (with a "try a different method" dropdown to switch).
 
 **Files:**
-- Create: `web-new/src/auth/signin/MethodStep.tsx`
-- Modify: `web-new/src/auth/signin/SigninPage.tsx` (replace the placeholder branch)
+- Create: `web/src/auth/signin/MethodStep.tsx`
+- Modify: `web/src/auth/signin/SigninPage.tsx` (replace the placeholder branch)
 
 - [ ] **Step 1: MethodStep**
 

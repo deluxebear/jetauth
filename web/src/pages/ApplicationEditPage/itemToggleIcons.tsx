@@ -1,0 +1,100 @@
+// web/src/pages/ApplicationEditPage/itemToggleIcons.tsx
+//
+// Icon maps for the signin / signup / forget feature-toggle grids.
+// Kept separate from ItemFeatureToggles so the component stays generic
+// and each item family can evolve its own icon set without touching the
+// core toggle logic.
+
+import type { ReactNode } from "react";
+import {
+  Layers,
+  Image as ImageIcon,
+  ArrowLeft,
+  Globe,
+  User,
+  Lock,
+  MessageSquare,
+  Puzzle,
+  FileCheck,
+  HelpCircle,
+  LogIn,
+  UserPlus,
+  Shield,
+  Repeat,
+  Building2,
+  Mail,
+  Phone,
+  IdCard,
+  Tag,
+  GraduationCap,
+  Hash,
+  Briefcase,
+  VenetianMask,
+  CircleUser,
+  BookOpen,
+  Ticket,
+  Check,
+  Send,
+  KeyRound,
+  RefreshCw,
+  CheckCircle2,
+  ArrowRightCircle,
+} from "lucide-react";
+
+export const SIGNIN_ICONS: Record<string, ReactNode> = {
+  "Signin methods":      <Layers size={14} />,
+  "Logo":                <ImageIcon size={14} />,
+  "Back button":         <ArrowLeft size={14} />,
+  "Languages":           <Globe size={14} />,
+  "Username":            <User size={14} />,
+  "Password":            <Lock size={14} />,
+  "Verification code":   <MessageSquare size={14} />,
+  "Providers":           <Puzzle size={14} />,
+  "Agreement":           <FileCheck size={14} />,
+  "Forgot password?":    <HelpCircle size={14} />,
+  "Login button":        <LogIn size={14} />,
+  "Signup link":         <UserPlus size={14} />,
+  "Captcha":             <Shield size={14} />,
+  "Auto sign in":        <Repeat size={14} />,
+  "Select organization": <Building2 size={14} />,
+};
+
+export const SIGNUP_ICONS: Record<string, ReactNode> = {
+  "ID":                <Hash size={14} />,
+  "Username":          <User size={14} />,
+  "Display name":      <CircleUser size={14} />,
+  "First name":        <User size={14} />,
+  "Last name":         <User size={14} />,
+  "Affiliation":       <Briefcase size={14} />,
+  "Gender":            <VenetianMask size={14} />,
+  "Bio":               <BookOpen size={14} />,
+  "Tag":               <Tag size={14} />,
+  "Education":         <GraduationCap size={14} />,
+  "Country/Region":    <Globe size={14} />,
+  "ID card":           <IdCard size={14} />,
+  "Password":          <Lock size={14} />,
+  "Confirm password":  <Lock size={14} />,
+  "Email":             <Mail size={14} />,
+  "Phone":             <Phone size={14} />,
+  "Email or Phone":    <Mail size={14} />,
+  "Phone or Email":    <Phone size={14} />,
+  "Invitation code":   <Ticket size={14} />,
+  "Agreement":         <FileCheck size={14} />,
+  "Signup button":     <Check size={14} />,
+  "Providers":         <Puzzle size={14} />,
+};
+
+export const FORGET_ICONS: Record<string, ReactNode> = {
+  "Logo":                  <ImageIcon size={14} />,
+  "Back button":           <ArrowLeft size={14} />,
+  "Languages":             <Globe size={14} />,
+  "Username":              <User size={14} />,
+  "Verification code":     <MessageSquare size={14} />,
+  "New password":          <Lock size={14} />,
+  "Confirm password":      <Lock size={14} />,
+  "Send code button":      <Send size={14} />,
+  "Verify code button":    <KeyRound size={14} />,
+  "Reset password button": <RefreshCw size={14} />,
+  "Success message":       <CheckCircle2 size={14} />,
+  "Signin link":           <ArrowRightCircle size={14} />,
+};

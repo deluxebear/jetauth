@@ -1,4 +1,4 @@
-# Provider Logo Manifest (web-new/public/providers/)
+# Provider Logo Manifest (web/public/providers/)
 
 Thirteen SVG icons used by ProvidersRow to render branded OAuth buttons.
 

@@ -97,7 +97,7 @@ type ThemeData struct {
 ## Frontend Data Structure
 
 ```typescript
-// web-new/src/theme-presets.ts
+// web/src/theme-presets.ts
 
 interface ThemePreset {
   key: string;
@@ -143,7 +143,7 @@ Output CSS variables:
 
 Implementation uses HSL math only (hex → HSL → manipulate → HSL → hex). No external color library needed.
 
-File: `web-new/src/lib/theme-utils.ts`
+File: `web/src/lib/theme-utils.ts`
 
 ## UI Design: Organization Theme Tab
 
@@ -181,7 +181,7 @@ Border Radius [number]  Compact Mode [switch]
 - Selected state: accent-colored border + checkmark badge
 - Hover: subtle scale(1.02) + shadow lift
 
-File: `web-new/src/components/ThemePresetCard.tsx`
+File: `web/src/components/ThemePresetCard.tsx`
 
 ### Login Preview Component
 
@@ -192,7 +192,7 @@ File: `web-new/src/components/ThemePresetCard.tsx`
 - All corners use current `borderRadius`
 - Responds to themeType (light surfaces vs dark surfaces)
 
-File: `web-new/src/components/LoginPreview.tsx`
+File: `web/src/components/LoginPreview.tsx`
 
 ## Login/Signup Page Integration
 
@@ -226,17 +226,17 @@ Add `applyOrgTheme(themeData: ThemeData | null)` method:
 
 | File | Change | Description |
 |------|--------|-------------|
-| `web-new/src/theme-presets.ts` | **New** | 5 preset definitions |
-| `web-new/src/lib/theme-utils.ts` | **New** | Color derivation: hex↔HSL, darken, hueShift, deriveThemeVars |
-| `web-new/src/components/ThemePresetCard.tsx` | **New** | Preset selection card with mini preview |
-| `web-new/src/components/LoginPreview.tsx` | **New** | Live login page preview simulation |
-| `web-new/src/pages/OrganizationEditPage.tsx` | **Modify** | Replace theme tab content with card selector + preview |
-| `web-new/src/pages/Login.tsx` | **Modify** | Apply org theme on load, use CSS variables for gradients |
-| `web-new/src/pages/Signup.tsx` | **Modify** | Apply org theme on load (same mechanism) |
-| `web-new/src/theme.tsx` | **Modify** | Add applyOrgTheme() method |
-| `web-new/src/index.css` | **Modify** | Add --radius, --gradient-from, --gradient-to, --gradient-blob variables |
-| `web-new/src/locales/en.ts` | **Modify** | Add preset name translations |
-| `web-new/src/locales/zh.ts` | **Modify** | Add preset name translations |
+| `web/src/theme-presets.ts` | **New** | 5 preset definitions |
+| `web/src/lib/theme-utils.ts` | **New** | Color derivation: hex↔HSL, darken, hueShift, deriveThemeVars |
+| `web/src/components/ThemePresetCard.tsx` | **New** | Preset selection card with mini preview |
+| `web/src/components/LoginPreview.tsx` | **New** | Live login page preview simulation |
+| `web/src/pages/OrganizationEditPage.tsx` | **Modify** | Replace theme tab content with card selector + preview |
+| `web/src/pages/Login.tsx` | **Modify** | Apply org theme on load, use CSS variables for gradients |
+| `web/src/pages/Signup.tsx` | **Modify** | Apply org theme on load (same mechanism) |
+| `web/src/theme.tsx` | **Modify** | Add applyOrgTheme() method |
+| `web/src/index.css` | **Modify** | Add --radius, --gradient-from, --gradient-to, --gradient-blob variables |
+| `web/src/locales/en.ts` | **Modify** | Add preset name translations |
+| `web/src/locales/zh.ts` | **Modify** | Add preset name translations |
 
 ## What Does NOT Change
 

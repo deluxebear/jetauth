@@ -94,7 +94,7 @@ no frontend-side data mirror is required. Restart the backend for new
 presets to appear; the frontend picks them up on next page load.
 
 If you want a local-only preset (not server-shipped), add it to
-`web-new/src/data/emailPresets.ts` as a fallback. That file currently only
+`web/src/data/emailPresets.ts` as a fallback. That file currently only
 contains the fetcher.
 
 ## Example: adding Mailjet variant

@@ -96,7 +96,7 @@ cd /Users/xiongyanlin/projects/jetauth
 go run .
 
 # Terminal 2
-cd web-new
+cd web
 npm run dev
 ```
 
@@ -135,13 +135,13 @@ p, *, *, POST, /api/resolve-signin-methods, *, *
 
 ### Issue 2 (pre-existing, not W2a's concern): `npm run build` fails at `tsc -b`
 
-Several pre-existing `*EditPage.tsx` files in `web-new/src/pages/` have unused-import and type errors that predate the auth revamp branch. These prevent the `tsc -b && vite build` chain from completing. Vite itself bundles fine when run directly. W2a does not introduce any new tsc errors — `npx tsc --noEmit 2>&1 | grep "src/auth/"` returns empty.
+Several pre-existing `*EditPage.tsx` files in `web/src/pages/` have unused-import and type errors that predate the auth revamp branch. These prevent the `tsc -b && vite build` chain from completing. Vite itself bundles fine when run directly. W2a does not introduce any new tsc errors — `npx tsc --noEmit 2>&1 | grep "src/auth/"` returns empty.
 
 **Action:** not fixed in W2a; flagged as follow-up. Recommendation: schedule a dedicated cleanup task (likely ½ day) to clear the pre-existing pages errors before W6 merge, so CI can return to green-on-master.
 
 ### Issue 3 (minor, deferred): husky pre-commit hook references `web/`
 
-Every commit on the branch shows a warning `cd: web/: No such file or directory` from a pre-commit hook. The hook survives the deleted `web/` module but has nothing to do now. Needs updating to reference `web-new/` or removal. Tracked for W2b preflight.
+Every commit on the branch shows a warning `cd: web/: No such file or directory` from a pre-commit hook. The hook survives the deleted `web/` module but has nothing to do now. Needs updating to reference `web/` or removal. Tracked for W2b preflight.
 
 ---
 

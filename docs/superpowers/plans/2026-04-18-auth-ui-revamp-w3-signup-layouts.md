@@ -100,8 +100,8 @@ pain of configuring 10+ apps in one org.
 Pure TypeScript — derives runtime form schema from `signupItems[]` including regex validators and step grouping.
 
 **Files:**
-- Create: `web-new/src/auth/signup/useSignupSchema.ts`
-- Create: `web-new/src/auth/__tests__/useSignupSchema.test.ts`
+- Create: `web/src/auth/signup/useSignupSchema.ts`
+- Create: `web/src/auth/__tests__/useSignupSchema.test.ts`
 
 - [ ] Interface:
 
@@ -151,17 +151,17 @@ export function buildSignupSchema(
 Single router + nine thin field components. Each emits `{ value, onChange, error }` pattern; SignupPage collects via a form store.
 
 **Files:**
-- Create: `web-new/src/auth/signup/DynamicField.tsx` (router)
-- Create: `web-new/src/auth/signup/fields/TextField.tsx`
-- Create: `web-new/src/auth/signup/fields/EmailField.tsx`
-- Create: `web-new/src/auth/signup/fields/PhoneField.tsx` (uses libphonenumber-js)
-- Create: `web-new/src/auth/signup/fields/PasswordField.tsx`
-- Create: `web-new/src/auth/signup/fields/ConfirmPasswordField.tsx`
-- Create: `web-new/src/auth/signup/fields/SelectField.tsx`
-- Create: `web-new/src/auth/signup/fields/CheckboxField.tsx`
-- Create: `web-new/src/auth/signup/fields/DateField.tsx`
-- Create: `web-new/src/auth/signup/fields/AgreementField.tsx`
-- Create: `web-new/src/auth/__tests__/DynamicField.test.tsx` — 6 tests covering the router + each field type's core behavior
+- Create: `web/src/auth/signup/DynamicField.tsx` (router)
+- Create: `web/src/auth/signup/fields/TextField.tsx`
+- Create: `web/src/auth/signup/fields/EmailField.tsx`
+- Create: `web/src/auth/signup/fields/PhoneField.tsx` (uses libphonenumber-js)
+- Create: `web/src/auth/signup/fields/PasswordField.tsx`
+- Create: `web/src/auth/signup/fields/ConfirmPasswordField.tsx`
+- Create: `web/src/auth/signup/fields/SelectField.tsx`
+- Create: `web/src/auth/signup/fields/CheckboxField.tsx`
+- Create: `web/src/auth/signup/fields/DateField.tsx`
+- Create: `web/src/auth/signup/fields/AgreementField.tsx`
+- Create: `web/src/auth/__tests__/DynamicField.test.tsx` — 6 tests covering the router + each field type's core behavior
 - Install: `libphonenumber-js`
 
 - [ ] DynamicField signature:
@@ -209,9 +209,9 @@ switch (schema.type) {
 Uses the schema + DynamicField to render the full signup flow, including step navigation and final submit.
 
 **Files:**
-- Create: `web-new/src/auth/signup/SignupPage.tsx`
-- Create: `web-new/src/auth/__tests__/SignupPage.test.tsx`
-- Modify: `web-new/src/locales/{en,zh}.ts` — ~8 keys under `auth.signup.*`
+- Create: `web/src/auth/signup/SignupPage.tsx`
+- Create: `web/src/auth/__tests__/SignupPage.test.tsx`
+- Modify: `web/src/locales/{en,zh}.ts` — ~8 keys under `auth.signup.*`
 
 - [ ] i18n keys:
 ```
@@ -262,7 +262,7 @@ interface SignupPageProps {
 ## Task W3-T06: Wire SignupPage into AuthShell
 
 **Files:**
-- Modify: `web-new/src/auth/AuthShell.tsx` — replace the `mode === "signup"` placeholder with `<SignupPage application={app} />`
+- Modify: `web/src/auth/AuthShell.tsx` — replace the `mode === "signup"` placeholder with `<SignupPage application={app} />`
 
 - [ ] Remove the W1 placeholder JSX and its CSS var fallbacks.
 
@@ -277,8 +277,8 @@ interface SignupPageProps {
 Renders `formBackgroundUrl` (with mobile variant) behind the auth surface.
 
 **Files:**
-- Create: `web-new/src/auth/shell/BackgroundLayer.tsx`
-- Create: `web-new/src/auth/__tests__/BackgroundLayer.test.tsx`
+- Create: `web/src/auth/shell/BackgroundLayer.tsx`
+- Create: `web/src/auth/__tests__/BackgroundLayer.test.tsx`
 
 - [ ] Props: `{ url?: string; urlMobile?: string; children: ReactNode }`
 
@@ -295,8 +295,8 @@ Renders `formBackgroundUrl` (with mobile variant) behind the auth surface.
 Renders user-supplied `formSideHtml` in a sanitized iframe-less container for `formOffset=4` layouts.
 
 **Files:**
-- Create: `web-new/src/auth/shell/SideHtml.tsx`
-- Create: `web-new/src/auth/__tests__/SideHtml.test.tsx`
+- Create: `web/src/auth/shell/SideHtml.tsx`
+- Create: `web/src/auth/__tests__/SideHtml.test.tsx`
 
 - [ ] Use `dangerouslySetInnerHTML` with a minimal allowlist scrubber (script / iframe / object stripped). Full DOMPurify integration is W5's job — here we do a quick regex-based scrub (good enough for W3's layout rendering) and leave a TODO(W5) comment.
 
@@ -311,12 +311,12 @@ Renders user-supplied `formSideHtml` in a sanitized iframe-less container for `f
 AuthShell wraps its child in one of four layout components based on `application.formOffset`.
 
 **Files:**
-- Create: `web-new/src/auth/layouts/LeftForm.tsx` (offset=1)
-- Create: `web-new/src/auth/layouts/CenteredCard.tsx` (offset=2, also the default)
-- Create: `web-new/src/auth/layouts/RightForm.tsx` (offset=3)
-- Create: `web-new/src/auth/layouts/SidePanel.tsx` (offset=4)
-- Create: `web-new/src/auth/layouts/LayoutRouter.tsx`
-- Modify: `web-new/src/auth/AuthShell.tsx` — wrap inner content with `<LayoutRouter>`
+- Create: `web/src/auth/layouts/LeftForm.tsx` (offset=1)
+- Create: `web/src/auth/layouts/CenteredCard.tsx` (offset=2, also the default)
+- Create: `web/src/auth/layouts/RightForm.tsx` (offset=3)
+- Create: `web/src/auth/layouts/SidePanel.tsx` (offset=4)
+- Create: `web/src/auth/layouts/LayoutRouter.tsx`
+- Modify: `web/src/auth/AuthShell.tsx` — wrap inner content with `<LayoutRouter>`
 
 - [ ] LayoutRouter signature:
 
@@ -366,10 +366,10 @@ Not a new component — an audit + fix pass across the auth module.
 Maps the app's `signinItems[]` to actual rendered widgets in SigninPage.
 
 **Files:**
-- Create: `web-new/src/auth/items/SigninItemsSlotRenderer.tsx`
-- Create: `web-new/src/auth/items/slots/{Logo,BackButton,Languages,Captcha,AutoSignin,SelectOrganization,Agreement,CustomText}.tsx`
-- Create: `web-new/src/auth/__tests__/SigninItemsSlotRenderer.test.tsx`
-- Modify: `web-new/src/auth/signin/SigninPage.tsx` — insert the renderer
+- Create: `web/src/auth/items/SigninItemsSlotRenderer.tsx`
+- Create: `web/src/auth/items/slots/{Logo,BackButton,Languages,Captcha,AutoSignin,SelectOrganization,Agreement,CustomText}.tsx`
+- Create: `web/src/auth/__tests__/SigninItemsSlotRenderer.test.tsx`
+- Modify: `web/src/auth/signin/SigninPage.tsx` — insert the renderer
 
 - [ ] SlotRenderer looks up each item by name and dispatches to the corresponding slot component. Built-in slots:
   - Logo → BrandingLayer's logo (already rendered; slot toggles visibility)
@@ -400,10 +400,10 @@ Maps the app's `signinItems[]` to actual rendered widgets in SigninPage.
 Renders an org picker at the top of SigninPage based on `application.orgChoiceMode`.
 
 **Files:**
-- Create: `web-new/src/auth/shell/OrgChoiceWidget.tsx`
-- Create: `web-new/src/auth/__tests__/OrgChoiceWidget.test.tsx`
-- Modify: `web-new/src/auth/signin/SigninPage.tsx` — mount the widget when applicable
-- Modify: `web-new/src/locales/{en,zh}.ts` — 4 new keys
+- Create: `web/src/auth/shell/OrgChoiceWidget.tsx`
+- Create: `web/src/auth/__tests__/OrgChoiceWidget.test.tsx`
+- Modify: `web/src/auth/signin/SigninPage.tsx` — mount the widget when applicable
+- Modify: `web/src/locales/{en,zh}.ts` — 4 new keys
 
 - [ ] i18n keys:
 ```

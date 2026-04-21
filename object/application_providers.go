@@ -29,7 +29,7 @@ type ResolvedProvider struct {
 }
 
 // providerLogoMap is the canonical mapping of built-in provider types to
-// static logo URLs. The frontend ships the actual SVGs in web-new/public/
+// static logo URLs. The frontend ships the actual SVGs in web/public/
 // and the backend just returns the path so responses stay cache-friendly.
 //
 // Keys match the Type values in the admin "类型" dropdown exactly

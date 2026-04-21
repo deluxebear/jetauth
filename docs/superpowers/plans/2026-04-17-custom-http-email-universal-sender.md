@@ -6,7 +6,7 @@
 
 **Architecture:** Add dedicated Provider fields (`BodyMapping`, `ContentType`, `BodyTemplate`) that stop reusing `UserMapping` / `IssuerUrl`; introduce a `${var}` placeholder engine that escapes values based on content-type; gate all outbound HTTP through an SSRF-safe `http.RoundTripper`; ship built-in presets so users pick a provider name and only fill credentials.
 
-**Tech Stack:** Go 1.22 (stdlib `net/http`, `net`, `encoding/json`, `net/url`, `mime/multipart`), xorm v1 migrations, React 18 + TypeScript (web-new frontend), i18next.
+**Tech Stack:** Go 1.22 (stdlib `net/http`, `net`, `encoding/json`, `net/url`, `mime/multipart`), xorm v1 migrations, React 18 + TypeScript (web frontend), i18next.
 
 **Scope notes:**
 - In-scope: Email category only. SMS Custom HTTP (`object/sms_custom_http.go`) stays; any shared helpers are extracted carefully.
@@ -45,14 +45,14 @@
 - `object/init.go` — invoke migration helper on startup (once)
 
 **Frontend — new files:**
-- `web-new/src/components/BodyTemplateEditor.tsx` — template textarea + live preview + variable chips
-- `web-new/src/components/PresetPicker.tsx` — picker dropdown + autofill
-- `web-new/src/data/emailPresets.ts` — preset definitions (parallel to backend presets for instant apply)
+- `web/src/components/BodyTemplateEditor.tsx` — template textarea + live preview + variable chips
+- `web/src/components/PresetPicker.tsx` — picker dropdown + autofill
+- `web/src/data/emailPresets.ts` — preset definitions (parallel to backend presets for instant apply)
 
 **Frontend — modified files:**
-- `web-new/src/pages/ProviderEditPage.tsx` — replace old `emailMapping` section around lines 990–1024
-- `web-new/src/locales/en.ts` — add `providers.httpEmail.*` keys
-- `web-new/src/locales/zh.ts` — same
+- `web/src/pages/ProviderEditPage.tsx` — replace old `emailMapping` section around lines 990–1024
+- `web/src/locales/en.ts` — add `providers.httpEmail.*` keys
+- `web/src/locales/zh.ts` — same
 
 **Docs — new files:**
 - `docs/http-email-presets.md` — authoring guide for new presets
@@ -1289,7 +1289,7 @@ git commit -m "feat(email): ship built-in presets for 7 mainstream email APIs + 
 ### Task 10: `BodyTemplateEditor` component
 
 **Files:**
-- Create: `web-new/src/components/BodyTemplateEditor.tsx`
+- Create: `web/src/components/BodyTemplateEditor.tsx`
 
 - [ ] **Step 1: Create the component**
 
@@ -1364,7 +1364,7 @@ export function BodyTemplateEditor({ value, onChange, contentType, className }: 
 - [ ] **Step 2: Quick smoke in-browser**
 
 ```bash
-cd web-new && npm run dev &
+cd web && npm run dev &
 ```
 
 Navigate to any page — component not yet used. Expected: no compile errors in dev console.
@@ -1378,7 +1378,7 @@ kill %1
 - [ ] **Step 4: Type-check**
 
 ```bash
-cd web-new && npm run build
+cd web && npm run build
 ```
 
 Expected: build succeeds.
@@ -1386,7 +1386,7 @@ Expected: build succeeds.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add web-new/src/components/BodyTemplateEditor.tsx
+git add web/src/components/BodyTemplateEditor.tsx
 git commit -m "feat(web): BodyTemplateEditor component with variable chips and live preview"
 ```
 
@@ -1395,12 +1395,12 @@ git commit -m "feat(web): BodyTemplateEditor component with variable chips and l
 ### Task 11: `PresetPicker` component + data
 
 **Files:**
-- Create: `web-new/src/data/emailPresets.ts`
-- Create: `web-new/src/components/PresetPicker.tsx`
+- Create: `web/src/data/emailPresets.ts`
+- Create: `web/src/components/PresetPicker.tsx`
 
 - [ ] **Step 1: Create preset data (mirror backend)**
 
-`web-new/src/data/emailPresets.ts`:
+`web/src/data/emailPresets.ts`:
 
 ```ts
 export type EmailPreset = {
@@ -1424,7 +1424,7 @@ export async function fetchEmailPresets(): Promise<EmailPreset[]> {
 
 - [ ] **Step 2: Create the picker**
 
-`web-new/src/components/PresetPicker.tsx`:
+`web/src/components/PresetPicker.tsx`:
 
 ```tsx
 import { useEffect, useState } from "react";
@@ -1460,7 +1460,7 @@ export function PresetPicker({ onPick }: Props) {
 - [ ] **Step 3: Type-check**
 
 ```bash
-cd web-new && npm run build
+cd web && npm run build
 ```
 
 Expected: build succeeds.
@@ -1468,7 +1468,7 @@ Expected: build succeeds.
 - [ ] **Step 4: Smoke in dev**
 
 ```bash
-cd web-new && npm run dev &
+cd web && npm run dev &
 ```
 
 No new render path uses it yet — just verify no errors.
@@ -1480,7 +1480,7 @@ kill %1
 - [ ] **Step 5: Commit**
 
 ```bash
-git add web-new/src/data/emailPresets.ts web-new/src/components/PresetPicker.tsx
+git add web/src/data/emailPresets.ts web/src/components/PresetPicker.tsx
 git commit -m "feat(web): PresetPicker + preset fetcher"
 ```
 
@@ -1489,7 +1489,7 @@ git commit -m "feat(web): PresetPicker + preset fetcher"
 ### Task 12: Wire new UI into `ProviderEditPage`, remove old broken section
 
 **Files:**
-- Modify: `web-new/src/pages/ProviderEditPage.tsx` (lines 990–1024)
+- Modify: `web/src/pages/ProviderEditPage.tsx` (lines 990–1024)
 
 - [ ] **Step 1: Replace the Custom HTTP Email branch**
 
@@ -1576,7 +1576,7 @@ import { PresetPicker } from "../components/PresetPicker";
 - [ ] **Step 3: Build**
 
 ```bash
-cd web-new && npm run build
+cd web && npm run build
 ```
 
 Expected: no TS errors.
@@ -1584,7 +1584,7 @@ Expected: no TS errors.
 - [ ] **Step 4: Manual QA**
 
 ```bash
-cd web-new && npm run dev &
+cd web && npm run dev &
 ```
 
 - Open a provider edit page, set Category=Email, Type=Custom HTTP Email.
@@ -1598,7 +1598,7 @@ Kill dev: `kill %1`
 - [ ] **Step 5: Commit**
 
 ```bash
-git add web-new/src/pages/ProviderEditPage.tsx
+git add web/src/pages/ProviderEditPage.tsx
 git commit -m "feat(web): new Custom HTTP Email editor with presets + body template"
 ```
 
@@ -1607,8 +1607,8 @@ git commit -m "feat(web): new Custom HTTP Email editor with presets + body templ
 ### Task 13: i18n keys
 
 **Files:**
-- Modify: `web-new/src/locales/en.ts`
-- Modify: `web-new/src/locales/zh.ts`
+- Modify: `web/src/locales/en.ts`
+- Modify: `web/src/locales/zh.ts`
 
 - [ ] **Step 1: Add English keys**
 
@@ -1654,7 +1654,7 @@ fromName: "发件人名称",
 - [ ] **Step 3: Build**
 
 ```bash
-cd web-new && npm run build
+cd web && npm run build
 ```
 
 Expected: no errors.
@@ -1662,7 +1662,7 @@ Expected: no errors.
 - [ ] **Step 4: Verify in dev**
 
 ```bash
-cd web-new && npm run dev &
+cd web && npm run dev &
 ```
 
 Toggle language; both locales render the new labels. Kill dev: `kill %1`.
@@ -1670,7 +1670,7 @@ Toggle language; both locales render the new labels. Kill dev: `kill %1`.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add web-new/src/locales/en.ts web-new/src/locales/zh.ts
+git add web/src/locales/en.ts web/src/locales/zh.ts
 git commit -m "feat(i18n): add httpEmail keys for new editor UI"
 ```
 

@@ -2,7 +2,7 @@
 
 **Date:** 2026-04-18  
 **Branch:** feat/auth-ui-revamp  
-**Context:** Dependency enumeration for W1-T02 (static serving migration from legacy `web/` to `web-new/`)
+**Context:** Dependency enumeration for W1-T02 (static serving migration from legacy `web/` to `web/`)
 
 ## Summary
 
@@ -10,12 +10,12 @@ Audit complete. Baseline search found 9 references across known files; grep surf
 
 ## Grep Output
 
-### Command 1: Go Code References to `web/build` and `web-new/build`
+### Command 1: Go Code References to `web/build` and `web/build`
 
 ```
 ./routers/static_filter.go:43:	path := "web/build"
 ./routers/static_filter.go:52:	path = filepath.Join(frontendBaseDir, "web/build")
-./routers/static_filter.go:202:		errorText := fmt.Sprintf("The JetAuth frontend HTML file: \"index.html\" was not found, it should be placed at: \"%s/web-new/build/index.html\".", dir)
+./routers/static_filter.go:202:		errorText := fmt.Sprintf("The JetAuth frontend HTML file: \"index.html\" was not found, it should be placed at: \"%s/web/build/index.html\".", dir)
 ./embed_static.go:26://go:embed all:web/build
 ./embed_static.go:33:	sub, err := fs.Sub(embeddedWebFS, "web/build")
 ./deployment/deploy.go:55:	path := fmt.Sprintf("../web/build/static/%s/", folder)
@@ -52,27 +52,27 @@ Makefile:71:	cd web/ && yarn && yarn run build && cd -
 ## Deletion Surface: Files Requiring W1-T02 Changes
 
 - [ ] **Go Files (Path Rewrites)**
-  - [ ] `embed_static.go:26,33` — Repoint `//go:embed` directive and `fs.Sub()` call from `web/build` → `web-new/build`
-  - [ ] `routers/static_filter.go:43,52` — Update hardcoded path strings `"web/build"` → `"web-new/build"`
-  - [ ] `routers/static_filter.go:202` — Update error message (already hints `web-new/build`, but verify it matches final target)
-  - [ ] `routers/lightweight_auth_filter.go:46` — Update fallback candidate path from `"web"` → `"web-new"`
-  - [ ] `deployment/deploy.go:55,79` — Update relative paths `../web/build/static` and `../web/build/index.html` → use `web-new/` equivalent
+  - [ ] `embed_static.go:26,33` — Repoint `//go:embed` directive and `fs.Sub()` call from `web/build` → `web/build`
+  - [ ] `routers/static_filter.go:43,52` — Update hardcoded path strings `"web/build"` → `"web/build"`
+  - [ ] `routers/static_filter.go:202` — Update error message (already hints `web/build`, but verify it matches final target)
+  - [ ] `routers/lightweight_auth_filter.go:46` — Update fallback candidate path from `"web"` → `"web"`
+  - [ ] `deployment/deploy.go:55,79` — Update relative paths `../web/build/static` and `../web/build/index.html` → use `web/` equivalent
 
 - [ ] **Configuration & Metadata**
-  - [ ] `embedded/embedded.go:19` — Update comment documentation for `WebFS` to reflect `web-new/build` source
+  - [ ] `embedded/embedded.go:19` — Update comment documentation for `WebFS` to reflect `web/build` source
 
 - [ ] **Docker Build**
-  - [ ] `Dockerfile:5` — Update `COPY ./web/package.json ./web/yarn.lock` → point to `web-new/` paths
-  - [ ] `Dockerfile:49,68` — Update `COPY --from=FRONT /web/build` → `COPY --from=FRONT /web-new/build` (2 occurrences in different build stages)
+  - [ ] `Dockerfile:5` — Update `COPY ./web/package.json ./web/yarn.lock` → point to `web/` paths
+  - [ ] `Dockerfile:49,68` — Update `COPY --from=FRONT /web/build` → `COPY --from=FRONT /web/build` (2 occurrences in different build stages)
 
 - [ ] **CI/CD Workflows**
-  - [ ] `.github/workflows/build.yml:46,136` — Update `cache-dependency-path: ./web/yarn.lock` → `./web-new/yarn.lock` (2 occurrences)
-  - [ ] `.github/workflows/build.yml:54,212` — Update artifact `path: ./web/build` → `./web-new/build` (2 occurrences)
-  - [ ] `.github/workflows/build.yml:151,156` — Update test artifact paths (cypress screenshots/videos) from `./web/cypress` → `./web-new/cypress` if test suites move
-  - [ ] `.github/workflows/sync.yml:30` — Update Crowdin config `'./web/crowdin.yml'` → `'./web-new/crowdin.yml'` (if file moves)
+  - [ ] `.github/workflows/build.yml:46,136` — Update `cache-dependency-path: ./web/yarn.lock` → `./web/yarn.lock` (2 occurrences)
+  - [ ] `.github/workflows/build.yml:54,212` — Update artifact `path: ./web/build` → `./web/build` (2 occurrences)
+  - [ ] `.github/workflows/build.yml:151,156` — Update test artifact paths (cypress screenshots/videos) from `./web/cypress` → `./web/cypress` if test suites move
+  - [ ] `.github/workflows/sync.yml:30` — Update Crowdin config `'./web/crowdin.yml'` → `'./web/crowdin.yml'` (if file moves)
 
 - [ ] **Build Automation**
-  - [ ] `Makefile:71` — Update `frontend` target from `cd web/` → `cd web-new/` (both the directory and yarn command)
+  - [ ] `Makefile:71` — Update `frontend` target from `cd web/` → `cd web/` (both the directory and yarn command)
 
 **Total files to touch:** 10 (5 Go, 1 Dockerfile, 2 GitHub workflows, 1 Makefile, 1 configuration comment)
 
@@ -81,7 +81,7 @@ Makefile:71:	cd web/ && yarn && yarn run build && cd -
 ## Notes for W1-T02
 
 1. The `//go:embed all:web/build` directive must remain a **single-line rewrite** (not a folder migration) since it's a compile-time directive.
-2. The Dockerfile `COPY` stages should verify that the build stage name `FRONT` outputs to `/web-new/build` (not `/web/build`) — may need adjustment in the multi-stage build.
-3. Cypress test paths assume the test suite files move to `web-new/cypress/`; confirm with the UI team if tests stay in legacy `web/` or move.
+2. The Dockerfile `COPY` stages should verify that the build stage name `FRONT` outputs to `/web/build` (not `/web/build`) — may need adjustment in the multi-stage build.
+3. Cypress test paths assume the test suite files move to `web/cypress/`; confirm with the UI team if tests stay in legacy `web/` or move.
 4. The `deployment/deploy.go` file uses relative paths (`../web/build`) — verify working directory expectations before rewriting (may need absolute path or env var injection).
 5. No references found in shell scripts (`build.sh`, `docker-entrypoint.sh`) in this audit run—those were searched but returned no hits.

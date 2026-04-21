@@ -84,8 +84,8 @@ preview (e.g. HTML injection) is deferred to W5.
 Restructure the "界面定制" tab to a config ⇆ preview iframe split.
 
 **Files:**
-- Modify: `web-new/src/pages/ApplicationEditPage.tsx` — wrap the UI tab body
-- Create: `web-new/src/pages/admin-preview/AdminPreviewPane.tsx` — the iframe wrapper
+- Modify: `web/src/pages/ApplicationEditPage.tsx` — wrap the UI tab body
+- Create: `web/src/pages/admin-preview/AdminPreviewPane.tsx` — the iframe wrapper
 
 - [ ] AdminPreviewPane props: `{ application: AuthApplication, previewMode: "signin" | "signup" | "forget", device: "desktop" | "mobile", theme: "light" | "dark" }`
 - [ ] Renders an iframe with src computed from the current (unsaved) application + device/mode/theme toggles
@@ -108,8 +108,8 @@ Restructure the "界面定制" tab to a config ⇆ preview iframe split.
 Derive the preview override JSON from the ApplicationEditPage's current form state.
 
 **Files:**
-- Create: `web-new/src/pages/admin-preview/buildPreviewConfig.ts`
-- Create: `web-new/src/pages/admin-preview/__tests__/buildPreviewConfig.test.ts`
+- Create: `web/src/pages/admin-preview/buildPreviewConfig.ts`
+- Create: `web/src/pages/admin-preview/__tests__/buildPreviewConfig.test.ts`
 
 - [ ] Function `buildPreviewConfig(app: AuthApplication): Record<string, unknown>` — returns the subset of fields that matter for rendering:
   - themeData, logo, favicon, displayName, organizationObj fields
@@ -131,8 +131,8 @@ Derive the preview override JSON from the ApplicationEditPage's current form sta
 Frame controls above the preview iframe.
 
 **Files:**
-- Create: `web-new/src/pages/admin-preview/PreviewToolbar.tsx`
-- Create: `web-new/src/pages/admin-preview/__tests__/PreviewToolbar.test.tsx`
+- Create: `web/src/pages/admin-preview/PreviewToolbar.tsx`
+- Create: `web/src/pages/admin-preview/__tests__/PreviewToolbar.test.tsx`
 
 - [ ] Toolbar renders 3 button groups:
   - Mode: `Signin | Signup | Forget`
@@ -168,8 +168,8 @@ Frame controls above the preview iframe.
 ## Task W4-T06: Color Picker
 
 **Files:**
-- Create: `web-new/src/pages/admin-preview/ColorPicker.tsx`
-- Create: `web-new/src/pages/admin-preview/__tests__/ColorPicker.test.tsx`
+- Create: `web/src/pages/admin-preview/ColorPicker.tsx`
+- Create: `web/src/pages/admin-preview/__tests__/ColorPicker.test.tsx`
 - Modify: the existing Theme section in the UI tab to use the new ColorPicker
 
 - [ ] ColorPicker features:

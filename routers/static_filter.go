@@ -40,7 +40,7 @@ var (
 )
 
 func getWebBuildFolder() string {
-	path := "web-new/build"
+	path := "web/build"
 	if util.FileExist(filepath.Join(path, "index.html")) || frontendBaseDir == "" {
 		return path
 	}
@@ -49,7 +49,7 @@ func getWebBuildFolder() string {
 		return frontendBaseDir
 	}
 
-	path = filepath.Join(frontendBaseDir, "web-new/build")
+	path = filepath.Join(frontendBaseDir, "web/build")
 	return path
 }
 
@@ -163,7 +163,7 @@ func StaticFilter(ctx *context.Context) {
 		}
 	}
 
-	// Legacy /callback interceptor removed — the React SPA (web-new)
+	// Legacy /callback interceptor removed — the React SPA (web)
 	// now owns /callback via its own AuthCallback component, which calls
 	// /api/login directly. The old serveAuthCallbackPage served a template
 	// that loaded /AuthCallbackHandler.js (a file that no longer ships),
@@ -202,7 +202,7 @@ func StaticFilter(ctx *context.Context) {
 		}
 		dir = strings.ReplaceAll(dir, "\\", "/")
 		ctx.ResponseWriter.WriteHeader(http.StatusNotFound)
-		errorText := fmt.Sprintf("The JetAuth frontend HTML file: \"index.html\" was not found, it should be placed at: \"%s/web-new/build/index.html\".", dir)
+		errorText := fmt.Sprintf("The JetAuth frontend HTML file: \"index.html\" was not found, it should be placed at: \"%s/web/build/index.html\".", dir)
 		http.ServeContent(ctx.ResponseWriter, ctx.Request, "JetAuth frontend has encountered error...", time.Now(), strings.NewReader(errorText))
 		return
 	}

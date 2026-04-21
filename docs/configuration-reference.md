@@ -255,7 +255,7 @@ web.AppConfig.String(key)  ─── 命中 ────▶ 用 app.conf 的值
 ### `frontendBaseDir` — 前端构建产物目录
 - **默认**：`""`
 - **用途**：自定义前端静态文件位置（`routers/static_filter.go:39`）。默认用
-  `embed_static.go` 打进 binary 的 `web-new/build/`。
+  `embed_static.go` 打进 binary 的 `web/build/`。
 
 ### `enableGzip` — 静态资源 gzip
 - **默认**：`true`

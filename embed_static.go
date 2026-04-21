@@ -23,14 +23,14 @@ import (
 	"github.com/deluxebear/jetauth/embedded"
 )
 
-//go:embed all:web-new/build
+//go:embed all:web/build
 var embeddedWebFS embed.FS
 
 //go:embed all:swagger
 var embeddedSwaggerFS embed.FS
 
 func init() {
-	sub, err := fs.Sub(embeddedWebFS, "web-new/build")
+	sub, err := fs.Sub(embeddedWebFS, "web/build")
 	if err != nil {
 		panic(err)
 	}

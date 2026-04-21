@@ -106,23 +106,23 @@ Zero-value semantics make this **100% backward-compatible** — existing records
 
 | File | Lines | Reason |
 |---|---|---|
-| `web-new/src/pages/Login.tsx` | 305 | Replaced by `auth/signin/SigninPage.tsx` |
-| `web-new/src/pages/Signup.tsx` | 644 | Replaced by `auth/signup/SignupPage.tsx` |
+| `web/src/pages/Login.tsx` | 305 | Replaced by `auth/signin/SigninPage.tsx` |
+| `web/src/pages/Signup.tsx` | 644 | Replaced by `auth/signup/SignupPage.tsx` |
 
 ### Web-new (new frontend) files that **reference** old Login/Signup
 
 | File | Ref | Action |
 |---|---|---|
-| `web-new/src/App.tsx:10-11` | imports Login + Signup | Update to import from `auth/` module |
+| `web/src/App.tsx:10-11` | imports Login + Signup | Update to import from `auth/` module |
 
 ### Web-new files that are **kept and reused**
 
 | File | Role |
 |---|---|
-| `web-new/src/theme.tsx` | ThemeContext; extend for ResolvedTheme |
-| `web-new/src/i18n.tsx` | translation hook; unchanged API |
-| `web-new/src/lib/theme-utils.ts` | `deriveThemeVars`; extend for new tokens |
-| `web-new/src/components/LoginPreview.tsx` | used in OrganizationEditPage; will be refactored to consume ResolvedTheme |
+| `web/src/theme.tsx` | ThemeContext; extend for ResolvedTheme |
+| `web/src/i18n.tsx` | translation hook; unchanged API |
+| `web/src/lib/theme-utils.ts` | `deriveThemeVars`; extend for new tokens |
+| `web/src/components/LoginPreview.tsx` | used in OrganizationEditPage; will be refactored to consume ResolvedTheme |
 
 ### Web (legacy) module — **delete entirely in W1**
 
@@ -168,7 +168,7 @@ Before deletion, verify:
 
 **Good news:** nothing required. All backend changes are additive (new columns with nullable types + zero-value defaults). Existing rows auto-read with new fields empty; merge logic treats empty as "inherit", which behaves identically to pre-revamp.
 
-**Only exception:** the hard-coded default `FormOffset = 2` in `web-new/src/backend/ApplicationBackend.ts:227` — that's a **frontend** default, not a DB value. Preserves correctly because empty DB → zero value → frontend maps `0` to centered (`formOffset=2` equivalent) in the new layout router. We'll special-case `0 → 2` in the `AuthShell` to avoid touching existing records.
+**Only exception:** the hard-coded default `FormOffset = 2` in `web/src/backend/ApplicationBackend.ts:227` — that's a **frontend** default, not a DB value. Preserves correctly because empty DB → zero value → frontend maps `0` to centered (`formOffset=2` equivalent) in the new layout router. We'll special-case `0 → 2` in the `AuthShell` to avoid touching existing records.
 
 ---
 
@@ -176,10 +176,10 @@ Before deletion, verify:
 
 | Dep | Where | Why | Phase |
 |---|---|---|---|
-| `isomorphic-dompurify` | web-new | Client-side HTML sanitization | W5 |
-| `@dnd-kit/core` + `@dnd-kit/sortable` | web-new | Drag-sort in admin UI | W4 |
-| `@simplewebauthn/browser` | web-new | WebAuthn client | W2 |
-| `libphonenumber-js` | web-new | Phone number formatting + validation | W3 |
+| `isomorphic-dompurify` | web | Client-side HTML sanitization | W5 |
+| `@dnd-kit/core` + `@dnd-kit/sortable` | web | Drag-sort in admin UI | W4 |
+| `@simplewebauthn/browser` | web | WebAuthn client | W2 |
+| `libphonenumber-js` | web | Phone number formatting + validation | W3 |
 | `bluemonday` (Go) | backend | Server-side HTML sanitization | W5 |
 
 All pinned to specific versions in the W1 plan.
@@ -201,11 +201,11 @@ All pinned to specific versions in the W1 plan.
 
 ## 9. i18n key coverage
 
-Current `web-new/src/locales/` has `en.ts` (1166 keys) and `zh.ts` (1161 keys).
+Current `web/src/locales/` has `en.ts` (1166 keys) and `zh.ts` (1161 keys).
 
 **Discrepancy:** 5 keys present in `en.ts` but missing from `zh.ts` — must be fixed in W1 as a precondition. This is also when we add all new auth-related keys (~80 keys total estimated).
 
-**CI gate to add in W1:** `web-new/scripts/check-i18n.ts` — fails build if any key in `en.ts` absent from `zh.ts`.
+**CI gate to add in W1:** `web/scripts/check-i18n.ts` — fails build if any key in `en.ts` absent from `zh.ts`.
 
 ---
 

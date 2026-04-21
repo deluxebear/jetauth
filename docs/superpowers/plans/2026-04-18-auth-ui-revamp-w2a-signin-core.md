@@ -519,12 +519,12 @@ The error path for unknown identifiers deliberately does NOT return an error —
 Add TypeScript types and a fetcher for the new endpoint.
 
 **Files:**
-- Modify: `/Users/xiongyanlin/projects/jetauth/web-new/src/auth/api/types.ts`
-- Create: `/Users/xiongyanlin/projects/jetauth/web-new/src/auth/api/resolveSigninMethods.ts`
+- Modify: `/Users/xiongyanlin/projects/jetauth/web/src/auth/api/types.ts`
+- Create: `/Users/xiongyanlin/projects/jetauth/web/src/auth/api/resolveSigninMethods.ts`
 
 - [ ] **Step 1: Extend `types.ts`**
 
-Append to `web-new/src/auth/api/types.ts`:
+Append to `web/src/auth/api/types.ts`:
 
 ```typescript
 export interface SigninMethodInfo {
@@ -554,7 +554,7 @@ export interface ResolveSigninRequest {
 
 - [ ] **Step 2: Create the fetcher**
 
-Create `/Users/xiongyanlin/projects/jetauth/web-new/src/auth/api/resolveSigninMethods.ts`:
+Create `/Users/xiongyanlin/projects/jetauth/web/src/auth/api/resolveSigninMethods.ts`:
 
 ```typescript
 import { api } from "../../api/client";
@@ -574,7 +574,7 @@ export async function resolveSigninMethods(
 - [ ] **Step 3: TypeScript compile check**
 
 ```bash
-cd /Users/xiongyanlin/projects/jetauth/web-new
+cd /Users/xiongyanlin/projects/jetauth/web
 npx tsc --noEmit 2>&1 | grep "src/auth/" | head
 ```
 
@@ -584,7 +584,7 @@ Expected: empty (no new errors in `src/auth/`).
 
 ```bash
 cd /Users/xiongyanlin/projects/jetauth
-git add web-new/src/auth/api/
+git add web/src/auth/api/
 git commit -m "feat(auth): API types + fetcher for POST /api/resolve-signin-methods
 
 Typed wrapper for the identifier-first endpoint. Types mirror the
@@ -593,7 +593,7 @@ Go structs from controllers/resolve_signin.go."
 
 ## Context
 
-The `api` client at `web-new/src/api/client.ts` provides `api.post<T>(url, body)`. If you're unsure of the exact signature, grep for existing uses (e.g., `pages/Signup.tsx` calls `api.post` already).
+The `api` client at `web/src/api/client.ts` provides `api.post<T>(url, body)`. If you're unsure of the exact signature, grep for existing uses (e.g., `pages/Signup.tsx` calls `api.post` already).
 
 ---
 
@@ -602,12 +602,12 @@ The `api` client at `web-new/src/api/client.ts` provides `api.post<T>(url, body)
 Render the org/app branding (logo + name + favicon + document title). Extracted from the W1 placeholder so it can be reused across SigninPage / SignupPage / layout variants in W3.
 
 **Files:**
-- Create: `/Users/xiongyanlin/projects/jetauth/web-new/src/auth/shell/BrandingLayer.tsx`
-- Create: `/Users/xiongyanlin/projects/jetauth/web-new/src/auth/__tests__/BrandingLayer.test.tsx`
+- Create: `/Users/xiongyanlin/projects/jetauth/web/src/auth/shell/BrandingLayer.tsx`
+- Create: `/Users/xiongyanlin/projects/jetauth/web/src/auth/__tests__/BrandingLayer.test.tsx`
 
 - [ ] **Step 1: Write failing tests**
 
-Create `web-new/src/auth/__tests__/BrandingLayer.test.tsx`:
+Create `web/src/auth/__tests__/BrandingLayer.test.tsx`:
 
 ```typescript
 import { describe, it, expect } from "vitest";
@@ -651,13 +651,13 @@ describe("BrandingLayer", () => {
 - [ ] **Step 2: Run — expect failure**
 
 ```bash
-cd web-new
+cd web
 npm test -- BrandingLayer
 ```
 
 - [ ] **Step 3: Implement**
 
-Create `web-new/src/auth/shell/BrandingLayer.tsx`:
+Create `web/src/auth/shell/BrandingLayer.tsx`:
 
 ```typescript
 import { useEffect } from "react";
@@ -735,7 +735,7 @@ npm test -- BrandingLayer
 
 ```bash
 cd /Users/xiongyanlin/projects/jetauth
-git add web-new/src/auth/shell/BrandingLayer.tsx web-new/src/auth/__tests__/BrandingLayer.test.tsx
+git add web/src/auth/shell/BrandingLayer.tsx web/src/auth/__tests__/BrandingLayer.test.tsx
 git commit -m "feat(auth/shell): BrandingLayer renders logo + title + favicon
 
 Extracted from W1 placeholder so signin / signup / forgot pages
@@ -750,12 +750,12 @@ as a side effect in useEffect."
 Always-on controls in the top-right: theme toggle (light/dark) + language picker. Extracted from the old Login.tsx so it's reusable.
 
 **Files:**
-- Create: `/Users/xiongyanlin/projects/jetauth/web-new/src/auth/shell/TopBar.tsx`
-- Create: `/Users/xiongyanlin/projects/jetauth/web-new/src/auth/__tests__/TopBar.test.tsx`
+- Create: `/Users/xiongyanlin/projects/jetauth/web/src/auth/shell/TopBar.tsx`
+- Create: `/Users/xiongyanlin/projects/jetauth/web/src/auth/__tests__/TopBar.test.tsx`
 
 - [ ] **Step 1: Write failing tests**
 
-Create `web-new/src/auth/__tests__/TopBar.test.tsx`:
+Create `web/src/auth/__tests__/TopBar.test.tsx`:
 
 ```typescript
 import { describe, it, expect, vi } from "vitest";
@@ -804,7 +804,7 @@ npm test -- TopBar
 
 - [ ] **Step 3: Implement**
 
-Create `web-new/src/auth/shell/TopBar.tsx`:
+Create `web/src/auth/shell/TopBar.tsx`:
 
 ```typescript
 import { Sun, Moon, Globe } from "lucide-react";
@@ -868,7 +868,7 @@ npm test -- TopBar
 
 ```bash
 cd /Users/xiongyanlin/projects/jetauth
-git add web-new/src/auth/shell/TopBar.tsx web-new/src/auth/__tests__/TopBar.test.tsx
+git add web/src/auth/shell/TopBar.tsx web/src/auth/__tests__/TopBar.test.tsx
 git commit -m "feat(auth/shell): TopBar with theme toggle + language picker
 
 Always-on controls in the top-right of the auth surface. Extracted
@@ -883,12 +883,12 @@ pages via the new auth/ module."
 Step 1 of the identifier-first flow: user enters username/email/phone, hits Continue, triggers `resolveSigninMethods`.
 
 **Files:**
-- Create: `/Users/xiongyanlin/projects/jetauth/web-new/src/auth/signin/IdentifierStep.tsx`
-- Create: `/Users/xiongyanlin/projects/jetauth/web-new/src/auth/__tests__/IdentifierStep.test.tsx`
+- Create: `/Users/xiongyanlin/projects/jetauth/web/src/auth/signin/IdentifierStep.tsx`
+- Create: `/Users/xiongyanlin/projects/jetauth/web/src/auth/__tests__/IdentifierStep.test.tsx`
 
 - [ ] **Step 1: Add i18n keys**
 
-Add to BOTH `web-new/src/locales/en.ts` and `zh.ts` (parity required):
+Add to BOTH `web/src/locales/en.ts` and `zh.ts` (parity required):
 
 ```
 "auth.identifier.placeholder"        → "Email, phone, or username" / "邮箱、手机号或用户名"
@@ -900,7 +900,7 @@ Run `npm run check:i18n` — must still show parity.
 
 - [ ] **Step 2: Write failing tests**
 
-Create `web-new/src/auth/__tests__/IdentifierStep.test.tsx`:
+Create `web/src/auth/__tests__/IdentifierStep.test.tsx`:
 
 ```typescript
 import { describe, it, expect, vi } from "vitest";
@@ -964,7 +964,7 @@ npm test -- IdentifierStep
 
 - [ ] **Step 4: Implement**
 
-Create `web-new/src/auth/signin/IdentifierStep.tsx`:
+Create `web/src/auth/signin/IdentifierStep.tsx`:
 
 ```typescript
 import { useState, type FormEvent } from "react";
@@ -1048,7 +1048,7 @@ npm test -- IdentifierStep
 - [ ] **Step 6: Commit**
 
 ```bash
-git add web-new/src/auth/signin/IdentifierStep.tsx web-new/src/auth/__tests__/IdentifierStep.test.tsx web-new/src/locales/en.ts web-new/src/locales/zh.ts
+git add web/src/auth/signin/IdentifierStep.tsx web/src/auth/__tests__/IdentifierStep.test.tsx web/src/locales/en.ts web/src/locales/zh.ts
 git commit -m "feat(auth/signin): IdentifierStep for identifier-first flow
 
 Step 1 — single input (username / email / phone), trims + submits.
@@ -1064,8 +1064,8 @@ identifier (W2a-T08)."
 Step 2 (for the Password method): password entry + submit. Calls the existing `/api/login` endpoint.
 
 **Files:**
-- Create: `/Users/xiongyanlin/projects/jetauth/web-new/src/auth/signin/PasswordForm.tsx`
-- Create: `/Users/xiongyanlin/projects/jetauth/web-new/src/auth/__tests__/PasswordForm.test.tsx`
+- Create: `/Users/xiongyanlin/projects/jetauth/web/src/auth/signin/PasswordForm.tsx`
+- Create: `/Users/xiongyanlin/projects/jetauth/web/src/auth/__tests__/PasswordForm.test.tsx`
 
 - [ ] **Step 1: Add i18n keys**
 
@@ -1085,7 +1085,7 @@ Run `npm run check:i18n` — parity OK.
 
 - [ ] **Step 2: Write failing tests**
 
-Create `web-new/src/auth/__tests__/PasswordForm.test.tsx`:
+Create `web/src/auth/__tests__/PasswordForm.test.tsx`:
 
 ```typescript
 import { describe, it, expect, vi } from "vitest";
@@ -1149,7 +1149,7 @@ npm test -- PasswordForm
 
 - [ ] **Step 4: Implement**
 
-Create `web-new/src/auth/signin/PasswordForm.tsx`:
+Create `web/src/auth/signin/PasswordForm.tsx`:
 
 ```typescript
 import { useState, type FormEvent } from "react";
@@ -1275,7 +1275,7 @@ npm test -- PasswordForm
 - [ ] **Step 6: Commit**
 
 ```bash
-git add web-new/src/auth/signin/PasswordForm.tsx web-new/src/auth/__tests__/PasswordForm.test.tsx web-new/src/locales/en.ts web-new/src/locales/zh.ts
+git add web/src/auth/signin/PasswordForm.tsx web/src/auth/__tests__/PasswordForm.test.tsx web/src/locales/en.ts web/src/locales/zh.ts
 git commit -m "feat(auth/signin): PasswordForm for identifier-first step 2
 
 Receives the resolved identifier (+ optional hint) and password;
@@ -1291,8 +1291,8 @@ Pure component — no API calls directly."
 State machine that composes IdentifierStep → resolveSigninMethods → PasswordForm → `/api/login`. This is the actual "page" component for signin.
 
 **Files:**
-- Create: `/Users/xiongyanlin/projects/jetauth/web-new/src/auth/signin/SigninPage.tsx`
-- Create: `/Users/xiongyanlin/projects/jetauth/web-new/src/auth/__tests__/SigninPage.test.tsx`
+- Create: `/Users/xiongyanlin/projects/jetauth/web/src/auth/signin/SigninPage.tsx`
+- Create: `/Users/xiongyanlin/projects/jetauth/web/src/auth/__tests__/SigninPage.test.tsx`
 
 - [ ] **Step 1: Add i18n keys**
 
@@ -1308,7 +1308,7 @@ Run `npm run check:i18n`.
 
 - [ ] **Step 2: Write failing tests**
 
-Create `web-new/src/auth/__tests__/SigninPage.test.tsx`:
+Create `web/src/auth/__tests__/SigninPage.test.tsx`:
 
 ```typescript
 import { describe, it, expect, vi } from "vitest";
@@ -1411,7 +1411,7 @@ npm test -- SigninPage
 
 - [ ] **Step 4: Implement**
 
-Create `web-new/src/auth/signin/SigninPage.tsx`:
+Create `web/src/auth/signin/SigninPage.tsx`:
 
 ```typescript
 import { useState } from "react";
@@ -1585,7 +1585,7 @@ npm test -- SigninPage
 - [ ] **Step 6: Commit**
 
 ```bash
-git add web-new/src/auth/signin/SigninPage.tsx web-new/src/auth/__tests__/SigninPage.test.tsx web-new/src/locales/en.ts web-new/src/locales/zh.ts
+git add web/src/auth/signin/SigninPage.tsx web/src/auth/__tests__/SigninPage.test.tsx web/src/locales/en.ts web/src/locales/zh.ts
 git commit -m "feat(auth/signin): SigninPage state machine
 
 Composes BrandingLayer + TopBar + IdentifierStep + PasswordForm
@@ -1604,7 +1604,7 @@ existing handler needs no changes — only the UX surface moved."
 Replace the W1 placeholder body with SigninPage when `mode === "signin"`.
 
 **Files:**
-- Modify: `/Users/xiongyanlin/projects/jetauth/web-new/src/auth/AuthShell.tsx`
+- Modify: `/Users/xiongyanlin/projects/jetauth/web/src/auth/AuthShell.tsx`
 
 - [ ] **Step 1: Edit AuthShell.tsx**
 
@@ -1667,7 +1667,7 @@ Remove any unused imports or variables from the old placeholder body (e.g., `use
 - [ ] **Step 2: TypeScript compile check**
 
 ```bash
-cd web-new
+cd web
 npx tsc --noEmit 2>&1 | grep "src/auth/" | head
 ```
 
@@ -1685,7 +1685,7 @@ Expected: ThemeProvider (3) + BrandingLayer (3) + TopBar (2) + IdentifierStep (4
 
 ```bash
 cd /Users/xiongyanlin/projects/jetauth
-git add web-new/src/auth/AuthShell.tsx
+git add web/src/auth/AuthShell.tsx
 git commit -m "feat(auth): AuthShell routes signin mode to SigninPage
 
 Replaces the W1 placeholder body for mode='signin' with the new
@@ -1710,7 +1710,7 @@ cd /Users/xiongyanlin/projects/jetauth
 go run .
 
 # Terminal 2
-cd /Users/xiongyanlin/projects/jetauth/web-new
+cd /Users/xiongyanlin/projects/jetauth/web
 npm run dev
 ```
 

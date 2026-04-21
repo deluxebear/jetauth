@@ -33,7 +33,7 @@
 - 后端权限检查：`object/check.go:489` 和 `object/check.go:605`
 - Permission 结构体：`object/permission.go:46-49`
 - Submitter 查询 API：`controllers/permission.go:90`
-- 前端审批区域：`web-new/src/pages/PermissionEditPage.tsx` Approval section
+- 前端审批区域：`web/src/pages/PermissionEditPage.tsx` Approval section
 
 ---
 
@@ -127,7 +127,7 @@ m = g(r.sub, p.sub) && r.obj == p.obj && r.act == p.act
 - 模型加载与默认模型：`object/permission_enforcer.go:96-120` 和 `460-476`
 - 默认模型 TODO 注释：`object/permission_enforcer.go:106`
 - 原版前端模型检查：`web/src/PermissionEditPage.js` 中 `getModel()` 调用
-- 新前端权限编辑页：`web-new/src/pages/PermissionEditPage.tsx`
+- 新前端权限编辑页：`web/src/pages/PermissionEditPage.tsx`
 
 ---
 
@@ -755,8 +755,8 @@ func (c *Client) applyResponse(resp WatchResponse) {
 - Enforce 入口：`object/biz_enforcer_cache.go` — `BizEnforce`
 - 现有 API：`controllers/biz_permission_api.go`
 - 路由注册：`routers/router.go:231-254`
-- 前端授权页：`web-new/src/pages/AuthorizationPage.tsx`
-- 前端应用授权页：`web-new/src/pages/AppAuthorizationPage.tsx`
+- 前端授权页：`web/src/pages/AuthorizationPage.tsx`
+- 前端应用授权页：`web/src/pages/AppAuthorizationPage.tsx`
 
 ---
 
@@ -942,4 +942,4 @@ if site.CasdoorApplication != "" && claims != nil {
 - 网关 OAuth 检查：`service/proxy.go:217-242` — claims 解析后的插入点
 - BizEnforce 入口：`object/biz_enforcer_cache.go:167` — 内存缓存 enforce
 - BizAppConfig 查询：`object/biz_app_config.go:53` — 判断应用是否配置了授权
-- 前端站点编辑：`web-new/src/pages/SiteEditPage.tsx` — CasdoorApplication 字段
+- 前端站点编辑：`web/src/pages/SiteEditPage.tsx` — CasdoorApplication 字段

@@ -16,7 +16,7 @@ package embedded
 
 import "io/fs"
 
-// WebFS holds the embedded frontend filesystem (web-new/build).
+// WebFS holds the embedded frontend filesystem (web/build).
 // It is nil when built without the "embed" build tag.
 var WebFS fs.FS
 
