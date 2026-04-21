@@ -21,11 +21,6 @@ on:
 env:
   GO_VERSION: "1.25.8"
   NODE_VERSION: "22"
-  # Opt into Node.js 24 for all JavaScript-based actions. GitHub plans to
-  # force this on 2026-06-02 and remove Node 20 from runners on 2026-09-16;
-  # flipping the switch now silences the deprecation warnings and catches
-  # any incompatibility early.
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 
 permissions:
   contents: read
@@ -39,8 +34,8 @@ jobs:
     name: Go lint
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v6
         with:
           go-version: ${{ env.GO_VERSION }}
           cache: false
@@ -69,8 +64,8 @@ jobs:
           --health-timeout=5s
           --health-retries=3
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v6
         with:
           go-version: ${{ env.GO_VERSION }}
           cache-dependency-path: ./go.mod
@@ -81,8 +76,8 @@ jobs:
     name: Frontend build
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: "npm"
@@ -92,7 +87,7 @@ jobs:
       - run: npm run build
         working-directory: ./web
       # Re-used by the two release-build jobs via actions/download-artifact
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         with:
           name: frontend-build-${{ github.run_id }}
           path: ./web/build
@@ -121,11 +116,11 @@ jobs:
           - { goos: windows, goarch: amd64, suffix: windows_amd64, ext: ".exe" }
           - { goos: windows, goarch: arm64, suffix: windows_arm64, ext: ".exe" }
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0  # TestGetVersionInfo walks the full tag history
 
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v6
         with:
           go-version: ${{ env.GO_VERSION }}
           cache-dependency-path: ./go.mod
@@ -147,7 +142,7 @@ jobs:
           go build -trimpath -ldflags="-w -s" -o stage/jetauth${{ matrix.ext }} .
 
       - name: Pull frontend build
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           name: frontend-build-${{ github.run_id }}
           path: stage/web/build
@@ -166,7 +161,7 @@ jobs:
           cd stage
           zip -r "../jetauth_${{ github.ref_name }}_${{ matrix.suffix }}.zip" .
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         with:
           name: release-separate-${{ matrix.suffix }}
           path: jetauth_${{ github.ref_name }}_${{ matrix.suffix }}.zip
@@ -192,11 +187,11 @@ jobs:
           - { goos: windows, goarch: amd64, suffix: windows_amd64, ext: ".exe" }
           - { goos: windows, goarch: arm64, suffix: windows_arm64, ext: ".exe" }
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v6
         with:
           go-version: ${{ env.GO_VERSION }}
           cache-dependency-path: ./go.mod
@@ -205,7 +200,7 @@ jobs:
       # compile. Download the artifact produced by the `frontend` job so we
       # don't pay the npm cost twice.
       - name: Pull frontend build
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           name: frontend-build-${{ github.run_id }}
           path: ./web/build
@@ -230,7 +225,7 @@ jobs:
           zip "../jetauth-embedded_${{ github.ref_name }}_${{ matrix.suffix }}.zip" \
               jetauth${{ matrix.ext }}
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         with:
           name: release-embedded-${{ matrix.suffix }}
           path: jetauth-embedded_${{ github.ref_name }}_${{ matrix.suffix }}.zip
@@ -249,7 +244,7 @@ jobs:
       contents: read
       packages: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
@@ -309,10 +304,10 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Gather release zips
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           pattern: release-*
           merge-multiple: true
