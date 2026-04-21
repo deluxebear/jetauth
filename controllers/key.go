@@ -24,19 +24,18 @@ import (
 
 // KeyListResponse represents the response for key list APIs
 type KeyListResponse struct {
-	Status string        `json:"status" example:"ok"`
-	Msg    string        `json:"msg" example:""`
+	Status string       `json:"status" example:"ok"`
+	Msg    string       `json:"msg" example:""`
 	Data   []object.Key `json:"data"`
-	Data2  int           `json:"data2" example:"10"`
+	Data2  int          `json:"data2" example:"10"`
 }
 
 // KeyResponse represents the response for single key APIs
 type KeyResponse struct {
-	Status string       `json:"status" example:"ok"`
-	Msg    string       `json:"msg" example:""`
-	Data   object.Key  `json:"data"`
+	Status string     `json:"status" example:"ok"`
+	Msg    string     `json:"msg" example:""`
+	Data   object.Key `json:"data"`
 }
-
 
 // GetKeys
 // @Summary GetKeys

@@ -141,4 +141,3 @@ func ObtainCertificateGoDaddy(client *lego.Client, domain string, accessKey stri
 	}
 	return getGoDaddyCert(client, conf)
 }
-

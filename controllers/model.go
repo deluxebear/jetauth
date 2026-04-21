@@ -24,19 +24,18 @@ import (
 
 // ModelListResponse represents the response for model list APIs
 type ModelListResponse struct {
-	Status string        `json:"status" example:"ok"`
-	Msg    string        `json:"msg" example:""`
+	Status string         `json:"status" example:"ok"`
+	Msg    string         `json:"msg" example:""`
 	Data   []object.Model `json:"data"`
-	Data2  int           `json:"data2" example:"10"`
+	Data2  int            `json:"data2" example:"10"`
 }
 
 // ModelResponse represents the response for single model APIs
 type ModelResponse struct {
 	Status string       `json:"status" example:"ok"`
 	Msg    string       `json:"msg" example:""`
-	Data   object.Model  `json:"data"`
+	Data   object.Model `json:"data"`
 }
-
 
 // GetModels
 // @Summary GetModels

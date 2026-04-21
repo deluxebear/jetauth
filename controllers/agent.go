@@ -24,19 +24,18 @@ import (
 
 // AgentListResponse represents the response for agent list APIs
 type AgentListResponse struct {
-	Status string        `json:"status" example:"ok"`
-	Msg    string        `json:"msg" example:""`
+	Status string         `json:"status" example:"ok"`
+	Msg    string         `json:"msg" example:""`
 	Data   []object.Agent `json:"data"`
-	Data2  int           `json:"data2" example:"10"`
+	Data2  int            `json:"data2" example:"10"`
 }
 
 // AgentResponse represents the response for single agent APIs
 type AgentResponse struct {
 	Status string       `json:"status" example:"ok"`
 	Msg    string       `json:"msg" example:""`
-	Data   object.Agent  `json:"data"`
+	Data   object.Agent `json:"data"`
 }
-
 
 // GetAgents
 // @Summary GetAgents

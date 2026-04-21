@@ -92,15 +92,15 @@ type BizRoleResponse struct {
 
 // BizRoleStatsResponse represents the response for biz role stats APIs
 type BizRoleStatsResponse struct {
-	Status string             `json:"status" example:"ok"`
-	Msg    string             `json:"msg" example:""`
+	Status string              `json:"status" example:"ok"`
+	Msg    string              `json:"msg" example:""`
 	Data   object.BizRoleStats `json:"data"`
 }
 
 // BizPermissionStatsResponse represents the response for biz permission stats APIs
 type BizPermissionStatsResponse struct {
-	Status string                   `json:"status" example:"ok"`
-	Msg    string                   `json:"msg" example:""`
+	Status string                    `json:"status" example:"ok"`
+	Msg    string                    `json:"msg" example:""`
 	Data   object.BizPermissionStats `json:"data"`
 }
 
@@ -121,9 +121,9 @@ type BizAppResourceResponse struct {
 // BizResourceImportPreviewResponse wraps the preview payload from
 // biz-parse-resource-import so OpenAPI spec has a concrete data type.
 type BizResourceImportPreviewResponse struct {
-	Status string                           `json:"status" example:"ok"`
-	Msg    string                           `json:"msg" example:""`
-	Data   object.BizResourceImportPreview  `json:"data"`
+	Status string                          `json:"status" example:"ok"`
+	Msg    string                          `json:"msg" example:""`
+	Data   object.BizResourceImportPreview `json:"data"`
 }
 
 // BizResourceImportApplyResponse wraps the per-row outcome aggregate
@@ -136,9 +136,9 @@ type BizResourceImportApplyResponse struct {
 
 // BizPermissionMatchResponse wraps the test-match result.
 type BizPermissionMatchResponse struct {
-	Status string                            `json:"status" example:"ok"`
-	Msg    string                            `json:"msg" example:""`
-	Data   object.BizPermissionMatchResult   `json:"data"`
+	Status string                          `json:"status" example:"ok"`
+	Msg    string                          `json:"msg" example:""`
+	Data   object.BizPermissionMatchResult `json:"data"`
 }
 
 // BizRoleMemberListResponse represents the response for paginated role member lists
@@ -167,10 +167,10 @@ type BizRoleBulkDeleteResultItem struct {
 
 // BizRoleBulkDeleteResponseData aggregates the per-id results plus a summary.
 type BizRoleBulkDeleteResponseData struct {
-	Results    []BizRoleBulkDeleteResultItem `json:"results"`
-	Succeeded  int                           `json:"succeeded" example:"2"`
-	Failed     int                           `json:"failed" example:"1"`
-	Total      int                           `json:"total" example:"3"`
+	Results   []BizRoleBulkDeleteResultItem `json:"results"`
+	Succeeded int                           `json:"succeeded" example:"2"`
+	Failed    int                           `json:"failed" example:"1"`
+	Total     int                           `json:"total" example:"3"`
 }
 
 // BizRoleBulkDeleteResponse is the envelope returned by /biz-bulk-delete-role.
@@ -388,10 +388,12 @@ func (c *ApiController) DeleteBizAppConfig() {
 // @Summary Get business roles
 // @Tags Business Permission API
 // @Description Get all business roles visible in (organization, appName). If
+//
 //	appName is empty, returns org-scope roles only; otherwise returns the union
 //	of app-scope and org-scope roles for the app.
+//
 // @Param   organization  query    string  true   "The organization"
-// @Param   appName       query    string  false  "The app name ('' for org-scope only)"
+// @Param   appName       query    string  false  "The app name (” for org-scope only)"
 // @Success 200 {object} BizRoleListResponse "The Response object"
 // @Router /biz-get-roles [get]
 func (c *ApiController) GetBizRoles() {
@@ -507,10 +509,12 @@ func (c *ApiController) UpdateBizRole() {
 // @Summary Get aggregated counters for a role (members / inheritance / permissions)
 // @Tags Business Permission API
 // @Description Returns derived counts used by the role detail page overview:
+//
 //	members (broken down by subject type), parent/child role counts, and the
 //	number of permissions that reference this role. Each counter is a COUNT
 //	query on an indexed column; the endpoint replaces what would otherwise be
 //	four separate list calls just to read their lengths.
+//
 // @Param   id     query    int64   true  "The numeric role id"
 // @Success 200 {object} BizRoleStatsResponse "Per-role aggregate counters"
 // @Router /biz-get-role-stats [get]
@@ -914,8 +918,10 @@ func (c *ApiController) UpdateBizPermission() {
 // @Summary Get aggregated counters for a permission (grantees / resources / actions)
 // @Tags Business Permission API
 // @Description Returns derived counts used by the permission detail page overview:
+//
 //	grantees broken down by subject type (user/group/role), plus the size of
 //	the permission's resources and actions arrays.
+//
 // @Param   id     query    int64   true  "The numeric permission id"
 // @Success 200 {object} BizPermissionStatsResponse "Per-permission aggregate counters"
 // @Router /biz-get-permission-stats [get]
@@ -1075,9 +1081,11 @@ func (c *ApiController) UpdateBizAppResource() {
 // @Summary Dry-run a permission against a concrete request tuple
 // @Tags Business Permission API
 // @Description Given a permission id and (method, url), returns whether the
+//
 //	permission would apply, with a row-by-row breakdown of which resource
 //	patterns and actions matched. Mirrors Casbin's keyMatch / keyMatch2
 //	semantics so the answer tracks enforce-time behavior.
+//
 // @Param   body    body   object.BizPermissionMatchRequest  true  "Test input"
 // @Success 200 {object} BizPermissionMatchResponse "Match result + explanation"
 // @Router /biz-test-permission-match [post]
@@ -1099,8 +1107,10 @@ func (c *ApiController) TestBizPermissionMatch() {
 // @Summary Parse an OpenAPI / template / paste into a resource import preview
 // @Tags Business Permission API
 // @Description Parse content without persisting. Returns per-row classification
+//
 //	(new / update / deprecated / error). Use the preview as the request body of
 //	/biz-import-app-resources after the admin reviews and selects rows.
+//
 // @Param   body    body   object.BizResourceImportRequest  true  "Import source + content + options"
 // @Success 200 {object} BizResourceImportPreviewResponse "Parsed preview"
 // @Router /biz-parse-resource-import [post]
@@ -1122,8 +1132,10 @@ func (c *ApiController) ParseBizResourceImport() {
 // @Summary Apply a previewed resource import (selected rows)
 // @Tags Business Permission API
 // @Description Upsert the selected rows by natural key (owner, appName, name).
+//
 //	The server re-validates each row; errors are reported per-row so partial
 //	success is the normal outcome.
+//
 // @Param   body    body   object.BizResourceImportApplyRequest  true  "Selected rows"
 // @Success 200 {object} BizResourceImportApplyResponse "Per-row outcomes + aggregate counts"
 // @Router /biz-import-app-resources [post]
@@ -1267,8 +1279,10 @@ func (c *ApiController) ListPermissionsByRole() {
 // @Summary List permissions directly granted to a user within an organization
 // @Tags Business Permission API
 // @Description Returns only direct user grants. Effective permissions (via role
+//
 //	membership) must be composed on the caller side from biz-list-user-roles and
 //	biz-list-permissions-by-role.
+//
 // @Param   organization  query  string  true  "The organization"
 // @Param   userId        query  string  true  "The user id (typically org/username)"
 // @Success 200 {object} BizPermissionListResponse "The Response object"

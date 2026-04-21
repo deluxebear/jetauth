@@ -24,19 +24,18 @@ import (
 
 // AdapterListResponse represents the response for adapter list APIs
 type AdapterListResponse struct {
-	Status string        `json:"status" example:"ok"`
-	Msg    string        `json:"msg" example:""`
+	Status string           `json:"status" example:"ok"`
+	Msg    string           `json:"msg" example:""`
 	Data   []object.Adapter `json:"data"`
-	Data2  int           `json:"data2" example:"10"`
+	Data2  int              `json:"data2" example:"10"`
 }
 
 // AdapterResponse represents the response for single adapter APIs
 type AdapterResponse struct {
-	Status string       `json:"status" example:"ok"`
-	Msg    string       `json:"msg" example:""`
-	Data   object.Adapter  `json:"data"`
+	Status string         `json:"status" example:"ok"`
+	Msg    string         `json:"msg" example:""`
+	Data   object.Adapter `json:"data"`
 }
-
 
 // GetAdapters
 // @Summary GetAdapters

@@ -32,11 +32,10 @@ type FormListResponse struct {
 
 // FormResponse represents the response for single form APIs
 type FormResponse struct {
-	Status string       `json:"status" example:"ok"`
-	Msg    string       `json:"msg" example:""`
-	Data   object.Form  `json:"data"`
+	Status string      `json:"status" example:"ok"`
+	Msg    string      `json:"msg" example:""`
+	Data   object.Form `json:"data"`
 }
-
 
 // GetGlobalForms
 // @Summary GetGlobalForms

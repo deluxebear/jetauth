@@ -32,11 +32,10 @@ type CertListResponse struct {
 
 // CertResponse represents the response for single cert APIs
 type CertResponse struct {
-	Status string       `json:"status" example:"ok"`
-	Msg    string       `json:"msg" example:""`
-	Data   object.Cert  `json:"data"`
+	Status string      `json:"status" example:"ok"`
+	Msg    string      `json:"msg" example:""`
+	Data   object.Cert `json:"data"`
 }
-
 
 // GetCerts
 // @Summary GetCerts

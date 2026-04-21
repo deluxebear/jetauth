@@ -32,11 +32,10 @@ type PlanListResponse struct {
 
 // PlanResponse represents the response for single plan APIs
 type PlanResponse struct {
-	Status string       `json:"status" example:"ok"`
-	Msg    string       `json:"msg" example:""`
-	Data   object.Plan  `json:"data"`
+	Status string      `json:"status" example:"ok"`
+	Msg    string      `json:"msg" example:""`
+	Data   object.Plan `json:"data"`
 }
-
 
 // GetPlans
 // @Summary GetPlans

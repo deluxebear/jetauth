@@ -47,19 +47,18 @@ func sanitizeApplicationForNonGlobalAdmin(incoming, existing *object.Application
 
 // ApplicationListResponse represents the response for application list APIs
 type ApplicationListResponse struct {
-	Status string        `json:"status" example:"ok"`
-	Msg    string        `json:"msg" example:""`
+	Status string               `json:"status" example:"ok"`
+	Msg    string               `json:"msg" example:""`
 	Data   []object.Application `json:"data"`
-	Data2  int           `json:"data2" example:"10"`
+	Data2  int                  `json:"data2" example:"10"`
 }
 
 // ApplicationResponse represents the response for single application APIs
 type ApplicationResponse struct {
-	Status string       `json:"status" example:"ok"`
-	Msg    string       `json:"msg" example:""`
-	Data   object.Application  `json:"data"`
+	Status string             `json:"status" example:"ok"`
+	Msg    string             `json:"msg" example:""`
+	Data   object.Application `json:"data"`
 }
-
 
 // GetApplications
 // @Summary GetApplications

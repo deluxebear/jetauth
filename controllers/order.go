@@ -24,19 +24,18 @@ import (
 
 // OrderListResponse represents the response for order list APIs
 type OrderListResponse struct {
-	Status string        `json:"status" example:"ok"`
-	Msg    string        `json:"msg" example:""`
+	Status string         `json:"status" example:"ok"`
+	Msg    string         `json:"msg" example:""`
 	Data   []object.Order `json:"data"`
-	Data2  int           `json:"data2" example:"10"`
+	Data2  int            `json:"data2" example:"10"`
 }
 
 // OrderResponse represents the response for single order APIs
 type OrderResponse struct {
 	Status string       `json:"status" example:"ok"`
 	Msg    string       `json:"msg" example:""`
-	Data   object.Order  `json:"data"`
+	Data   object.Order `json:"data"`
 }
-
 
 // GetOrders
 // @Summary GetOrders

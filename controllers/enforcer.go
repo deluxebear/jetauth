@@ -19,26 +19,25 @@ import (
 	"fmt"
 
 	"github.com/beego/beego/v2/core/utils/pagination"
+	xormadapter "github.com/deluxebear/jetauth/adapters/xormadapter"
 	"github.com/deluxebear/jetauth/object"
 	"github.com/deluxebear/jetauth/util"
-	xormadapter "github.com/deluxebear/jetauth/adapters/xormadapter"
 )
 
 // EnforcerListResponse represents the response for enforcer list APIs
 type EnforcerListResponse struct {
-	Status string        `json:"status" example:"ok"`
-	Msg    string        `json:"msg" example:""`
+	Status string            `json:"status" example:"ok"`
+	Msg    string            `json:"msg" example:""`
 	Data   []object.Enforcer `json:"data"`
-	Data2  int           `json:"data2" example:"10"`
+	Data2  int               `json:"data2" example:"10"`
 }
 
 // EnforcerResponse represents the response for single enforcer APIs
 type EnforcerResponse struct {
-	Status string       `json:"status" example:"ok"`
-	Msg    string       `json:"msg" example:""`
-	Data   object.Enforcer  `json:"data"`
+	Status string          `json:"status" example:"ok"`
+	Msg    string          `json:"msg" example:""`
+	Data   object.Enforcer `json:"data"`
 }
-
 
 // GetEnforcers
 // @Summary GetEnforcers

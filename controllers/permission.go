@@ -24,19 +24,18 @@ import (
 
 // PermissionListResponse represents the response for permission list APIs
 type PermissionListResponse struct {
-	Status string        `json:"status" example:"ok"`
-	Msg    string        `json:"msg" example:""`
+	Status string              `json:"status" example:"ok"`
+	Msg    string              `json:"msg" example:""`
 	Data   []object.Permission `json:"data"`
-	Data2  int           `json:"data2" example:"10"`
+	Data2  int                 `json:"data2" example:"10"`
 }
 
 // PermissionResponse represents the response for single permission APIs
 type PermissionResponse struct {
-	Status string       `json:"status" example:"ok"`
-	Msg    string       `json:"msg" example:""`
-	Data   object.Permission  `json:"data"`
+	Status string            `json:"status" example:"ok"`
+	Msg    string            `json:"msg" example:""`
+	Data   object.Permission `json:"data"`
 }
-
 
 // GetPermissions
 // @Summary GetPermissions

@@ -24,19 +24,18 @@ import (
 
 // EntryListResponse represents the response for entry list APIs
 type EntryListResponse struct {
-	Status string        `json:"status" example:"ok"`
-	Msg    string        `json:"msg" example:""`
+	Status string         `json:"status" example:"ok"`
+	Msg    string         `json:"msg" example:""`
 	Data   []object.Entry `json:"data"`
-	Data2  int           `json:"data2" example:"10"`
+	Data2  int            `json:"data2" example:"10"`
 }
 
 // EntryResponse represents the response for single entry APIs
 type EntryResponse struct {
 	Status string       `json:"status" example:"ok"`
 	Msg    string       `json:"msg" example:""`
-	Data   object.Entry  `json:"data"`
+	Data   object.Entry `json:"data"`
 }
-
 
 // GetEntries
 // @Summary GetEntries

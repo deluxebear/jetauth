@@ -17,11 +17,11 @@ package certificate
 import (
 	"crypto"
 
+	"github.com/deluxebear/jetauth/proxy"
 	"github.com/go-acme/lego/v4/acme"
 	"github.com/go-acme/lego/v4/certcrypto"
 	"github.com/go-acme/lego/v4/lego"
 	"github.com/go-acme/lego/v4/registration"
-	"github.com/deluxebear/jetauth/proxy"
 )
 
 type Account struct {

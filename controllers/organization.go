@@ -24,19 +24,18 @@ import (
 
 // OrganizationListResponse represents the response for organization list APIs
 type OrganizationListResponse struct {
-	Status string        `json:"status" example:"ok"`
-	Msg    string        `json:"msg" example:""`
+	Status string                `json:"status" example:"ok"`
+	Msg    string                `json:"msg" example:""`
 	Data   []object.Organization `json:"data"`
-	Data2  int           `json:"data2" example:"10"`
+	Data2  int                   `json:"data2" example:"10"`
 }
 
 // OrganizationResponse represents the response for single organization APIs
 type OrganizationResponse struct {
-	Status string       `json:"status" example:"ok"`
-	Msg    string       `json:"msg" example:""`
-	Data   object.Organization  `json:"data"`
+	Status string              `json:"status" example:"ok"`
+	Msg    string              `json:"msg" example:""`
+	Data   object.Organization `json:"data"`
 }
-
 
 // GetOrganizations ...
 // @Summary GetOrganizations

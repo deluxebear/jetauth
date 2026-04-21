@@ -24,19 +24,18 @@ import (
 
 // PaymentListResponse represents the response for payment list APIs
 type PaymentListResponse struct {
-	Status string        `json:"status" example:"ok"`
-	Msg    string        `json:"msg" example:""`
+	Status string           `json:"status" example:"ok"`
+	Msg    string           `json:"msg" example:""`
 	Data   []object.Payment `json:"data"`
-	Data2  int           `json:"data2" example:"10"`
+	Data2  int              `json:"data2" example:"10"`
 }
 
 // PaymentResponse represents the response for single payment APIs
 type PaymentResponse struct {
-	Status string       `json:"status" example:"ok"`
-	Msg    string       `json:"msg" example:""`
-	Data   object.Payment  `json:"data"`
+	Status string         `json:"status" example:"ok"`
+	Msg    string         `json:"msg" example:""`
+	Data   object.Payment `json:"data"`
 }
-
 
 // GetPayments
 // @Summary GetPayments

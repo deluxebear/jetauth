@@ -26,19 +26,18 @@ import (
 
 // InvitationListResponse represents the response for invitation list APIs
 type InvitationListResponse struct {
-	Status string        `json:"status" example:"ok"`
-	Msg    string        `json:"msg" example:""`
+	Status string              `json:"status" example:"ok"`
+	Msg    string              `json:"msg" example:""`
 	Data   []object.Invitation `json:"data"`
-	Data2  int           `json:"data2" example:"10"`
+	Data2  int                 `json:"data2" example:"10"`
 }
 
 // InvitationResponse represents the response for single invitation APIs
 type InvitationResponse struct {
-	Status string       `json:"status" example:"ok"`
-	Msg    string       `json:"msg" example:""`
-	Data   object.Invitation  `json:"data"`
+	Status string            `json:"status" example:"ok"`
+	Msg    string            `json:"msg" example:""`
+	Data   object.Invitation `json:"data"`
 }
-
 
 // GetInvitations
 // @Summary GetInvitations

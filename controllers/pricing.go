@@ -24,19 +24,18 @@ import (
 
 // PricingListResponse represents the response for pricing list APIs
 type PricingListResponse struct {
-	Status string        `json:"status" example:"ok"`
-	Msg    string        `json:"msg" example:""`
+	Status string           `json:"status" example:"ok"`
+	Msg    string           `json:"msg" example:""`
 	Data   []object.Pricing `json:"data"`
-	Data2  int           `json:"data2" example:"10"`
+	Data2  int              `json:"data2" example:"10"`
 }
 
 // PricingResponse represents the response for single pricing APIs
 type PricingResponse struct {
-	Status string       `json:"status" example:"ok"`
-	Msg    string       `json:"msg" example:""`
-	Data   object.Pricing  `json:"data"`
+	Status string         `json:"status" example:"ok"`
+	Msg    string         `json:"msg" example:""`
+	Data   object.Pricing `json:"data"`
 }
-
 
 // GetPricings
 // @Summary GetPricings
