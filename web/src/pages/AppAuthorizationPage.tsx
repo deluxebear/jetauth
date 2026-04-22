@@ -9,6 +9,7 @@ import BizAppResourceTab from "../components/BizAppResourceTab";
 import BizSchemaEditor from "../components/BizSchemaEditor";
 import BizTupleManager from "../components/BizTupleManager";
 import BizReBACTester from "../components/BizReBACTester";
+import BizIntegrationTab from "../components/BizIntegrationTab";
 import { useTranslation } from "../i18n";
 import { useModal } from "../components/Modal";
 import * as BizBackend from "../backend/BizBackend";
@@ -2231,11 +2232,6 @@ function RebacTesterTab({ appId, t: _t }: { appId: string; t: (k: any) => string
   return <BizReBACTester appId={appId} />;
 }
 
-function RebacIntegrationTab({ appId: _appId, t }: { appId: string; t: (k: any) => string }) {
-  return (
-    <RebacStubPanel
-      label={t("rebac.tab.integration")}
-      hint="CP-7 Task 9: Go / TypeScript / Python SDK snippets with copy-to-clipboard."
-    />
-  );
+function RebacIntegrationTab({ appId, t: _t }: { appId: string; t: (k: any) => string }) {
+  return <BizIntegrationTab appId={appId} />;
 }
