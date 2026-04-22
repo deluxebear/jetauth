@@ -360,12 +360,18 @@ function QuickCreateWizard({ open, onClose, onCreated, existingAppNames }: {
   const [loadingApps, setLoadingApps] = useState(false);
   const [selectedApp, setSelectedApp] = useState<Application | null>(null);
 
-  // Step 1: Model selection
+  // Step 1: Authorization model type — RBAC (Casbin, legacy) vs ReBAC
+  // (OpenFGA-style). The picked value drives the remaining steps:
+  // ReBAC skips modelText + policyTable entirely; the schema is saved
+  // post-create via the ReBAC Schema tab (spec §8.1).
+  const [modelType, setModelType] = useState<"casbin" | "rebac">("casbin");
+
+  // Step 2 (casbin only): Model selection
   const [selectedPreset, setSelectedPreset] = useState<string>("rbac-api");
   const [modelText, setModelText] = useState(DEFAULT_RBAC_MODEL);
   const [showCustomEditor, setShowCustomEditor] = useState(false);
 
-  // Step 2: Policy table name
+  // Step 3 (casbin only): Policy table name
   const [policyTable, setPolicyTable] = useState("");
 
   const orgName = getNewEntityOwner();
@@ -374,6 +380,7 @@ function QuickCreateWizard({ open, onClose, onCreated, existingAppNames }: {
     if (!open) return;
     setStep(0);
     setSelectedApp(null);
+    setModelType("casbin");
     setSelectedPreset("rbac-api");
     setModelText(DEFAULT_RBAC_MODEL);
     setShowCustomEditor(false);
@@ -414,8 +421,15 @@ function QuickCreateWizard({ open, onClose, onCreated, existingAppNames }: {
         updatedTime: new Date().toISOString(),
         displayName: selectedApp.displayName || selectedApp.name,
         description: "",
-        modelText,
-        policyTable: policyTable || `biz_${selectedApp.name.replace(/-/g, "_")}_policy`,
+        modelType,
+        // ReBAC apps don't consume modelText or policyTable; send empty
+        // strings so the row stays well-shaped without writing Casbin
+        // artefacts. Casbin path is unchanged.
+        modelText: modelType === "rebac" ? "" : modelText,
+        policyTable:
+          modelType === "rebac"
+            ? ""
+            : policyTable || `biz_${selectedApp.name.replace(/-/g, "_")}_policy`,
         isEnabled: true,
       };
 
@@ -435,23 +449,36 @@ function QuickCreateWizard({ open, onClose, onCreated, existingAppNames }: {
     }
   };
 
+  // Step flow:
+  //   0 → select app
+  //   1 → pick modelType (casbin | rebac)
+  //   2 → (casbin only) choose modelText
+  //   3 → (casbin only) name the policy table
+  // ReBAC short-circuits from step 1 directly to create.
+  const lastStep = modelType === "rebac" ? 1 : 3;
+
   const canProceed = () => {
     if (step === 0) return !!selectedApp;
-    if (step === 1) return !!modelText.trim();
-    if (step === 2) return !!policyTable.trim();
+    if (step === 1) return true;
+    if (step === 2) return !!modelText.trim();
+    if (step === 3) return !!policyTable.trim();
     return false;
   };
 
   const handleNext = () => {
-    if (step < 2) setStep(step + 1);
+    if (step < lastStep) setStep(step + 1);
     else handleCreate();
   };
 
-  const stepLabels = [
-    t("authz.wizard.selectApp" as any),
-    t("authz.wizard.modelText" as any),
-    t("authz.wizard.policyTableName" as any),
-  ];
+  const stepLabels =
+    modelType === "rebac"
+      ? [t("authz.wizard.selectApp" as any), t("rebac.wizard.modelType.title")]
+      : [
+          t("authz.wizard.selectApp" as any),
+          t("rebac.wizard.modelType.title"),
+          t("authz.wizard.modelText" as any),
+          t("authz.wizard.policyTableName" as any),
+        ];
 
   return (
     <AnimatePresence>
@@ -554,7 +581,70 @@ function QuickCreateWizard({ open, onClose, onCreated, existingAppNames }: {
               )}
 
               {step === 1 && (
-                /* ═══ Step 1: Model Selection ═══ */
+                /* ═══ Step 1: Model Type (RBAC vs ReBAC) ═══ */
+                <div className="space-y-2">
+                  <p className="text-[12px] text-text-muted mb-2">
+                    {t("rebac.wizard.modelType.title")}
+                  </p>
+                  {(["casbin", "rebac"] as const).map((mt) => {
+                    const title =
+                      mt === "casbin"
+                        ? t("rebac.wizard.modelType.rbac.title")
+                        : t("rebac.wizard.modelType.rebac.title");
+                    const desc =
+                      mt === "casbin"
+                        ? t("rebac.wizard.modelType.rbac.desc")
+                        : t("rebac.wizard.modelType.rebac.desc");
+                    const tip =
+                      mt === "casbin"
+                        ? t("rebac.wizard.modelType.rbac.tip")
+                        : t("rebac.wizard.modelType.rebac.tip");
+                    const selected = modelType === mt;
+                    return (
+                      <button
+                        key={mt}
+                        type="button"
+                        onClick={() => setModelType(mt)}
+                        className={`w-full text-left rounded-lg border px-4 py-3 transition-all ${
+                          selected
+                            ? "border-accent bg-accent/5 ring-1 ring-accent/20"
+                            : "border-border hover:border-accent/40 hover:bg-surface-2"
+                        }`}
+                      >
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-[13px] font-semibold text-text-primary">
+                            {title}
+                          </span>
+                          {selected && (
+                            <div className="ml-auto w-4 h-4 rounded-full bg-accent flex items-center justify-center flex-shrink-0">
+                              <svg
+                                width="10"
+                                height="10"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="3"
+                                className="text-white"
+                              >
+                                <path d="M20 6L9 17l-5-5" />
+                              </svg>
+                            </div>
+                          )}
+                        </div>
+                        <p className="text-[12px] text-text-secondary leading-relaxed">
+                          {desc}
+                        </p>
+                        <p className="text-[11px] text-text-muted mt-1">
+                          {tip}
+                        </p>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+
+              {step === 2 && (
+                /* ═══ Step 2: Model Selection (Casbin only) ═══ */
                 <div className="space-y-3">
                   <div className="space-y-2 max-h-[340px] overflow-y-auto pr-1">
                     {MODEL_PRESETS.map((preset) => (
@@ -619,8 +709,8 @@ function QuickCreateWizard({ open, onClose, onCreated, existingAppNames }: {
                 </div>
               )}
 
-              {step === 2 && (
-                /* ═══ Step 2: Policy Table Name ═══ */
+              {step === 3 && (
+                /* ═══ Step 3: Policy Table Name (Casbin only) ═══ */
                 <div className="space-y-4">
                   <div>
                     <label className="block text-[12px] font-semibold text-text-primary mb-1.5">
@@ -686,7 +776,7 @@ function QuickCreateWizard({ open, onClose, onCreated, existingAppNames }: {
                     disabled={!canProceed()}
                     className="flex items-center gap-1 rounded-lg bg-accent px-5 py-2 text-[12px] font-semibold text-white hover:bg-accent-hover disabled:opacity-40 transition-colors"
                   >
-                    {step < 2 ? (
+                    {step < lastStep ? (
                       <>
                         {t("common.next" as any)}
                         <ChevronRight size={14} />
