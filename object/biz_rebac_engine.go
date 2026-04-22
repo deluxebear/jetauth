@@ -17,6 +17,7 @@
 package object
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 	"sync"
@@ -25,6 +26,15 @@ import (
 	openfgav1 "github.com/openfga/api/proto/openfga/v1"
 	"golang.org/x/sync/errgroup"
 )
+
+// errSchemaMissing is surfaced by findRelation when the requested object
+// type or relation isn't defined in the loaded authorization model. The
+// top-level dispatcher bubbles it up so clients see a 400-style message;
+// tuple_to_userset and `this`'s userset-expansion path intercept it with
+// errors.Is and treat "missing" as "this branch doesn't contribute" — a
+// polymorphic parent (e.g. `parent: [document, folder]` where only folder
+// defines viewer) is a normal case, not an error.
+var errSchemaMissing = errors.New("rebac: schema-missing")
 
 // maxResolutionDepth caps recursive evaluation at the OpenFGA reference
 // default (spec §6.1). Hitting the cap returns an error rather than false so
@@ -149,15 +159,15 @@ func findRelation(model *openfgav1.AuthorizationModel, objectType, relation stri
 		}
 		rels := td.GetRelations()
 		if len(rels) == 0 {
-			return nil, fmt.Errorf("rebac: object type %q has no relations defined", objectType)
+			return nil, fmt.Errorf("%w: object type %q has no relations defined", errSchemaMissing, objectType)
 		}
 		u, ok := rels[relation]
 		if !ok {
-			return nil, fmt.Errorf("rebac: relation %q not defined on object type %q", relation, objectType)
+			return nil, fmt.Errorf("%w: relation %q not defined on object type %q", errSchemaMissing, relation, objectType)
 		}
 		return u, nil
 	}
-	return nil, fmt.Errorf("rebac: object type %q not in schema", objectType)
+	return nil, fmt.Errorf("%w: object type %q not in schema", errSchemaMissing, objectType)
 }
 
 // check is the central dispatcher for a single Check step: it enforces the
@@ -229,86 +239,69 @@ func (ctx *checkContext) evaluate(userset *openfgav1.Userset, key TupleKey, dept
 	}
 }
 
-// matchesContextualTuple reports whether any of the caller-supplied
-// contextual tuples directly satisfies key. Respects wildcard rows the same
-// way DB rows are respected: a `user:*` contextual tuple grants to every
-// plain `user:<id>` caller, but never to a userset caller (type:id#relation)
-// nor to the self-wildcard `user:*` caller itself.
+// checkThis resolves the `this` rewrite — a direct-tuple grant. It scans
+// every tuple on (object, relation) and tests each user against the
+// caller:
 //
-// Extracted as a pure helper so the wildcard semantics can be unit-tested
-// without a database — DB coverage for checkThis proper lives in
-// biz_rebac_engine_db_test.go under the !skipCi tag.
-func matchesContextualTuple(contextual []TupleKey, key TupleKey) bool {
-	if len(contextual) == 0 {
-		return false
-	}
-	userType, userId, userRel, err := parseUserString(key.User)
-	if err != nil {
-		return false
-	}
-	isUserset := userRel != ""
-	isSelfWildcard := userId == "*"
-	wildcard := userType + ":*"
-
-	for _, t := range contextual {
-		if t.Object != key.Object || t.Relation != key.Relation {
-			continue
-		}
-		if t.User == key.User {
-			return true
-		}
-		if !isSelfWildcard && !isUserset && t.User == wildcard {
-			return true
-		}
-	}
-	return false
-}
-
-// checkThis resolves the `this` rewrite — a direct tuple grant. It looks
-// at (contextual tuples first, then DB) for an exact (object, relation,
-// user) row, and separately for a type-wide wildcard row `{userType}:*`
-// when the caller is a plain user. `this` is a leaf rewrite so depth is
-// irrelevant and not checked here.
+//   - plain match (`user:alice` grants `user:alice`) → true
+//   - type-wide wildcard (`user:*` grants any `user:<id>`) → true
+//   - userset reference (`team:eng#member` grants anyone who is an
+//     `eng` team member) → recurse into the referenced userset
+//
+// Contextual tuples are folded in first via tuplesetUsers (spec §6.1).
+// Wildcard rows only expand to plain-user callers — a userset subject or
+// the self-wildcard are never granted by a `{type}:*` row. Userset
+// expansion bumps depth so a malformed schema looping on itself can't
+// outrun the cap.
 func (ctx *checkContext) checkThis(key TupleKey, depth int) (bool, error) {
-	_ = depth
-
 	userType, userId, userRel, err := parseUserString(key.User)
 	if err != nil {
 		return false, fmt.Errorf("rebac: parse user: %w", err)
 	}
 	isUserset := userRel != ""
 	isSelfWildcard := userId == "*"
+	wildcardUser := userType + ":*"
 
-	if matchesContextualTuple(ctx.contextual, key) {
-		return true, nil
-	}
-
-	owner, appName, err := parseStoreId(ctx.storeId)
+	users, err := ctx.tuplesetUsers(key.Object, key.Relation)
 	if err != nil {
 		return false, err
 	}
 
-	exact, err := ReadBizTuples(owner, appName, key.Object, key.Relation, key.User)
-	if err != nil {
-		return false, fmt.Errorf("rebac: read tuples: %w", err)
-	}
-	if len(exact) > 0 {
-		return true, nil
-	}
-
-	// Wildcard rows only expand to plain-user callers. A userset subject
-	// or the self-wildcard are never granted by a `{type}:*` row.
-	if !isSelfWildcard && !isUserset {
-		wildcardUser := userType + ":*"
-		wc, err := ReadBizTuples(owner, appName, key.Object, key.Relation, wildcardUser)
-		if err != nil {
-			return false, fmt.Errorf("rebac: read wildcard tuples: %w", err)
-		}
-		if len(wc) > 0 {
+	for _, u := range users {
+		if u == key.User {
 			return true, nil
 		}
+		if !isSelfWildcard && !isUserset && u == wildcardUser {
+			return true, nil
+		}
+		// Userset expansion. `team:eng#member` means "whoever has `member`
+		// on `team:eng`". Only rows with a `#relation` suffix qualify;
+		// plain type:id rows were handled by the exact-match check above.
+		if hashIdx := strings.LastIndex(u, "#"); hashIdx > 0 {
+			rowObj := u[:hashIdx]
+			rowRel := u[hashIdx+1:]
+			if rowRel == "" {
+				continue
+			}
+			allowed, err := ctx.check(TupleKey{
+				Object:   rowObj,
+				Relation: rowRel,
+				User:     key.User,
+			}, depth+1)
+			if err != nil {
+				// Same polymorphic-skip logic as tuple_to_userset: a
+				// userset reference into a type that doesn't define the
+				// relation means "no grant from here", not a fatal error.
+				if errors.Is(err, errSchemaMissing) {
+					continue
+				}
+				return false, err
+			}
+			if allowed {
+				return true, nil
+			}
+		}
 	}
-
 	return false, nil
 }
 
@@ -375,6 +368,12 @@ func (ctx *checkContext) checkTupleToUserset(key TupleKey, ttu *openfgav1.TupleT
 			User:     key.User,
 		}, depth+1)
 		if err != nil {
+			// A polymorphic parent (parent: [document, folder]) whose
+			// concrete type doesn't define the computed relation isn't
+			// an error — the branch simply doesn't contribute.
+			if errors.Is(err, errSchemaMissing) {
+				continue
+			}
 			return false, err
 		}
 		if allowed {
