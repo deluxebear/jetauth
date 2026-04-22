@@ -100,6 +100,182 @@ func TestResolveAuthorizationModel_UnknownId(t *testing.T) {
 	}
 }
 
+// --- checkThis (Task 4) end-to-end ----------------------------------------
+
+// seedThisApp creates a ReBAC BizAppConfig, saves minimalDSL as the
+// authorization model, and returns (storeId, modelId). Used by every
+// TestCheck_This_* case.
+func seedThisApp(t *testing.T) (storeId, modelId string) {
+	t.Helper()
+	owner := "rebac-it-" + util.GenerateUUID()[:8]
+	appName := "app_check_this"
+	seedRebacAppConfigForTest(t, owner, appName)
+	res, err := SaveAuthorizationModel(owner, appName, minimalDSL, "test-user")
+	if err != nil || res.Outcome != SaveOutcomeAdvanced {
+		t.Fatalf("save minimalDSL: err=%v outcome=%v", err, res)
+	}
+	return BuildStoreId(owner, appName), res.AuthorizationModelId
+}
+
+func TestCheck_This_ExactMatch(t *testing.T) {
+	if ormer == nil {
+		t.Skip("ormer not initialised (test needs DB)")
+	}
+	storeId, modelId := seedThisApp(t)
+	owner, appName, _ := parseStoreId(storeId)
+
+	if _, err := AddBizTuples([]*BizTuple{{
+		Owner:                owner,
+		AppName:              appName,
+		Object:               "document:d1",
+		Relation:             "viewer",
+		User:                 "user:alice",
+		AuthorizationModelId: modelId,
+	}}); err != nil {
+		t.Fatalf("write tuple: %v", err)
+	}
+
+	res, err := ReBACCheck(&CheckRequest{
+		StoreId:              storeId,
+		AuthorizationModelId: modelId,
+		TupleKey:             TupleKey{Object: "document:d1", Relation: "viewer", User: "user:alice"},
+	})
+	if err != nil {
+		t.Fatalf("check: %v", err)
+	}
+	if !res.Allowed {
+		t.Fatalf("want allowed, got denied")
+	}
+}
+
+func TestCheck_This_NoMatch(t *testing.T) {
+	if ormer == nil {
+		t.Skip("ormer not initialised (test needs DB)")
+	}
+	storeId, modelId := seedThisApp(t)
+
+	res, err := ReBACCheck(&CheckRequest{
+		StoreId:              storeId,
+		AuthorizationModelId: modelId,
+		TupleKey:             TupleKey{Object: "document:d1", Relation: "viewer", User: "user:bob"},
+	})
+	if err != nil {
+		t.Fatalf("check: %v", err)
+	}
+	if res.Allowed {
+		t.Fatalf("want denied, got allowed")
+	}
+}
+
+func TestCheck_This_WildcardGrantsPlainUser(t *testing.T) {
+	if ormer == nil {
+		t.Skip("ormer not initialised (test needs DB)")
+	}
+	storeId, modelId := seedThisApp(t)
+	owner, appName, _ := parseStoreId(storeId)
+
+	if _, err := AddBizTuples([]*BizTuple{{
+		Owner: owner, AppName: appName,
+		Object: "document:d1", Relation: "viewer", User: "user:*",
+		AuthorizationModelId: modelId,
+	}}); err != nil {
+		t.Fatalf("write wildcard: %v", err)
+	}
+
+	res, err := ReBACCheck(&CheckRequest{
+		StoreId: storeId, AuthorizationModelId: modelId,
+		TupleKey: TupleKey{Object: "document:d1", Relation: "viewer", User: "user:anyone"},
+	})
+	if err != nil {
+		t.Fatalf("check: %v", err)
+	}
+	if !res.Allowed {
+		t.Fatalf("user:* should grant user:anyone, got denied")
+	}
+}
+
+func TestCheck_This_WildcardDoesNotCrossType(t *testing.T) {
+	if ormer == nil {
+		t.Skip("ormer not initialised (test needs DB)")
+	}
+	storeId, modelId := seedThisApp(t)
+	owner, appName, _ := parseStoreId(storeId)
+
+	if _, err := AddBizTuples([]*BizTuple{{
+		Owner: owner, AppName: appName,
+		Object: "document:d1", Relation: "viewer", User: "team:*",
+		AuthorizationModelId: modelId,
+	}}); err != nil {
+		t.Fatalf("write wildcard: %v", err)
+	}
+
+	res, err := ReBACCheck(&CheckRequest{
+		StoreId: storeId, AuthorizationModelId: modelId,
+		TupleKey: TupleKey{Object: "document:d1", Relation: "viewer", User: "user:alice"},
+	})
+	if err != nil {
+		t.Fatalf("check: %v", err)
+	}
+	if res.Allowed {
+		t.Fatalf("team:* must not grant user:alice, got allowed")
+	}
+}
+
+func TestCheck_This_ContextualTuple(t *testing.T) {
+	if ormer == nil {
+		t.Skip("ormer not initialised (test needs DB)")
+	}
+	storeId, modelId := seedThisApp(t)
+
+	// No DB tuple — but contextual says allow.
+	res, err := ReBACCheck(&CheckRequest{
+		StoreId: storeId, AuthorizationModelId: modelId,
+		TupleKey: TupleKey{Object: "document:d1", Relation: "viewer", User: "user:alice"},
+		ContextualTuples: []TupleKey{
+			{Object: "document:d1", Relation: "viewer", User: "user:alice"},
+		},
+	})
+	if err != nil {
+		t.Fatalf("check: %v", err)
+	}
+	if !res.Allowed {
+		t.Fatalf("contextual tuple must grant, got denied")
+	}
+}
+
+func TestCheck_This_CrossStoreIsolation(t *testing.T) {
+	if ormer == nil {
+		t.Skip("ormer not initialised (test needs DB)")
+	}
+
+	// Store A has a matching tuple.
+	storeA, modelA := seedThisApp(t)
+	ownerA, appA, _ := parseStoreId(storeA)
+	if _, err := AddBizTuples([]*BizTuple{{
+		Owner: ownerA, AppName: appA,
+		Object: "document:d1", Relation: "viewer", User: "user:alice",
+		AuthorizationModelId: modelA,
+	}}); err != nil {
+		t.Fatalf("seed A tuple: %v", err)
+	}
+
+	// Store B — separate, no tuple.
+	storeB, modelB := seedThisApp(t)
+
+	res, err := ReBACCheck(&CheckRequest{
+		StoreId: storeB, AuthorizationModelId: modelB,
+		TupleKey: TupleKey{Object: "document:d1", Relation: "viewer", User: "user:alice"},
+	})
+	if err != nil {
+		t.Fatalf("check B: %v", err)
+	}
+	if res.Allowed {
+		t.Fatalf("store B must not see store A's tuple, got allowed")
+	}
+}
+
+// --- resolveAuthorizationModel (Task 2) end-to-end --------------------------
+
 // TestResolveAuthorizationModel_CrossStore verifies a model id that belongs
 // to a different store collapses to "not found" — the caller must not be
 // able to probe another tenant's model-id namespace (spec §7.2).

@@ -131,15 +131,72 @@ func TestCheck_MemoHit(t *testing.T) {
 	}
 }
 
-// TestCheck_ThisStubFires confirms the dispatcher actually routes to
-// checkThis when the schema's rewrite is a plain direct userset. The stub
-// currently errors with "not implemented (CP-3 Task 4)"; Task 4 replaces
-// this test's expectation with the real outcome.
-func TestCheck_ThisStubFires(t *testing.T) {
-	ctx := dispatchTestCtx(t, minimalDSL) // define viewer: [user] = `this`
-	_, err := ctx.check(TupleKey{Object: "document:d1", Relation: "viewer", User: "user:a"}, 0)
-	if err == nil || !strings.Contains(err.Error(), "'this' rewrite not implemented") {
-		t.Fatalf("want dispatcher to reach `this` stub, got: %v", err)
+// TestMatchesContextualTuple covers the wildcard / userset / irrelevant-key
+// edges for the pure helper that powers checkThis's first-pass scan. DB-
+// backed verification of the full checkThis path lives in
+// biz_rebac_engine_db_test.go.
+func TestMatchesContextualTuple(t *testing.T) {
+	cases := []struct {
+		name     string
+		ctuples  []TupleKey
+		key      TupleKey
+		want     bool
+	}{
+		{
+			name:    "exact plain match",
+			ctuples: []TupleKey{{Object: "document:d1", Relation: "viewer", User: "user:alice"}},
+			key:     TupleKey{Object: "document:d1", Relation: "viewer", User: "user:alice"},
+			want:    true,
+		},
+		{
+			name:    "wildcard expands to plain user of same type",
+			ctuples: []TupleKey{{Object: "document:d1", Relation: "viewer", User: "user:*"}},
+			key:     TupleKey{Object: "document:d1", Relation: "viewer", User: "user:alice"},
+			want:    true,
+		},
+		{
+			name:    "wildcard does not cross to a different type",
+			ctuples: []TupleKey{{Object: "document:d1", Relation: "viewer", User: "team:*"}},
+			key:     TupleKey{Object: "document:d1", Relation: "viewer", User: "user:alice"},
+			want:    false,
+		},
+		{
+			name:    "wildcard does not grant a userset subject",
+			ctuples: []TupleKey{{Object: "document:d1", Relation: "viewer", User: "user:*"}},
+			key:     TupleKey{Object: "document:d1", Relation: "viewer", User: "team:eng#member"},
+			want:    false,
+		},
+		{
+			name:    "different object is ignored",
+			ctuples: []TupleKey{{Object: "document:d2", Relation: "viewer", User: "user:alice"}},
+			key:     TupleKey{Object: "document:d1", Relation: "viewer", User: "user:alice"},
+			want:    false,
+		},
+		{
+			name:    "different relation is ignored",
+			ctuples: []TupleKey{{Object: "document:d1", Relation: "editor", User: "user:alice"}},
+			key:     TupleKey{Object: "document:d1", Relation: "viewer", User: "user:alice"},
+			want:    false,
+		},
+		{
+			name:    "empty contextual returns false fast",
+			ctuples: nil,
+			key:     TupleKey{Object: "document:d1", Relation: "viewer", User: "user:alice"},
+			want:    false,
+		},
+		{
+			name:    "malformed user returns false, not panic",
+			ctuples: []TupleKey{{Object: "document:d1", Relation: "viewer", User: "user:alice"}},
+			key:     TupleKey{Object: "document:d1", Relation: "viewer", User: "bad-no-colon"},
+			want:    false,
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := matchesContextualTuple(tc.ctuples, tc.key); got != tc.want {
+				t.Fatalf("matchesContextualTuple = %v, want %v", got, tc.want)
+			}
+		})
 	}
 }
 

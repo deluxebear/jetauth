@@ -215,10 +215,87 @@ func (ctx *checkContext) evaluate(userset *openfgav1.Userset, key TupleKey, dept
 	}
 }
 
-// checkThis — Task 4.
+// matchesContextualTuple reports whether any of the caller-supplied
+// contextual tuples directly satisfies key. Respects wildcard rows the same
+// way DB rows are respected: a `user:*` contextual tuple grants to every
+// plain `user:<id>` caller, but never to a userset caller (type:id#relation)
+// nor to the self-wildcard `user:*` caller itself.
+//
+// Extracted as a pure helper so the wildcard semantics can be unit-tested
+// without a database — DB coverage for checkThis proper lives in
+// biz_rebac_engine_db_test.go under the !skipCi tag.
+func matchesContextualTuple(contextual []TupleKey, key TupleKey) bool {
+	if len(contextual) == 0 {
+		return false
+	}
+	userType, userId, userRel, err := parseUserString(key.User)
+	if err != nil {
+		return false
+	}
+	isUserset := userRel != ""
+	isSelfWildcard := userId == "*"
+	wildcard := userType + ":*"
+
+	for _, t := range contextual {
+		if t.Object != key.Object || t.Relation != key.Relation {
+			continue
+		}
+		if t.User == key.User {
+			return true
+		}
+		if !isSelfWildcard && !isUserset && t.User == wildcard {
+			return true
+		}
+	}
+	return false
+}
+
+// checkThis resolves the `this` rewrite — a direct tuple grant. It looks
+// at (contextual tuples first, then DB) for an exact (object, relation,
+// user) row, and separately for a type-wide wildcard row `{userType}:*`
+// when the caller is a plain user. `this` is a leaf rewrite so depth is
+// irrelevant and not checked here.
 func (ctx *checkContext) checkThis(key TupleKey, depth int) (bool, error) {
 	_ = depth
-	return false, fmt.Errorf("rebac: 'this' rewrite not implemented (CP-3 Task 4) for %s#%s", key.Object, key.Relation)
+
+	userType, userId, userRel, err := parseUserString(key.User)
+	if err != nil {
+		return false, fmt.Errorf("rebac: parse user: %w", err)
+	}
+	isUserset := userRel != ""
+	isSelfWildcard := userId == "*"
+
+	if matchesContextualTuple(ctx.contextual, key) {
+		return true, nil
+	}
+
+	owner, appName, err := parseStoreId(ctx.storeId)
+	if err != nil {
+		return false, err
+	}
+
+	exact, err := ReadBizTuples(owner, appName, key.Object, key.Relation, key.User)
+	if err != nil {
+		return false, fmt.Errorf("rebac: read tuples: %w", err)
+	}
+	if len(exact) > 0 {
+		return true, nil
+	}
+
+	// Wildcard rows only expand to plain-user callers. A userset subject
+	// or the self-wildcard are never granted by a `{type}:*` row.
+	if !isSelfWildcard && !isUserset {
+		wildcardUser := userType + ":*"
+		wc, err := ReadBizTuples(owner, appName, key.Object, key.Relation, wildcardUser)
+		if err != nil {
+			return false, fmt.Errorf("rebac: read wildcard tuples: %w", err)
+		}
+		if len(wc) > 0 {
+			return true, nil
+		}
+	}
+
+	return false, nil
 }
 
 // checkComputedUserset — Task 5.
