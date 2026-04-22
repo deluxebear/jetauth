@@ -724,8 +724,9 @@ func (c *Client) applyResponse(resp WatchResponse) {
 
 - [ ] `BizEnforce` / `BizBatchEnforce` 按 `config.ModelType` 路由到 Casbin 或 ReBAC 引擎
 - [ ] 新增路由：`biz-write-tuples` / `biz-delete-tuples` / `biz-read-tuples`
-- [ ] 新增路由：`biz-list-objects` / `biz-list-users`
-- [ ] 新增路由：`biz-expand`（展开关系树，调试用）
+- [x] 新增路由：`biz-check` / `biz-batch-check` (CP-4)
+- [ ] 新增路由：`biz-list-objects` / `biz-list-users` (CP-5)
+- [ ] 新增路由：`biz-expand`（展开关系树，调试用）(CP-5)
 - [ ] ReBAC 模式下适配 `biz-get-user-roles` / `biz-get-user-permissions`
 
 ### P4: 前端 Schema + Tuple（3-4 天）
