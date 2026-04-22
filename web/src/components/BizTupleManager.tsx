@@ -6,13 +6,6 @@ import { useModal } from "./Modal";
 import * as BizBackend from "../backend/BizBackend";
 import type { BizTuple, BizWriteTuplesRequest } from "../backend/BizBackend";
 
-// DataTable's generic constraint is `T extends Record<string, unknown>`.
-// Interfaces (like BizTuple) don't carry an implicit index signature,
-// so TS rejects them even though the shape is compatible. Widening the
-// row type with `& Record<string, unknown>` satisfies the constraint
-// without touching the source interface.
-type TupleRow = BizTuple & Record<string, unknown>;
-
 // BizTupleManager — Task 7. List + filter + add + bulk import + bulk
 // delete of (object, relation, user) tuples for one ReBAC app. The
 // backend does full schema validation on write, so we don't duplicate
@@ -41,7 +34,7 @@ export default function BizTupleManager({ appId }: Props) {
   const { t } = useTranslation();
   const modal = useModal();
 
-  const [tuples, setTuples] = useState<TupleRow[]>([]);
+  const [tuples, setTuples] = useState<BizTuple[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState({ object: "", relation: "", user: "" });
   const [addOpen, setAddOpen] = useState(false);
@@ -52,7 +45,7 @@ export default function BizTupleManager({ appId }: Props) {
     try {
       const res = await BizBackend.readBizTuples(appId, filter);
       if (res.status === "ok" && Array.isArray(res.data)) {
-        setTuples(res.data as TupleRow[]);
+        setTuples(res.data);
       } else {
         modal.toast(res.msg || t("rebac.common.error"), "error");
       }
@@ -66,7 +59,7 @@ export default function BizTupleManager({ appId }: Props) {
   }, [refresh]);
 
   const handleDelete = useCallback(
-    async (rows: TupleRow[]) => {
+    async (rows: BizTuple[]) => {
       if (rows.length === 0) return;
       const req: BizWriteTuplesRequest = {
         appId,
@@ -94,7 +87,7 @@ export default function BizTupleManager({ appId }: Props) {
     [appId, modal, refresh, t],
   );
 
-  const columns = useMemo<Column<TupleRow>[]>(
+  const columns = useMemo<Column<BizTuple>[]>(
     () => [
       {
         key: "object",
@@ -152,7 +145,7 @@ export default function BizTupleManager({ appId }: Props) {
   );
 
   const rowKey = useCallback(
-    (r: TupleRow) => `${r.object}|${r.relation}|${r.user}`,
+    (r: BizTuple) => `${r.object}|${r.relation}|${r.user}`,
     [],
   );
 
