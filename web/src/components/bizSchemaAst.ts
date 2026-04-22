@@ -255,56 +255,57 @@ export function serializeAstToDsl(ast: SchemaAST): string {
   return lines.join("\n") + "\n";
 }
 
-// The DSL puts type restrictions inside the square brackets that
-// accompany `this` / a bare `[...]` list. Other rewrites (union,
-// intersection, etc.) don't take restrictions; the list is emitted
-// only when the rewrite evaluates to a direct `this`.
 function renderRelationBody(rel: RelationDef): string {
-  return renderRewriteWithRestrictions(rel.rewrite, rel.typeRestrictions);
+  return renderRewriteWithRestrictions(rel.rewrite, rel.typeRestrictions, true);
 }
 
+// renderRewriteWithRestrictions emits DSL for a rewrite tree. Because
+// OpenFGA's `directly_related_user_types` is a flat list attached to
+// the relation (not per-node), every `this` encountered during the
+// walk — no matter how deep — gets the same restriction list. That's
+// why restrictions thread through every branch rather than only the
+// top-level `this` (review finding R5: a prior version short-circuited
+// only on direct children of `difference`, silently dropping
+// restrictions from shapes like `(this or admin) but not banned`).
+//
+// `topLevel` controls parenthesisation: OpenFGA DSL mixes `or`/`and`/
+// `but not` with a defined precedence, but the safe authoring rule is
+// to parenthesise any nested composite — that's what the parser round-
+// trips through without ambiguity.
 function renderRewriteWithRestrictions(
   node: RewriteNode,
   restrictions: TypeRestriction[],
+  topLevel: boolean,
 ): string {
-  if (node.kind === "this") {
-    return renderRestrictions(restrictions);
-  }
-  if (node.kind === "union" || node.kind === "intersection") {
-    // `this` as one branch of a union/intersection carries the
-    // restriction list in its slot; other branches emit normally.
-    const kw = node.kind === "union" ? " or " : " and ";
-    const parts = node.children.map((c) =>
-      c.kind === "this"
-        ? renderRestrictions(restrictions)
-        : renderRewriteAtom(c),
-    );
-    return parts.join(kw);
-  }
-  if (node.kind === "difference") {
-    const base =
-      node.base.kind === "this"
-        ? renderRestrictions(restrictions)
-        : renderRewriteAtom(node.base);
-    return `${base} but not ${renderRewriteAtom(node.subtract)}`;
-  }
-  return renderRewriteAtom(node);
-}
-
-function renderRewriteAtom(node: RewriteNode): string {
   switch (node.kind) {
     case "this":
-      return "[]";
+      return renderRestrictions(restrictions);
     case "computedUserset":
       return node.relation || "_unset_";
     case "tupleToUserset":
       return `${node.computedUserset || "_unset_"} from ${node.tupleset || "_unset_"}`;
-    case "union":
-      return `(${node.children.map(renderRewriteAtom).join(" or ")})`;
-    case "intersection":
-      return `(${node.children.map(renderRewriteAtom).join(" and ")})`;
-    case "difference":
-      return `(${renderRewriteAtom(node.base)} but not ${renderRewriteAtom(node.subtract)})`;
+    case "union": {
+      const body = node.children
+        .map((c) => renderRewriteWithRestrictions(c, restrictions, false))
+        .join(" or ");
+      return topLevel ? body : `(${body})`;
+    }
+    case "intersection": {
+      const body = node.children
+        .map((c) => renderRewriteWithRestrictions(c, restrictions, false))
+        .join(" and ");
+      return topLevel ? body : `(${body})`;
+    }
+    case "difference": {
+      const base = renderRewriteWithRestrictions(node.base, restrictions, false);
+      const subtract = renderRewriteWithRestrictions(
+        node.subtract,
+        restrictions,
+        false,
+      );
+      const body = `${base} but not ${subtract}`;
+      return topLevel ? body : `(${body})`;
+    }
   }
 }
 
@@ -463,33 +464,3 @@ function parseRelationReference(ref: RawRelationReference): TypeRestriction {
     : { kind: "direct", type };
 }
 
-// Short display strings for the rewrite placeholder (Task 5b replaces
-// this with a real editor). Kept here so Task 5a's component is a pure
-// renderer — no switch statements in JSX.
-export function formatRewriteSummary(node: RewriteNode): string {
-  switch (node.kind) {
-    case "this":
-      return "this";
-    case "computedUserset":
-      return `computed_userset(${node.relation || "?"})`;
-    case "tupleToUserset":
-      return `tuple_to_userset(${node.tupleset || "?"} → ${node.computedUserset || "?"})`;
-    case "union":
-      return `union [${node.children.length}]`;
-    case "intersection":
-      return `intersection [${node.children.length}]`;
-    case "difference":
-      return "difference";
-  }
-}
-
-export function formatTypeRestrictionSummary(r: TypeRestriction): string {
-  switch (r.kind) {
-    case "direct":
-      return r.condition ? `${r.type} with ${r.condition}` : r.type;
-    case "wildcard":
-      return `${r.type}:*`;
-    case "userset":
-      return `${r.type}#${r.relation}`;
-  }
-}
