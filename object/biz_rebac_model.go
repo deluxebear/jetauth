@@ -171,6 +171,50 @@ type SaveAuthorizationModelResult struct {
 	Conflicts            []SchemaConflict              `json:"conflicts,omitempty"`
 }
 
+// ValidateAuthorizationModel runs the same parse + idempotence-hash +
+// conflict-scan pipeline as SaveAuthorizationModel, but never inserts a
+// model row or advances the app pointer. It is the backing call for the
+// admin UI's dry-run DSL editor (spec §8.2 "DSL 编辑器实时校验"). The
+// result mirrors what a real save *would* return so the frontend can
+// render the same three outcomes without a separate error channel:
+//   - unchanged: DSL matches the latest model already on disk.
+//   - advanced:  DSL is new and would produce a clean insert.
+//   - conflict:  DSL drops types/relations still referenced by tuples;
+//                the Conflicts list tells the admin what to clean up.
+func ValidateAuthorizationModel(owner, appName, dsl string) (*SaveAuthorizationModelResult, error) {
+	if _, err := getBizAppConfigOrError(owner, appName); err != nil {
+		return nil, err
+	}
+
+	parsed, err := ParseSchemaDSL(dsl)
+	if err != nil {
+		return nil, fmt.Errorf("schema parse: %w", err)
+	}
+
+	hash := computeSchemaHash(dsl)
+	if existing, err := FindLatestBizAuthorizationModelByHash(owner, appName, hash); err != nil {
+		return nil, fmt.Errorf("lookup by hash: %w", err)
+	} else if existing != nil {
+		return &SaveAuthorizationModelResult{
+			Outcome:              SaveOutcomeUnchanged,
+			AuthorizationModelId: existing.Id,
+		}, nil
+	}
+
+	conflicts, err := ScanSchemaConflictsForApp(owner, appName, parsed)
+	if err != nil {
+		return nil, fmt.Errorf("scan conflicts: %w", err)
+	}
+	if len(conflicts) > 0 {
+		return &SaveAuthorizationModelResult{
+			Outcome:   SaveOutcomeConflict,
+			Conflicts: conflicts,
+		}, nil
+	}
+
+	return &SaveAuthorizationModelResult{Outcome: SaveOutcomeAdvanced}, nil
+}
+
 // SaveAuthorizationModel parses the DSL, scans for tuple conflicts, and
 // (if clean) inserts a new model row + advances the app's pointer. Wraps
 // the spec §4.2 "写入规则" as a single atomic op from the caller's

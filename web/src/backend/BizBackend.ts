@@ -886,10 +886,19 @@ export interface BizExpandResult {
 }
 
 // 1. biz-write-authorization-model
-export function saveBizAuthorizationModel(appId: string, schemaDsl: string) {
+// When dryRun is true, backend runs parse + conflict-scan and returns the
+// same outcome envelope without inserting a row — used by the DSL editor
+// for inline validation.
+export function saveBizAuthorizationModel(
+  appId: string,
+  schemaDsl: string,
+  dryRun = false,
+) {
+  const q = new URLSearchParams({ appId });
+  if (dryRun) q.set("dryRun", "true");
   return request<SaveAuthorizationModelResult>(
     "POST",
-    `/api/biz-write-authorization-model?appId=${encodeURIComponent(appId)}`,
+    `/api/biz-write-authorization-model?${q.toString()}`,
     { schemaDsl },
   );
 }

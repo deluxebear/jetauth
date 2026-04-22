@@ -3478,6 +3478,8 @@ const en = {
   "rebac.schema.saving": "Saving...",
   "rebac.schema.saved": "Saved",
   "rebac.schema.unsaved": "Unsaved",
+  "rebac.schema.validating": "Validating...",
+  "rebac.schema.valid": "Syntax OK",
   "rebac.schema.previewDsl": "DSL preview",
   "rebac.schema.parseError": "DSL parse error",
   "rebac.schema.lockedByParseError": "DSL has syntax errors; fix them in the DSL tab first.",

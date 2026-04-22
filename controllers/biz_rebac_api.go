@@ -31,9 +31,12 @@ type writeAuthorizationModelRequest struct {
 // schema drops types or relations still referenced by existing tuples,
 // returns outcome=conflict with the list of offending tuples; no new row
 // is inserted. Otherwise inserts a new append-only row and advances the
-// app's CurrentAuthorizationModelId.
-// @Param   appId   query    string  true  "The app id (owner/appName)"
-// @Param   body    body     controllers.writeAuthorizationModelRequest  true  "Schema DSL payload"
+// app's CurrentAuthorizationModelId. Pass ?dryRun=true to run the same
+// parse + conflict-scan pipeline without inserting — used by the admin
+// UI DSL editor for inline validation.
+// @Param   appId    query    string  true   "The app id (owner/appName)"
+// @Param   dryRun   query    bool    false  "When true, validate only; no DB insert or pointer advance"
+// @Param   body     body     controllers.writeAuthorizationModelRequest  true  "Schema DSL payload"
 // @Success 200 {object} object.SaveAuthorizationModelResult "outcome + model id or conflict list"
 // @Router /biz-write-authorization-model [post]
 func (c *ApiController) BizWriteAuthorizationModel() {
@@ -51,6 +54,18 @@ func (c *ApiController) BizWriteAuthorizationModel() {
 	}
 	if body.SchemaDSL == "" {
 		c.ResponseError("schemaDsl is required")
+		return
+	}
+
+	// Dry-run path: validate-only, no row inserted, no pointer advanced.
+	// Accept both ?dryRun=true and ?dryRun=1 for client convenience.
+	if dry := c.Ctx.Input.Query("dryRun"); dry == "true" || dry == "1" {
+		result, err := object.ValidateAuthorizationModel(owner, appName, body.SchemaDSL)
+		if err != nil {
+			c.ResponseError(err.Error())
+			return
+		}
+		c.ResponseOk(result)
 		return
 	}
 

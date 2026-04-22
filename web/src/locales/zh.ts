@@ -3468,6 +3468,8 @@ const zh: Record<string, string> = {
   "rebac.schema.saving": "保存中...",
   "rebac.schema.saved": "已保存",
   "rebac.schema.unsaved": "未保存",
+  "rebac.schema.validating": "校验中...",
+  "rebac.schema.valid": "语法正确",
   "rebac.schema.previewDsl": "DSL 预览",
   "rebac.schema.parseError": "DSL 解析错误",
   "rebac.schema.lockedByParseError": "DSL 存在错误,请先在 DSL 面板修复",
