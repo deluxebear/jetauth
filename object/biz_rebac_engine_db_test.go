@@ -624,6 +624,101 @@ func TestCheck_Intersection_OneFalseDenies(t *testing.T) {
 	}
 }
 
+// --- checkDifference (Task 9) end-to-end ----------------------------------
+
+const differenceDSL = `model
+  schema 1.1
+
+type user
+
+type document
+  relations
+    define banned: [user]
+    define granted: [user]
+    define viewer: granted but not banned
+`
+
+func seedDifferenceApp(t *testing.T) (storeId, modelId string) {
+	t.Helper()
+	owner := "rebac-it-" + util.GenerateUUID()[:8]
+	appName := "app_diff"
+	seedRebacAppConfigForTest(t, owner, appName)
+	res, err := SaveAuthorizationModel(owner, appName, differenceDSL, "test-user")
+	if err != nil || res.Outcome != SaveOutcomeAdvanced {
+		t.Fatalf("save: err=%v outcome=%v", err, res)
+	}
+	return BuildStoreId(owner, appName), res.AuthorizationModelId
+}
+
+func TestCheck_Difference_GrantedNotBannedAllows(t *testing.T) {
+	if ormer == nil {
+		t.Skip("ormer not initialised (test needs DB)")
+	}
+	storeId, modelId := seedDifferenceApp(t)
+	owner, appName, _ := parseStoreId(storeId)
+
+	if _, err := AddBizTuples([]*BizTuple{{
+		Owner: owner, AppName: appName,
+		Object: "document:d1", Relation: "granted", User: "user:alice",
+		AuthorizationModelId: modelId,
+	}}); err != nil {
+		t.Fatalf("seed: %v", err)
+	}
+	res, err := ReBACCheck(&CheckRequest{
+		StoreId: storeId, AuthorizationModelId: modelId,
+		TupleKey: TupleKey{Object: "document:d1", Relation: "viewer", User: "user:alice"},
+	})
+	if err != nil {
+		t.Fatalf("check: %v", err)
+	}
+	if !res.Allowed {
+		t.Fatalf("granted and not banned must allow, got denied")
+	}
+}
+
+func TestCheck_Difference_GrantedAndBannedDenies(t *testing.T) {
+	if ormer == nil {
+		t.Skip("ormer not initialised (test needs DB)")
+	}
+	storeId, modelId := seedDifferenceApp(t)
+	owner, appName, _ := parseStoreId(storeId)
+
+	if _, err := AddBizTuples([]*BizTuple{
+		{Owner: owner, AppName: appName, Object: "document:d1", Relation: "granted", User: "user:alice", AuthorizationModelId: modelId},
+		{Owner: owner, AppName: appName, Object: "document:d1", Relation: "banned", User: "user:alice", AuthorizationModelId: modelId},
+	}); err != nil {
+		t.Fatalf("seed: %v", err)
+	}
+	res, err := ReBACCheck(&CheckRequest{
+		StoreId: storeId, AuthorizationModelId: modelId,
+		TupleKey: TupleKey{Object: "document:d1", Relation: "viewer", User: "user:alice"},
+	})
+	if err != nil {
+		t.Fatalf("check: %v", err)
+	}
+	if res.Allowed {
+		t.Fatalf("banned must deny even if granted, got allowed")
+	}
+}
+
+func TestCheck_Difference_NotGrantedDenies(t *testing.T) {
+	if ormer == nil {
+		t.Skip("ormer not initialised (test needs DB)")
+	}
+	storeId, modelId := seedDifferenceApp(t)
+
+	res, err := ReBACCheck(&CheckRequest{
+		StoreId: storeId, AuthorizationModelId: modelId,
+		TupleKey: TupleKey{Object: "document:d1", Relation: "viewer", User: "user:alice"},
+	})
+	if err != nil {
+		t.Fatalf("check: %v", err)
+	}
+	if res.Allowed {
+		t.Fatalf("not granted must deny, got allowed")
+	}
+}
+
 // --- resolveAuthorizationModel (Task 2) end-to-end --------------------------
 
 // TestResolveAuthorizationModel_CrossStore verifies a model id that belongs

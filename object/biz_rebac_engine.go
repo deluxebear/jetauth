@@ -495,11 +495,32 @@ func (ctx *checkContext) checkIntersection(key TupleKey, u *openfgav1.Usersets, 
 	return true, nil
 }
 
-// checkDifference — Task 9.
+// checkDifference resolves `define viewer: [user] but not banned` — the
+// base grants, provided the subtract does not also grant. Strictly
+// sequential: if Base is false, Subtract is never consulted — callers
+// often use Subtract for expensive "banlist" lookups, and running them
+// for users who weren't getting access anyway is pure waste.
 func (ctx *checkContext) checkDifference(key TupleKey, d *openfgav1.Difference, depth int) (bool, error) {
-	_ = d
-	_ = depth
-	return false, fmt.Errorf("rebac: 'difference' rewrite not implemented (CP-3 Task 9) for %s#%s", key.Object, key.Relation)
+	base := d.GetBase()
+	sub := d.GetSubtract()
+	if base == nil || sub == nil {
+		return false, fmt.Errorf("rebac: difference on %s#%s missing base or subtract",
+			key.Object, key.Relation)
+	}
+
+	baseAllowed, err := ctx.evaluate(base, key, depth)
+	if err != nil {
+		return false, err
+	}
+	if !baseAllowed {
+		return false, nil
+	}
+
+	subAllowed, err := ctx.evaluate(sub, key, depth)
+	if err != nil {
+		return false, err
+	}
+	return !subAllowed, nil
 }
 
 // ReBACCheck evaluates whether req.TupleKey.User has req.TupleKey.Relation
