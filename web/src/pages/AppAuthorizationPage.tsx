@@ -8,6 +8,7 @@ import DataTable, { type Column, useTablePrefs, ColumnsMenu } from "../component
 import BizAppResourceTab from "../components/BizAppResourceTab";
 import BizSchemaEditor from "../components/BizSchemaEditor";
 import BizTupleManager from "../components/BizTupleManager";
+import BizReBACTester from "../components/BizReBACTester";
 import { useTranslation } from "../i18n";
 import { useModal } from "../components/Modal";
 import * as BizBackend from "../backend/BizBackend";
@@ -2226,13 +2227,8 @@ function RebacTuplesTab({ appId, t: _t }: { appId: string; t: (k: any) => string
   return <BizTupleManager appId={appId} />;
 }
 
-function RebacTesterTab({ appId: _appId, t }: { appId: string; t: (k: any) => string }) {
-  return (
-    <RebacStubPanel
-      label={t("rebac.tab.tester")}
-      hint="CP-7 Task 8: Check form + react-flow Expand tree + history."
-    />
-  );
+function RebacTesterTab({ appId, t: _t }: { appId: string; t: (k: any) => string }) {
+  return <BizReBACTester appId={appId} />;
 }
 
 function RebacIntegrationTab({ appId: _appId, t }: { appId: string; t: (k: any) => string }) {
