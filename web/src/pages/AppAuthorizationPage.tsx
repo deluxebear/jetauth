@@ -12,7 +12,20 @@ import * as BizBackend from "../backend/BizBackend";
 import type { BizAppConfig, BizRole, BizPermission, PoliciesExport } from "../backend/BizBackend";
 import { pickAppIcon } from "../utils/appIcon";
 
-type TabKey = "overview" | "roles" | "permissions" | "resources" | "test" | "integration";
+// Casbin-lane tabs are unchanged. ReBAC-lane tabs are rendered only when
+// the app's modelType is "rebac" (spec §8.2). Since "overview" and
+// "integration" are common to both, TabKey is the union — the visible
+// tab list is filtered at render time.
+type TabKey =
+  | "overview"
+  | "roles"
+  | "permissions"
+  | "resources"
+  | "test"
+  | "integration"
+  | "schema"
+  | "tuples"
+  | "tester";
 
 // Shared helper for RolesTab + PermissionsTab: turns a bulk-delete API
 // response into the appropriate toast (all-success / all-failed / partial).
@@ -42,7 +55,8 @@ function showBulkDeleteToast(
   modal.toast(`${succeeded} ${deleted}, ${failed} ${failedLabel} — ${firstErr}`, "error");
 }
 
-const VALID_TABS: TabKey[] = ["overview", "roles", "permissions", "resources", "test", "integration"];
+const CASBIN_TABS: TabKey[] = ["overview", "roles", "permissions", "resources", "test", "integration"];
+const REBAC_TABS: TabKey[] = ["overview", "schema", "tuples", "tester", "integration"];
 
 // Local relative-time helper — mirrors the one in AuthorizationPage. Kept
 // here to avoid a cross-page import cycle; both functions are short.
@@ -62,8 +76,9 @@ function formatRelativeTimeLocal(iso: string, t: (k: any) => string): string {
   return new Date(iso).toLocaleDateString();
 }
 
-function parseTab(raw: string | null): TabKey {
-  return (VALID_TABS as string[]).includes(raw ?? "") ? (raw as TabKey) : "overview";
+function parseTab(raw: string | null, modelType: "casbin" | "rebac" | undefined): TabKey {
+  const valid = modelType === "rebac" ? REBAC_TABS : CASBIN_TABS;
+  return (valid as string[]).includes(raw ?? "") ? (raw as TabKey) : "overview";
 }
 
 export default function AppAuthorizationPage() {
@@ -74,8 +89,9 @@ export default function AppAuthorizationPage() {
   const modal = useModal();
 
   // Tab persists in the URL so edit pages can deep-link back to the right
-  // tab and browser refresh preserves the user's position.
-  const activeTab = parseTab(searchParams.get("tab"));
+  // tab and browser refresh preserves the user's position. parseTab needs
+  // the app's modelType to know which valid-tab set applies — hoisted
+  // below the configQuery.
   const setActiveTab = useCallback((tab: TabKey) => {
     setSearchParams((prev) => {
       const next = new URLSearchParams(prev);
@@ -138,6 +154,12 @@ export default function AppAuthorizationPage() {
   const permissions = permissionsQuery.data ?? [];
   const loading = configQuery.isLoading || rolesQuery.isLoading || permissionsQuery.isLoading;
 
+  // ReBAC-mode tabs (spec §8.2) are rendered only when modelType is
+  // explicitly "rebac". Legacy apps and unset values default to the
+  // Casbin tab set — zero behaviour change for the existing UI.
+  const isReBAC = config?.modelType === "rebac";
+  const activeTab = parseTab(searchParams.get("tab"), config?.modelType);
+
   const appIcon = useMemo(() => {
     const app = appMetaQuery.data as any;
     return app ? pickAppIcon(app) : "";
@@ -189,7 +211,7 @@ export default function AppAuthorizationPage() {
   const allowCount = permissions.filter((p) => p.effect === "Allow").length;
   const denyCount = permissions.filter((p) => p.effect === "Deny").length;
 
-  const tabs: { key: TabKey; label: string; count?: number; icon: React.ReactNode }[] = [
+  const casbinTabs: { key: TabKey; label: string; count?: number; icon: React.ReactNode }[] = [
     { key: "overview", label: t("authz.tab.overview" as any), icon: <LayoutDashboard size={14} /> },
     { key: "roles", label: t("authz.tab.roles" as any), count: roles.length, icon: <Crown size={14} /> },
     { key: "permissions", label: t("authz.tab.permissions" as any), count: permissions.length, icon: <ShieldCheck size={14} /> },
@@ -197,6 +219,14 @@ export default function AppAuthorizationPage() {
     { key: "test", label: t("authz.tab.test" as any), icon: <FlaskConical size={14} /> },
     { key: "integration", label: t("authz.tab.integration" as any), icon: <Code size={14} /> },
   ];
+  const rebacTabs: { key: TabKey; label: string; count?: number; icon: React.ReactNode }[] = [
+    { key: "overview", label: t("rebac.tab.overview"), icon: <LayoutDashboard size={14} /> },
+    { key: "schema", label: t("rebac.tab.schema"), icon: <ShieldCheck size={14} /> },
+    { key: "tuples", label: t("rebac.tab.tuples"), icon: <Target size={14} /> },
+    { key: "tester", label: t("rebac.tab.tester"), icon: <FlaskConical size={14} /> },
+    { key: "integration", label: t("rebac.tab.integration"), icon: <Code size={14} /> },
+  ];
+  const tabs = isReBAC ? rebacTabs : casbinTabs;
 
   return (
     <div className="space-y-0">
@@ -279,7 +309,26 @@ export default function AppAuthorizationPage() {
       </div>
 
       <div className="pt-6">
-        {activeTab === "overview" && (
+        {/* ReBAC tabs — spec §8.2. Each Tab is a stub in this commit; the
+            Task 4-9 commits fill in the real editors, manager, tester,
+            and integration panels. */}
+        {isReBAC && activeTab === "overview" && (
+          <RebacOverviewTab appId={appId} t={t} />
+        )}
+        {isReBAC && activeTab === "schema" && (
+          <RebacSchemaTab appId={appId} t={t} />
+        )}
+        {isReBAC && activeTab === "tuples" && (
+          <RebacTuplesTab appId={appId} t={t} />
+        )}
+        {isReBAC && activeTab === "tester" && (
+          <RebacTesterTab appId={appId} t={t} />
+        )}
+        {isReBAC && activeTab === "integration" && (
+          <RebacIntegrationTab appId={appId} t={t} />
+        )}
+
+        {!isReBAC && activeTab === "overview" && (
           <OverviewTab
             config={config}
             roles={roles}
@@ -292,7 +341,7 @@ export default function AppAuthorizationPage() {
             modal={modal}
           />
         )}
-        {activeTab === "roles" && (
+        {!isReBAC && activeTab === "roles" && (
           <RolesTab
             roles={roles}
             permissions={permissions}
@@ -304,7 +353,7 @@ export default function AppAuthorizationPage() {
             navigate={navigate}
           />
         )}
-        {activeTab === "permissions" && (
+        {!isReBAC && activeTab === "permissions" && (
           <PermissionsTab
             permissions={permissions}
             onRefresh={refreshData}
@@ -316,10 +365,10 @@ export default function AppAuthorizationPage() {
             navigate={navigate}
           />
         )}
-        {activeTab === "resources" && (
+        {!isReBAC && activeTab === "resources" && (
           <BizAppResourceTab owner={owner!} appName={appName!} />
         )}
-        {activeTab === "test" && (
+        {!isReBAC && activeTab === "test" && (
           <TestTab
             appOwner={owner!}
             appName={appName!}
@@ -329,7 +378,7 @@ export default function AppAuthorizationPage() {
             t={t}
           />
         )}
-        {activeTab === "integration" && (
+        {!isReBAC && activeTab === "integration" && (
           <IntegrationTab
             config={config}
             t={t}
@@ -2140,5 +2189,64 @@ const allowed = await bizEnforce(userId, "/orders", "DELETE");
         </div>
       </div>
     </div>
+  );
+}
+
+// ── ReBAC Tabs (CP-7 stubs, filled in by Tasks 4-9) ──────────────────────
+// Each stub takes the minimal props the full implementation will need
+// (appId + t for translations). Real components live in separate files
+// once they grow beyond ~50 lines.
+
+function RebacStubPanel({ label, hint }: { label: string; hint: string }) {
+  return (
+    <div className="rounded-xl border border-dashed border-border bg-surface-1 p-12 text-center">
+      <p className="text-[14px] font-semibold text-text-primary mb-2">{label}</p>
+      <p className="text-[12px] text-text-muted">{hint}</p>
+    </div>
+  );
+}
+
+function RebacOverviewTab({ appId: _appId, t }: { appId: string; t: (k: any) => string }) {
+  return (
+    <RebacStubPanel
+      label={t("rebac.tab.overview")}
+      hint="CP-7 Task 4-9 fills this in with type/relation/tuple counts and the current model id."
+    />
+  );
+}
+
+function RebacSchemaTab({ appId: _appId, t }: { appId: string; t: (k: any) => string }) {
+  return (
+    <RebacStubPanel
+      label={t("rebac.tab.schema")}
+      hint="CP-7 Task 4-6: CodeMirror DSL editor + visual query-builder, both bound to one AST."
+    />
+  );
+}
+
+function RebacTuplesTab({ appId: _appId, t }: { appId: string; t: (k: any) => string }) {
+  return (
+    <RebacStubPanel
+      label={t("rebac.tab.tuples")}
+      hint="CP-7 Task 7: DataTable with filter, bulk import, and add-tuple form."
+    />
+  );
+}
+
+function RebacTesterTab({ appId: _appId, t }: { appId: string; t: (k: any) => string }) {
+  return (
+    <RebacStubPanel
+      label={t("rebac.tab.tester")}
+      hint="CP-7 Task 8: Check form + react-flow Expand tree + history."
+    />
+  );
+}
+
+function RebacIntegrationTab({ appId: _appId, t }: { appId: string; t: (k: any) => string }) {
+  return (
+    <RebacStubPanel
+      label={t("rebac.tab.integration")}
+      hint="CP-7 Task 9: Go / TypeScript / Python SDK snippets with copy-to-clipboard."
+    />
   );
 }
