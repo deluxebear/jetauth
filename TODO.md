@@ -748,6 +748,12 @@ func (c *Client) applyResponse(resp WatchResponse) {
 - [ ] 可选 Redis 缓存层（复用 `bizPolicyCacheEnabled` 配置）
 - [ ] ListObjects 并发遍历 + context 超时控制
 
+### 清理
+
+- [ ] **CP-4 接入 cel-go 真正导入后，删除 `object/biz_rebac_anchor.go`**
+  占位文件，仅为阻止 `go mod tidy` 在第一次真实使用前把 cel-go 从 vendor/ 剔除。
+  锚点文件里已注明移除条件。
+
 ### 相关代码位置
 
 - 方案文档：`docs/rebac-integration-plan.md`

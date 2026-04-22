@@ -431,6 +431,18 @@ func (a *Ormer) createTable() {
 		panic(err)
 	}
 
+	// ReBAC tables (spec §4.2 / §4.3). Additive migration — zero impact on
+	// Casbin apps (BizAppConfig.ModelType defaults to "casbin").
+	err = a.Engine.Sync2(new(BizAuthorizationModel))
+	if err != nil {
+		panic(err)
+	}
+
+	err = a.Engine.Sync2(new(BizTuple))
+	if err != nil {
+		panic(err)
+	}
+
 	err = a.Engine.Sync2(new(Session))
 	if err != nil {
 		panic(err)

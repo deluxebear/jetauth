@@ -28,6 +28,16 @@ type BizAppConfig struct {
 	PolicyTable string `xorm:"varchar(100)" json:"policyTable"`
 	IsEnabled   bool   `json:"isEnabled"`
 
+	// ModelType selects the authorization engine. Defaults to "casbin"
+	// for backward compatibility; "rebac" routes BizEnforce to the
+	// OpenFGA-compatible graph engine. See docs/rebac-spec.md §4.1.
+	ModelType string `xorm:"varchar(20) default 'casbin'" json:"modelType"`
+
+	// CurrentAuthorizationModelId points at the latest BizAuthorizationModel
+	// row for this app. Writes and Checks default to this model; historical
+	// models are preserved (spec §4.2) and can be addressed explicitly.
+	CurrentAuthorizationModelId string `xorm:"varchar(40)" json:"currentAuthorizationModelId"`
+
 	// SupportsDeny is a computed field (not persisted) that reports whether
 	// the current ModelText has both a p_eft field and a policy_effect that
 	// references p.eft == deny. The frontend uses this to hide or disable
@@ -174,6 +184,26 @@ func UpdateBizAppConfig(id string, config *BizAppConfig) (bool, error) {
 	return affected != 0, nil
 }
 
+// SetBizAppConfigAuthorizationModelId atomically advances only the
+// CurrentAuthorizationModelId column on the app config row. It exists so the
+// ReBAC save path can move the pointer without going through UpdateBizAppConfig,
+// which runs ValidatePolicyTable + syncBizPolicies — both Casbin-lane ops that
+// are wasted work on a ReBAC-modeled app (and a literal touch of the "Casbin
+// path zero modifications" invariant from spec §13 Always).
+func SetBizAppConfigAuthorizationModelId(owner, appName, modelId string) (bool, error) {
+	if util.IsStringsEmpty(owner, appName) {
+		return false, nil
+	}
+	affected, err := ormer.Engine.
+		ID(core.PK{owner, appName}).
+		Cols("current_authorization_model_id").
+		Update(&BizAppConfig{CurrentAuthorizationModelId: modelId})
+	if err != nil {
+		return false, err
+	}
+	return affected != 0, nil
+}
+
 func DeleteBizAppConfig(config *BizAppConfig) (bool, error) {
 	affected, err := ormer.Engine.ID(core.PK{config.Owner, config.AppName}).Delete(&BizAppConfig{})
 	if err != nil {
@@ -182,6 +212,14 @@ func DeleteBizAppConfig(config *BizAppConfig) (bool, error) {
 
 	if affected != 0 {
 		ClearBizEnforcerCache(config.Owner, config.AppName)
+		// ReBAC cascade (spec §4.2, §4.3): tuples and authorization models are
+		// per-app and have no standalone delete path, so they must be reaped
+		// when the owning config disappears. Errors are swallowed so a
+		// partially-cleaned row set can still be reported to the caller as
+		// "config deleted" — the alternative is leaving the config half-gone
+		// while surfacing a confusing error.
+		_, _ = DeleteBizTuplesForApp(config.Owner, config.AppName)
+		_, _ = DeleteBizAuthorizationModelsForApp(config.Owner, config.AppName)
 	}
 
 	return affected != 0, nil
