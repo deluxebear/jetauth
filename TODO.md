@@ -731,18 +731,18 @@ func (c *Client) applyResponse(resp WatchResponse) {
 
 ### P4: 前端 Schema + Tuple（3-4 天）
 
-- [ ] 创建向导步骤 2 增加模型类型选择（RBAC / ReBAC 卡片）
-- [ ] `AppAuthorizationPage` 按 `modelType` 显示不同 Tab（概览/类型定义/关系数据/测试/集成）
-- [ ] 新建 `BizSchemaEditor.tsx` — 可视化编辑对象类型和关系定义
-- [ ] 新建 `BizTupleManager.tsx` — 元组管理表格（增删查 + 批量导入）
-- [ ] `BizBackend.ts` 增加 tuple API 调用函数
-- [ ] i18n 中英文翻译
+- [x] 创建向导步骤 2 增加模型类型选择（RBAC / ReBAC 卡片）(CP-7 Task 10)
+- [x] `AppAuthorizationPage` 按 `modelType` 显示不同 Tab（概览/Schema/元组/测试/集成）(CP-7 Task 3)
+- [x] 新建 `BizSchemaEditor.tsx` — DSL + 可视化(query-builder)双 Tab,共享 AST(CP-7 Task 4-6)
+- [x] 新建 `BizTupleManager.tsx` — 元组管理表格(增删查 + 批量导入 CSV/JSON + 批量删除)(CP-7 Task 7)
+- [x] `BizBackend.ts` 增加 10 个 ReBAC API 调用函数 + 类型(CP-7 Task 1)
+- [x] i18n 中英文翻译 — 86 个 `rebac.*` 键,parity 3286/3286 (CP-7 Task 2 + 增量)
 
-### P5: 前端测试 + 集成（1-2 天）
+### P5: 前端测试 + 集成(1-2 天)
 
-- [ ] 新建 `BizReBACTester.tsx` — Check 测试器（输入主体/对象/关系，显示结果 + 路径）
-- [ ] 集成 Tab 补充 ReBAC 模式的 SDK 代码示例（Go / TypeScript）
-- [ ] 概览 Tab 适配 ReBAC 统计信息（类型数、关系数、元组数）
+- [x] 新建 `BizReBACTester.tsx` — Check 测试器(输入主体/对象/关系,显示结果 + Expand 树 + 20 条本地历史)(CP-7 Task 8)
+- [x] 集成 Tab 补充 ReBAC 模式的 SDK 代码示例(Go / TypeScript / Python,带 copy-to-clipboard)(CP-7 Task 9)
+- [x] 概览 Tab 适配 ReBAC 统计信息(类型数、关系数、元组数、Model id、最后更新时间)(CP-7 Task 11)
 
 ### P6: 缓存优化（2 天）
 

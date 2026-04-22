@@ -10,6 +10,7 @@ import BizSchemaEditor from "../components/BizSchemaEditor";
 import BizTupleManager from "../components/BizTupleManager";
 import BizReBACTester from "../components/BizReBACTester";
 import BizIntegrationTab from "../components/BizIntegrationTab";
+import BizReBACOverview from "../components/BizReBACOverview";
 import { useTranslation } from "../i18n";
 import { useModal } from "../components/Modal";
 import * as BizBackend from "../backend/BizBackend";
@@ -2196,27 +2197,12 @@ const allowed = await bizEnforce(userId, "/orders", "DELETE");
   );
 }
 
-// ── ReBAC Tabs (CP-7 stubs, filled in by Tasks 4-9) ──────────────────────
-// Each stub takes the minimal props the full implementation will need
-// (appId + t for translations). Real components live in separate files
-// once they grow beyond ~50 lines.
+// ── ReBAC Tabs — thin wrappers over the per-feature components ──────────
+// The dispatch logic lives in the page body; these functions exist so
+// the tab names line up with their Casbin siblings in a single switch.
 
-function RebacStubPanel({ label, hint }: { label: string; hint: string }) {
-  return (
-    <div className="rounded-xl border border-dashed border-border bg-surface-1 p-12 text-center">
-      <p className="text-[14px] font-semibold text-text-primary mb-2">{label}</p>
-      <p className="text-[12px] text-text-muted">{hint}</p>
-    </div>
-  );
-}
-
-function RebacOverviewTab({ appId: _appId, t }: { appId: string; t: (k: any) => string }) {
-  return (
-    <RebacStubPanel
-      label={t("rebac.tab.overview")}
-      hint="CP-7 Task 4-9 fills this in with type/relation/tuple counts and the current model id."
-    />
-  );
+function RebacOverviewTab({ appId, t: _t }: { appId: string; t: (k: any) => string }) {
+  return <BizReBACOverview appId={appId} />;
 }
 
 function RebacSchemaTab({ appId, t: _t }: { appId: string; t: (k: any) => string }) {
