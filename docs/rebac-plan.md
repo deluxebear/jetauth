@@ -191,9 +191,9 @@ CP-4 和 CP-8 是**门槛 checkpoint**(spec §15 定义):
 
 | CP | 状态 | 备注 |
 |---|---|---|
-| CP-1 数据模型 | ✅ 完成 (feature/rebac-integration @ HEAD) | 数据表 + CRUD + 唯一索引 |
-| CP-2 DSL + schema save | ✅ 完成 (feature/rebac-integration @ HEAD) | DSL 保存 + 冲突阻断 + 无 Delete API |
-| CP-3 Check 核心(五 rewrite) | ⬜ 未开始 | |
+| CP-1 数据模型 | ✅ 完成 (merged via PR #1 @ `4718caad`) | 数据表 + CRUD + 唯一索引 |
+| CP-2 DSL + schema save | ✅ 完成 (merged via PR #1 @ `4718caad`) | DSL 保存 + 冲突阻断 + 无 Delete API |
+| CP-3 Check 核心(五 rewrite) | ✅ 完成 (feature/rebac-cp3) | 五 rewrite + memo + maxDepth + openfga consolidated 112/134 pass, 22 skip (out-of-CP-3 scope) |
 | CP-4 Conditions + Contextual tuples | ⬜ 未开始 | **门槛** |
 | CP-5 ListObjects/Users/Expand | ⬜ 未开始 | |
 | CP-6 缓存 L2/L3 | ⬜ 未开始 | |

@@ -708,16 +708,17 @@ func (c *Client) applyResponse(resp WatchResponse) {
 
 ### P2: 图遍历引擎（3-4 天）
 
-- [ ] 实现 `ReBACCheck(owner, appName, object, relation, subject)` — 核心 Check 算法
-  - 直接关系查找
-  - userset 展开（`team:eng#member`）
-  - also 展开（同对象隐含关系，如 `owner → editor`）
-  - from 展开（关联对象继承，如 `parent.editor`）
-  - 请求级 memo map 去重
-  - maxDepth=15 深度限制
-- [ ] 实现 `ReBACListObjects(owner, appName, objectType, relation, subject)` — 列出可访问对象
-- [ ] 实现 `ReBACListUsers(owner, appName, object, relation)` — 列出有权限的用户
-- [ ] 单元测试覆盖：直接关系、userset、继承链、循环检测、深度限制
+- [x] 实现 `ReBACCheck(owner, appName, object, relation, subject)` — 核心 Check 算法 (CP-3, feature/rebac-cp3)
+  - [x] 直接关系查找 (Task 4 — `this`)
+  - [x] userset 展开（`team:eng#member`）(Task 4 — integrated)
+  - [x] also 展开（同对象隐含关系，如 `owner → editor`）(Task 5 — computed_userset)
+  - [x] from 展开（关联对象继承，如 `parent.editor`）(Task 6 — tuple_to_userset)
+  - [x] union / intersection / difference (Tasks 7–9)
+  - [x] 请求级 memo map 去重 (Task 3 + verification Task 10)
+  - [x] maxDepth=25 深度限制 (Task 11)
+- [ ] 实现 `ReBACListObjects(owner, appName, objectType, relation, subject)` — 列出可访问对象 (CP-5)
+- [ ] 实现 `ReBACListUsers(owner, appName, object, relation)` — 列出有权限的用户 (CP-5)
+- [x] 单元测试覆盖：直接关系、userset、继承链、循环检测、深度限制 (CP-3 + openfga consolidated suite 112/134)
 
 ### P3: API 层（2 天）
 
