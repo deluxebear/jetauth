@@ -32,4 +32,3 @@ func TestComputeSchemaHash_DiffersOnByteChange(t *testing.T) {
 		t.Fatalf("hash collided on trailing space: %s", h1)
 	}
 }
-
