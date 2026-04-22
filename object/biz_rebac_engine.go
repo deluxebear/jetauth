@@ -400,6 +400,13 @@ func (ctx *checkContext) tuplesetUsers(object, relation string) ([]string, error
 			out = append(out, t.User)
 		}
 	}
+	// ormer can be nil in pure-function engine tests that exercise the
+	// dispatcher with contextual tuples alone (no DB bootstrap). Avoid a
+	// nil-pointer panic on ReadBizTuples' Engine.Where call by short-
+	// circuiting to the contextual-only view.
+	if ormer == nil {
+		return out, nil
+	}
 	rows, err := ReadBizTuples(owner, appName, object, relation, "")
 	if err != nil {
 		return nil, fmt.Errorf("rebac: read tupleset %s#%s: %w", object, relation, err)
