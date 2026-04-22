@@ -6,8 +6,7 @@ import { motion } from "framer-motion";
 import { ArrowLeft, Plus, Play, Copy, Check, X, RefreshCw, RotateCcw, Pencil, Trash2, LayoutDashboard, Crown, ShieldCheck, FlaskConical, Code, Target } from "lucide-react";
 import DataTable, { type Column, useTablePrefs, ColumnsMenu } from "../components/DataTable";
 import BizAppResourceTab from "../components/BizAppResourceTab";
-import BizSchemaDslEditor from "../components/BizSchemaDslEditor";
-import BizSchemaVisualEditor from "../components/BizSchemaVisualEditor";
+import BizSchemaEditor from "../components/BizSchemaEditor";
 import { useTranslation } from "../i18n";
 import { useModal } from "../components/Modal";
 import * as BizBackend from "../backend/BizBackend";
@@ -2217,45 +2216,9 @@ function RebacOverviewTab({ appId: _appId, t }: { appId: string; t: (k: any) => 
   );
 }
 
-function RebacSchemaTab({ appId, t }: { appId: string; t: (k: any) => string }) {
-  // DSL editor (Task 4) and Visual editor shell (Task 5a) sit under
-  // independent sub-tabs. Task 6 unifies them via a shared AST
-  // reducer; until then each tab manages its own state and save is
-  // DSL-only.
-  const [subTab, setSubTab] = useState<"dsl" | "visual">("dsl");
-  return (
-    <div className="flex flex-col gap-3">
-      <div className="inline-flex items-center gap-1 rounded-lg border border-border bg-surface-1 p-1 self-start">
-        <button
-          type="button"
-          className={`px-3 py-1 rounded text-[12px] font-medium ${
-            subTab === "dsl"
-              ? "bg-accent-primary text-white"
-              : "text-text-muted hover:text-text-primary"
-          }`}
-          onClick={() => setSubTab("dsl")}
-        >
-          {t("rebac.schema.tabDsl")}
-        </button>
-        <button
-          type="button"
-          className={`px-3 py-1 rounded text-[12px] font-medium ${
-            subTab === "visual"
-              ? "bg-accent-primary text-white"
-              : "text-text-muted hover:text-text-primary"
-          }`}
-          onClick={() => setSubTab("visual")}
-        >
-          {t("rebac.schema.tabVisual")}
-        </button>
-      </div>
-      {subTab === "dsl" ? (
-        <BizSchemaDslEditor appId={appId} />
-      ) : (
-        <BizSchemaVisualEditor appId={appId} />
-      )}
-    </div>
-  );
+function RebacSchemaTab({ appId, t: _t }: { appId: string; t: (k: any) => string }) {
+  // BizSchemaEditor owns the shared AST and the DSL↔Visual sync.
+  return <BizSchemaEditor appId={appId} />;
 }
 
 function RebacTuplesTab({ appId: _appId, t }: { appId: string; t: (k: any) => string }) {

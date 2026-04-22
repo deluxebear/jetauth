@@ -165,9 +165,12 @@ const (
 
 // SaveAuthorizationModelResult bundles the outcome with the resulting
 // model id (on advance / unchanged) or the conflict list (on conflict).
+// SchemaJSON is populated on unchanged/advanced so the admin UI's
+// visual editor can ingest the parsed model without a second request.
 type SaveAuthorizationModelResult struct {
 	Outcome              SaveAuthorizationModelOutcome `json:"outcome"`
 	AuthorizationModelId string                        `json:"authorizationModelId,omitempty"`
+	SchemaJSON           string                        `json:"schemaJson,omitempty"`
 	Conflicts            []SchemaConflict              `json:"conflicts,omitempty"`
 }
 
@@ -198,6 +201,7 @@ func ValidateAuthorizationModel(owner, appName, dsl string) (*SaveAuthorizationM
 		return &SaveAuthorizationModelResult{
 			Outcome:              SaveOutcomeUnchanged,
 			AuthorizationModelId: existing.Id,
+			SchemaJSON:           existing.SchemaJSON,
 		}, nil
 	}
 
@@ -212,7 +216,10 @@ func ValidateAuthorizationModel(owner, appName, dsl string) (*SaveAuthorizationM
 		}, nil
 	}
 
-	return &SaveAuthorizationModelResult{Outcome: SaveOutcomeAdvanced}, nil
+	return &SaveAuthorizationModelResult{
+		Outcome:    SaveOutcomeAdvanced,
+		SchemaJSON: parsed.JSON,
+	}, nil
 }
 
 // SaveAuthorizationModel parses the DSL, scans for tuple conflicts, and
@@ -249,6 +256,7 @@ func SaveAuthorizationModel(owner, appName, dsl, createdBy string) (*SaveAuthori
 		return &SaveAuthorizationModelResult{
 			Outcome:              SaveOutcomeUnchanged,
 			AuthorizationModelId: existing.Id,
+			SchemaJSON:           existing.SchemaJSON,
 		}, nil
 	}
 
@@ -294,5 +302,6 @@ func SaveAuthorizationModel(owner, appName, dsl, createdBy string) (*SaveAuthori
 	return &SaveAuthorizationModelResult{
 		Outcome:              SaveOutcomeAdvanced,
 		AuthorizationModelId: m.Id,
+		SchemaJSON:           m.SchemaJSON,
 	}, nil
 }

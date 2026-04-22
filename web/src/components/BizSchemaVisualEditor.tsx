@@ -1,13 +1,11 @@
-import { useEffect, useReducer, useState } from "react";
+import { useEffect, useState, type Dispatch } from "react";
 import { Plus, Trash2, Pencil, Check as CheckIcon, X as XIcon } from "lucide-react";
 import { useTranslation } from "../i18n";
-import * as BizBackend from "../backend/BizBackend";
 import {
-  emptyAST,
-  parseSchemaJson,
-  schemaReducer,
   type RelationDef,
   type RewriteNode,
+  type SchemaAST,
+  type SchemaAction,
   type TypeDef,
   type TypeRestriction,
 } from "./bizSchemaAst";
@@ -17,133 +15,101 @@ import {
   rewriteTouchesThis,
 } from "./BizRewriteEditor";
 
-// Task 5a shell: loads the existing schema as an AST, lets the admin
-// add/rename/remove types and relations, and reserves a per-relation
-// body slot for the rewrite editor (Task 5b). Save is intentionally
-// absent — persistence is Task 6's job once DSL serialisation lands.
+// Controlled visual editor. State (AST + selection) lives in the
+// parent BizSchemaEditor so the DSL and Visual tabs share a single
+// source of truth. All edits go out as SchemaAction dispatches.
 
 interface Props {
-  appId: string;
+  ast: SchemaAST;
+  dispatch: Dispatch<SchemaAction>;
+  selectedTypeId: string | null;
+  onSelectType: (id: string | null) => void;
 }
 
-export default function BizSchemaVisualEditor({ appId }: Props) {
+export default function BizSchemaVisualEditor({
+  ast,
+  dispatch,
+  selectedTypeId,
+  onSelectType,
+}: Props) {
   const { t } = useTranslation();
-  const [ast, dispatch] = useReducer(schemaReducer, emptyAST());
-  const [selectedTypeId, setSelectedTypeId] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    let cancelled = false;
-    setLoading(true);
-    BizBackend.getBizAuthorizationModel(appId)
-      .then((res) => {
-        if (cancelled) return;
-        if (res.status === "ok" && res.data?.schemaJson) {
-          const parsed = parseSchemaJson(res.data.schemaJson);
-          dispatch({ type: "LOAD", ast: parsed });
-          if (parsed.types.length > 0) {
-            setSelectedTypeId(parsed.types[0].id);
-          }
-        } else {
-          dispatch({ type: "LOAD", ast: emptyAST() });
-          setSelectedTypeId(null);
-        }
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [appId]);
-
   const selectedType =
     ast.types.find((t) => t.id === selectedTypeId) || ast.types[0] || null;
 
-  // Keep selection in sync if the selected type is removed. Falls back
-  // to the first remaining type so the right rail doesn't go blank on
-  // delete.
+  // Keep the parent's selection in sync if the current pick evaporates
+  // (e.g. the type was removed). Falls back to the first remaining
+  // type so the right rail never goes blank while the AST still has
+  // types.
   useEffect(() => {
-    if (!selectedType && ast.types.length > 0) {
-      setSelectedTypeId(ast.types[0].id);
-    } else if (ast.types.length === 0 && selectedTypeId !== null) {
-      setSelectedTypeId(null);
+    if (ast.types.length === 0) {
+      if (selectedTypeId !== null) onSelectType(null);
+      return;
     }
-  }, [ast.types, selectedType, selectedTypeId]);
-
-  if (loading) {
-    return (
-      <div className="rounded-lg border border-border bg-surface-1 p-6 text-center text-[13px] text-text-muted">
-        {t("rebac.common.loading")}
-      </div>
-    );
-  }
+    if (!ast.types.some((ty) => ty.id === selectedTypeId)) {
+      onSelectType(ast.types[0].id);
+    }
+  }, [ast.types, selectedTypeId, onSelectType]);
 
   return (
-    <div className="flex flex-col gap-3">
-      <div className="rounded-lg border border-warning/30 bg-warning/5 p-3 text-[12px] text-text-muted">
-        {t("rebac.schema.visualReadOnlyHint")}
-      </div>
-      <div className="grid grid-cols-1 md:grid-cols-[260px_1fr] gap-3">
-        <TypeRail
-          types={ast.types}
-          selectedId={selectedType?.id ?? null}
-          onSelect={setSelectedTypeId}
-          onAdd={(name) => dispatch({ type: "TYPE_ADD", name })}
-          onRename={(typeId, name) =>
-            dispatch({ type: "TYPE_RENAME", typeId, name })
-          }
-          onRemove={(typeId) => dispatch({ type: "TYPE_REMOVE", typeId })}
-          t={t}
-        />
-        <RelationPane
-          type={selectedType}
-          onAdd={(name) =>
-            selectedType &&
-            dispatch({
-              type: "RELATION_ADD",
-              typeId: selectedType.id,
-              name,
-            })
-          }
-          onRename={(relationId, name) =>
-            selectedType &&
-            dispatch({
-              type: "RELATION_RENAME",
-              typeId: selectedType.id,
-              relationId,
-              name,
-            })
-          }
-          onRemove={(relationId) =>
-            selectedType &&
-            dispatch({
-              type: "RELATION_REMOVE",
-              typeId: selectedType.id,
-              relationId,
-            })
-          }
-          onSetRewrite={(relationId, rewrite) =>
-            selectedType &&
-            dispatch({
-              type: "RELATION_SET_REWRITE",
-              typeId: selectedType.id,
-              relationId,
-              rewrite,
-            })
-          }
-          onSetRestrictions={(relationId, restrictions) =>
-            selectedType &&
-            dispatch({
-              type: "RELATION_SET_RESTRICTIONS",
-              typeId: selectedType.id,
-              relationId,
-              restrictions,
-            })
-          }
-          t={t}
-        />
-      </div>
+    <div className="grid grid-cols-1 md:grid-cols-[260px_1fr] gap-3">
+      <TypeRail
+        types={ast.types}
+        selectedId={selectedType?.id ?? null}
+        onSelect={onSelectType}
+        onAdd={(name) => dispatch({ type: "TYPE_ADD", name })}
+        onRename={(typeId, name) =>
+          dispatch({ type: "TYPE_RENAME", typeId, name })
+        }
+        onRemove={(typeId) => dispatch({ type: "TYPE_REMOVE", typeId })}
+        t={t}
+      />
+      <RelationPane
+        type={selectedType}
+        onAdd={(name) =>
+          selectedType &&
+          dispatch({
+            type: "RELATION_ADD",
+            typeId: selectedType.id,
+            name,
+          })
+        }
+        onRename={(relationId, name) =>
+          selectedType &&
+          dispatch({
+            type: "RELATION_RENAME",
+            typeId: selectedType.id,
+            relationId,
+            name,
+          })
+        }
+        onRemove={(relationId) =>
+          selectedType &&
+          dispatch({
+            type: "RELATION_REMOVE",
+            typeId: selectedType.id,
+            relationId,
+          })
+        }
+        onSetRewrite={(relationId, rewrite) =>
+          selectedType &&
+          dispatch({
+            type: "RELATION_SET_REWRITE",
+            typeId: selectedType.id,
+            relationId,
+            rewrite,
+          })
+        }
+        onSetRestrictions={(relationId, restrictions) =>
+          selectedType &&
+          dispatch({
+            type: "RELATION_SET_RESTRICTIONS",
+            typeId: selectedType.id,
+            relationId,
+            restrictions,
+          })
+        }
+        t={t}
+      />
     </div>
   );
 }

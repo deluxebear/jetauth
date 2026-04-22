@@ -748,6 +748,9 @@ export interface BizSchemaConflict {
 export interface SaveAuthorizationModelResult {
   outcome: SaveAuthorizationModelOutcome;
   authorizationModelId?: string;
+  // Populated on unchanged/advanced — lets the visual editor ingest
+  // the parsed model without a second request after a DSL edit.
+  schemaJson?: string;
   conflicts?: BizSchemaConflict[];
 }
 
