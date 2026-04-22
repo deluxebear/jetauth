@@ -59,6 +59,10 @@ func (c *ApiController) BizWriteAuthorizationModel() {
 
 	// Dry-run path: validate-only, no row inserted, no pointer advanced.
 	// Accept both ?dryRun=true and ?dryRun=1 for client convenience.
+	// Authorization is enforced by the same filter as the real-write
+	// path — `?appId=` flows through getBizAuthzTarget in
+	// routers/authz_filter.go, so an unprivileged user cannot use
+	// dryRun as a side-channel to probe another tenant's conflict list.
 	if dry := c.Ctx.Input.Query("dryRun"); dry == "true" || dry == "1" {
 		result, err := object.ValidateAuthorizationModel(owner, appName, body.SchemaDSL)
 		if err != nil {
@@ -593,6 +597,42 @@ func (c *ApiController) BizReadTuples() {
 		return
 	}
 	c.ResponseOk(tuples)
+}
+
+// bizCountTuplesResponse mirrors the one scalar the count endpoint returns.
+// Typed struct (vs bare int64) keeps the response envelope consistent with
+// the rest of the ReBAC API surface.
+type bizCountTuplesResponse struct {
+	Count int64 `json:"count"`
+}
+
+// BizCountTuples
+// @Summary BizCountTuples
+// @Tags Business Permission API
+// @Description Return the total tuple count for an app without
+// fetching rows. Backs the admin Overview dashboard — reading the
+// full table just to measure length is a multi-MB payload for large
+// stores.
+// @Param   appId   query    string  true  "The app id (owner/appName)"
+// @Success 200 {object} controllers.bizCountTuplesResponse "Tuple count"
+// @Router /biz-count-tuples [get]
+func (c *ApiController) BizCountTuples() {
+	appId := c.Ctx.Input.Query("appId")
+	if appId == "" {
+		c.ResponseError("appId is required")
+		return
+	}
+	owner, appName, err := util.GetOwnerAndNameFromIdWithError(appId)
+	if err != nil {
+		c.ResponseError(err.Error())
+		return
+	}
+	count, err := object.CountBizTuples(owner, appName)
+	if err != nil {
+		c.ResponseError(err.Error())
+		return
+	}
+	c.ResponseOk(bizCountTuplesResponse{Count: count})
 }
 
 // BizBatchCheck

@@ -221,6 +221,15 @@ func ReadBizTuples(owner, appName, object, relation, user string) ([]*BizTuple, 
 	return tuples, nil
 }
 
+// CountBizTuples returns the total number of tuples in (owner, appName)'s
+// store. Backs the admin Overview's tuple count — fetching every row just
+// to measure .length would be a multi-MB payload for 10k+ stores (review
+// finding R3).
+func CountBizTuples(owner, appName string) (int64, error) {
+	storeId := BuildStoreId(owner, appName)
+	return ormer.Engine.Where("store_id = ?", storeId).Count(new(BizTuple))
+}
+
 // ListBizTuplesForApp returns all tuples for (owner, appName). Used by
 // administrative list endpoints and schema migration tooling.
 func ListBizTuplesForApp(owner, appName string) ([]*BizTuple, error) {
