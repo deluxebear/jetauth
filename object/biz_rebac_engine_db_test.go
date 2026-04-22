@@ -171,8 +171,28 @@ func TestCheck_This_WildcardGrantsPlainUser(t *testing.T) {
 	if ormer == nil {
 		t.Skip("ormer not initialised (test needs DB)")
 	}
-	storeId, modelId := seedThisApp(t)
-	owner, appName, _ := parseStoreId(storeId)
+	// Needs a schema that explicitly admits `user:*` — the minimalDSL
+	// used by seedThisApp declares `[user]` only, and CP-4's type-
+	// restriction filter correctly rejects wildcard subjects under
+	// that restriction (spec §5.2). Build a wildcard-admitting app.
+	owner := "rebac-wc-" + util.GenerateUUID()[:8]
+	appName := "app_wildcard"
+	seedRebacAppConfigForTest(t, owner, appName)
+	dsl := `model
+  schema 1.1
+
+type user
+
+type document
+  relations
+    define viewer: [user, user:*]
+`
+	saveRes, err := SaveAuthorizationModel(owner, appName, dsl, "test-user")
+	if err != nil || saveRes.Outcome != SaveOutcomeAdvanced {
+		t.Fatalf("save: err=%v outcome=%v", err, saveRes)
+	}
+	storeId := BuildStoreId(owner, appName)
+	modelId := saveRes.AuthorizationModelId
 
 	if _, err := AddBizTuples([]*BizTuple{{
 		Owner: owner, AppName: appName,
