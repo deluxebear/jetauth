@@ -150,3 +150,170 @@ func (c *ApiController) BizListAuthorizationModels() {
 	}
 	c.ResponseOk(models)
 }
+
+// bizCheckTupleKey mirrors object.TupleKey for API serialisation. Kept
+// local to the controller so the engine's internal type stays free of
+// HTTP concerns.
+type bizCheckTupleKey struct {
+	Object   string `json:"object"`
+	Relation string `json:"relation"`
+	User     string `json:"user"`
+}
+
+// bizCheckRequest is the POST body for /api/biz-check.
+type bizCheckRequest struct {
+	AppId                string             `json:"appId"`
+	AuthorizationModelId string             `json:"authorizationModelId,omitempty"`
+	TupleKey             bizCheckTupleKey   `json:"tupleKey"`
+	ContextualTuples     []bizCheckTupleKey `json:"contextualTuples,omitempty"`
+	Context              map[string]any     `json:"context,omitempty"`
+}
+
+// bizCheckResponse is the shape wrapped inside ApiController.ResponseOk's
+// data field for /api/biz-check.
+type bizCheckResponse struct {
+	Allowed    bool   `json:"allowed"`
+	Resolution string `json:"resolution,omitempty"`
+}
+
+func toEngineTupleKeys(src []bizCheckTupleKey) []object.TupleKey {
+	if len(src) == 0 {
+		return nil
+	}
+	out := make([]object.TupleKey, len(src))
+	for i, t := range src {
+		out[i] = object.TupleKey{Object: t.Object, Relation: t.Relation, User: t.User}
+	}
+	return out
+}
+
+// BizCheck
+// @Summary BizCheck
+// @Tags Business Permission API
+// @Description Evaluate whether a user has a relation on an object using
+// the ReBAC engine. Honors contextual tuples (request-only grants) and
+// conditional tuples (CEL-evaluated under the merged tuple-context +
+// request-context). Query param `appId` accepted in addition to the body
+// field; body wins if both are set.
+// @Param   appId   query    string  false  "The app id (owner/appName); required via body if absent"
+// @Param   body    body     controllers.bizCheckRequest  true  "Check request"
+// @Success 200 {object} controllers.bizCheckResponse "allowed flag + optional resolution trace"
+// @Router /biz-check [post]
+func (c *ApiController) BizCheck() {
+	var body bizCheckRequest
+	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &body); err != nil {
+		c.ResponseError("invalid JSON body: " + err.Error())
+		return
+	}
+	if body.AppId == "" {
+		body.AppId = c.Ctx.Input.Query("appId")
+	}
+	if body.AppId == "" {
+		c.ResponseError("appId is required (body or ?appId= query)")
+		return
+	}
+	owner, appName, err := util.GetOwnerAndNameFromIdWithError(body.AppId)
+	if err != nil {
+		c.ResponseError(err.Error())
+		return
+	}
+
+	res, err := object.ReBACCheck(&object.CheckRequest{
+		StoreId:              object.BuildStoreId(owner, appName),
+		AuthorizationModelId: body.AuthorizationModelId,
+		TupleKey: object.TupleKey{
+			Object:   body.TupleKey.Object,
+			Relation: body.TupleKey.Relation,
+			User:     body.TupleKey.User,
+		},
+		ContextualTuples: toEngineTupleKeys(body.ContextualTuples),
+		Context:          body.Context,
+	})
+	if err != nil {
+		c.ResponseError(err.Error())
+		return
+	}
+	c.ResponseOk(bizCheckResponse{Allowed: res.Allowed, Resolution: res.Resolution})
+}
+
+// bizBatchCheckItem is a single entry in a /api/biz-batch-check request.
+// No per-item appId — batches are app-scoped by design (spec CP-4 plan
+// §Architecture: "never mix stores within one call").
+type bizBatchCheckItem struct {
+	TupleKey         bizCheckTupleKey   `json:"tupleKey"`
+	ContextualTuples []bizCheckTupleKey `json:"contextualTuples,omitempty"`
+	Context          map[string]any     `json:"context,omitempty"`
+}
+
+type bizBatchCheckRequest struct {
+	AppId                string              `json:"appId"`
+	AuthorizationModelId string              `json:"authorizationModelId,omitempty"`
+	Checks               []bizBatchCheckItem `json:"checks"`
+}
+
+type bizBatchCheckResponseItem struct {
+	Allowed    bool   `json:"allowed"`
+	Resolution string `json:"resolution,omitempty"`
+	Error      string `json:"error,omitempty"`
+}
+
+type bizBatchCheckResponse struct {
+	Results []bizBatchCheckResponseItem `json:"results"`
+}
+
+// BizBatchCheck
+// @Summary BizBatchCheck
+// @Tags Business Permission API
+// @Description Evaluate multiple Check requests against the same app /
+// authorization model in one call. Response preserves input order; each
+// item carries its own allowed flag and (on failure) an error string.
+// Per-item appId is not supported — the batch is app-scoped.
+// @Param   appId   query    string  false  "The app id (owner/appName); required via body if absent"
+// @Param   body    body     controllers.bizBatchCheckRequest  true  "Batch check request"
+// @Success 200 {object} controllers.bizBatchCheckResponse "Ordered results, one per input"
+// @Router /biz-batch-check [post]
+func (c *ApiController) BizBatchCheck() {
+	var body bizBatchCheckRequest
+	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &body); err != nil {
+		c.ResponseError("invalid JSON body: " + err.Error())
+		return
+	}
+	if body.AppId == "" {
+		body.AppId = c.Ctx.Input.Query("appId")
+	}
+	if body.AppId == "" {
+		c.ResponseError("appId is required (body or ?appId= query)")
+		return
+	}
+	if len(body.Checks) == 0 {
+		c.ResponseError("checks must not be empty")
+		return
+	}
+	owner, appName, err := util.GetOwnerAndNameFromIdWithError(body.AppId)
+	if err != nil {
+		c.ResponseError(err.Error())
+		return
+	}
+	storeId := object.BuildStoreId(owner, appName)
+
+	results := make([]bizBatchCheckResponseItem, len(body.Checks))
+	for i, item := range body.Checks {
+		res, err := object.ReBACCheck(&object.CheckRequest{
+			StoreId:              storeId,
+			AuthorizationModelId: body.AuthorizationModelId,
+			TupleKey: object.TupleKey{
+				Object:   item.TupleKey.Object,
+				Relation: item.TupleKey.Relation,
+				User:     item.TupleKey.User,
+			},
+			ContextualTuples: toEngineTupleKeys(item.ContextualTuples),
+			Context:          item.Context,
+		})
+		if err != nil {
+			results[i] = bizBatchCheckResponseItem{Error: err.Error()}
+			continue
+		}
+		results[i] = bizBatchCheckResponseItem{Allowed: res.Allowed, Resolution: res.Resolution}
+	}
+	c.ResponseOk(bizBatchCheckResponse{Results: results})
+}
