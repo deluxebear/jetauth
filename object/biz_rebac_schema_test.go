@@ -12,7 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:build !skipCi
+// Pure-function tests — no DB access — so they run in CI under the skipCi
+// tag like the rest of the repo. The !skipCi tag is reserved for DB-bound
+// or environment-dependent tests.
 
 package object
 

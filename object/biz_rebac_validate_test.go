@@ -6,7 +6,8 @@
 //
 //      http://www.apache.org/licenses/LICENSE-2.0
 
-//go:build !skipCi
+// Pure-function tests for the schema conflict scanner — no DB access — so
+// they run in CI. DB-bound conflict-scan coverage lives in biz_rebac_save_test.go.
 
 package object
 
