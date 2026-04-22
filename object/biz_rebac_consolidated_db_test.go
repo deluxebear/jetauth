@@ -144,18 +144,20 @@ var skippedTests = map[string]string{
 	"validation_invalid_wildcard_in_contextual_tuple":     "contextual-tuple request validation (CP-4 Task 7 HTTP layer)",
 	"val_contextual_tuples_and_wildcard_in_ttu_evaluation": "contextual-tuple request validation (CP-4 Task 7 HTTP layer)",
 
-	// OpenFGA has per-branch cycle detection that returns false (not
-	// error) when the same key is re-entered on the same resolution
-	// path. Our engine returns the depth-cap error — correct for
-	// protecting the stack, but different from upstream semantics for
-	// pathological schemas. Tracked as a follow-up; spec §13 Always
-	// requires the depth cap as the strict floor.
-	"immediate_cycle_through_computed_userset":       "per-branch cycle-returns-false (out of CP-3)",
-	"true_butnot_cycle_return_false":                 "per-branch cycle-returns-false (out of CP-3)",
-	"cycle_or_cycle_return_false":                    "per-branch cycle-returns-false (out of CP-3)",
-	"cycle_and_cycle_return_false":                   "per-branch cycle-returns-false (out of CP-3)",
-	"resolution_too_complex_throws_error":            "per-branch cycle-returns-false (out of CP-3)",
-	"list_objects_with_subcheck_encounters_cycle":    "CP-5 ListObjects + per-branch cycle detection",
+	// list_objects_with_subcheck_encounters_cycle contains listObjects
+	// assertions that are CP-5 work. Its checkAssertions run, but the
+	// test as a whole still exercises ListObjects semantics we don't
+	// yet implement — keep it skipped until CP-5.
+	"list_objects_with_subcheck_encounters_cycle": "CP-5 ListObjects (checkAssertions happen to use cycle schemas)",
+
+	// Cycle inside a difference subtract branch: OpenFGA's engine
+	// recognises the pending-resolution state and conservatively denies
+	// the whole diff. Our visited-path detector returns (false, nil) for
+	// the cycle — which is correct locally but lets the outer diff
+	// compute `base(true) but not subtract(false)` = true, missing the
+	// upstream deny. Fixing this needs a ternary (true/false/cycle)
+	// propagation through the evaluation stack; scope creep for CP-4.
+	"true_butnot_cycle_return_false": "cycle inside difference-subtract needs ternary resolution state (follow-up)",
 }
 
 // expectedSkipCount is a guard against skippedTests silently growing.
@@ -165,7 +167,7 @@ var skippedTests = map[string]string{
 // Unique skip-map entries. Changing either the count or any entry's
 // reason requires updating this constant explicitly — the gate below
 // compares len(skippedTests) to this value to catch silent growth/shrink.
-const expectedSkipCount = 19
+const expectedSkipCount = 15
 
 func TestConsolidatedSuite(t *testing.T) {
 	ensureDBForConsolidated(t)

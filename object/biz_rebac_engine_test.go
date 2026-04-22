@@ -85,7 +85,7 @@ func dispatchTestCtx(t *testing.T, dsl string) *checkContext {
 // actionable.
 func TestCheck_UnknownObjectType(t *testing.T) {
 	ctx := dispatchTestCtx(t, minimalDSL) // defines user + document only
-	_, err := ctx.check(TupleKey{Object: "widget:w1", Relation: "viewer", User: "user:a"}, 0)
+	_, err := ctx.check(TupleKey{Object: "widget:w1", Relation: "viewer", User: "user:a"}, 0, nil)
 	if err == nil || !strings.Contains(err.Error(), `object type "widget" not in schema`) {
 		t.Fatalf("want 'widget not in schema' error, got: %v", err)
 	}
@@ -95,7 +95,7 @@ func TestCheck_UnknownObjectType(t *testing.T) {
 // definition errors out before any rewrite runs.
 func TestCheck_UnknownRelation(t *testing.T) {
 	ctx := dispatchTestCtx(t, minimalDSL) // document has only viewer
-	_, err := ctx.check(TupleKey{Object: "document:d1", Relation: "editor", User: "user:a"}, 0)
+	_, err := ctx.check(TupleKey{Object: "document:d1", Relation: "editor", User: "user:a"}, 0, nil)
 	if err == nil || !strings.Contains(err.Error(), `relation "editor" not defined`) {
 		t.Fatalf("want 'editor not defined' error, got: %v", err)
 	}
@@ -108,6 +108,7 @@ func TestCheck_MaxDepth(t *testing.T) {
 	_, err := ctx.check(
 		TupleKey{Object: "document:d1", Relation: "viewer", User: "user:a"},
 		maxResolutionDepth,
+		nil,
 	)
 	if err == nil || !strings.Contains(err.Error(), "max resolution depth") {
 		t.Fatalf("want 'max resolution depth' error, got: %v", err)
@@ -123,7 +124,7 @@ func TestCheck_MemoHit(t *testing.T) {
 	key := TupleKey{Object: "document:d1", Relation: "viewer", User: "user:a"}
 	ctx.memo.Store(memoKey(key), true)
 
-	allowed, err := ctx.check(key, 0)
+	allowed, err := ctx.check(key, 0, nil)
 	if err != nil {
 		t.Fatalf("memo hit path errored: %v", err)
 	}
@@ -150,7 +151,7 @@ func TestCheck_NilUserset(t *testing.T) {
 		},
 	}
 	ctx := &checkContext{storeId: "owner/app", model: model, memo: sync.Map{}}
-	_, err := ctx.check(TupleKey{Object: "document:d1", Relation: "viewer", User: "user:a"}, 0)
+	_, err := ctx.check(TupleKey{Object: "document:d1", Relation: "viewer", User: "user:a"}, 0, nil)
 	if err == nil || !strings.Contains(err.Error(), "no userset type") {
 		t.Fatalf("want 'no userset type' error, got: %v", err)
 	}
@@ -181,7 +182,7 @@ type document
 	var cnt atomic.Int64
 	ctx.evalCount = &cnt
 
-	allowed, err := ctx.check(TupleKey{Object: "document:d1", Relation: "viewer", User: "user:alice"}, 0)
+	allowed, err := ctx.check(TupleKey{Object: "document:d1", Relation: "viewer", User: "user:alice"}, 0, nil)
 	if err != nil {
 		t.Fatalf("check: %v", err)
 	}
@@ -198,11 +199,16 @@ type document
 	}
 }
 
-// TestCheck_MaxDepth_CycleErrors constructs a schema with a mutual cycle
-// (a depends on b, b depends on a) and verifies the cap surfaces as an
-// error rather than the engine returning a silent false. Schema parser
-// allows the cycle; the runtime cap is the guard.
-func TestCheck_MaxDepth_CycleErrors(t *testing.T) {
+// TestCheck_Cycle_ReturnsFalseNotError verifies the per-branch cycle
+// detector catches a mutual `define a: b; define b: a` recursion before
+// the depth cap fires and returns `(false, nil)`. Matches OpenFGA
+// reference semantics: cycles on a resolution path mean "no grant from
+// this path" — a caller composing check results shouldn't see a schema
+// cycle as a poison-error.
+//
+// The depth cap itself is still active for truly deep but non-cyclic
+// schemas (verified by TestCheck_MaxDepth above).
+func TestCheck_Cycle_ReturnsFalseNotError(t *testing.T) {
 	const dsl = `model
   schema 1.1
 
@@ -215,9 +221,12 @@ type document
 `
 	ctx := dispatchTestCtx(t, dsl)
 
-	_, err := ctx.check(TupleKey{Object: "document:d1", Relation: "a", User: "user:alice"}, 0)
-	if err == nil || !strings.Contains(err.Error(), "max resolution depth") {
-		t.Fatalf("want 'max resolution depth' error on cycle, got: %v", err)
+	allowed, err := ctx.check(TupleKey{Object: "document:d1", Relation: "a", User: "user:alice"}, 0, nil)
+	if err != nil {
+		t.Fatalf("cycle should not error, got: %v", err)
+	}
+	if allowed {
+		t.Fatalf("cycle must deny, got allowed")
 	}
 }
 

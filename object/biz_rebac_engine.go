@@ -245,21 +245,37 @@ func findRelation(model *openfgav1.AuthorizationModel, objectType, relation stri
 }
 
 // check is the central dispatcher for a single Check step: it enforces the
-// depth cap, consults the memo, parses the object's type, looks up the
-// matching rewrite, and hands evaluation off to the per-rewrite helper. The
-// helpers themselves are stubs in this commit (Task 3); Tasks 4–9 replace
-// each stub with the real rewrite semantics.
+// depth cap, detects per-branch cycles, consults the memo, parses the
+// object's type, looks up the matching rewrite, and hands evaluation off
+// to the per-rewrite helper.
 //
-// Depth is checked before the memo hit on purpose: a cycle that makes us
-// call check() with the same key from depth 24 and depth 26 must error at
-// depth 26 regardless of whether the key was observed before.
-func (ctx *checkContext) check(key TupleKey, depth int) (bool, error) {
+// visited tracks the resolution path — memoKeys of every ancestor call
+// on this branch. A re-entry of the same memoKey on the same path means
+// the schema has a cycle that "this branch" can't close; we return
+// (false, nil) without memoising, so a legitimate reach of the same key
+// via a different path can still produce its real answer.
+//
+// Depth is checked before the memo hit on purpose: a misauthored schema
+// that somehow passes the cycle check but still recurses 25+ deep must
+// surface as error, not a silent false.
+//
+// Goroutines in checkUnion / checkIntersection share visited by value —
+// Go slices pass the header by value, underlying array by reference. Each
+// sub-ctx.check that needs to add to visited does append([]string(nil),
+// visited...) first so siblings don't mutate each other's arrays.
+func (ctx *checkContext) check(key TupleKey, depth int, visited []string) (bool, error) {
+	mkey := memoKey(key)
+	for _, v := range visited {
+		if v == mkey {
+			return false, nil
+		}
+	}
 	if depth >= maxResolutionDepth {
 		return false, fmt.Errorf("rebac: max resolution depth %d exceeded on %s#%s",
 			maxResolutionDepth, key.Object, key.Relation)
 	}
 
-	if v, ok := ctx.memo.Load(memoKey(key)); ok {
+	if v, ok := ctx.memo.Load(mkey); ok {
 		return v.(bool), nil
 	}
 	// Past the memo short-circuit — this is real dispatch work. Counter
@@ -278,34 +294,40 @@ func (ctx *checkContext) check(key TupleKey, depth int) (bool, error) {
 		return false, err
 	}
 
-	allowed, err := ctx.evaluate(userset, key, depth)
+	// Children inherit "this key has been seen" by receiving a fresh
+	// slice with the current mkey appended. append-from-nil guarantees a
+	// standalone backing array so concurrent siblings never stomp one
+	// another when they recurse further.
+	childVisited := append(append([]string(nil), visited...), mkey)
+	allowed, err := ctx.evaluate(userset, key, depth, childVisited)
 	if err != nil {
 		return false, err
 	}
 	// Only positive or negative *decisions* are memoised — errors are not,
 	// so transient failures don't poison later sibling branches that might
 	// reach the same key via a different path.
-	ctx.memo.Store(memoKey(key), allowed)
+	ctx.memo.Store(mkey, allowed)
 	return allowed, nil
 }
 
-// evaluate selects the rewrite implementation by oneof type and forwards to
-// the matching stub. Task 4–9 commits replace each stub body; signatures
-// are frozen here so those commits stay surgical.
-func (ctx *checkContext) evaluate(userset *openfgav1.Userset, key TupleKey, depth int) (bool, error) {
+// evaluate selects the rewrite implementation by oneof type. visited is
+// forwarded so any helper that recurses via ctx.check carries the
+// resolution path with it — union / intersection / difference don't
+// themselves consume visited; they're rewrites on the current key.
+func (ctx *checkContext) evaluate(userset *openfgav1.Userset, key TupleKey, depth int, visited []string) (bool, error) {
 	switch u := userset.GetUserset().(type) {
 	case *openfgav1.Userset_This:
-		return ctx.checkThis(key, depth)
+		return ctx.checkThis(key, depth, visited)
 	case *openfgav1.Userset_ComputedUserset:
-		return ctx.checkComputedUserset(key, u.ComputedUserset, depth)
+		return ctx.checkComputedUserset(key, u.ComputedUserset, depth, visited)
 	case *openfgav1.Userset_TupleToUserset:
-		return ctx.checkTupleToUserset(key, u.TupleToUserset, depth)
+		return ctx.checkTupleToUserset(key, u.TupleToUserset, depth, visited)
 	case *openfgav1.Userset_Union:
-		return ctx.checkUnion(key, u.Union, depth)
+		return ctx.checkUnion(key, u.Union, depth, visited)
 	case *openfgav1.Userset_Intersection:
-		return ctx.checkIntersection(key, u.Intersection, depth)
+		return ctx.checkIntersection(key, u.Intersection, depth, visited)
 	case *openfgav1.Userset_Difference:
-		return ctx.checkDifference(key, u.Difference, depth)
+		return ctx.checkDifference(key, u.Difference, depth, visited)
 	case nil:
 		return false, fmt.Errorf("rebac: rewrite for %s#%s has no userset type", key.Object, key.Relation)
 	default:
@@ -332,7 +354,7 @@ func (ctx *checkContext) evaluate(userset *openfgav1.Userset, key TupleKey, dept
 // the self-wildcard are never granted by a `{type}:*` row. Userset
 // expansion bumps depth so a malformed schema looping on itself can't
 // outrun the cap.
-func (ctx *checkContext) checkThis(key TupleKey, depth int) (bool, error) {
+func (ctx *checkContext) checkThis(key TupleKey, depth int, visited []string) (bool, error) {
 	userType, userId, userRel, err := parseUserString(key.User)
 	if err != nil {
 		return false, fmt.Errorf("rebac: parse user: %w", err)
@@ -395,7 +417,7 @@ func (ctx *checkContext) checkThis(key TupleKey, depth int) (bool, error) {
 				Object:   rowObj,
 				Relation: rowRel,
 				User:     key.User,
-			}, depth+1)
+			}, depth+1, visited)
 			if err != nil {
 				// Same polymorphic-skip logic as tuple_to_userset: a
 				// userset reference into a type that doesn't define the
@@ -459,12 +481,13 @@ func (ctx *checkContext) evaluateTupleCondition(ref tupleRef) (bool, error) {
 // checkComputedUserset resolves `define viewer: editor` — evaluate the
 // caller's access to the *same* object under a different relation. Just a
 // shallow redirect: build a new TupleKey with the target relation and hand
-// it back to the dispatcher, which enforces depth + memo on the re-entry.
+// it back to the dispatcher, which enforces depth + memo + cycle detection
+// on the re-entry.
 //
 // The ObjectRelation.Object field is ignored here because computed_userset
 // always refers to the current object. OpenFGA's proto keeps the field for
 // symmetry with tuple_to_userset; the OpenFGA server asserts it's empty.
-func (ctx *checkContext) checkComputedUserset(key TupleKey, cu *openfgav1.ObjectRelation, depth int) (bool, error) {
+func (ctx *checkContext) checkComputedUserset(key TupleKey, cu *openfgav1.ObjectRelation, depth int, visited []string) (bool, error) {
 	target := cu.GetRelation()
 	if target == "" {
 		return false, fmt.Errorf("rebac: computed_userset on %s#%s has empty target relation",
@@ -474,7 +497,7 @@ func (ctx *checkContext) checkComputedUserset(key TupleKey, cu *openfgav1.Object
 		Object:   key.Object,
 		Relation: target,
 		User:     key.User,
-	}, depth+1)
+	}, depth+1, visited)
 }
 
 // checkTupleToUserset resolves `define viewer: viewer from parent` by first
@@ -485,7 +508,7 @@ func (ctx *checkContext) checkComputedUserset(key TupleKey, cu *openfgav1.Object
 // The scan is lazy — we fetch parent tuples on demand rather than
 // pre-materialising every ancestor, so a folder with many documents pays
 // only for the parents it actually needs to consult for a given Check.
-func (ctx *checkContext) checkTupleToUserset(key TupleKey, ttu *openfgav1.TupleToUserset, depth int) (bool, error) {
+func (ctx *checkContext) checkTupleToUserset(key TupleKey, ttu *openfgav1.TupleToUserset, depth int, visited []string) (bool, error) {
 	tupleset := ttu.GetTupleset().GetRelation()
 	computed := ttu.GetComputedUserset().GetRelation()
 	if tupleset == "" || computed == "" {
@@ -536,7 +559,7 @@ func (ctx *checkContext) checkTupleToUserset(key TupleKey, ttu *openfgav1.TupleT
 			Object:   parentObject,
 			Relation: computed,
 			User:     key.User,
-		}, depth+1)
+		}, depth+1, visited)
 		if err != nil {
 			// A polymorphic parent (parent: [document, folder]) whose
 			// concrete type doesn't define the computed relation isn't
@@ -613,13 +636,13 @@ func (ctx *checkContext) tuplesetTuples(object, relation string) ([]tupleRef, er
 // Error handling: if any branch returns true, errors from other branches
 // are swallowed — one positive decision suffices. If no branch is true and
 // any branch errored, the first error surfaces; otherwise false.
-func (ctx *checkContext) checkUnion(key TupleKey, u *openfgav1.Usersets, depth int) (bool, error) {
+func (ctx *checkContext) checkUnion(key TupleKey, u *openfgav1.Usersets, depth int, visited []string) (bool, error) {
 	children := u.GetChild()
 	if len(children) == 0 {
 		return false, nil
 	}
 	if len(children) == 1 {
-		return ctx.evaluate(children[0], key, depth)
+		return ctx.evaluate(children[0], key, depth, visited)
 	}
 
 	var g errgroup.Group
@@ -630,7 +653,7 @@ func (ctx *checkContext) checkUnion(key TupleKey, u *openfgav1.Usersets, depth i
 			if found.Load() {
 				return nil
 			}
-			allowed, err := ctx.evaluate(c, key, depth)
+			allowed, err := ctx.evaluate(c, key, depth, visited)
 			if err != nil {
 				return err
 			}
@@ -657,7 +680,7 @@ func (ctx *checkContext) checkUnion(key TupleKey, u *openfgav1.Usersets, depth i
 // Error handling mirrors checkUnion's shape but inverted: a single false
 // decision is enough to reject, and errors only surface when no branch
 // was decisive.
-func (ctx *checkContext) checkIntersection(key TupleKey, u *openfgav1.Usersets, depth int) (bool, error) {
+func (ctx *checkContext) checkIntersection(key TupleKey, u *openfgav1.Usersets, depth int, visited []string) (bool, error) {
 	children := u.GetChild()
 	if len(children) == 0 {
 		// Empty intersection is a schema bug — DSL never emits one, but a
@@ -666,7 +689,7 @@ func (ctx *checkContext) checkIntersection(key TupleKey, u *openfgav1.Usersets, 
 		return false, fmt.Errorf("rebac: empty intersection on %s#%s", key.Object, key.Relation)
 	}
 	if len(children) == 1 {
-		return ctx.evaluate(children[0], key, depth)
+		return ctx.evaluate(children[0], key, depth, visited)
 	}
 
 	var g errgroup.Group
@@ -677,7 +700,7 @@ func (ctx *checkContext) checkIntersection(key TupleKey, u *openfgav1.Usersets, 
 			if anyFalse.Load() {
 				return nil
 			}
-			allowed, err := ctx.evaluate(c, key, depth)
+			allowed, err := ctx.evaluate(c, key, depth, visited)
 			if err != nil {
 				return err
 			}
@@ -702,7 +725,7 @@ func (ctx *checkContext) checkIntersection(key TupleKey, u *openfgav1.Usersets, 
 // sequential: if Base is false, Subtract is never consulted — callers
 // often use Subtract for expensive "banlist" lookups, and running them
 // for users who weren't getting access anyway is pure waste.
-func (ctx *checkContext) checkDifference(key TupleKey, d *openfgav1.Difference, depth int) (bool, error) {
+func (ctx *checkContext) checkDifference(key TupleKey, d *openfgav1.Difference, depth int, visited []string) (bool, error) {
 	base := d.GetBase()
 	sub := d.GetSubtract()
 	if base == nil || sub == nil {
@@ -710,7 +733,7 @@ func (ctx *checkContext) checkDifference(key TupleKey, d *openfgav1.Difference, 
 			key.Object, key.Relation)
 	}
 
-	baseAllowed, err := ctx.evaluate(base, key, depth)
+	baseAllowed, err := ctx.evaluate(base, key, depth, visited)
 	if err != nil {
 		return false, err
 	}
@@ -718,7 +741,7 @@ func (ctx *checkContext) checkDifference(key TupleKey, d *openfgav1.Difference, 
 		return false, nil
 	}
 
-	subAllowed, err := ctx.evaluate(sub, key, depth)
+	subAllowed, err := ctx.evaluate(sub, key, depth, visited)
 	if err != nil {
 		return false, err
 	}
@@ -753,7 +776,7 @@ func ReBACCheck(req *CheckRequest) (*CheckResult, error) {
 		contextual:     req.ContextualTuples,
 		requestContext: req.Context,
 	}
-	allowed, err := ctx.check(req.TupleKey, 0)
+	allowed, err := ctx.check(req.TupleKey, 0, nil)
 	if err != nil {
 		return nil, err
 	}
