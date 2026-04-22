@@ -447,6 +447,105 @@ func TestCheck_TupleToUserset_AnyParentSuffices(t *testing.T) {
 	}
 }
 
+// --- checkUnion (Task 7) end-to-end ---------------------------------------
+
+const unionDSL = `model
+  schema 1.1
+
+type user
+
+type document
+  relations
+    define editor: [user]
+    define viewer: [user] or editor
+`
+
+func seedUnionApp(t *testing.T) (storeId, modelId string) {
+	t.Helper()
+	owner := "rebac-it-" + util.GenerateUUID()[:8]
+	appName := "app_union"
+	seedRebacAppConfigForTest(t, owner, appName)
+	res, err := SaveAuthorizationModel(owner, appName, unionDSL, "test-user")
+	if err != nil || res.Outcome != SaveOutcomeAdvanced {
+		t.Fatalf("save: err=%v outcome=%v", err, res)
+	}
+	return BuildStoreId(owner, appName), res.AuthorizationModelId
+}
+
+func TestCheck_Union_DirectBranchAllows(t *testing.T) {
+	if ormer == nil {
+		t.Skip("ormer not initialised (test needs DB)")
+	}
+	storeId, modelId := seedUnionApp(t)
+	owner, appName, _ := parseStoreId(storeId)
+
+	// Direct viewer tuple (via `[user]` branch).
+	if _, err := AddBizTuples([]*BizTuple{{
+		Owner: owner, AppName: appName,
+		Object: "document:d1", Relation: "viewer", User: "user:alice",
+		AuthorizationModelId: modelId,
+	}}); err != nil {
+		t.Fatalf("seed: %v", err)
+	}
+
+	res, err := ReBACCheck(&CheckRequest{
+		StoreId: storeId, AuthorizationModelId: modelId,
+		TupleKey: TupleKey{Object: "document:d1", Relation: "viewer", User: "user:alice"},
+	})
+	if err != nil {
+		t.Fatalf("check: %v", err)
+	}
+	if !res.Allowed {
+		t.Fatalf("direct viewer must allow, got denied")
+	}
+}
+
+func TestCheck_Union_IndirectBranchAllows(t *testing.T) {
+	if ormer == nil {
+		t.Skip("ormer not initialised (test needs DB)")
+	}
+	storeId, modelId := seedUnionApp(t)
+	owner, appName, _ := parseStoreId(storeId)
+
+	// Editor tuple — viewer granted via `or editor` branch.
+	if _, err := AddBizTuples([]*BizTuple{{
+		Owner: owner, AppName: appName,
+		Object: "document:d1", Relation: "editor", User: "user:alice",
+		AuthorizationModelId: modelId,
+	}}); err != nil {
+		t.Fatalf("seed: %v", err)
+	}
+
+	res, err := ReBACCheck(&CheckRequest{
+		StoreId: storeId, AuthorizationModelId: modelId,
+		TupleKey: TupleKey{Object: "document:d1", Relation: "viewer", User: "user:alice"},
+	})
+	if err != nil {
+		t.Fatalf("check: %v", err)
+	}
+	if !res.Allowed {
+		t.Fatalf("editor → viewer via union, got denied")
+	}
+}
+
+func TestCheck_Union_NoBranchAllows(t *testing.T) {
+	if ormer == nil {
+		t.Skip("ormer not initialised (test needs DB)")
+	}
+	storeId, modelId := seedUnionApp(t)
+
+	res, err := ReBACCheck(&CheckRequest{
+		StoreId: storeId, AuthorizationModelId: modelId,
+		TupleKey: TupleKey{Object: "document:d1", Relation: "viewer", User: "user:ghost"},
+	})
+	if err != nil {
+		t.Fatalf("check: %v", err)
+	}
+	if res.Allowed {
+		t.Fatalf("no grants → denied, got allowed")
+	}
+}
+
 // --- resolveAuthorizationModel (Task 2) end-to-end --------------------------
 
 // TestResolveAuthorizationModel_CrossStore verifies a model id that belongs

@@ -20,8 +20,10 @@ import (
 	"fmt"
 	"strings"
 	"sync"
+	"sync/atomic"
 
 	openfgav1 "github.com/openfga/api/proto/openfga/v1"
+	"golang.org/x/sync/errgroup"
 )
 
 // maxResolutionDepth caps recursive evaluation at the OpenFGA reference
@@ -400,11 +402,50 @@ func (ctx *checkContext) tuplesetUsers(object, relation string) ([]string, error
 	return out, nil
 }
 
-// checkUnion — Task 7.
+// checkUnion resolves `define viewer: [user] or editor` — any child branch
+// true is enough. Branches evaluate concurrently via errgroup; a soft
+// short-circuit flag lets later goroutines skip real work once one branch
+// has returned true (the running goroutines can't be hard-cancelled without
+// threading context through ReadBizTuples, which is a CP-6 refactor).
+//
+// Error handling: if any branch returns true, errors from other branches
+// are swallowed — one positive decision suffices. If no branch is true and
+// any branch errored, the first error surfaces; otherwise false.
 func (ctx *checkContext) checkUnion(key TupleKey, u *openfgav1.Usersets, depth int) (bool, error) {
-	_ = u
-	_ = depth
-	return false, fmt.Errorf("rebac: 'union' rewrite not implemented (CP-3 Task 7) for %s#%s", key.Object, key.Relation)
+	children := u.GetChild()
+	if len(children) == 0 {
+		return false, nil
+	}
+	if len(children) == 1 {
+		return ctx.evaluate(children[0], key, depth)
+	}
+
+	var g errgroup.Group
+	var found atomic.Bool
+	for _, c := range children {
+		c := c
+		g.Go(func() error {
+			if found.Load() {
+				return nil
+			}
+			allowed, err := ctx.evaluate(c, key, depth)
+			if err != nil {
+				return err
+			}
+			if allowed {
+				found.Store(true)
+			}
+			return nil
+		})
+	}
+	err := g.Wait()
+	if found.Load() {
+		return true, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	return false, nil
 }
 
 // checkIntersection — Task 8.
