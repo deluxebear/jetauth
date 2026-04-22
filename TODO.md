@@ -746,9 +746,10 @@ func (c *Client) applyResponse(resp WatchResponse) {
 
 ### P6: 缓存优化（2 天）
 
-- [ ] sync.Map 元组查询结果缓存 + 写入时失效
-- [ ] 可选 Redis 缓存层（复用 `bizPolicyCacheEnabled` 配置）
-- [ ] ListObjects 并发遍历 + context 超时控制
+- [x] sync.Map 元组查询结果缓存 + 写入时失效 (CP-6, biz_rebac_cache.go)
+- [ ] 可选 Redis L3 缓存层（复用 `bizPolicyCacheEnabled` 配置）— CP-6 follow-up
+- [x] ListObjects context 超时控制 (CP-5 — 10s 硬超时)
+- [ ] ListObjects 并发遍历 (CP-8 产品级验收)
 
 ### 清理
 
