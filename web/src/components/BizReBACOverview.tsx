@@ -35,10 +35,13 @@ export default function BizReBACOverview({ appId }: Props) {
     setLoading(true);
     Promise.all([
       BizBackend.getBizAuthorizationModel(appId),
-      BizBackend.readBizTuples(appId),
+      // countBizTuples is a scalar SELECT COUNT(*) — safe to call on
+      // large stores (post-review R3: prior version pulled every row
+      // just to measure length, a multi-MB payload for 10k+ stores).
+      BizBackend.countBizTuples(appId),
       BizBackend.listBizAuthorizationModels(appId),
     ])
-      .then(([modelRes, tuplesRes, listRes]) => {
+      .then(([modelRes, countRes, listRes]) => {
         if (cancelled) return;
         const hasSchema =
           modelRes.status === "ok" && !!modelRes.data?.schemaJson;
@@ -50,8 +53,8 @@ export default function BizReBACOverview({ appId }: Props) {
           for (const td of ast.types) relationCount += td.relations.length;
         }
         const tupleCount =
-          tuplesRes.status === "ok" && Array.isArray(tuplesRes.data)
-            ? tuplesRes.data.length
+          countRes.status === "ok" && countRes.data
+            ? countRes.data.count
             : 0;
         const models =
           listRes.status === "ok" && Array.isArray(listRes.data)

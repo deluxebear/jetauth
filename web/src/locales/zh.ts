@@ -3537,6 +3537,8 @@ const zh: Record<string, string> = {
   "rebac.tuples.columns.user": "用户",
   "rebac.tuples.columns.condition": "条件",
   "rebac.tuples.columns.createdTime": "创建时间",
+  "rebac.tuples.conditionContextLabel": "条件上下文 (JSON)",
+  "rebac.tuples.bulkImportPlaceholder": "在此粘贴...",
   "rebac.tuples.empty": "暂无元组",
 
   // Tester

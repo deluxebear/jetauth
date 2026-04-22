@@ -3547,6 +3547,8 @@ const en = {
   "rebac.tuples.columns.user": "User",
   "rebac.tuples.columns.condition": "Condition",
   "rebac.tuples.columns.createdTime": "Created",
+  "rebac.tuples.conditionContextLabel": "Condition context (JSON)",
+  "rebac.tuples.bulkImportPlaceholder": "Paste here...",
   "rebac.tuples.empty": "No tuples",
 
   // Tester

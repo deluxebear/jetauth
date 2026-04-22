@@ -198,21 +198,21 @@ export default function BizReBACTester({ appId }: Props) {
     <div className="flex flex-col gap-3">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
         <LabeledInput
-          label="User"
+          label={t("rebac.tuples.columns.user")}
           value={form.user}
           onChange={(v) => setForm((f) => ({ ...f, user: v }))}
           placeholder="user:alice"
           mono
         />
         <LabeledInput
-          label="Object"
+          label={t("rebac.tuples.columns.object")}
           value={form.object}
           onChange={(v) => setForm((f) => ({ ...f, object: v }))}
           placeholder="document:d1"
           mono
         />
         <LabeledInput
-          label="Relation"
+          label={t("rebac.tuples.columns.relation")}
           value={form.relation}
           onChange={(v) => setForm((f) => ({ ...f, relation: v }))}
           placeholder="viewer"

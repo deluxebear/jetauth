@@ -966,6 +966,19 @@ export function bizExpand(appId: string, object: string, relation: string, id?: 
   return request<BizExpandResult>("GET", `/api/biz-expand?${params.toString()}`);
 }
 
+// biz-count-tuples — post-review addition so Overview can render the
+// tuple count without pulling the full table.
+export interface BizCountTuplesResponse {
+  count: number;
+}
+
+export function countBizTuples(appId: string) {
+  return request<BizCountTuplesResponse>(
+    "GET",
+    `/api/biz-count-tuples?appId=${encodeURIComponent(appId)}`,
+  );
+}
+
 // ── Helpers ──
 
 /** Parse policy_definition fields from model text. Returns field names like ["sub", "obj", "act"] */

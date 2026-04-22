@@ -305,9 +305,9 @@ function AddTupleDialog({
   return (
     <DialogShell title={t("rebac.tuples.addDialog.title")} onClose={onClose}>
       <div className="flex flex-col gap-2.5">
-        <Field label="Object" value={object} onChange={setObject} mono placeholder="document:d1" />
-        <Field label="Relation" value={relation} onChange={setRelation} mono placeholder="viewer" />
-        <Field label="User" value={user} onChange={setUser} mono placeholder="user:alice" />
+        <Field label={t("rebac.tuples.columns.object")} value={object} onChange={setObject} mono placeholder="document:d1" />
+        <Field label={t("rebac.tuples.columns.relation")} value={relation} onChange={setRelation} mono placeholder="viewer" />
+        <Field label={t("rebac.tuples.columns.user")} value={user} onChange={setUser} mono placeholder="user:alice" />
         <Field
           label={t("rebac.typeRestriction.condition")}
           value={conditionName}
@@ -317,7 +317,7 @@ function AddTupleDialog({
         />
         {conditionName && (
           <Field
-            label="Condition context (JSON)"
+            label={t("rebac.tuples.conditionContextLabel")}
             value={conditionContext}
             onChange={setConditionContext}
             mono
@@ -416,7 +416,7 @@ function BulkImportDialog({
       </div>
       <textarea
         className="w-full h-40 px-2 py-1 rounded border border-border bg-surface-0 text-[12px] font-mono"
-        placeholder="Paste here..."
+        placeholder={t("rebac.tuples.bulkImportPlaceholder")}
         value={raw}
         onChange={(e) => setRaw(e.target.value)}
       />
