@@ -3480,6 +3480,7 @@ const en = {
   "rebac.schema.unsaved": "Unsaved",
   "rebac.schema.validating": "Validating...",
   "rebac.schema.valid": "Syntax OK",
+  "rebac.schema.relationNeedsRestriction": "Relation needs at least one allowed subject type",
   "rebac.schema.visualReadOnlyHint": "Visual editor (preview): add/rename/remove types and relations here. Rewrite rules and save land in Tasks 5b–6.",
   "rebac.schema.selectTypeHint": "Select a type on the left to view its relations.",
   "rebac.schema.visualRewriteComingSoon": "Rewrite editor arrives in CP-7 Task 5b.",

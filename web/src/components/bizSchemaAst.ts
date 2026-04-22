@@ -258,6 +258,55 @@ export function serializeAstToDsl(ast: SchemaAST): string {
   return lines.join("\n") + "\n";
 }
 
+// findIncompleteRelations walks the AST and returns every relation
+// that would serialise to an unparseable `[]` — i.e. its rewrite
+// reduces to a bare `this` with no subject-type restrictions. This is
+// the expected post-"add relation" state in the visual editor (the
+// reducer seeds new relations with `{this, []}` so the user picks a
+// subject type next); surfacing it as a structured list lets the
+// editor render a friendly nudge instead of the raw OpenFGA parse
+// error (`mismatched input ']' …`).
+export interface IncompleteRelation {
+  typeName: string;
+  relationName: string;
+}
+
+export function findIncompleteRelations(ast: SchemaAST): IncompleteRelation[] {
+  const out: IncompleteRelation[] = [];
+  for (const td of ast.types) {
+    for (const rel of td.relations) {
+      if (isIncomplete(rel.rewrite, rel.typeRestrictions)) {
+        out.push({ typeName: td.name, relationName: rel.name });
+      }
+    }
+  }
+  return out;
+}
+
+// A rewrite is "incomplete" when every `this` it contains has no
+// backing restrictions. The walk mirrors renderRewriteWithRestrictions
+// so the two stay in agreement about what would produce `[]` in DSL.
+function isIncomplete(
+  node: RewriteNode,
+  restrictions: TypeRestriction[],
+): boolean {
+  switch (node.kind) {
+    case "this":
+      return restrictions.length === 0;
+    case "computedUserset":
+    case "tupleToUserset":
+      return false;
+    case "union":
+    case "intersection":
+      return node.children.some((c) => isIncomplete(c, restrictions));
+    case "difference":
+      return (
+        isIncomplete(node.base, restrictions) ||
+        isIncomplete(node.subtract, restrictions)
+      );
+  }
+}
+
 function renderRelationBody(rel: RelationDef): string {
   return renderRewriteWithRestrictions(rel.rewrite, rel.typeRestrictions, true);
 }
@@ -338,12 +387,6 @@ function renderRestrictions(restrictions: TypeRestriction[]): string {
 // rather than throwing. Malformed schemas originate from a parseable
 // DSL (the backend always validates before storing), so hard-failing
 // here would only bite on hand-authored JSON.
-
-interface RawModel {
-  schemaVersion?: string;
-  typeDefinitions?: RawTypeDef[];
-  conditions?: Record<string, unknown>;
-}
 
 // The backend protojson.Marshal emits OpenFGA's canonical JSON which
 // is snake_case (type_definitions, directly_related_user_types,

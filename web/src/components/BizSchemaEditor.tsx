@@ -18,6 +18,7 @@ import BizSchemaDslEditor from "./BizSchemaDslEditor";
 import BizSchemaVisualEditor from "./BizSchemaVisualEditor";
 import {
   emptyAST,
+  findIncompleteRelations,
   parseSchemaJson,
   schemaReducer,
   serializeAstToDsl,
@@ -140,6 +141,26 @@ export default function BizSchemaEditor({ appId }: Props) {
       setDryRun({ kind: "idle" });
       return;
     }
+    // Visual-lead short-circuit: the reducer seeds new relations with
+    // `this` + empty restrictions, which serialises to `define X: []`
+    // — rejected by OpenFGA's parser. Intercept here so the admin
+    // sees a friendly nudge instead of the raw `mismatched input ']'`
+    // backend error while they're still editing.
+    if (leadSourceRef.current === "visual") {
+      const incomplete = findIncompleteRelations(ast);
+      if (incomplete.length > 0) {
+        const sample = incomplete
+          .slice(0, 3)
+          .map((r) => `${r.typeName}.${r.relationName}`)
+          .join(", ");
+        const suffix = incomplete.length > 3 ? ` (+${incomplete.length - 3})` : "";
+        setDryRun({
+          kind: "error",
+          message: `${t("rebac.schema.relationNeedsRestriction")}: ${sample}${suffix}`,
+        });
+        return;
+      }
+    }
     const token = ++reqIdRef.current;
     setDryRun({ kind: "validating" });
     debounceRef.current = window.setTimeout(() => {
@@ -183,7 +204,7 @@ export default function BizSchemaEditor({ appId }: Props) {
     return () => {
       if (debounceRef.current) window.clearTimeout(debounceRef.current);
     };
-  }, [appId, dsl, loading, t]);
+  }, [appId, dsl, loading, t, ast]);
 
   const dirty = dsl !== savedDsl;
 

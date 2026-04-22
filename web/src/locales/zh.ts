@@ -3470,6 +3470,7 @@ const zh: Record<string, string> = {
   "rebac.schema.unsaved": "未保存",
   "rebac.schema.validating": "校验中...",
   "rebac.schema.valid": "语法正确",
+  "rebac.schema.relationNeedsRestriction": "关系需要至少一个允许的主体类型",
   "rebac.schema.visualReadOnlyHint": "可视化编辑器(预览):可在此增删/重命名类型与关系。重写规则编辑与保存将在 Task 5b–6 完成。",
   "rebac.schema.selectTypeHint": "在左侧选择一个类型,查看其关系列表。",
   "rebac.schema.visualRewriteComingSoon": "重写编辑器将在 CP-7 Task 5b 补齐。",
