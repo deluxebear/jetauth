@@ -71,6 +71,18 @@ export type SchemaAction =
       typeId: string;
       relationId: string;
       name: string;
+    }
+  | {
+      type: "RELATION_SET_REWRITE";
+      typeId: string;
+      relationId: string;
+      rewrite: RewriteNode;
+    }
+  | {
+      type: "RELATION_SET_RESTRICTIONS";
+      typeId: string;
+      relationId: string;
+      restrictions: TypeRestriction[];
     };
 
 export function emptyAST(): SchemaAST {
@@ -167,7 +179,148 @@ export function schemaReducer(
             : t,
         ),
       };
+    case "RELATION_SET_REWRITE":
+      return {
+        ...state,
+        types: state.types.map((t) =>
+          t.id === action.typeId
+            ? {
+                ...t,
+                relations: t.relations.map((r) =>
+                  r.id === action.relationId
+                    ? { ...r, rewrite: action.rewrite }
+                    : r,
+                ),
+              }
+            : t,
+        ),
+      };
+    case "RELATION_SET_RESTRICTIONS":
+      return {
+        ...state,
+        types: state.types.map((t) =>
+          t.id === action.typeId
+            ? {
+                ...t,
+                relations: t.relations.map((r) =>
+                  r.id === action.relationId
+                    ? { ...r, typeRestrictions: action.restrictions }
+                    : r,
+                ),
+              }
+            : t,
+        ),
+      };
   }
+}
+
+// ── AST → DSL serialiser ────────────────────────────────────────────
+//
+// Emits OpenFGA v1.1 DSL from the AST. This is the "AST → DSL" side of
+// the bidirectional sync that Task 6 wires; writing it here as a pure
+// function means both tabs of the schema editor can call it without
+// pulling React into the bridge.
+//
+// The grammar is small but strict:
+//
+//   model
+//     schema 1.1
+//
+//   type user
+//
+//   type document
+//     relations
+//       define viewer: [user, team#member, user:* with valid_ip]
+//       define editor: viewer or admin but not banned
+//       define can_edit: viewer from parent
+//
+// Precedence: the spec only defines associativity for "or" / "and";
+// difference ("but not") binds to exactly two operands. When emitting
+// nested operators we parenthesise aggressively to avoid ambiguity.
+
+export function serializeAstToDsl(ast: SchemaAST): string {
+  const lines: string[] = ["model", "  schema 1.1", ""];
+  for (const td of ast.types) {
+    lines.push(`type ${td.name}`);
+    if (td.relations.length > 0) {
+      lines.push("  relations");
+      for (const rel of td.relations) {
+        lines.push(`    define ${rel.name}: ${renderRelationBody(rel)}`);
+      }
+    }
+    lines.push("");
+  }
+  // Trim trailing blank line for a tidy final string.
+  while (lines.length > 0 && lines[lines.length - 1] === "") lines.pop();
+  return lines.join("\n") + "\n";
+}
+
+// The DSL puts type restrictions inside the square brackets that
+// accompany `this` / a bare `[...]` list. Other rewrites (union,
+// intersection, etc.) don't take restrictions; the list is emitted
+// only when the rewrite evaluates to a direct `this`.
+function renderRelationBody(rel: RelationDef): string {
+  return renderRewriteWithRestrictions(rel.rewrite, rel.typeRestrictions);
+}
+
+function renderRewriteWithRestrictions(
+  node: RewriteNode,
+  restrictions: TypeRestriction[],
+): string {
+  if (node.kind === "this") {
+    return renderRestrictions(restrictions);
+  }
+  if (node.kind === "union" || node.kind === "intersection") {
+    // `this` as one branch of a union/intersection carries the
+    // restriction list in its slot; other branches emit normally.
+    const kw = node.kind === "union" ? " or " : " and ";
+    const parts = node.children.map((c) =>
+      c.kind === "this"
+        ? renderRestrictions(restrictions)
+        : renderRewriteAtom(c),
+    );
+    return parts.join(kw);
+  }
+  if (node.kind === "difference") {
+    const base =
+      node.base.kind === "this"
+        ? renderRestrictions(restrictions)
+        : renderRewriteAtom(node.base);
+    return `${base} but not ${renderRewriteAtom(node.subtract)}`;
+  }
+  return renderRewriteAtom(node);
+}
+
+function renderRewriteAtom(node: RewriteNode): string {
+  switch (node.kind) {
+    case "this":
+      return "[]";
+    case "computedUserset":
+      return node.relation || "_unset_";
+    case "tupleToUserset":
+      return `${node.computedUserset || "_unset_"} from ${node.tupleset || "_unset_"}`;
+    case "union":
+      return `(${node.children.map(renderRewriteAtom).join(" or ")})`;
+    case "intersection":
+      return `(${node.children.map(renderRewriteAtom).join(" and ")})`;
+    case "difference":
+      return `(${renderRewriteAtom(node.base)} but not ${renderRewriteAtom(node.subtract)})`;
+  }
+}
+
+function renderRestrictions(restrictions: TypeRestriction[]): string {
+  if (restrictions.length === 0) return "[]";
+  const parts = restrictions.map((r) => {
+    switch (r.kind) {
+      case "direct":
+        return r.condition ? `${r.type} with ${r.condition}` : r.type;
+      case "wildcard":
+        return `${r.type}:*`;
+      case "userset":
+        return `${r.type}#${r.relation}`;
+    }
+  });
+  return `[${parts.join(", ")}]`;
 }
 
 // ── schemaJson (protojson) → AST ───────────────────────────────────

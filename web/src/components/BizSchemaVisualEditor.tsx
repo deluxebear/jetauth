@@ -4,13 +4,18 @@ import { useTranslation } from "../i18n";
 import * as BizBackend from "../backend/BizBackend";
 import {
   emptyAST,
-  formatRewriteSummary,
-  formatTypeRestrictionSummary,
   parseSchemaJson,
   schemaReducer,
   type RelationDef,
+  type RewriteNode,
   type TypeDef,
+  type TypeRestriction,
 } from "./bizSchemaAst";
+import {
+  BizRewriteEditor,
+  BizTypeRestrictionsEditor,
+  rewriteTouchesThis,
+} from "./BizRewriteEditor";
 
 // Task 5a shell: loads the existing schema as an AST, lets the admin
 // add/rename/remove types and relations, and reserves a per-relation
@@ -116,6 +121,24 @@ export default function BizSchemaVisualEditor({ appId }: Props) {
               type: "RELATION_REMOVE",
               typeId: selectedType.id,
               relationId,
+            })
+          }
+          onSetRewrite={(relationId, rewrite) =>
+            selectedType &&
+            dispatch({
+              type: "RELATION_SET_REWRITE",
+              typeId: selectedType.id,
+              relationId,
+              rewrite,
+            })
+          }
+          onSetRestrictions={(relationId, restrictions) =>
+            selectedType &&
+            dispatch({
+              type: "RELATION_SET_RESTRICTIONS",
+              typeId: selectedType.id,
+              relationId,
+              restrictions,
             })
           }
           t={t}
@@ -319,12 +342,16 @@ function RelationPane({
   onAdd,
   onRename,
   onRemove,
+  onSetRewrite,
+  onSetRestrictions,
   t,
 }: {
   type: TypeDef | null;
   onAdd: (name: string) => void;
   onRename: (relationId: string, name: string) => void;
   onRemove: (relationId: string) => void;
+  onSetRewrite: (relationId: string, rewrite: RewriteNode) => void;
+  onSetRestrictions: (relationId: string, restrictions: TypeRestriction[]) => void;
   t: (k: any) => string;
 }) {
   const [draft, setDraft] = useState("");
@@ -368,6 +395,10 @@ function RelationPane({
                   }}
                   onCancelEdit={() => setEditingId(null)}
                   onRemove={() => onRemove(rel.id)}
+                  onSetRewrite={(rewrite) => onSetRewrite(rel.id, rewrite)}
+                  onSetRestrictions={(restrictions) =>
+                    onSetRestrictions(rel.id, restrictions)
+                  }
                   t={t}
                 />
               </li>
@@ -411,6 +442,8 @@ function RelationRow({
   onCommitEdit,
   onCancelEdit,
   onRemove,
+  onSetRewrite,
+  onSetRestrictions,
   t,
 }: {
   relation: RelationDef;
@@ -419,6 +452,8 @@ function RelationRow({
   onCommitEdit: (name: string) => void;
   onCancelEdit: () => void;
   onRemove: () => void;
+  onSetRewrite: (rewrite: RewriteNode) => void;
+  onSetRestrictions: (restrictions: TypeRestriction[]) => void;
   t: (k: any) => string;
 }) {
   const [value, setValue] = useState(relation.name);
@@ -480,36 +515,17 @@ function RelationRow({
           </>
         )}
       </div>
-      <RewriteSlot relation={relation} t={t} />
-    </div>
-  );
-}
-
-// RewriteSlot is the placeholder that Task 5b replaces with the real
-// recursive editor. It renders a compact summary of the rewrite + type
-// restrictions so the admin can confirm the schema loaded correctly
-// even before the visual editor is complete.
-function RewriteSlot({
-  relation,
-  t,
-}: {
-  relation: RelationDef;
-  t: (k: any) => string;
-}) {
-  return (
-    <div className="rounded border border-dashed border-border bg-surface-0 px-3 py-2 text-[12px] text-text-muted">
-      <div className="flex items-center gap-2">
-        <span className="text-text-primary font-mono text-[12px]">
-          {formatRewriteSummary(relation.rewrite)}
-        </span>
-        {relation.typeRestrictions.length > 0 && (
-          <span className="text-text-muted">
-            [{relation.typeRestrictions.map(formatTypeRestrictionSummary).join(", ")}]
-          </span>
+      <div className="flex flex-col gap-2">
+        <BizRewriteEditor
+          node={relation.rewrite}
+          onChange={onSetRewrite}
+        />
+        {rewriteTouchesThis(relation.rewrite) && (
+          <BizTypeRestrictionsEditor
+            restrictions={relation.typeRestrictions}
+            onChange={onSetRestrictions}
+          />
         )}
-      </div>
-      <div className="mt-1 text-[11px] italic">
-        {t("rebac.schema.visualRewriteComingSoon")}
       </div>
     </div>
   );
