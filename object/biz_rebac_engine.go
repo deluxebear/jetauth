@@ -18,6 +18,7 @@ package object
 
 import (
 	"fmt"
+	"strings"
 	"sync"
 
 	openfgav1 "github.com/openfga/api/proto/openfga/v1"
@@ -64,6 +65,57 @@ type checkContext struct {
 	contextual     []TupleKey
 	requestContext map[string]any
 	memo           sync.Map // key: "object#relation@user" → bool
+}
+
+// parseStoreId splits "{owner}/{appName}" back into its two parts, the
+// inverse of BuildStoreId (spec §4.3). Empty owner or appName is rejected
+// so callers can't sneak a half-formed store id past the DB filter.
+func parseStoreId(storeId string) (owner, appName string, err error) {
+	parts := strings.SplitN(storeId, "/", 2)
+	if len(parts) != 2 || parts[0] == "" || parts[1] == "" {
+		return "", "", fmt.Errorf("rebac: invalid storeId %q, expected \"owner/appName\"", storeId)
+	}
+	return parts[0], parts[1], nil
+}
+
+// resolveAuthorizationModel loads the authorization model proto for a Check
+// request. When modelId is empty, it falls back to the app's
+// CurrentAuthorizationModelId. Cross-store lookups (a modelId belonging to
+// a different owner/appName) return "not found" rather than 403 so the API
+// doesn't leak model existence across tenants (spec §7.2).
+func resolveAuthorizationModel(storeId, modelId string) (*openfgav1.AuthorizationModel, error) {
+	owner, appName, err := parseStoreId(storeId)
+	if err != nil {
+		return nil, err
+	}
+
+	if modelId == "" {
+		config, err := getBizAppConfig(owner, appName)
+		if err != nil {
+			return nil, fmt.Errorf("rebac: lookup app config: %w", err)
+		}
+		if config == nil || config.CurrentAuthorizationModelId == "" {
+			return nil, fmt.Errorf("rebac: app %s/%s has no authorization model", owner, appName)
+		}
+		modelId = config.CurrentAuthorizationModelId
+	}
+
+	m, err := GetBizAuthorizationModel(modelId)
+	if err != nil {
+		return nil, fmt.Errorf("rebac: load authorization model: %w", err)
+	}
+	// Both "row missing" and "row belongs to a different store" collapse to
+	// the same "not found" error — preventing a caller from confirming that
+	// some other tenant's model id exists.
+	if m == nil || m.Owner != owner || m.AppName != appName {
+		return nil, fmt.Errorf("rebac: authorization model %s not found", modelId)
+	}
+
+	proto, err := ParseSchemaJSON(m.SchemaJSON)
+	if err != nil {
+		return nil, fmt.Errorf("rebac: parse authorization model %s: %w", modelId, err)
+	}
+	return proto, nil
 }
 
 // ReBACCheck evaluates whether req.TupleKey.User has req.TupleKey.Relation

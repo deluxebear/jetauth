@@ -64,3 +64,39 @@ func TestMaxResolutionDepth(t *testing.T) {
 		t.Fatalf("maxResolutionDepth = %d, want 25 (OpenFGA v1.x default)", maxResolutionDepth)
 	}
 }
+
+func TestParseStoreId(t *testing.T) {
+	cases := []struct {
+		in          string
+		wantOwner   string
+		wantAppName string
+		wantErr     bool
+	}{
+		{"foo/bar", "foo", "bar", false},
+		// Only the first slash delimits — app names with slashes are
+		// already disallowed at entity creation, so this is mostly defence
+		// in depth against bad input.
+		{"org-1/app:sub", "org-1", "app:sub", false},
+		{"foo/", "", "", true},
+		{"/bar", "", "", true},
+		{"foo", "", "", true},
+		{"", "", "", true},
+	}
+	for _, tc := range cases {
+		t.Run(tc.in, func(t *testing.T) {
+			owner, appName, err := parseStoreId(tc.in)
+			if tc.wantErr {
+				if err == nil {
+					t.Fatalf("want error, got (%q, %q, nil)", owner, appName)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if owner != tc.wantOwner || appName != tc.wantAppName {
+				t.Fatalf("got (%q, %q), want (%q, %q)", owner, appName, tc.wantOwner, tc.wantAppName)
+			}
+		})
+	}
+}
