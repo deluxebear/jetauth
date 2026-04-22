@@ -19,7 +19,9 @@
 package object
 
 import (
+	"encoding/json"
 	"fmt"
+	"strings"
 	"sync"
 
 	"github.com/google/cel-go/cel"
@@ -88,6 +90,49 @@ func buildCELEnvForCondition(cond *openfgav1.Condition) (*cel.Env, error) {
 		return nil, fmt.Errorf("rebac cel: build env for %q: %w", cond.GetName(), err)
 	}
 	return env, nil
+}
+
+// parseConditionContext deserialises a BizTuple.ConditionContext JSON
+// string into a map suitable for cel.Program.Eval. It uses json.Number
+// (spec OQ-4) so integer literals stay integers and float literals stay
+// floats — default encoding/json collapses both to float64, which breaks
+// CEL integer comparisons and exposes a precision gap on big integers.
+// Lists and maps recurse, preserving nested numeric fidelity.
+//
+// Empty string is the canonical "no context" and returns an empty map,
+// not an error — a tuple with an empty ConditionContext column is a
+// normal state that the engine shouldn't reject.
+func parseConditionContext(raw string) (map[string]any, error) {
+	if raw == "" {
+		return map[string]any{}, nil
+	}
+	dec := json.NewDecoder(strings.NewReader(raw))
+	dec.UseNumber()
+	var out map[string]any
+	if err := dec.Decode(&out); err != nil {
+		return nil, fmt.Errorf("rebac: condition context: %w", err)
+	}
+	if out == nil {
+		out = map[string]any{}
+	}
+	return out, nil
+}
+
+// marshalConditionContext is the inverse of parseConditionContext. Go's
+// encoding/json preserves json.Number as its original token, so a
+// parse→marshal round-trip is byte-stable for any fully numeric map. An
+// empty / nil map serialises to the empty string so the DB column stays
+// empty rather than storing "{}" (keeps the open-coded `!= ""` comparisons
+// consistent across the engine).
+func marshalConditionContext(m map[string]any) (string, error) {
+	if len(m) == 0 {
+		return "", nil
+	}
+	b, err := json.Marshal(m)
+	if err != nil {
+		return "", fmt.Errorf("rebac: condition context marshal: %w", err)
+	}
+	return string(b), nil
 }
 
 // compileCondition returns a cached cel.Program for the given

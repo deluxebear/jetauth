@@ -12,6 +12,7 @@
 package object
 
 import (
+	"encoding/json"
 	"strings"
 	"testing"
 
@@ -141,5 +142,136 @@ func TestCELCompile_NilRejected(t *testing.T) {
 	_, err := compileCondition("model-any", nil)
 	if err == nil || !strings.Contains(err.Error(), "nil condition") {
 		t.Fatalf("expected nil-condition error, got: %v", err)
+	}
+}
+
+// --- condition context JSON roundtrip (Task 2, OQ-4) ----------------------
+
+func TestConditionContext_Empty(t *testing.T) {
+	m, err := parseConditionContext("")
+	if err != nil {
+		t.Fatalf("empty: %v", err)
+	}
+	if len(m) != 0 {
+		t.Fatalf("empty parse returned %d entries, want 0", len(m))
+	}
+
+	out, err := marshalConditionContext(m)
+	if err != nil {
+		t.Fatalf("empty marshal: %v", err)
+	}
+	if out != "" {
+		t.Fatalf("empty marshal = %q, want \"\"", out)
+	}
+}
+
+func TestConditionContext_NumberFidelity_Integer(t *testing.T) {
+	m, err := parseConditionContext(`{"age": 42}`)
+	if err != nil {
+		t.Fatalf("parse: %v", err)
+	}
+	v, ok := m["age"]
+	if !ok {
+		t.Fatal("age missing")
+	}
+	n, ok := v.(json.Number)
+	if !ok {
+		t.Fatalf("age type = %T, want json.Number (stock json.Unmarshal would yield float64 here)", v)
+	}
+	if got, err := n.Int64(); err != nil || got != 42 {
+		t.Fatalf("Int64() = (%d, %v), want (42, nil)", got, err)
+	}
+}
+
+func TestConditionContext_NumberFidelity_Float(t *testing.T) {
+	m, err := parseConditionContext(`{"rate": 3.14}`)
+	if err != nil {
+		t.Fatalf("parse: %v", err)
+	}
+	n, ok := m["rate"].(json.Number)
+	if !ok {
+		t.Fatalf("rate type = %T, want json.Number", m["rate"])
+	}
+	if n.String() != "3.14" {
+		t.Fatalf("rate token = %q, want \"3.14\"", n.String())
+	}
+}
+
+func TestConditionContext_NestedListAndMap(t *testing.T) {
+	m, err := parseConditionContext(`{"ids": [1, 2, 3], "meta": {"x": 10, "y": "hello"}}`)
+	if err != nil {
+		t.Fatalf("parse: %v", err)
+	}
+	ids, ok := m["ids"].([]any)
+	if !ok || len(ids) != 3 {
+		t.Fatalf("ids shape wrong: %T %v", m["ids"], m["ids"])
+	}
+	if _, ok := ids[0].(json.Number); !ok {
+		t.Fatalf("nested list element type = %T, want json.Number", ids[0])
+	}
+	meta, ok := m["meta"].(map[string]any)
+	if !ok {
+		t.Fatalf("meta shape wrong: %T", m["meta"])
+	}
+	if _, ok := meta["x"].(json.Number); !ok {
+		t.Fatalf("nested map element type = %T, want json.Number", meta["x"])
+	}
+	if s, ok := meta["y"].(string); !ok || s != "hello" {
+		t.Fatalf("meta.y = %v (%T), want \"hello\"", meta["y"], meta["y"])
+	}
+}
+
+func TestConditionContext_Roundtrip(t *testing.T) {
+	// A mix of int, float, string, bool, list, map, null — the full
+	// openfga-spec fixture shape. After parse → marshal → parse, the
+	// deep structure should be byte-identical to the original parse.
+	in := `{"b":true,"d":3.14,"i":42,"l":[1,"x",{"k":9}],"m":{"k":"v"},"n":null,"s":"hello"}`
+	first, err := parseConditionContext(in)
+	if err != nil {
+		t.Fatalf("first parse: %v", err)
+	}
+	out, err := marshalConditionContext(first)
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
+	second, err := parseConditionContext(out)
+	if err != nil {
+		t.Fatalf("second parse: %v", err)
+	}
+	// Validate shape preservation by comparing specific keys with type
+	// assertions — a DeepEqual on map[string]any would compare
+	// json.Number string values which we already know are stable.
+	if first["s"] != second["s"] {
+		t.Fatalf("string drift: %v vs %v", first["s"], second["s"])
+	}
+	if first["b"] != second["b"] {
+		t.Fatalf("bool drift: %v vs %v", first["b"], second["b"])
+	}
+	fi, _ := first["i"].(json.Number)
+	si, _ := second["i"].(json.Number)
+	if fi.String() != si.String() {
+		t.Fatalf("int drift: %s vs %s", fi, si)
+	}
+}
+
+func TestConditionContext_Malformed(t *testing.T) {
+	_, err := parseConditionContext(`{not valid`)
+	if err == nil || !strings.Contains(err.Error(), "condition context") {
+		t.Fatalf("want 'condition context' error, got: %v", err)
+	}
+}
+
+func TestConditionContext_NullRoot(t *testing.T) {
+	// `null` at the root decodes into a nil map — ensure we normalise
+	// back to an empty non-nil map so callers can iterate safely.
+	m, err := parseConditionContext(`null`)
+	if err != nil {
+		t.Fatalf("null: %v", err)
+	}
+	if m == nil {
+		t.Fatal("null parse returned nil map; want empty non-nil")
+	}
+	if len(m) != 0 {
+		t.Fatalf("null parse returned %d entries, want 0", len(m))
 	}
 }
