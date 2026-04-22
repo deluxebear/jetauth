@@ -660,11 +660,23 @@ type tupleRef struct {
 // deduplicated by User string (first-seen wins). Contextual tuples are
 // folded in first, then persisted rows. Preserving order lets test suites
 // reason about traversal sequence when needed.
+//
+// The DB-sourced portion is cached in L2 (spec §6.6 row 2) with a short
+// TTL. Contextual tuples are never cached — they're per-request grants
+// by definition. Cache misses fall through to DB; cache hits return the
+// already-deduplicated DB refs directly, and contextual refs merge on
+// top. Writes to affected (object, relation) keys invalidate the cache
+// slot.
 func (ctx *checkContext) tuplesetTuples(object, relation string) ([]tupleRef, error) {
 	owner, appName, err := parseStoreId(ctx.storeId)
 	if err != nil {
 		return nil, err
 	}
+
+	// Contextual-only merge set, seeded first so its entries shadow
+	// anything from the DB side. Callers that pass the same user in
+	// both a contextual tuple and a persisted row get the contextual
+	// view (which may have different condition context).
 	var out []tupleRef
 	seen := map[string]bool{}
 	for _, t := range ctx.contextual {
@@ -673,24 +685,51 @@ func (ctx *checkContext) tuplesetTuples(object, relation string) ([]tupleRef, er
 			out = append(out, tupleRef{User: t.User})
 		}
 	}
+
 	// ormer can be nil in pure-function engine tests that exercise the
 	// dispatcher with contextual tuples alone (no DB bootstrap). Short-
 	// circuit to the contextual-only view.
 	if ormer == nil {
 		return out, nil
 	}
+
+	// L2 cache lookup before DB.
+	if cached, ok := loadBizTuplesetCache(ctx.storeId, object, relation); ok {
+		for _, r := range cached {
+			if !seen[r.User] {
+				seen[r.User] = true
+				out = append(out, r)
+			}
+		}
+		return out, nil
+	}
+
 	rows, err := ReadBizTuples(owner, appName, object, relation, "")
 	if err != nil {
 		return nil, fmt.Errorf("rebac: read tupleset %s#%s: %w", object, relation, err)
 	}
+	// Build a deduplicated DB-side refs slice to cache. This is
+	// context-free (no contextual tuples mixed in), so subsequent
+	// callers with different contextual tuples still get correct
+	// results.
+	dbRefs := make([]tupleRef, 0, len(rows))
+	dbSeen := map[string]bool{}
 	for _, r := range rows {
-		if !seen[r.User] {
-			seen[r.User] = true
-			out = append(out, tupleRef{
+		if !dbSeen[r.User] {
+			dbSeen[r.User] = true
+			dbRefs = append(dbRefs, tupleRef{
 				User:             r.User,
 				ConditionName:    r.ConditionName,
 				ConditionContext: r.ConditionContext,
 			})
+		}
+	}
+	storeBizTuplesetCache(ctx.storeId, object, relation, dbRefs)
+
+	for _, r := range dbRefs {
+		if !seen[r.User] {
+			seen[r.User] = true
+			out = append(out, r)
 		}
 	}
 	return out, nil

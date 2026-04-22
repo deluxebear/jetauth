@@ -241,6 +241,12 @@ func SaveAuthorizationModel(owner, appName, dsl, createdBy string) (*SaveAuthori
 		return nil, fmt.Errorf("advance current model pointer: %w", err)
 	}
 
+	// Schema advance may reclassify which tuples are admissible under
+	// each relation's type restriction; the L2 tupleset cache's
+	// pre-advance snapshot is no longer safe to serve. Flush the entire
+	// store's cache entries (spec §6.6 "schema 切换时整 store flush").
+	flushBizTuplesetCacheForStore(BuildStoreId(owner, appName))
+
 	return &SaveAuthorizationModelResult{
 		Outcome:              SaveOutcomeAdvanced,
 		AuthorizationModelId: m.Id,
