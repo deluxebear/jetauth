@@ -448,11 +448,51 @@ func (ctx *checkContext) checkUnion(key TupleKey, u *openfgav1.Usersets, depth i
 	return false, nil
 }
 
-// checkIntersection — Task 8.
+// checkIntersection resolves `define viewer: [user] and active` — every
+// child branch must be true. Branches evaluate concurrently; an atomic
+// `anyFalse` flag lets later goroutines skip once one branch is false.
+//
+// Error handling mirrors checkUnion's shape but inverted: a single false
+// decision is enough to reject, and errors only surface when no branch
+// was decisive.
 func (ctx *checkContext) checkIntersection(key TupleKey, u *openfgav1.Usersets, depth int) (bool, error) {
-	_ = u
-	_ = depth
-	return false, fmt.Errorf("rebac: 'intersection' rewrite not implemented (CP-3 Task 8) for %s#%s", key.Object, key.Relation)
+	children := u.GetChild()
+	if len(children) == 0 {
+		// Empty intersection is a schema bug — DSL never emits one, but a
+		// malformed proto could. Refuse rather than returning a confusing
+		// "vacuous truth".
+		return false, fmt.Errorf("rebac: empty intersection on %s#%s", key.Object, key.Relation)
+	}
+	if len(children) == 1 {
+		return ctx.evaluate(children[0], key, depth)
+	}
+
+	var g errgroup.Group
+	var anyFalse atomic.Bool
+	for _, c := range children {
+		c := c
+		g.Go(func() error {
+			if anyFalse.Load() {
+				return nil
+			}
+			allowed, err := ctx.evaluate(c, key, depth)
+			if err != nil {
+				return err
+			}
+			if !allowed {
+				anyFalse.Store(true)
+			}
+			return nil
+		})
+	}
+	err := g.Wait()
+	if anyFalse.Load() {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	return true, nil
 }
 
 // checkDifference — Task 9.
