@@ -187,14 +187,15 @@ export default function BizSchemaEditor({ appId }: Props) {
 
   const dirty = dsl !== savedDsl;
 
+  // Save is only allowed once dry-run has *confirmed* the DSL is
+  // parseable (`valid` / `unchanged`). `idle` used to be in the allow-
+  // list to cover the pre-debounce window, but that let Ctrl-S bypass
+  // validation during the few ms between paste and validate — review
+  // finding R2.
   const canSave = useMemo(() => {
     if (loading || saving) return false;
     if (!dirty) return false;
-    return (
-      dryRun.kind === "valid" ||
-      dryRun.kind === "unchanged" ||
-      dryRun.kind === "idle"
-    );
+    return dryRun.kind === "valid" || dryRun.kind === "unchanged";
   }, [loading, saving, dirty, dryRun.kind]);
 
   const handleSave = useCallback(async () => {
@@ -209,6 +210,12 @@ export default function BizSchemaEditor({ appId }: Props) {
       const r = res.data as SaveAuthorizationModelResult;
       switch (r.outcome) {
         case "advanced":
+          // Clear leadSource before LOAD — otherwise the visual→DSL
+          // effect fires right after dispatch and, if the backend's
+          // protojson emits types/relations in a different order
+          // than the user's DSL, rewrites `dsl` and flips `dirty`
+          // back to true immediately after a successful save (R1).
+          leadSourceRef.current = "user-dsl";
           setSavedDsl(dsl);
           setDryRun({ kind: "unchanged" });
           if (r.schemaJson) {
@@ -217,6 +224,7 @@ export default function BizSchemaEditor({ appId }: Props) {
           modal.toast(t("rebac.schema.outcomeAdvanced"), "success");
           return;
         case "unchanged":
+          leadSourceRef.current = "user-dsl";
           setSavedDsl(dsl);
           setDryRun({ kind: "unchanged" });
           modal.toast(t("rebac.schema.outcomeUnchanged"), "info");

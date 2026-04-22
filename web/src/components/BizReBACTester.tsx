@@ -163,22 +163,26 @@ export default function BizReBACTester({ appId }: Props) {
         .catch(() => {
           /* non-fatal */
         });
-      // Record history.
+      // Record history. Functional setState so rapid consecutive Runs
+      // don't clobber each other by capturing the same `history`
+      // snapshot in two closures (review R4).
       const entry: HistoryEntry = {
         at: Date.now(),
         request: form,
         allowed: !!res.data.allowed,
         resolution: res.data.resolution || "",
       };
-      const next = [entry, ...history].slice(0, HISTORY_LIMIT);
-      setHistory(next);
-      saveHistory(appId, next);
+      setHistory((prev) => {
+        const next = [entry, ...prev].slice(0, HISTORY_LIMIT);
+        saveHistory(appId, next);
+        return next;
+      });
     } catch (err) {
       modal.toast(err instanceof Error ? err.message : String(err), "error");
     } finally {
       setRunning(false);
     }
-  }, [appId, form, formValid, history, modal, t]);
+  }, [appId, form, formValid, modal, t]);
 
   const clearHistory = () => {
     setHistory([]);
