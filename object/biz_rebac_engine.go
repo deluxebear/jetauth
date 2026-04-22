@@ -151,6 +151,75 @@ func memoKey(key TupleKey) string {
 	return key.Object + "#" + key.Relation + "@" + key.User
 }
 
+// schemaHasType reports whether the authorization model defines the given
+// object type. Linear scan — schemas have at most ~dozens of types, so the
+// O(n) cost is fine on the hot path.
+func schemaHasType(model *openfgav1.AuthorizationModel, typeName string) bool {
+	for _, td := range model.GetTypeDefinitions() {
+		if td.GetType() == typeName {
+			return true
+		}
+	}
+	return false
+}
+
+// schemaHasRelation reports whether (typeName, relation) is defined in the
+// authorization model — i.e. whether the type has a rewrite AST for that
+// relation. Used by request-level validation so a Check request naming a
+// non-existent relation fails at the edge, not deep in the dispatcher.
+func schemaHasRelation(model *openfgav1.AuthorizationModel, typeName, relation string) bool {
+	for _, td := range model.GetTypeDefinitions() {
+		if td.GetType() != typeName {
+			continue
+		}
+		_, ok := td.GetRelations()[relation]
+		return ok
+	}
+	return false
+}
+
+// validateCheckRequestTuple enforces schema-consistency on caller-supplied
+// tuples. Top-level TupleKey only gets the basic type/relation existence
+// checks — a caller checking `document:1#viewer@team:eng#member` against
+// `viewer: [user] or editor` is legitimate (editor branch may grant), so
+// we don't apply the narrow `this`-branch type restriction there.
+//
+// Contextual tuples (strict=true) additionally must pass the direct type
+// restriction: they're asserting a grant, and asserting one that the
+// schema's `this` slot can't consume is a bad request (upstream 2027),
+// not a silent deny.
+func validateCheckRequestTuple(model *openfgav1.AuthorizationModel, tk TupleKey, label string, strict bool) error {
+	objType, _, err := parseObjectString(tk.Object)
+	if err != nil {
+		return fmt.Errorf("rebac: %s: %w", label, err)
+	}
+	if !schemaHasType(model, objType) {
+		return fmt.Errorf("rebac: %s: object type %q not in schema", label, objType)
+	}
+	if !schemaHasRelation(model, objType, tk.Relation) {
+		return fmt.Errorf("rebac: %s: relation %q not defined on type %q", label, tk.Relation, objType)
+	}
+	userType, _, userRel, err := parseUserString(tk.User)
+	if err != nil {
+		return fmt.Errorf("rebac: %s: %w", label, err)
+	}
+	if !schemaHasType(model, userType) {
+		return fmt.Errorf("rebac: %s: user type %q not in schema", label, userType)
+	}
+	if userRel != "" && !schemaHasRelation(model, userType, userRel) {
+		return fmt.Errorf("rebac: %s: userset relation %q not defined on type %q",
+			label, userRel, userType)
+	}
+	if strict {
+		restrictions := findDirectlyRelatedUserTypes(model, objType, tk.Relation)
+		if !subjectMatchesTypeRestriction(tk.User, restrictions) {
+			return fmt.Errorf("rebac: %s: user %q not permitted by type restrictions on %s#%s",
+				label, tk.User, objType, tk.Relation)
+		}
+	}
+	return nil
+}
+
 // findDirectlyRelatedUserTypes returns the schema's direct-type-restriction
 // list for (objectType, relation) — the `[user, team#member, user:*]`
 // fragment of a `this`-flavored rewrite. Nil means "no restriction"
@@ -768,6 +837,24 @@ func ReBACCheck(req *CheckRequest) (*CheckResult, error) {
 	model, err := resolveAuthorizationModel(req.StoreId, req.AuthorizationModelId)
 	if err != nil {
 		return nil, err
+	}
+
+	// Request-boundary schema validation. Caller-asserted tuples with
+	// unknown types/relations fail here rather than silently resolving to
+	// a denial inside the dispatcher — matches OpenFGA's 2000/2027-class
+	// error behaviour (spec §7.1 semantics; exact codes not matched).
+	//
+	// Top-level TupleKey gets shape-only checks (strict=false) so a
+	// check against a userset / wildcard caller can still reach non-
+	// `this` rewrite branches. Contextual tuples are asserted grants and
+	// face the full type restriction (strict=true).
+	if err := validateCheckRequestTuple(model, req.TupleKey, "check request", false); err != nil {
+		return nil, err
+	}
+	for i, ct := range req.ContextualTuples {
+		if err := validateCheckRequestTuple(model, ct, fmt.Sprintf("contextual tuple #%d", i), true); err != nil {
+			return nil, err
+		}
 	}
 
 	ctx := &checkContext{

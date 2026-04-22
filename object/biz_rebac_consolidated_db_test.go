@@ -125,24 +125,6 @@ var skippedTests = map[string]string{
 	"check_with_invalid_tuple_in_store": "CP-2 conflict scanner rejects schema migration (spec OQ-3 by design)",
 	"ttu_some_parent_type_removed":      "CP-2 conflict scanner rejects schema migration (spec OQ-3 by design)",
 
-	// Upstream input-validation tests (error codes 2000/2027): the Check
-	// request itself references types or subjects the schema doesn't
-	// know. OpenFGA's server emits these errors at request-validation
-	// time, before Check runs. Our engine silently returns false for
-	// such inputs — correct at algorithm level, but mismatched vs the
-	// upstream API contract. Task 7's /api/biz-check handler will add
-	// request-level validation; until that lands (and decides to mirror
-	// upstream's error codes), these tests stay skipped.
-	"validation_user_type_not_in_model":                "request-level type validation (CP-4 Task 7 HTTP layer)",
-	"validation_userset_type_not_in_model":             "request-level type validation (CP-4 Task 7 HTTP layer)",
-	"validation_userset_relation_not_in_model":         "request-level relation validation (CP-4 Task 7 HTTP layer)",
-	"validation_user_invalid":                          "request-level user-string validation (CP-4 Task 7 HTTP layer)",
-	"validation_invalid_object_type_in_contextual_tuple":  "contextual-tuple request validation (CP-4 Task 7 HTTP layer)",
-	"validation_invalid_relation_in_contextual_tuple":     "contextual-tuple request validation (CP-4 Task 7 HTTP layer)",
-	"validation_invalid_user_in_contextual_tuple":         "contextual-tuple request validation (CP-4 Task 7 HTTP layer)",
-	"validation_invalid_userset_in_contextual_tuple":      "contextual-tuple request validation (CP-4 Task 7 HTTP layer)",
-	"validation_invalid_wildcard_in_contextual_tuple":     "contextual-tuple request validation (CP-4 Task 7 HTTP layer)",
-	"val_contextual_tuples_and_wildcard_in_ttu_evaluation": "contextual-tuple request validation (CP-4 Task 7 HTTP layer)",
 
 	// list_objects_with_subcheck_encounters_cycle contains listObjects
 	// assertions that are CP-5 work. Its checkAssertions run, but the
@@ -167,7 +149,7 @@ var skippedTests = map[string]string{
 // Unique skip-map entries. Changing either the count or any entry's
 // reason requires updating this constant explicitly — the gate below
 // compares len(skippedTests) to this value to catch silent growth/shrink.
-const expectedSkipCount = 15
+const expectedSkipCount = 5
 
 func TestConsolidatedSuite(t *testing.T) {
 	ensureDBForConsolidated(t)
