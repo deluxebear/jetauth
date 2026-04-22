@@ -327,6 +327,15 @@ func getBizAuthzTarget(ctx *context.Context, path string) (string, string, error
 	if owner := ctx.Input.Query("owner"); owner != "" {
 		return owner, "", nil
 	}
+	// biz-{write,read,list}-authorization-model + biz-{check,write-tuples,...}
+	// use ?appId=owner/appName (spec §7.1). Map it through the same composite
+	// id parser as biz-update-app-config so the filter sees the target app.
+	if appId := ctx.Input.Query("appId"); appId != "" {
+		if owner, name, err := util.GetOwnerAndNameFromIdWithError(appId); err == nil {
+			return owner, name, nil
+		}
+		return "", "", nil
+	}
 
 	body := ctx.Input.RequestBody
 	if len(body) == 0 {
