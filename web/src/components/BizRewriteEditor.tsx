@@ -167,7 +167,17 @@ function RewriteBody({
         <ChildrenList
           kind={node.kind}
           children={node.children}
-          onChange={(children) => onChange({ ...node, children })}
+          onChange={(children) => {
+            // Collapse to the single remaining child when the user
+            // deletes the penultimate branch — a 1-child union/intersection
+            // is a no-op operator and should not surface in the UI
+            // (review finding N2).
+            if (children.length === 1) {
+              onChange(children[0]);
+            } else {
+              onChange({ ...node, children });
+            }
+          }}
           depth={depth}
         />
       );
@@ -240,7 +250,9 @@ function ChildrenList({
           key={i}
           node={child}
           onChange={(n) => update(i, n)}
-          onDelete={children.length > 2 ? () => remove(i) : undefined}
+          // Allow delete down to 1 — the parent's onChange collapses
+          // 1-child union/intersection to the remaining child (N2).
+          onDelete={children.length > 1 ? () => remove(i) : undefined}
           onMoveUp={i > 0 ? () => move(i, -1) : undefined}
           onMoveDown={i < children.length - 1 ? () => move(i, 1) : undefined}
           depth={depth + 1}

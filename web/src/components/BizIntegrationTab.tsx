@@ -100,9 +100,18 @@ function SnippetBlock({
   );
 }
 
+// escapeForJsonString sanitises a value before it's interpolated into
+// a code snippet's double-quoted string literal. `appId` comes from
+// URL params and is constrained by the backend to `owner/appName`, so
+// today this is a no-op for any real input — but interpolating
+// untrusted strings into output is a reflex worth keeping (N3).
+function escapeForJsonString(s: string): string {
+  return s.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
+}
+
 function buildSnippets(lang: Lang, appId: string): Snippet[] {
   const fn = SNIPPET_BUILDERS[lang];
-  return fn(appId);
+  return fn(escapeForJsonString(appId));
 }
 
 const SNIPPET_BUILDERS: Record<Lang, (appId: string) => Snippet[]> = {

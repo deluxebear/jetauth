@@ -105,6 +105,23 @@ export default function BizReBACTester({ appId }: Props) {
       if (form.contextualTuplesJson.trim()) {
         const raw = JSON.parse(form.contextualTuplesJson);
         if (!Array.isArray(raw)) throw new Error("must be an array");
+        // Shape-check each entry locally so the admin gets a precise
+        // error (e.g. "entry #2: missing 'relation'") instead of a
+        // generic 500 from the backend (review N4).
+        raw.forEach((entry, i) => {
+          if (
+            !entry ||
+            typeof entry !== "object" ||
+            Array.isArray(entry) ||
+            typeof (entry as BizTupleKey).object !== "string" ||
+            typeof (entry as BizTupleKey).relation !== "string" ||
+            typeof (entry as BizTupleKey).user !== "string"
+          ) {
+            throw new Error(
+              `entry #${i} must have string fields object/relation/user`,
+            );
+          }
+        });
         contextualTuples = raw as BizTupleKey[];
       }
     } catch (err) {

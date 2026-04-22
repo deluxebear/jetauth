@@ -106,7 +106,10 @@ export function schemaReducer(
 ): SchemaAST {
   switch (action.type) {
     case "LOAD":
-      return action.ast;
+      // Defensive shallow copy so a future caller that mutates the
+      // passed-in AST (e.g. for test fixtures) can't leak changes
+      // into reducer state (review finding N5).
+      return { ...action.ast, types: action.ast.types };
     case "TYPE_ADD":
       return {
         ...state,
