@@ -151,6 +151,76 @@ func memoKey(key TupleKey) string {
 	return key.Object + "#" + key.Relation + "@" + key.User
 }
 
+// findDirectlyRelatedUserTypes returns the schema's direct-type-restriction
+// list for (objectType, relation) — the `[user, team#member, user:*]`
+// fragment of a `this`-flavored rewrite. Nil means "no restriction"
+// (likely because the relation uses computed_userset / tuple_to_userset
+// rather than `this`); in that case checkThis treats every tuple as
+// unconstrained. An empty slice is never returned — absent metadata maps
+// to nil.
+func findDirectlyRelatedUserTypes(model *openfgav1.AuthorizationModel, objectType, relation string) []*openfgav1.RelationReference {
+	for _, td := range model.GetTypeDefinitions() {
+		if td.GetType() != objectType {
+			continue
+		}
+		meta := td.GetMetadata()
+		if meta == nil {
+			return nil
+		}
+		if r, ok := meta.GetRelations()[relation]; ok {
+			refs := r.GetDirectlyRelatedUserTypes()
+			if len(refs) == 0 {
+				return nil
+			}
+			return refs
+		}
+		return nil
+	}
+	return nil
+}
+
+// subjectMatchesTypeRestriction reports whether the tuple subject string
+// (e.g. "user:alice", "team:eng#member", "user:*") is admissible under
+// *any* of the schema's direct type references. Nil restrictions means
+// the caller must apply their own policy (findDirectlyRelatedUserTypes
+// never returns empty — nil is its "no restriction" signal).
+func subjectMatchesTypeRestriction(user string, refs []*openfgav1.RelationReference) bool {
+	if len(refs) == 0 {
+		return true
+	}
+	userType, userId, userRel, err := parseUserString(user)
+	if err != nil {
+		return false
+	}
+	isWildcard := userId == "*"
+	hasUserRel := userRel != ""
+
+	for _, r := range refs {
+		if r.GetType() != userType {
+			continue
+		}
+		switch {
+		case r.GetWildcard() != nil:
+			if isWildcard {
+				return true
+			}
+		case r.GetRelation() != "":
+			// `{type}#{relation}` only matches userset-shaped subjects
+			// with the exact target relation.
+			if hasUserRel && userRel == r.GetRelation() {
+				return true
+			}
+		default:
+			// Plain `{type}` — matches exactly `type:id` (no wildcard,
+			// no userset reference).
+			if !isWildcard && !hasUserRel {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 // findRelation looks up the rewrite AST for (objectType, relation) in the
 // loaded authorization model. Callers get a structured error for every
 // failure mode (type missing, type has no relations, relation missing) so
@@ -276,7 +346,17 @@ func (ctx *checkContext) checkThis(key TupleKey, depth int) (bool, error) {
 		return false, err
 	}
 
+	// Type-restriction filter (spec §5.2 type_restriction). Absent
+	// restrictions (nil return) leave every subject admissible — schemas
+	// that reach `checkThis` through a non-`this` rewrite path have no
+	// DirectlyRelatedUserTypes metadata and must not be over-filtered.
+	objType, _, _ := parseObjectString(key.Object)
+	restrictions := findDirectlyRelatedUserTypes(ctx.model, objType, key.Relation)
+
 	for _, ref := range refs {
+		if !subjectMatchesTypeRestriction(ref.User, restrictions) {
+			continue
+		}
 		// Direct / wildcard match against the caller.
 		directMatch := ref.User == key.User ||
 			(!isSelfWildcard && !isUserset && ref.User == wildcardUser)
@@ -418,7 +498,16 @@ func (ctx *checkContext) checkTupleToUserset(key TupleKey, ttu *openfgav1.TupleT
 		return false, err
 	}
 
+	// Apply the tupleset relation's type restriction — e.g. if schema
+	// narrows from `parent: [group1, group2]` to `parent: [group1]`,
+	// a persisted `group2:1` parent row must become invisible.
+	objType, _, _ := parseObjectString(key.Object)
+	tuplesetRestrictions := findDirectlyRelatedUserTypes(ctx.model, objType, tupleset)
+
 	for _, p := range parents {
+		if !subjectMatchesTypeRestriction(p.User, tuplesetRestrictions) {
+			continue
+		}
 		// Only userset-producing parent rows matter — a `user:alice` in
 		// a `parent` column would be malformed against a TTU schema, and
 		// skipping it keeps us from dispatching a bogus plain-user Check.
