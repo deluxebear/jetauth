@@ -33,9 +33,14 @@ type BizTuple struct {
 	Owner   string `xorm:"varchar(100) notnull" json:"owner"`
 	AppName string `xorm:"varchar(100) notnull" json:"appName"`
 
-	Object   string `xorm:"varchar(256) notnull index(idx_forward) unique(uq_tuple)" json:"object"`
+	// Object/User widths are capped at 200 so the four-column composite unique
+	// index uq_tuple (store_id 200 + object 200 + relation 100 + user 200 = 700
+	// chars × 4 bytes per utf8mb4 char = 2800 bytes) stays under the MySQL 8
+	// InnoDB 3072-byte key-length limit. 200 chars still covers "type:id" and
+	// userset ("type:id#relation") forms for every realistic OpenFGA identifier.
+	Object   string `xorm:"varchar(200) notnull index(idx_forward) unique(uq_tuple)" json:"object"`
 	Relation string `xorm:"varchar(100) notnull index(idx_forward) unique(uq_tuple)" json:"relation"`
-	User     string `xorm:"varchar(256) notnull index(idx_reverse) unique(uq_tuple)" json:"user"`
+	User     string `xorm:"varchar(200) notnull index(idx_reverse) unique(uq_tuple)" json:"user"`
 
 	// Derived from Object/User by PopulateDerived; stored for query performance.
 	ObjectType   string `xorm:"varchar(100) notnull index(idx_reverse)" json:"-"`
