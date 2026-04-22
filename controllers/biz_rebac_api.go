@@ -10,6 +10,7 @@ package controllers
 
 import (
 	"encoding/json"
+	"fmt"
 
 	"github.com/deluxebear/jetauth/object"
 	"github.com/deluxebear/jetauth/util"
@@ -259,6 +260,160 @@ type bizBatchCheckResponseItem struct {
 
 type bizBatchCheckResponse struct {
 	Results []bizBatchCheckResponseItem `json:"results"`
+}
+
+// bizWriteTuplesRequest is the POST body for /api/biz-write-tuples.
+// Writes and deletes are applied in a single transaction — a failure in
+// any entry rolls the whole batch back.
+type bizWriteTuplesRequest struct {
+	AppId                string             `json:"appId"`
+	AuthorizationModelId string             `json:"authorizationModelId,omitempty"`
+	Writes               []bizWriteTupleIn  `json:"writes,omitempty"`
+	Deletes              []bizCheckTupleKey `json:"deletes,omitempty"`
+}
+
+// bizWriteTupleIn mirrors BizTuple's wire-shape. Condition fields are
+// optional; when absent the tuple is unconditional.
+type bizWriteTupleIn struct {
+	Object           string `json:"object"`
+	Relation         string `json:"relation"`
+	User             string `json:"user"`
+	ConditionName    string `json:"conditionName,omitempty"`
+	ConditionContext string `json:"conditionContext,omitempty"`
+}
+
+type bizWriteTuplesResponse struct {
+	Written int64 `json:"written"`
+	Deleted int64 `json:"deleted"`
+}
+
+// BizWriteTuples
+// @Summary BizWriteTuples
+// @Tags Business Permission API
+// @Description Apply a batch of tuple writes and/or deletes atomically.
+// Every tuple is validated against the current authorization model's
+// type restrictions before any DB write — a rejected tuple aborts the
+// whole batch. Empty writes + empty deletes is a no-op.
+// @Param   appId   query    string  false  "The app id (owner/appName)"
+// @Param   body    body     controllers.bizWriteTuplesRequest  true  "Batch tuple writes/deletes"
+// @Success 200 {object} controllers.bizWriteTuplesResponse "Written + deleted row counts"
+// @Router /biz-write-tuples [post]
+func (c *ApiController) BizWriteTuples() {
+	var body bizWriteTuplesRequest
+	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &body); err != nil {
+		c.ResponseError("invalid JSON body: " + err.Error())
+		return
+	}
+	if body.AppId == "" {
+		body.AppId = c.Ctx.Input.Query("appId")
+	}
+	if body.AppId == "" {
+		c.ResponseError("appId is required (body or ?appId= query)")
+		return
+	}
+	owner, appName, err := util.GetOwnerAndNameFromIdWithError(body.AppId)
+	if err != nil {
+		c.ResponseError(err.Error())
+		return
+	}
+
+	// Build the engine-layer BizTuple slices.
+	config, err := object.GetBizAppConfig(body.AppId)
+	if err != nil {
+		c.ResponseError(err.Error())
+		return
+	}
+	if config == nil {
+		c.ResponseError("app config not found: " + body.AppId)
+		return
+	}
+	modelId := body.AuthorizationModelId
+	if modelId == "" {
+		modelId = config.CurrentAuthorizationModelId
+	}
+	if modelId == "" && len(body.Writes) > 0 {
+		c.ResponseError("cannot write tuples: app has no authorization model; write schema first")
+		return
+	}
+
+	var writes []*object.BizTuple
+	for i, w := range body.Writes {
+		t := &object.BizTuple{
+			Owner:                owner,
+			AppName:              appName,
+			Object:               w.Object,
+			Relation:             w.Relation,
+			User:                 w.User,
+			ConditionName:        w.ConditionName,
+			ConditionContext:     w.ConditionContext,
+			AuthorizationModelId: modelId,
+		}
+		// PopulateDerived runs inside WriteBizTuples; an invalid shape
+		// surfaces as a structured error. We also smoke-parse here so
+		// we can point at the bad index in the caller's input.
+		if derr := t.PopulateDerived(); derr != nil {
+			c.ResponseError(fmt.Sprintf("write tuple #%d: %s", i, derr.Error()))
+			return
+		}
+		writes = append(writes, t)
+	}
+	var deletes []*object.BizTuple
+	for _, d := range body.Deletes {
+		deletes = append(deletes, &object.BizTuple{
+			Owner: owner, AppName: appName,
+			Object: d.Object, Relation: d.Relation, User: d.User,
+		})
+	}
+
+	written, deleted, err := object.WriteBizTuples(writes, deletes)
+	if err != nil {
+		c.ResponseError(err.Error())
+		return
+	}
+	c.ResponseOk(bizWriteTuplesResponse{Written: written, Deleted: deleted})
+}
+
+// bizReadTuplesRequest is the GET body for /api/biz-read-tuples.
+// Empty filter fields match everything. No cursor yet — CP-6 adds
+// pagination when production load motivates it.
+type bizReadTuplesRequest struct {
+	AppId    string `json:"appId"`
+	Object   string `json:"object,omitempty"`
+	Relation string `json:"relation,omitempty"`
+	User     string `json:"user,omitempty"`
+}
+
+// BizReadTuples
+// @Summary BizReadTuples
+// @Tags Business Permission API
+// @Description Read tuples filtered by object / relation / user.
+// Empty filter fields match everything.
+// @Param   appId      query    string  false  "The app id (owner/appName)"
+// @Param   object     query    string  false  "Filter: object (e.g. document:d1)"
+// @Param   relation   query    string  false  "Filter: relation"
+// @Param   user       query    string  false  "Filter: user"
+// @Success 200 {array} object.BizTuple "Matching tuples"
+// @Router /biz-read-tuples [get]
+func (c *ApiController) BizReadTuples() {
+	appId := c.Ctx.Input.Query("appId")
+	objectFilter := c.Ctx.Input.Query("object")
+	relationFilter := c.Ctx.Input.Query("relation")
+	userFilter := c.Ctx.Input.Query("user")
+	if appId == "" {
+		c.ResponseError("appId is required")
+		return
+	}
+	owner, appName, err := util.GetOwnerAndNameFromIdWithError(appId)
+	if err != nil {
+		c.ResponseError(err.Error())
+		return
+	}
+	tuples, err := object.ReadBizTuples(owner, appName, objectFilter, relationFilter, userFilter)
+	if err != nil {
+		c.ResponseError(err.Error())
+		return
+	}
+	c.ResponseOk(tuples)
 }
 
 // BizBatchCheck

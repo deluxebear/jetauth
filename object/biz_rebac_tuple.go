@@ -224,6 +224,64 @@ func ListBizTuplesForApp(owner, appName string) ([]*BizTuple, error) {
 	return tuples, nil
 }
 
+// WriteBizTuples applies a batch of writes and deletes atomically inside
+// a single xorm transaction. Writes go through PopulateDerived so the
+// derived columns (StoreId, ObjectType, UserType, UserRelation) stay
+// consistent. Deletes match on the full tuple key. A failure anywhere
+// rolls back the whole batch — partial commits are never visible.
+//
+// Empty writes + empty deletes is a no-op (returns 0, 0, nil).
+func WriteBizTuples(writes []*BizTuple, deletes []*BizTuple) (written int64, deleted int64, err error) {
+	if len(writes) == 0 && len(deletes) == 0 {
+		return 0, 0, nil
+	}
+	now := util.GetCurrentTime()
+	for _, w := range writes {
+		if perr := w.PopulateDerived(); perr != nil {
+			return 0, 0, perr
+		}
+		if w.CreatedTime == "" {
+			w.CreatedTime = now
+		}
+	}
+
+	session := ormer.Engine.NewSession()
+	defer session.Close()
+
+	if err = session.Begin(); err != nil {
+		return 0, 0, fmt.Errorf("rebac write_tuples: begin: %w", err)
+	}
+
+	for _, w := range writes {
+		affected, ierr := session.Insert(w)
+		if ierr != nil {
+			_ = session.Rollback()
+			return 0, 0, fmt.Errorf("rebac write_tuples: insert (%s/%s %s#%s@%s): %w",
+				w.Owner, w.AppName, w.Object, w.Relation, w.User, ierr)
+		}
+		written += affected
+	}
+
+	for _, d := range deletes {
+		storeId := BuildStoreId(d.Owner, d.AppName)
+		affected, derr := session.
+			Where("store_id = ? AND object = ? AND relation = ? AND user = ?",
+				storeId, d.Object, d.Relation, d.User).
+			Delete(&BizTuple{})
+		if derr != nil {
+			_ = session.Rollback()
+			return 0, 0, fmt.Errorf("rebac write_tuples: delete (%s#%s@%s): %w",
+				d.Object, d.Relation, d.User, derr)
+		}
+		deleted += affected
+	}
+
+	if err = session.Commit(); err != nil {
+		return 0, 0, fmt.Errorf("rebac write_tuples: commit: %w", err)
+	}
+	return written, deleted, nil
+}
+
 // DeleteBizTuplesForApp removes ALL tuples for (owner, appName). This is the
 // cascade path called when an application is torn down — it mirrors the
 // equivalent function in biz_rebac_model.go (spec §4.3 cascade semantics).

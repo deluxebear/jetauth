@@ -296,6 +296,8 @@ func InitAPI() {
 	web.Router("/api/biz-list-authorization-models", &controllers.ApiController{}, "GET:BizListAuthorizationModels")
 	web.Router("/api/biz-check", &controllers.ApiController{}, "POST:BizCheck")
 	web.Router("/api/biz-batch-check", &controllers.ApiController{}, "POST:BizBatchCheck")
+	web.Router("/api/biz-write-tuples", &controllers.ApiController{}, "POST:BizWriteTuples")
+	web.Router("/api/biz-read-tuples", &controllers.ApiController{}, "GET:BizReadTuples")
 
 	web.Router("/api/biz-sync-policies", &controllers.ApiController{}, "POST:BizSyncPolicies")
 
