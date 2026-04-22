@@ -184,6 +184,26 @@ func UpdateBizAppConfig(id string, config *BizAppConfig) (bool, error) {
 	return affected != 0, nil
 }
 
+// SetBizAppConfigAuthorizationModelId atomically advances only the
+// CurrentAuthorizationModelId column on the app config row. It exists so the
+// ReBAC save path can move the pointer without going through UpdateBizAppConfig,
+// which runs ValidatePolicyTable + syncBizPolicies — both Casbin-lane ops that
+// are wasted work on a ReBAC-modeled app (and a literal touch of the "Casbin
+// path zero modifications" invariant from spec §13 Always).
+func SetBizAppConfigAuthorizationModelId(owner, appName, modelId string) (bool, error) {
+	if util.IsStringsEmpty(owner, appName) {
+		return false, nil
+	}
+	affected, err := ormer.Engine.
+		ID(core.PK{owner, appName}).
+		Cols("current_authorization_model_id").
+		Update(&BizAppConfig{CurrentAuthorizationModelId: modelId})
+	if err != nil {
+		return false, err
+	}
+	return affected != 0, nil
+}
+
 func DeleteBizAppConfig(config *BizAppConfig) (bool, error) {
 	affected, err := ormer.Engine.ID(core.PK{config.Owner, config.AppName}).Delete(&BizAppConfig{})
 	if err != nil {

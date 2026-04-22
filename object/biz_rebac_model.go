@@ -183,8 +183,11 @@ type SaveAuthorizationModelResult struct {
 // will be added then; for PR1 the conflict scan already blocks the
 // destructive-change race that matters most.
 func SaveAuthorizationModel(owner, appName, dsl, createdBy string) (*SaveAuthorizationModelResult, error) {
-	config, err := getBizAppConfigOrError(owner, appName)
-	if err != nil {
+	// Verify the app exists before doing any DSL work — getBizAppConfigOrError
+	// returns a descriptive error for missing configs. The config itself isn't
+	// needed here because pointer advance below uses a targeted single-column
+	// update by (owner, appName).
+	if _, err := getBizAppConfigOrError(owner, appName); err != nil {
 		return nil, err
 	}
 
@@ -230,8 +233,11 @@ func SaveAuthorizationModel(owner, appName, dsl, createdBy string) (*SaveAuthori
 		return nil, fmt.Errorf("insert authorization model: %w", err)
 	}
 
-	config.CurrentAuthorizationModelId = m.Id
-	if _, err := UpdateBizAppConfig(config.GetId(), config); err != nil {
+	// Advance only the pointer column — not via UpdateBizAppConfig, which
+	// would (a) re-validate PolicyTable and (b) trigger syncBizPolicies, both
+	// of which are Casbin-lane operations wasted on a ReBAC app (spec §13
+	// Always: "Casbin 代码路径零修改").
+	if _, err := SetBizAppConfigAuthorizationModelId(owner, appName, m.Id); err != nil {
 		return nil, fmt.Errorf("advance current model pointer: %w", err)
 	}
 
