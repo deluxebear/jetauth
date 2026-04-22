@@ -118,11 +118,150 @@ func resolveAuthorizationModel(storeId, modelId string) (*openfgav1.Authorizatio
 	return proto, nil
 }
 
+// memoKey is the canonical sync.Map key for a single (object, relation,
+// user) tuple in a Check run. Derived form "object#relation@user" is the
+// same shape OpenFGA reference uses for its resolution trace. CP-4 will
+// append a |conditionHash segment when conditional tuples land — the key
+// schema is versioned by segment count, not by a format string, so the
+// extension is additive.
+func memoKey(key TupleKey) string {
+	return key.Object + "#" + key.Relation + "@" + key.User
+}
+
+// findRelation looks up the rewrite AST for (objectType, relation) in the
+// loaded authorization model. Callers get a structured error for every
+// failure mode (type missing, type has no relations, relation missing) so
+// the HTTP layer can map each to its own 400 message rather than collapsing
+// to a generic "schema mismatch".
+func findRelation(model *openfgav1.AuthorizationModel, objectType, relation string) (*openfgav1.Userset, error) {
+	for _, td := range model.GetTypeDefinitions() {
+		if td.GetType() != objectType {
+			continue
+		}
+		rels := td.GetRelations()
+		if len(rels) == 0 {
+			return nil, fmt.Errorf("rebac: object type %q has no relations defined", objectType)
+		}
+		u, ok := rels[relation]
+		if !ok {
+			return nil, fmt.Errorf("rebac: relation %q not defined on object type %q", relation, objectType)
+		}
+		return u, nil
+	}
+	return nil, fmt.Errorf("rebac: object type %q not in schema", objectType)
+}
+
+// check is the central dispatcher for a single Check step: it enforces the
+// depth cap, consults the memo, parses the object's type, looks up the
+// matching rewrite, and hands evaluation off to the per-rewrite helper. The
+// helpers themselves are stubs in this commit (Task 3); Tasks 4–9 replace
+// each stub with the real rewrite semantics.
+//
+// Depth is checked before the memo hit on purpose: a cycle that makes us
+// call check() with the same key from depth 24 and depth 26 must error at
+// depth 26 regardless of whether the key was observed before.
+func (ctx *checkContext) check(key TupleKey, depth int) (bool, error) {
+	if depth >= maxResolutionDepth {
+		return false, fmt.Errorf("rebac: max resolution depth %d exceeded on %s#%s",
+			maxResolutionDepth, key.Object, key.Relation)
+	}
+
+	if v, ok := ctx.memo.Load(memoKey(key)); ok {
+		return v.(bool), nil
+	}
+
+	objType, _, err := parseObjectString(key.Object)
+	if err != nil {
+		return false, fmt.Errorf("rebac: parse object: %w", err)
+	}
+
+	userset, err := findRelation(ctx.model, objType, key.Relation)
+	if err != nil {
+		return false, err
+	}
+
+	allowed, err := ctx.evaluate(userset, key, depth)
+	if err != nil {
+		return false, err
+	}
+	// Only positive or negative *decisions* are memoised — errors are not,
+	// so transient failures don't poison later sibling branches that might
+	// reach the same key via a different path.
+	ctx.memo.Store(memoKey(key), allowed)
+	return allowed, nil
+}
+
+// evaluate selects the rewrite implementation by oneof type and forwards to
+// the matching stub. Task 4–9 commits replace each stub body; signatures
+// are frozen here so those commits stay surgical.
+func (ctx *checkContext) evaluate(userset *openfgav1.Userset, key TupleKey, depth int) (bool, error) {
+	switch u := userset.GetUserset().(type) {
+	case *openfgav1.Userset_This:
+		return ctx.checkThis(key, depth)
+	case *openfgav1.Userset_ComputedUserset:
+		return ctx.checkComputedUserset(key, u.ComputedUserset, depth)
+	case *openfgav1.Userset_TupleToUserset:
+		return ctx.checkTupleToUserset(key, u.TupleToUserset, depth)
+	case *openfgav1.Userset_Union:
+		return ctx.checkUnion(key, u.Union, depth)
+	case *openfgav1.Userset_Intersection:
+		return ctx.checkIntersection(key, u.Intersection, depth)
+	case *openfgav1.Userset_Difference:
+		return ctx.checkDifference(key, u.Difference, depth)
+	case nil:
+		return false, fmt.Errorf("rebac: rewrite for %s#%s has no userset type", key.Object, key.Relation)
+	default:
+		return false, fmt.Errorf("rebac: unsupported rewrite kind %T on %s#%s", u, key.Object, key.Relation)
+	}
+}
+
+// checkThis — Task 4.
+func (ctx *checkContext) checkThis(key TupleKey, depth int) (bool, error) {
+	_ = depth
+	return false, fmt.Errorf("rebac: 'this' rewrite not implemented (CP-3 Task 4) for %s#%s", key.Object, key.Relation)
+}
+
+// checkComputedUserset — Task 5.
+func (ctx *checkContext) checkComputedUserset(key TupleKey, cu *openfgav1.ObjectRelation, depth int) (bool, error) {
+	_ = cu
+	_ = depth
+	return false, fmt.Errorf("rebac: 'computed_userset' rewrite not implemented (CP-3 Task 5) for %s#%s", key.Object, key.Relation)
+}
+
+// checkTupleToUserset — Task 6.
+func (ctx *checkContext) checkTupleToUserset(key TupleKey, ttu *openfgav1.TupleToUserset, depth int) (bool, error) {
+	_ = ttu
+	_ = depth
+	return false, fmt.Errorf("rebac: 'tuple_to_userset' rewrite not implemented (CP-3 Task 6) for %s#%s", key.Object, key.Relation)
+}
+
+// checkUnion — Task 7.
+func (ctx *checkContext) checkUnion(key TupleKey, u *openfgav1.Usersets, depth int) (bool, error) {
+	_ = u
+	_ = depth
+	return false, fmt.Errorf("rebac: 'union' rewrite not implemented (CP-3 Task 7) for %s#%s", key.Object, key.Relation)
+}
+
+// checkIntersection — Task 8.
+func (ctx *checkContext) checkIntersection(key TupleKey, u *openfgav1.Usersets, depth int) (bool, error) {
+	_ = u
+	_ = depth
+	return false, fmt.Errorf("rebac: 'intersection' rewrite not implemented (CP-3 Task 8) for %s#%s", key.Object, key.Relation)
+}
+
+// checkDifference — Task 9.
+func (ctx *checkContext) checkDifference(key TupleKey, d *openfgav1.Difference, depth int) (bool, error) {
+	_ = d
+	_ = depth
+	return false, fmt.Errorf("rebac: 'difference' rewrite not implemented (CP-3 Task 9) for %s#%s", key.Object, key.Relation)
+}
+
 // ReBACCheck evaluates whether req.TupleKey.User has req.TupleKey.Relation
-// on req.TupleKey.Object within the given store. Full OpenFGA v1.1 Check
-// semantics (five rewrites) land in follow-up commits; this CP-3 skeleton
-// owns input validation and the error envelope so callers can wire against
-// a stable signature while the engine body fills in.
+// on req.TupleKey.Object within the given store. Implements OpenFGA v1.1
+// Check semantics: resolve the app's authorization model, then recursively
+// evaluate rewrites with request-scoped memoisation and a depth cap. The
+// individual rewrite bodies are stubs in this commit; see evaluate() for
+// the dispatch table.
 func ReBACCheck(req *CheckRequest) (*CheckResult, error) {
 	if req == nil {
 		return nil, fmt.Errorf("rebac check: nil request")
@@ -133,5 +272,21 @@ func ReBACCheck(req *CheckRequest) (*CheckResult, error) {
 	if req.TupleKey.Object == "" || req.TupleKey.Relation == "" || req.TupleKey.User == "" {
 		return nil, fmt.Errorf("rebac check: incomplete tuple key %+v", req.TupleKey)
 	}
-	return nil, fmt.Errorf("rebac check: not implemented (CP-3 in progress)")
+
+	model, err := resolveAuthorizationModel(req.StoreId, req.AuthorizationModelId)
+	if err != nil {
+		return nil, err
+	}
+
+	ctx := &checkContext{
+		storeId:        req.StoreId,
+		model:          model,
+		contextual:     req.ContextualTuples,
+		requestContext: req.Context,
+	}
+	allowed, err := ctx.check(req.TupleKey, 0)
+	if err != nil {
+		return nil, err
+	}
+	return &CheckResult{Allowed: allowed}, nil
 }
