@@ -7,6 +7,7 @@ import { ArrowLeft, Plus, Play, Copy, Check, X, RefreshCw, RotateCcw, Pencil, Tr
 import DataTable, { type Column, useTablePrefs, ColumnsMenu } from "../components/DataTable";
 import BizAppResourceTab from "../components/BizAppResourceTab";
 import BizSchemaEditor from "../components/BizSchemaEditor";
+import BizTupleManager from "../components/BizTupleManager";
 import { useTranslation } from "../i18n";
 import { useModal } from "../components/Modal";
 import * as BizBackend from "../backend/BizBackend";
@@ -2221,13 +2222,8 @@ function RebacSchemaTab({ appId, t: _t }: { appId: string; t: (k: any) => string
   return <BizSchemaEditor appId={appId} />;
 }
 
-function RebacTuplesTab({ appId: _appId, t }: { appId: string; t: (k: any) => string }) {
-  return (
-    <RebacStubPanel
-      label={t("rebac.tab.tuples")}
-      hint="CP-7 Task 7: DataTable with filter, bulk import, and add-tuple form."
-    />
-  );
+function RebacTuplesTab({ appId, t: _t }: { appId: string; t: (k: any) => string }) {
+  return <BizTupleManager appId={appId} />;
 }
 
 function RebacTesterTab({ appId: _appId, t }: { appId: string; t: (k: any) => string }) {
