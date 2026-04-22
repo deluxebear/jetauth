@@ -751,9 +751,9 @@ func (c *Client) applyResponse(resp WatchResponse) {
 
 ### 清理
 
-- [ ] **CP-4 接入 cel-go 真正导入后，删除 `object/biz_rebac_anchor.go`**
+- [x] **CP-4 接入 cel-go 真正导入后，删除 `object/biz_rebac_anchor.go`**
   占位文件，仅为阻止 `go mod tidy` 在第一次真实使用前把 cel-go 从 vendor/ 剔除。
-  锚点文件里已注明移除条件。
+  已随 CP-4 Task 1 移除（`object/biz_rebac_condition.go` 现在真实导入 cel-go）。
 
 ### 相关代码位置
 
