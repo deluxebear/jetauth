@@ -345,125 +345,149 @@ interface RawModel {
   conditions?: Record<string, unknown>;
 }
 
-interface RawTypeDef {
-  type?: string;
-  relations?: Record<string, RawUserset>;
-  metadata?: {
-    relations?: Record<string, RawRelationMetadata>;
-  };
-}
-
-interface RawRelationMetadata {
-  directlyRelatedUserTypes?: RawRelationReference[];
-}
-
-interface RawRelationReference {
-  type?: string;
-  relation?: string;
-  wildcard?: Record<string, unknown>;
-  condition?: string;
-}
-
-interface RawObjectRelation {
-  object?: string;
-  relation?: string;
-}
-
-interface RawUserset {
-  this?: Record<string, unknown>;
-  computedUserset?: RawObjectRelation;
-  tupleToUserset?: {
-    tupleset?: RawObjectRelation;
-    computedUserset?: RawObjectRelation;
-  };
-  union?: { child?: RawUserset[] };
-  intersection?: { child?: RawUserset[] };
-  difference?: { base?: RawUserset; subtract?: RawUserset };
+// The backend protojson.Marshal emits OpenFGA's canonical JSON which
+// is snake_case (type_definitions, directly_related_user_types,
+// computed_userset, …), matching the OpenFGA HTTP API spec. Some
+// SDKs and hand-authored files use camelCase instead. The parser
+// accepts either by consulting both spellings at every lookup — pick
+// helper below hides the fork.
+function pick<T>(obj: Record<string, unknown>, ...keys: string[]): T | undefined {
+  for (const k of keys) {
+    const v = obj[k];
+    if (v !== undefined) return v as T;
+  }
+  return undefined;
 }
 
 export function parseSchemaJson(jsonText: string): SchemaAST {
   if (!jsonText.trim()) return emptyAST();
-  let raw: RawModel;
+  let raw: Record<string, unknown>;
   try {
-    raw = JSON.parse(jsonText) as RawModel;
+    raw = JSON.parse(jsonText) as Record<string, unknown>;
   } catch {
     return emptyAST();
   }
 
-  const types: TypeDef[] = (raw.typeDefinitions || []).map((td) => {
-    const relationsMap = td.relations || {};
-    const metaRelations = td.metadata?.relations || {};
-    const relations: RelationDef[] = Object.keys(relationsMap).map((name) => ({
-      id: newId(),
-      name,
-      rewrite: parseUserset(relationsMap[name]),
-      typeRestrictions: (
-        metaRelations[name]?.directlyRelatedUserTypes || []
-      ).map(parseRelationReference),
-    }));
+  const typeDefs =
+    pick<unknown[]>(raw, "type_definitions", "typeDefinitions") || [];
+  const types: TypeDef[] = typeDefs.map((tdAny) => {
+    const td = (tdAny as Record<string, unknown>) || {};
+    const relationsMap =
+      (td.relations as Record<string, Record<string, unknown>>) || {};
+    const metadata = (td.metadata as Record<string, unknown>) || {};
+    const metaRelations =
+      (metadata.relations as Record<string, Record<string, unknown>>) || {};
+    const relations: RelationDef[] = Object.keys(relationsMap).map((name) => {
+      const meta = metaRelations[name] || {};
+      const directUserTypes =
+        (pick<unknown[]>(
+          meta,
+          "directly_related_user_types",
+          "directlyRelatedUserTypes",
+        ) as unknown[]) || [];
+      return {
+        id: newId(),
+        name,
+        rewrite: parseUserset(relationsMap[name]),
+        typeRestrictions: directUserTypes.map((ref) =>
+          parseRelationReference((ref as Record<string, unknown>) || {}),
+        ),
+      };
+    });
     return {
       id: newId(),
-      name: td.type || "",
+      name: (td.type as string) || "",
       relations,
     };
   });
 
-  const ast: SchemaAST = {
-    schemaVersion: "1.1",
-    types,
-  };
-  if (raw.conditions && Object.keys(raw.conditions).length > 0) {
-    ast.rawConditionsJson = JSON.stringify(raw.conditions);
+  const ast: SchemaAST = { schemaVersion: "1.1", types };
+  const conditions = raw.conditions as Record<string, unknown> | undefined;
+  if (conditions && Object.keys(conditions).length > 0) {
+    ast.rawConditionsJson = JSON.stringify(conditions);
   }
   return ast;
 }
 
-function parseUserset(u: RawUserset | undefined): RewriteNode {
+function parseUserset(u: Record<string, unknown> | undefined): RewriteNode {
   if (!u) return { kind: "this" };
   if (u.this !== undefined) return { kind: "this" };
-  if (u.computedUserset) {
+
+  const computedUserset = pick<Record<string, unknown>>(
+    u,
+    "computed_userset",
+    "computedUserset",
+  );
+  if (computedUserset) {
     return {
       kind: "computedUserset",
-      relation: u.computedUserset.relation || "",
+      relation: (computedUserset.relation as string) || "",
     };
   }
-  if (u.tupleToUserset) {
+
+  const ttu = pick<Record<string, unknown>>(u, "tuple_to_userset", "tupleToUserset");
+  if (ttu) {
+    const tuplesetRef =
+      (pick<Record<string, unknown>>(ttu, "tupleset") as
+        | Record<string, unknown>
+        | undefined) || {};
+    const cuRef =
+      (pick<Record<string, unknown>>(ttu, "computed_userset", "computedUserset") as
+        | Record<string, unknown>
+        | undefined) || {};
     return {
       kind: "tupleToUserset",
-      tupleset: u.tupleToUserset.tupleset?.relation || "",
-      computedUserset: u.tupleToUserset.computedUserset?.relation || "",
+      tupleset: (tuplesetRef.relation as string) || "",
+      computedUserset: (cuRef.relation as string) || "",
     };
   }
-  if (u.union) {
-    return { kind: "union", children: (u.union.child || []).map(parseUserset) };
+
+  const union = u.union as Record<string, unknown> | undefined;
+  if (union) {
+    const children = (union.child as unknown[]) || [];
+    return {
+      kind: "union",
+      children: children.map((c) =>
+        parseUserset((c as Record<string, unknown>) || {}),
+      ),
+    };
   }
-  if (u.intersection) {
+
+  const intersection = u.intersection as Record<string, unknown> | undefined;
+  if (intersection) {
+    const children = (intersection.child as unknown[]) || [];
     return {
       kind: "intersection",
-      children: (u.intersection.child || []).map(parseUserset),
+      children: children.map((c) =>
+        parseUserset((c as Record<string, unknown>) || {}),
+      ),
     };
   }
-  if (u.difference) {
+
+  const difference = u.difference as Record<string, unknown> | undefined;
+  if (difference) {
     return {
       kind: "difference",
-      base: parseUserset(u.difference.base),
-      subtract: parseUserset(u.difference.subtract),
+      base: parseUserset(difference.base as Record<string, unknown>),
+      subtract: parseUserset(difference.subtract as Record<string, unknown>),
     };
   }
+
   // Empty or unknown oneof — treat as `this` so the AST stays well-formed.
   return { kind: "this" };
 }
 
-function parseRelationReference(ref: RawRelationReference): TypeRestriction {
-  const type = ref.type || "";
+function parseRelationReference(ref: Record<string, unknown>): TypeRestriction {
+  const type = (ref.type as string) || "";
   if (ref.wildcard !== undefined) {
     return { kind: "wildcard", type };
   }
-  if (ref.relation) {
+  if (typeof ref.relation === "string" && ref.relation) {
     return { kind: "userset", type, relation: ref.relation };
   }
-  return ref.condition
-    ? { kind: "direct", type, condition: ref.condition }
-    : { kind: "direct", type };
+  if (typeof ref.condition === "string" && ref.condition) {
+    return { kind: "direct", type, condition: ref.condition };
+  }
+  return { kind: "direct", type };
 }
 

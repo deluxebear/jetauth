@@ -414,4 +414,60 @@ describe("parseSchemaJson — protojson shape", () => {
     expect(parseSchemaJson("")).toEqual(emptyAST());
     expect(parseSchemaJson("not json")).toEqual(emptyAST());
   });
+
+  it("accepts OpenFGA canonical snake_case (what backend actually emits)", () => {
+    // Verified by curl against the running backend: protojson.Marshal
+    // for openfgav1.AuthorizationModel emits snake_case keys matching
+    // the OpenFGA HTTP API spec. The parser must accept this shape —
+    // a prior version only read camelCase and silently returned zero
+    // types on every real schema.
+    const json = JSON.stringify({
+      schema_version: "1.1",
+      type_definitions: [
+        { type: "user" },
+        {
+          type: "document",
+          relations: {
+            viewer: { this: {} },
+            editor: { computed_userset: { relation: "owner" } },
+            can_edit: {
+              tuple_to_userset: {
+                tupleset: { relation: "parent" },
+                computed_userset: { relation: "editor" },
+              },
+            },
+          },
+          metadata: {
+            relations: {
+              viewer: {
+                directly_related_user_types: [
+                  { type: "user" },
+                  { type: "team", relation: "member" },
+                ],
+              },
+            },
+          },
+        },
+      ],
+    });
+    const ast = parseSchemaJson(json);
+    expect(ast.types).toHaveLength(2);
+    const doc = ast.types[1];
+    expect(doc.relations).toHaveLength(3);
+    const byName = Object.fromEntries(doc.relations.map((r) => [r.name, r]));
+    expect(byName.viewer.rewrite).toEqual({ kind: "this" });
+    expect(byName.viewer.typeRestrictions).toEqual([
+      { kind: "direct", type: "user" },
+      { kind: "userset", type: "team", relation: "member" },
+    ]);
+    expect(byName.editor.rewrite).toEqual({
+      kind: "computedUserset",
+      relation: "owner",
+    });
+    expect(byName.can_edit.rewrite).toEqual({
+      kind: "tupleToUserset",
+      tupleset: "parent",
+      computedUserset: "editor",
+    });
+  });
 });
