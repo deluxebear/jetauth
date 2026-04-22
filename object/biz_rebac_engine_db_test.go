@@ -274,6 +274,123 @@ func TestCheck_This_CrossStoreIsolation(t *testing.T) {
 	}
 }
 
+// --- checkThis conditional tuples (CP-4 Task 3) ---------------------------
+
+// conditionalDSL uses a non-expired-grant pattern: a tuple grants viewer
+// only if current_time < expires_at. Both params are timestamps.
+const conditionalDSL = `model
+  schema 1.1
+
+type user
+
+type document
+  relations
+    define viewer: [user with non_expired_grant]
+
+condition non_expired_grant(current_time: timestamp, expires_at: timestamp) {
+  current_time < expires_at
+}
+`
+
+func seedConditionalApp(t *testing.T) (storeId, modelId string) {
+	t.Helper()
+	owner := "rebac-it-" + util.GenerateUUID()[:8]
+	appName := "app_conditional"
+	seedRebacAppConfigForTest(t, owner, appName)
+	res, err := SaveAuthorizationModel(owner, appName, conditionalDSL, "test-user")
+	if err != nil || res.Outcome != SaveOutcomeAdvanced {
+		t.Fatalf("save: err=%v outcome=%v", err, res)
+	}
+	return BuildStoreId(owner, appName), res.AuthorizationModelId
+}
+
+func TestCheckThis_Conditional_ExpressionTrueAllows(t *testing.T) {
+	ensureDBForConsolidated(t)
+	storeId, modelId := seedConditionalApp(t)
+	owner, appName, _ := parseStoreId(storeId)
+
+	// Tuple with an explicit expires_at; request supplies a current_time
+	// that's earlier → condition true → grant.
+	if _, err := AddBizTuples([]*BizTuple{{
+		Owner: owner, AppName: appName,
+		Object: "document:d1", Relation: "viewer", User: "user:alice",
+		ConditionName:        "non_expired_grant",
+		ConditionContext:     `{"expires_at":"2030-01-01T00:00:00Z"}`,
+		AuthorizationModelId: modelId,
+	}}); err != nil {
+		t.Fatalf("seed: %v", err)
+	}
+	res, err := ReBACCheck(&CheckRequest{
+		StoreId: storeId, AuthorizationModelId: modelId,
+		TupleKey: TupleKey{Object: "document:d1", Relation: "viewer", User: "user:alice"},
+		Context: map[string]any{
+			"current_time": "2026-04-22T00:00:00Z",
+		},
+	})
+	if err != nil {
+		t.Fatalf("check: %v", err)
+	}
+	if !res.Allowed {
+		t.Fatalf("non-expired grant must allow, got denied")
+	}
+}
+
+func TestCheckThis_Conditional_ExpressionFalseDenies(t *testing.T) {
+	ensureDBForConsolidated(t)
+	storeId, modelId := seedConditionalApp(t)
+	owner, appName, _ := parseStoreId(storeId)
+
+	// Same tuple, but request's current_time is AFTER expires_at → condition
+	// false → deny.
+	if _, err := AddBizTuples([]*BizTuple{{
+		Owner: owner, AppName: appName,
+		Object: "document:d1", Relation: "viewer", User: "user:bob",
+		ConditionName:        "non_expired_grant",
+		ConditionContext:     `{"expires_at":"2020-01-01T00:00:00Z"}`,
+		AuthorizationModelId: modelId,
+	}}); err != nil {
+		t.Fatalf("seed: %v", err)
+	}
+	res, err := ReBACCheck(&CheckRequest{
+		StoreId: storeId, AuthorizationModelId: modelId,
+		TupleKey: TupleKey{Object: "document:d1", Relation: "viewer", User: "user:bob"},
+		Context: map[string]any{
+			"current_time": "2026-04-22T00:00:00Z",
+		},
+	})
+	if err != nil {
+		t.Fatalf("check: %v", err)
+	}
+	if res.Allowed {
+		t.Fatalf("expired grant must deny, got allowed")
+	}
+}
+
+func TestCheckThis_Unconditional_IsUnchanged(t *testing.T) {
+	// Baseline check: no condition on tuple, no context in request —
+	// existing CP-3 semantics still hold with the Task 3 refactor.
+	ensureDBForConsolidated(t)
+	storeId, modelId := seedThisApp(t)
+	owner, appName, _ := parseStoreId(storeId)
+	if _, err := AddBizTuples([]*BizTuple{{
+		Owner: owner, AppName: appName,
+		Object: "document:d1", Relation: "viewer", User: "user:alice",
+		AuthorizationModelId: modelId,
+	}}); err != nil {
+		t.Fatalf("seed: %v", err)
+	}
+	res, err := ReBACCheck(&CheckRequest{
+		StoreId: storeId, AuthorizationModelId: modelId,
+		TupleKey: TupleKey{Object: "document:d1", Relation: "viewer", User: "user:alice"},
+	})
+	if err != nil {
+		t.Fatalf("check: %v", err)
+	}
+	if !res.Allowed {
+		t.Fatalf("unconditional grant must still allow, got denied")
+	}
+}
+
 // --- checkComputedUserset (Task 5) end-to-end -----------------------------
 
 const computedUsersetDSL = `model

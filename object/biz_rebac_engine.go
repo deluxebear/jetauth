@@ -134,6 +134,10 @@ func resolveAuthorizationModel(storeId, modelId string) (*openfgav1.Authorizatio
 	if err != nil {
 		return nil, fmt.Errorf("rebac: parse authorization model %s: %w", modelId, err)
 	}
+	// The transformer doesn't always populate AuthorizationModel.Id in the
+	// JSON blob; set it from the DB row so downstream CEL caches can key on
+	// model id without a second plumbing path.
+	proto.Id = m.Id
 	return proto, nil
 }
 
@@ -248,7 +252,12 @@ func (ctx *checkContext) evaluate(userset *openfgav1.Userset, key TupleKey, dept
 //   - userset reference (`team:eng#member` grants anyone who is an
 //     `eng` team member) → recurse into the referenced userset
 //
-// Contextual tuples are folded in first via tuplesetUsers (spec §6.1).
+// A tuple carrying a CEL condition (spec §6.1 item 5) only grants when
+// the condition evaluates true under the merged tuple-context + request-
+// context. False/error in the condition means "this tuple doesn't
+// contribute" — the loop moves on without surfacing the result.
+//
+// Contextual tuples are folded in first via tuplesetTuples (spec §6.1).
 // Wildcard rows only expand to plain-user callers — a userset subject or
 // the self-wildcard are never granted by a `{type}:*` row. Userset
 // expansion bumps depth so a malformed schema looping on itself can't
@@ -262,24 +271,43 @@ func (ctx *checkContext) checkThis(key TupleKey, depth int) (bool, error) {
 	isSelfWildcard := userId == "*"
 	wildcardUser := userType + ":*"
 
-	users, err := ctx.tuplesetUsers(key.Object, key.Relation)
+	refs, err := ctx.tuplesetTuples(key.Object, key.Relation)
 	if err != nil {
 		return false, err
 	}
 
-	for _, u := range users {
-		if u == key.User {
-			return true, nil
-		}
-		if !isSelfWildcard && !isUserset && u == wildcardUser {
-			return true, nil
+	for _, ref := range refs {
+		// Direct / wildcard match against the caller.
+		directMatch := ref.User == key.User ||
+			(!isSelfWildcard && !isUserset && ref.User == wildcardUser)
+		if directMatch {
+			ok, err := ctx.evaluateTupleCondition(ref)
+			if err != nil {
+				return false, err
+			}
+			if ok {
+				return true, nil
+			}
+			// Condition denied this tuple; keep scanning — another tuple
+			// may still grant.
+			continue
 		}
 		// Userset expansion. `team:eng#member` means "whoever has `member`
 		// on `team:eng`". Only rows with a `#relation` suffix qualify;
-		// plain type:id rows were handled by the exact-match check above.
-		if hashIdx := strings.LastIndex(u, "#"); hashIdx > 0 {
-			rowObj := u[:hashIdx]
-			rowRel := u[hashIdx+1:]
+		// plain type:id rows were handled by the direct-match branch.
+		if hashIdx := strings.LastIndex(ref.User, "#"); hashIdx > 0 {
+			// A failing condition on a userset reference gates the whole
+			// expansion — if the grant is conditional and the condition
+			// is unmet, we must not recurse through it.
+			ok, err := ctx.evaluateTupleCondition(ref)
+			if err != nil {
+				return false, err
+			}
+			if !ok {
+				continue
+			}
+			rowObj := ref.User[:hashIdx]
+			rowRel := ref.User[hashIdx+1:]
 			if rowRel == "" {
 				continue
 			}
@@ -303,6 +331,49 @@ func (ctx *checkContext) checkThis(key TupleKey, depth int) (bool, error) {
 		}
 	}
 	return false, nil
+}
+
+// evaluateTupleCondition applies the caller-tuple's CEL condition (if
+// any) against the merged tuple-context + request-context. Unconditional
+// tuples always grant. Unknown condition names surface as an error — the
+// schema guaranteed the name exists at write time, so seeing it go
+// missing here is a real integrity failure, not a "deny silently".
+func (ctx *checkContext) evaluateTupleCondition(ref tupleRef) (bool, error) {
+	if ref.ConditionName == "" {
+		return true, nil
+	}
+	cond, ok := ctx.model.GetConditions()[ref.ConditionName]
+	if !ok {
+		return false, fmt.Errorf("rebac cel: tuple references unknown condition %q", ref.ConditionName)
+	}
+	program, err := compileCondition(ctx.model.GetId(), cond)
+	if err != nil {
+		return false, err
+	}
+	tupleCtx, err := parseConditionContext(ref.ConditionContext)
+	if err != nil {
+		return false, fmt.Errorf("rebac cel: tuple %q: %w", ref.User, err)
+	}
+	// Merge: tuple context supplies the condition's own parameters,
+	// request context provides caller-level vars. Request wins on name
+	// collision — request-time values are the caller's assertion of
+	// current state (clock, IP, …), tuple context is persisted data.
+	vars := make(map[string]any, len(tupleCtx)+len(ctx.requestContext))
+	for k, v := range tupleCtx {
+		vars[k] = v
+	}
+	for k, v := range ctx.requestContext {
+		vars[k] = v
+	}
+	val, _, err := program.Eval(vars)
+	if err != nil {
+		return false, fmt.Errorf("rebac cel: eval condition %q: %w", ref.ConditionName, err)
+	}
+	b, ok := val.Value().(bool)
+	if !ok {
+		return false, fmt.Errorf("rebac cel: condition %q result not bool: %T", ref.ConditionName, val.Value())
+	}
+	return b, nil
 }
 
 // checkComputedUserset resolves `define viewer: editor` — evaluate the
@@ -342,7 +413,7 @@ func (ctx *checkContext) checkTupleToUserset(key TupleKey, ttu *openfgav1.TupleT
 			key.Object, key.Relation)
 	}
 
-	parents, err := ctx.tuplesetUsers(key.Object, tupleset)
+	parents, err := ctx.tuplesetTuples(key.Object, tupleset)
 	if err != nil {
 		return false, err
 	}
@@ -351,15 +422,25 @@ func (ctx *checkContext) checkTupleToUserset(key TupleKey, ttu *openfgav1.TupleT
 		// Only userset-producing parent rows matter — a `user:alice` in
 		// a `parent` column would be malformed against a TTU schema, and
 		// skipping it keeps us from dispatching a bogus plain-user Check.
-		if !strings.Contains(p, ":") {
+		if !strings.Contains(p.User, ":") {
 			continue
 		}
-		parentObject := p
+		// Condition on the parent tuple gates its entire contribution —
+		// a failing condition means the parent effectively isn't a
+		// parent for this request.
+		ok, err := ctx.evaluateTupleCondition(p)
+		if err != nil {
+			return false, err
+		}
+		if !ok {
+			continue
+		}
+		parentObject := p.User
 		// Strip any accidental `#relation` — real `parent` tuples should
 		// store plain `folder:eng`, but upstream fixtures occasionally
 		// include the `#...` suffix; normalise.
-		if idx := strings.LastIndex(p, "#"); idx >= 0 {
-			parentObject = p[:idx]
+		if idx := strings.LastIndex(p.User, "#"); idx >= 0 {
+			parentObject = p.User[:idx]
 		}
 
 		allowed, err := ctx.check(TupleKey{
@@ -383,27 +464,37 @@ func (ctx *checkContext) checkTupleToUserset(key TupleKey, ttu *openfgav1.TupleT
 	return false, nil
 }
 
-// tuplesetUsers returns the distinct User strings of every tuple matching
-// (storeId, object, relation). Contextual tuples are folded in first. The
-// returned slice is order-preserving (contextual before DB, DB in index
-// order) so tests can reason about traversal sequence if they care.
-func (ctx *checkContext) tuplesetUsers(object, relation string) ([]string, error) {
+// tupleRef is the engine-internal view of a tuple during Check: the User
+// string plus the optional CEL condition fields. Contextual tuples don't
+// carry conditions in CP-4 (TupleKey's shape predates the feature) — the
+// Condition* fields stay empty for contextual-sourced refs, which
+// evaluateTupleCondition treats as "unconditional grant".
+type tupleRef struct {
+	User             string
+	ConditionName    string
+	ConditionContext string
+}
+
+// tuplesetTuples returns every tuple matching (storeId, object, relation),
+// deduplicated by User string (first-seen wins). Contextual tuples are
+// folded in first, then persisted rows. Preserving order lets test suites
+// reason about traversal sequence when needed.
+func (ctx *checkContext) tuplesetTuples(object, relation string) ([]tupleRef, error) {
 	owner, appName, err := parseStoreId(ctx.storeId)
 	if err != nil {
 		return nil, err
 	}
-	var out []string
+	var out []tupleRef
 	seen := map[string]bool{}
 	for _, t := range ctx.contextual {
 		if t.Object == object && t.Relation == relation && !seen[t.User] {
 			seen[t.User] = true
-			out = append(out, t.User)
+			out = append(out, tupleRef{User: t.User})
 		}
 	}
 	// ormer can be nil in pure-function engine tests that exercise the
-	// dispatcher with contextual tuples alone (no DB bootstrap). Avoid a
-	// nil-pointer panic on ReadBizTuples' Engine.Where call by short-
-	// circuiting to the contextual-only view.
+	// dispatcher with contextual tuples alone (no DB bootstrap). Short-
+	// circuit to the contextual-only view.
 	if ormer == nil {
 		return out, nil
 	}
@@ -414,7 +505,11 @@ func (ctx *checkContext) tuplesetUsers(object, relation string) ([]string, error
 	for _, r := range rows {
 		if !seen[r.User] {
 			seen[r.User] = true
-			out = append(out, r.User)
+			out = append(out, tupleRef{
+				User:             r.User,
+				ConditionName:    r.ConditionName,
+				ConditionContext: r.ConditionContext,
+			})
 		}
 	}
 	return out, nil
