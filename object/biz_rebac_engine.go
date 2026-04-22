@@ -319,11 +319,85 @@ func (ctx *checkContext) checkComputedUserset(key TupleKey, cu *openfgav1.Object
 	}, depth+1)
 }
 
-// checkTupleToUserset — Task 6.
+// checkTupleToUserset resolves `define viewer: viewer from parent` by first
+// finding every object reachable through the `parent` relation of the
+// current object, then recursively checking the caller's access to
+// `viewer` on each such parent. Returns true as soon as any parent grants.
+//
+// The scan is lazy — we fetch parent tuples on demand rather than
+// pre-materialising every ancestor, so a folder with many documents pays
+// only for the parents it actually needs to consult for a given Check.
 func (ctx *checkContext) checkTupleToUserset(key TupleKey, ttu *openfgav1.TupleToUserset, depth int) (bool, error) {
-	_ = ttu
-	_ = depth
-	return false, fmt.Errorf("rebac: 'tuple_to_userset' rewrite not implemented (CP-3 Task 6) for %s#%s", key.Object, key.Relation)
+	tupleset := ttu.GetTupleset().GetRelation()
+	computed := ttu.GetComputedUserset().GetRelation()
+	if tupleset == "" || computed == "" {
+		return false, fmt.Errorf("rebac: tuple_to_userset on %s#%s missing tupleset or computed relation",
+			key.Object, key.Relation)
+	}
+
+	parents, err := ctx.tuplesetUsers(key.Object, tupleset)
+	if err != nil {
+		return false, err
+	}
+
+	for _, p := range parents {
+		// Only userset-producing parent rows matter — a `user:alice` in
+		// a `parent` column would be malformed against a TTU schema, and
+		// skipping it keeps us from dispatching a bogus plain-user Check.
+		if !strings.Contains(p, ":") {
+			continue
+		}
+		parentObject := p
+		// Strip any accidental `#relation` — real `parent` tuples should
+		// store plain `folder:eng`, but upstream fixtures occasionally
+		// include the `#...` suffix; normalise.
+		if idx := strings.LastIndex(p, "#"); idx >= 0 {
+			parentObject = p[:idx]
+		}
+
+		allowed, err := ctx.check(TupleKey{
+			Object:   parentObject,
+			Relation: computed,
+			User:     key.User,
+		}, depth+1)
+		if err != nil {
+			return false, err
+		}
+		if allowed {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
+// tuplesetUsers returns the distinct User strings of every tuple matching
+// (storeId, object, relation). Contextual tuples are folded in first. The
+// returned slice is order-preserving (contextual before DB, DB in index
+// order) so tests can reason about traversal sequence if they care.
+func (ctx *checkContext) tuplesetUsers(object, relation string) ([]string, error) {
+	owner, appName, err := parseStoreId(ctx.storeId)
+	if err != nil {
+		return nil, err
+	}
+	var out []string
+	seen := map[string]bool{}
+	for _, t := range ctx.contextual {
+		if t.Object == object && t.Relation == relation && !seen[t.User] {
+			seen[t.User] = true
+			out = append(out, t.User)
+		}
+	}
+	rows, err := ReadBizTuples(owner, appName, object, relation, "")
+	if err != nil {
+		return nil, fmt.Errorf("rebac: read tupleset %s#%s: %w", object, relation, err)
+	}
+	for _, r := range rows {
+		if !seen[r.User] {
+			seen[r.User] = true
+			out = append(out, r.User)
+		}
+	}
+	return out, nil
 }
 
 // checkUnion — Task 7.

@@ -345,6 +345,108 @@ func TestCheck_ComputedUserset_NoEditorNoViewer(t *testing.T) {
 	}
 }
 
+// --- checkTupleToUserset (Task 6) end-to-end ------------------------------
+
+const tupleToUsersetDSL = `model
+  schema 1.1
+
+type user
+
+type folder
+  relations
+    define viewer: [user]
+
+type document
+  relations
+    define parent: [folder]
+    define viewer: viewer from parent
+`
+
+func seedTupleToUsersetApp(t *testing.T) (storeId, modelId string) {
+	t.Helper()
+	owner := "rebac-it-" + util.GenerateUUID()[:8]
+	appName := "app_ttu"
+	seedRebacAppConfigForTest(t, owner, appName)
+	res, err := SaveAuthorizationModel(owner, appName, tupleToUsersetDSL, "test-user")
+	if err != nil || res.Outcome != SaveOutcomeAdvanced {
+		t.Fatalf("save: err=%v outcome=%v", err, res)
+	}
+	return BuildStoreId(owner, appName), res.AuthorizationModelId
+}
+
+func TestCheck_TupleToUserset_ViewerViaParent(t *testing.T) {
+	if ormer == nil {
+		t.Skip("ormer not initialised (test needs DB)")
+	}
+	storeId, modelId := seedTupleToUsersetApp(t)
+	owner, appName, _ := parseStoreId(storeId)
+
+	// document:d1 -parent-> folder:f1; folder:f1 has viewer user:alice.
+	if _, err := AddBizTuples([]*BizTuple{
+		{Owner: owner, AppName: appName, Object: "document:d1", Relation: "parent", User: "folder:f1", AuthorizationModelId: modelId},
+		{Owner: owner, AppName: appName, Object: "folder:f1", Relation: "viewer", User: "user:alice", AuthorizationModelId: modelId},
+	}); err != nil {
+		t.Fatalf("seed: %v", err)
+	}
+
+	res, err := ReBACCheck(&CheckRequest{
+		StoreId: storeId, AuthorizationModelId: modelId,
+		TupleKey: TupleKey{Object: "document:d1", Relation: "viewer", User: "user:alice"},
+	})
+	if err != nil {
+		t.Fatalf("check: %v", err)
+	}
+	if !res.Allowed {
+		t.Fatalf("want allowed via parent folder, got denied")
+	}
+}
+
+func TestCheck_TupleToUserset_NoParentNoAccess(t *testing.T) {
+	if ormer == nil {
+		t.Skip("ormer not initialised (test needs DB)")
+	}
+	storeId, modelId := seedTupleToUsersetApp(t)
+
+	res, err := ReBACCheck(&CheckRequest{
+		StoreId: storeId, AuthorizationModelId: modelId,
+		TupleKey: TupleKey{Object: "document:d1", Relation: "viewer", User: "user:alice"},
+	})
+	if err != nil {
+		t.Fatalf("check: %v", err)
+	}
+	if res.Allowed {
+		t.Fatalf("no parent → no viewer, got allowed")
+	}
+}
+
+func TestCheck_TupleToUserset_AnyParentSuffices(t *testing.T) {
+	if ormer == nil {
+		t.Skip("ormer not initialised (test needs DB)")
+	}
+	storeId, modelId := seedTupleToUsersetApp(t)
+	owner, appName, _ := parseStoreId(storeId)
+
+	// Two parents; only the second grants — check should still allow.
+	if _, err := AddBizTuples([]*BizTuple{
+		{Owner: owner, AppName: appName, Object: "document:d1", Relation: "parent", User: "folder:empty", AuthorizationModelId: modelId},
+		{Owner: owner, AppName: appName, Object: "document:d1", Relation: "parent", User: "folder:granting", AuthorizationModelId: modelId},
+		{Owner: owner, AppName: appName, Object: "folder:granting", Relation: "viewer", User: "user:bob", AuthorizationModelId: modelId},
+	}); err != nil {
+		t.Fatalf("seed: %v", err)
+	}
+
+	res, err := ReBACCheck(&CheckRequest{
+		StoreId: storeId, AuthorizationModelId: modelId,
+		TupleKey: TupleKey{Object: "document:d1", Relation: "viewer", User: "user:bob"},
+	})
+	if err != nil {
+		t.Fatalf("check: %v", err)
+	}
+	if !res.Allowed {
+		t.Fatalf("one of two parents grants — must allow")
+	}
+}
+
 // --- resolveAuthorizationModel (Task 2) end-to-end --------------------------
 
 // TestResolveAuthorizationModel_CrossStore verifies a model id that belongs
