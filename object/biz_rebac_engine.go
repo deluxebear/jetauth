@@ -298,11 +298,25 @@ func (ctx *checkContext) checkThis(key TupleKey, depth int) (bool, error) {
 	return false, nil
 }
 
-// checkComputedUserset — Task 5.
+// checkComputedUserset resolves `define viewer: editor` — evaluate the
+// caller's access to the *same* object under a different relation. Just a
+// shallow redirect: build a new TupleKey with the target relation and hand
+// it back to the dispatcher, which enforces depth + memo on the re-entry.
+//
+// The ObjectRelation.Object field is ignored here because computed_userset
+// always refers to the current object. OpenFGA's proto keeps the field for
+// symmetry with tuple_to_userset; the OpenFGA server asserts it's empty.
 func (ctx *checkContext) checkComputedUserset(key TupleKey, cu *openfgav1.ObjectRelation, depth int) (bool, error) {
-	_ = cu
-	_ = depth
-	return false, fmt.Errorf("rebac: 'computed_userset' rewrite not implemented (CP-3 Task 5) for %s#%s", key.Object, key.Relation)
+	target := cu.GetRelation()
+	if target == "" {
+		return false, fmt.Errorf("rebac: computed_userset on %s#%s has empty target relation",
+			key.Object, key.Relation)
+	}
+	return ctx.check(TupleKey{
+		Object:   key.Object,
+		Relation: target,
+		User:     key.User,
+	}, depth+1)
 }
 
 // checkTupleToUserset — Task 6.

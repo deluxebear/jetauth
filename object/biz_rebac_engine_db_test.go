@@ -274,6 +274,77 @@ func TestCheck_This_CrossStoreIsolation(t *testing.T) {
 	}
 }
 
+// --- checkComputedUserset (Task 5) end-to-end -----------------------------
+
+const computedUsersetDSL = `model
+  schema 1.1
+
+type user
+
+type document
+  relations
+    define editor: [user]
+    define viewer: editor
+`
+
+func seedComputedUsersetApp(t *testing.T) (storeId, modelId string) {
+	t.Helper()
+	owner := "rebac-it-" + util.GenerateUUID()[:8]
+	appName := "app_computed_userset"
+	seedRebacAppConfigForTest(t, owner, appName)
+	res, err := SaveAuthorizationModel(owner, appName, computedUsersetDSL, "test-user")
+	if err != nil || res.Outcome != SaveOutcomeAdvanced {
+		t.Fatalf("save: err=%v outcome=%v", err, res)
+	}
+	return BuildStoreId(owner, appName), res.AuthorizationModelId
+}
+
+func TestCheck_ComputedUserset_RedirectsToReferenced(t *testing.T) {
+	if ormer == nil {
+		t.Skip("ormer not initialised (test needs DB)")
+	}
+	storeId, modelId := seedComputedUsersetApp(t)
+	owner, appName, _ := parseStoreId(storeId)
+
+	// user:alice is editor → should be viewer via computed_userset.
+	if _, err := AddBizTuples([]*BizTuple{{
+		Owner: owner, AppName: appName,
+		Object: "document:d1", Relation: "editor", User: "user:alice",
+		AuthorizationModelId: modelId,
+	}}); err != nil {
+		t.Fatalf("seed: %v", err)
+	}
+
+	res, err := ReBACCheck(&CheckRequest{
+		StoreId: storeId, AuthorizationModelId: modelId,
+		TupleKey: TupleKey{Object: "document:d1", Relation: "viewer", User: "user:alice"},
+	})
+	if err != nil {
+		t.Fatalf("check: %v", err)
+	}
+	if !res.Allowed {
+		t.Fatalf("editor user should be viewer via computed_userset, got denied")
+	}
+}
+
+func TestCheck_ComputedUserset_NoEditorNoViewer(t *testing.T) {
+	if ormer == nil {
+		t.Skip("ormer not initialised (test needs DB)")
+	}
+	storeId, modelId := seedComputedUsersetApp(t)
+
+	res, err := ReBACCheck(&CheckRequest{
+		StoreId: storeId, AuthorizationModelId: modelId,
+		TupleKey: TupleKey{Object: "document:d1", Relation: "viewer", User: "user:alice"},
+	})
+	if err != nil {
+		t.Fatalf("check: %v", err)
+	}
+	if res.Allowed {
+		t.Fatalf("no editor tuple should mean no viewer, got allowed")
+	}
+}
+
 // --- resolveAuthorizationModel (Task 2) end-to-end --------------------------
 
 // TestResolveAuthorizationModel_CrossStore verifies a model id that belongs
