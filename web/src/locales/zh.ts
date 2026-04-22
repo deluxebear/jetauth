@@ -3435,6 +3435,121 @@ const zh: Record<string, string> = {
   "adminPreview.device.desktop": "桌面",
   "adminPreview.device.mobile": "移动",
   "adminPreview.theme.label": "主题",
+
+  // ── ReBAC (Phase 2 — OpenFGA-compatible) ──
+  // App wizard — model type selection
+  "rebac.wizard.modelType.title": "选择授权模型",
+  "rebac.wizard.modelType.rbac.title": "RBAC (Casbin)",
+  "rebac.wizard.modelType.rbac.desc": "角色-资源-动作矩阵式权限,适合传统管理后台",
+  "rebac.wizard.modelType.rbac.tip": "用户数量可控、权限矩阵清晰时选我",
+  "rebac.wizard.modelType.rebac.title": "ReBAC (OpenFGA)",
+  "rebac.wizard.modelType.rebac.desc": "基于关系的授权,支持对象层级继承、间接成员、ACL 分享",
+  "rebac.wizard.modelType.rebac.tip": "文档/文件夹/团队层级或 SaaS 资源分享场景选我",
+
+  // Tabs
+  "rebac.tab.overview": "概览",
+  "rebac.tab.schema": "Schema",
+  "rebac.tab.tuples": "关系元组",
+  "rebac.tab.tester": "测试",
+  "rebac.tab.integration": "集成",
+
+  // Overview
+  "rebac.overview.types": "类型数",
+  "rebac.overview.relations": "关系数",
+  "rebac.overview.tuples": "元组数",
+  "rebac.overview.currentModel": "当前 Schema 版本",
+  "rebac.overview.lastUpdated": "最近更新",
+  "rebac.overview.emptyState": "尚未保存 Schema,请前往 Schema 页签创建",
+
+  // Schema editor shell
+  "rebac.schema.tabDsl": "DSL",
+  "rebac.schema.tabVisual": "可视化",
+  "rebac.schema.save": "保存 Schema",
+  "rebac.schema.saving": "保存中...",
+  "rebac.schema.saved": "已保存",
+  "rebac.schema.unsaved": "未保存",
+  "rebac.schema.previewDsl": "DSL 预览",
+  "rebac.schema.parseError": "DSL 解析错误",
+  "rebac.schema.lockedByParseError": "DSL 存在错误,请先在 DSL 面板修复",
+  "rebac.schema.outcomeAdvanced": "Schema 已保存",
+  "rebac.schema.outcomeUnchanged": "Schema 无变更",
+  "rebac.schema.outcomeConflict": "检测到元组引用已删除的类型/关系",
+  "rebac.schema.conflictDialog.title": "Schema 变更被阻止",
+  "rebac.schema.conflictDialog.hint": "先清理以下元组再重试:",
+
+  // Type / relation panels
+  "rebac.types.label": "类型",
+  "rebac.types.add": "添加类型",
+  "rebac.types.remove": "删除类型",
+  "rebac.types.empty": "暂无类型",
+  "rebac.types.namePlaceholder": "类型名 (如 document)",
+  "rebac.relations.label": "关系",
+  "rebac.relations.add": "添加关系",
+  "rebac.relations.remove": "删除",
+  "rebac.relations.empty": "暂无关系",
+  "rebac.relations.namePlaceholder": "关系名 (如 viewer)",
+
+  // Rewrite node types
+  "rebac.rewrite.this": "直接关系",
+  "rebac.rewrite.computedUserset": "同对象关系引用",
+  "rebac.rewrite.tupleToUserset": "关联对象关系",
+  "rebac.rewrite.union": "并集 (OR)",
+  "rebac.rewrite.intersection": "交集 (AND)",
+  "rebac.rewrite.difference": "差集 (BUT NOT)",
+  "rebac.rewrite.addChild": "添加子节点",
+  "rebac.rewrite.moveUp": "上移",
+  "rebac.rewrite.moveDown": "下移",
+  "rebac.rewrite.diffBase": "被减数 (Base)",
+  "rebac.rewrite.diffSubtract": "减数 (Subtract)",
+
+  // Type restriction (`this` node editor)
+  "rebac.typeRestriction.addType": "允许类型",
+  "rebac.typeRestriction.wildcard": "通配 (type:*)",
+  "rebac.typeRestriction.userset": "Userset (type#relation)",
+  "rebac.typeRestriction.condition": "条件 (with)",
+  "rebac.typeRestriction.none": "(空,请至少添加一项)",
+
+  // Tuples
+  "rebac.tuples.add": "新建元组",
+  "rebac.tuples.addDialog.title": "写入元组",
+  "rebac.tuples.delete": "删除",
+  "rebac.tuples.bulkDelete": "批量删除选中",
+  "rebac.tuples.bulkImport": "批量导入",
+  "rebac.tuples.bulkImportDialog.title": "CSV/JSON 批量导入",
+  "rebac.tuples.filter.object": "过滤对象",
+  "rebac.tuples.filter.relation": "过滤关系",
+  "rebac.tuples.filter.user": "过滤用户",
+  "rebac.tuples.columns.object": "对象",
+  "rebac.tuples.columns.relation": "关系",
+  "rebac.tuples.columns.user": "用户",
+  "rebac.tuples.columns.condition": "条件",
+  "rebac.tuples.columns.createdTime": "创建时间",
+  "rebac.tuples.empty": "暂无元组",
+
+  // Tester
+  "rebac.tester.check": "执行 Check",
+  "rebac.tester.allowed": "允许",
+  "rebac.tester.denied": "拒绝",
+  "rebac.tester.expand": "展开关系树",
+  "rebac.tester.contextualTuples": "上下文元组 (JSON)",
+  "rebac.tester.context": "上下文变量 (JSON)",
+  "rebac.tester.recent": "最近 Check 历史",
+  "rebac.tester.clearHistory": "清空历史",
+  "rebac.tester.copy": "复制",
+
+  // Integration
+  "rebac.integration.lang.go": "Go",
+  "rebac.integration.lang.ts": "TypeScript",
+  "rebac.integration.lang.py": "Python",
+  "rebac.integration.copy": "复制代码",
+  "rebac.integration.copied": "已复制",
+
+  // Common
+  "rebac.common.save": "保存",
+  "rebac.common.cancel": "取消",
+  "rebac.common.confirm": "确认",
+  "rebac.common.loading": "加载中...",
+  "rebac.common.error": "错误",
 };
 
 export default zh;

@@ -3445,6 +3445,121 @@ const en = {
   "adminPreview.device.desktop": "Desktop",
   "adminPreview.device.mobile": "Mobile",
   "adminPreview.theme.label": "Theme",
+
+  // ── ReBAC (Phase 2 — OpenFGA-compatible) ──
+  // App wizard — model type selection
+  "rebac.wizard.modelType.title": "Authorization model",
+  "rebac.wizard.modelType.rbac.title": "RBAC (Casbin)",
+  "rebac.wizard.modelType.rbac.desc": "Role-resource-action matrix permissions, the classic admin-panel shape.",
+  "rebac.wizard.modelType.rbac.tip": "Pick me when the user count is bounded and the permission matrix is clear.",
+  "rebac.wizard.modelType.rebac.title": "ReBAC (OpenFGA)",
+  "rebac.wizard.modelType.rebac.desc": "Relationship-based authorization — supports object hierarchies, indirect group membership, and per-resource ACL sharing.",
+  "rebac.wizard.modelType.rebac.tip": "Pick me for document/folder/team hierarchies or SaaS resource sharing.",
+
+  // Tabs
+  "rebac.tab.overview": "Overview",
+  "rebac.tab.schema": "Schema",
+  "rebac.tab.tuples": "Tuples",
+  "rebac.tab.tester": "Tester",
+  "rebac.tab.integration": "Integration",
+
+  // Overview
+  "rebac.overview.types": "Types",
+  "rebac.overview.relations": "Relations",
+  "rebac.overview.tuples": "Tuples",
+  "rebac.overview.currentModel": "Current schema version",
+  "rebac.overview.lastUpdated": "Last updated",
+  "rebac.overview.emptyState": "No schema saved yet — visit the Schema tab to create one.",
+
+  // Schema editor shell
+  "rebac.schema.tabDsl": "DSL",
+  "rebac.schema.tabVisual": "Visual",
+  "rebac.schema.save": "Save schema",
+  "rebac.schema.saving": "Saving...",
+  "rebac.schema.saved": "Saved",
+  "rebac.schema.unsaved": "Unsaved",
+  "rebac.schema.previewDsl": "DSL preview",
+  "rebac.schema.parseError": "DSL parse error",
+  "rebac.schema.lockedByParseError": "DSL has syntax errors; fix them in the DSL tab first.",
+  "rebac.schema.outcomeAdvanced": "Schema saved",
+  "rebac.schema.outcomeUnchanged": "Schema unchanged",
+  "rebac.schema.outcomeConflict": "Existing tuples reference removed types/relations",
+  "rebac.schema.conflictDialog.title": "Schema change blocked",
+  "rebac.schema.conflictDialog.hint": "Clean up the following tuples and retry:",
+
+  // Type / relation panels
+  "rebac.types.label": "Types",
+  "rebac.types.add": "Add type",
+  "rebac.types.remove": "Remove type",
+  "rebac.types.empty": "No types defined",
+  "rebac.types.namePlaceholder": "Type name (e.g. document)",
+  "rebac.relations.label": "Relations",
+  "rebac.relations.add": "Add relation",
+  "rebac.relations.remove": "Remove",
+  "rebac.relations.empty": "No relations",
+  "rebac.relations.namePlaceholder": "Relation name (e.g. viewer)",
+
+  // Rewrite node types
+  "rebac.rewrite.this": "Direct",
+  "rebac.rewrite.computedUserset": "Computed userset",
+  "rebac.rewrite.tupleToUserset": "Tuple to userset",
+  "rebac.rewrite.union": "Union (OR)",
+  "rebac.rewrite.intersection": "Intersection (AND)",
+  "rebac.rewrite.difference": "Difference (BUT NOT)",
+  "rebac.rewrite.addChild": "Add child",
+  "rebac.rewrite.moveUp": "Move up",
+  "rebac.rewrite.moveDown": "Move down",
+  "rebac.rewrite.diffBase": "Base",
+  "rebac.rewrite.diffSubtract": "Subtract",
+
+  // Type restriction (`this` node editor)
+  "rebac.typeRestriction.addType": "Allowed type",
+  "rebac.typeRestriction.wildcard": "Wildcard (type:*)",
+  "rebac.typeRestriction.userset": "Userset (type#relation)",
+  "rebac.typeRestriction.condition": "Condition (with)",
+  "rebac.typeRestriction.none": "(empty — add at least one)",
+
+  // Tuples
+  "rebac.tuples.add": "New tuple",
+  "rebac.tuples.addDialog.title": "Write tuple",
+  "rebac.tuples.delete": "Delete",
+  "rebac.tuples.bulkDelete": "Delete selected",
+  "rebac.tuples.bulkImport": "Bulk import",
+  "rebac.tuples.bulkImportDialog.title": "Bulk import (CSV / JSON)",
+  "rebac.tuples.filter.object": "Filter object",
+  "rebac.tuples.filter.relation": "Filter relation",
+  "rebac.tuples.filter.user": "Filter user",
+  "rebac.tuples.columns.object": "Object",
+  "rebac.tuples.columns.relation": "Relation",
+  "rebac.tuples.columns.user": "User",
+  "rebac.tuples.columns.condition": "Condition",
+  "rebac.tuples.columns.createdTime": "Created",
+  "rebac.tuples.empty": "No tuples",
+
+  // Tester
+  "rebac.tester.check": "Run Check",
+  "rebac.tester.allowed": "Allowed",
+  "rebac.tester.denied": "Denied",
+  "rebac.tester.expand": "Show relation tree",
+  "rebac.tester.contextualTuples": "Contextual tuples (JSON)",
+  "rebac.tester.context": "Context variables (JSON)",
+  "rebac.tester.recent": "Recent Check history",
+  "rebac.tester.clearHistory": "Clear history",
+  "rebac.tester.copy": "Copy",
+
+  // Integration
+  "rebac.integration.lang.go": "Go",
+  "rebac.integration.lang.ts": "TypeScript",
+  "rebac.integration.lang.py": "Python",
+  "rebac.integration.copy": "Copy code",
+  "rebac.integration.copied": "Copied",
+
+  // Common
+  "rebac.common.save": "Save",
+  "rebac.common.cancel": "Cancel",
+  "rebac.common.confirm": "Confirm",
+  "rebac.common.loading": "Loading...",
+  "rebac.common.error": "Error",
 };
 
 export default en;
