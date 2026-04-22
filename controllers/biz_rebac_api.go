@@ -54,6 +54,14 @@ func (c *ApiController) BizWriteAuthorizationModel() {
 	}
 
 	createdBy := c.GetSessionUsername()
+	if createdBy == "" {
+		// Schema changes are low-frequency but audit-critical; an empty
+		// CreatedBy breaks the history trail, so refuse early rather than
+		// silently persist a row nobody can attribute. The authz filter
+		// should already have gated this request; this is a defence in depth.
+		c.ResponseError("unauthenticated: session has no username")
+		return
+	}
 	result, err := object.SaveAuthorizationModel(owner, appName, body.SchemaDSL, createdBy)
 	if err != nil {
 		c.ResponseError(err.Error())
