@@ -287,6 +287,170 @@ type bizWriteTuplesResponse struct {
 	Deleted int64 `json:"deleted"`
 }
 
+// bizListObjectsRequest is the POST body for /api/biz-list-objects.
+type bizListObjectsRequest struct {
+	AppId                string             `json:"appId"`
+	AuthorizationModelId string             `json:"authorizationModelId,omitempty"`
+	ObjectType           string             `json:"objectType"`
+	Relation             string             `json:"relation"`
+	User                 string             `json:"user"`
+	ContextualTuples     []bizCheckTupleKey `json:"contextualTuples,omitempty"`
+	Context              map[string]any     `json:"context,omitempty"`
+	PageSize             int                `json:"pageSize,omitempty"`
+	ContinuationToken    string             `json:"continuationToken,omitempty"`
+}
+
+// BizListObjects
+// @Summary BizListObjects
+// @Tags Business Permission API
+// @Description Enumerate the objects of ObjectType for which User holds
+// Relation. Cursor-based pagination; each candidate runs through
+// ReBACCheck so the full rewrite semantics apply (union / intersection
+// / difference / computed_userset / tuple_to_userset / conditional
+// tuples). Internal 10s timeout — past the deadline, returns what was
+// collected plus a continuation token for the caller to resume.
+// @Param   appId   query    string  false  "The app id (owner/appName)"
+// @Param   body    body     controllers.bizListObjectsRequest  true  "List-objects request"
+// @Success 200 {object} object.ListObjectsResult "Objects the user can reach + continuation token"
+// @Router /biz-list-objects [post]
+func (c *ApiController) BizListObjects() {
+	var body bizListObjectsRequest
+	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &body); err != nil {
+		c.ResponseError("invalid JSON body: " + err.Error())
+		return
+	}
+	if body.AppId == "" {
+		body.AppId = c.Ctx.Input.Query("appId")
+	}
+	if body.AppId == "" {
+		c.ResponseError("appId is required (body or ?appId= query)")
+		return
+	}
+	owner, appName, err := util.GetOwnerAndNameFromIdWithError(body.AppId)
+	if err != nil {
+		c.ResponseError(err.Error())
+		return
+	}
+
+	res, err := object.ReBACListObjects(&object.ListObjectsRequest{
+		StoreId:              object.BuildStoreId(owner, appName),
+		AuthorizationModelId: body.AuthorizationModelId,
+		ObjectType:           body.ObjectType,
+		Relation:             body.Relation,
+		User:                 body.User,
+		ContextualTuples:     toEngineTupleKeys(body.ContextualTuples),
+		Context:              body.Context,
+		PageSize:             body.PageSize,
+		ContinuationToken:    body.ContinuationToken,
+	})
+	if err != nil {
+		c.ResponseError(err.Error())
+		return
+	}
+	c.ResponseOk(res)
+}
+
+// bizListUsersRequest is the POST body for /api/biz-list-users.
+type bizListUsersRequest struct {
+	AppId                string             `json:"appId"`
+	AuthorizationModelId string             `json:"authorizationModelId,omitempty"`
+	Object               string             `json:"object"`
+	Relation             string             `json:"relation"`
+	UserFilter           string             `json:"userFilter,omitempty"`
+	ContextualTuples     []bizCheckTupleKey `json:"contextualTuples,omitempty"`
+	Context              map[string]any     `json:"context,omitempty"`
+	PageSize             int                `json:"pageSize,omitempty"`
+	ContinuationToken    string             `json:"continuationToken,omitempty"`
+}
+
+// BizListUsers
+// @Summary BizListUsers
+// @Tags Business Permission API
+// @Description Enumerate the users that hold Relation on Object.
+// UserFilter restricts by subject type ("user") or userset
+// ("team#member"); empty returns all shapes. Same cursor +
+// timeout + Check-per-candidate model as /biz-list-objects.
+// @Param   appId   query    string  false  "The app id (owner/appName)"
+// @Param   body    body     controllers.bizListUsersRequest  true  "List-users request"
+// @Success 200 {object} object.ListUsersResult "Users + continuation token"
+// @Router /biz-list-users [post]
+func (c *ApiController) BizListUsers() {
+	var body bizListUsersRequest
+	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &body); err != nil {
+		c.ResponseError("invalid JSON body: " + err.Error())
+		return
+	}
+	if body.AppId == "" {
+		body.AppId = c.Ctx.Input.Query("appId")
+	}
+	if body.AppId == "" {
+		c.ResponseError("appId is required (body or ?appId= query)")
+		return
+	}
+	owner, appName, err := util.GetOwnerAndNameFromIdWithError(body.AppId)
+	if err != nil {
+		c.ResponseError(err.Error())
+		return
+	}
+
+	res, err := object.ReBACListUsers(&object.ListUsersRequest{
+		StoreId:              object.BuildStoreId(owner, appName),
+		AuthorizationModelId: body.AuthorizationModelId,
+		Object:               body.Object,
+		Relation:             body.Relation,
+		UserFilter:           body.UserFilter,
+		ContextualTuples:     toEngineTupleKeys(body.ContextualTuples),
+		Context:              body.Context,
+		PageSize:             body.PageSize,
+		ContinuationToken:    body.ContinuationToken,
+	})
+	if err != nil {
+		c.ResponseError(err.Error())
+		return
+	}
+	c.ResponseOk(res)
+}
+
+// BizExpand
+// @Summary BizExpand
+// @Tags Business Permission API
+// @Description Return the rewrite tree for (object, relation) — a
+// debugging / audit view of how grants compose. See spec §6.2 and
+// the ExpandNode struct for the node shape.
+// @Param   appId      query    string  true   "The app id (owner/appName)"
+// @Param   object     query    string  true   "Object (e.g. document:d1)"
+// @Param   relation   query    string  true   "Relation"
+// @Param   id         query    string  false  "Authorization model id (default: app's current)"
+// @Success 200 {object} object.ExpandResult "Rewrite tree with nested rewrite nodes"
+// @Router /biz-expand [get]
+func (c *ApiController) BizExpand() {
+	appId := c.Ctx.Input.Query("appId")
+	objectQ := c.Ctx.Input.Query("object")
+	relationQ := c.Ctx.Input.Query("relation")
+	modelId := c.Ctx.Input.Query("id")
+	if appId == "" || objectQ == "" || relationQ == "" {
+		c.ResponseError("appId, object, and relation are required")
+		return
+	}
+	owner, appName, err := util.GetOwnerAndNameFromIdWithError(appId)
+	if err != nil {
+		c.ResponseError(err.Error())
+		return
+	}
+
+	res, err := object.ReBACExpand(&object.ExpandRequest{
+		StoreId:              object.BuildStoreId(owner, appName),
+		AuthorizationModelId: modelId,
+		Object:               objectQ,
+		Relation:             relationQ,
+	})
+	if err != nil {
+		c.ResponseError(err.Error())
+		return
+	}
+	c.ResponseOk(res)
+}
+
 // BizWriteTuples
 // @Summary BizWriteTuples
 // @Tags Business Permission API
