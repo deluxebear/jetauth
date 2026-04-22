@@ -19,6 +19,11 @@ export interface BizAppConfig {
    * should hide or disable the Deny option.
    */
   supportsDeny?: boolean;
+  // ReBAC-mode fields. Present on every row; `modelType` defaults to
+  // "casbin" for legacy apps. `currentAuthorizationModelId` is set on
+  // the first successful schema save for a ReBAC app.
+  modelType?: "casbin" | "rebac";
+  currentAuthorizationModelId?: string;
   [key: string]: unknown;
 }
 
@@ -693,6 +698,260 @@ export function newBizPermission(owner: string, appName: string): BizPermission 
     approveTime: "",
     state: "Approved",
   };
+}
+
+// ── ReBAC (Phase 2 — OpenFGA-compatible) ──
+//
+// Frontend types mirror the backend contracts documented in
+// docs/rebac-spec.md §7.1 ("routes") and §6 ("engine"). Every wrapper
+// here targets one of the 10 endpoints spec §7.1 enumerates.
+
+export interface BizTupleKey {
+  object: string;
+  relation: string;
+  user: string;
+}
+
+/**
+ * BizAuthorizationModel — a single immutable schema version for a
+ * ReBAC-mode app (spec §4.2). `schemaJson` holds the parsed
+ * representation; `schemaDsl` is the raw OpenFGA DSL.
+ */
+export interface BizAuthorizationModel {
+  id: string;
+  owner: string;
+  appName: string;
+  schemaDsl: string;
+  schemaJson: string;
+  schemaHash: string;
+  createdTime: string;
+  createdBy: string;
+}
+
+/**
+ * SaveAuthorizationModelResult — spec §4.2 write outcomes.
+ *   - `unchanged`: DSL identical to current model; same id returned.
+ *   - `advanced`:  new model row inserted, app pointer updated.
+ *   - `conflict`:  destructive schema drops a type/relation still
+ *                  referenced by tuples; no write happened.
+ */
+export type SaveAuthorizationModelOutcome = "unchanged" | "advanced" | "conflict";
+
+export interface BizSchemaConflict {
+  tupleId: number;
+  object: string;
+  relation: string;
+  user: string;
+  reason: string;
+}
+
+export interface SaveAuthorizationModelResult {
+  outcome: SaveAuthorizationModelOutcome;
+  authorizationModelId?: string;
+  conflicts?: BizSchemaConflict[];
+}
+
+/** BizTuple — persisted relationship. CreatedTime comes from the row. */
+export interface BizTuple {
+  storeId: string;
+  owner: string;
+  appName: string;
+  object: string;
+  relation: string;
+  user: string;
+  conditionName?: string;
+  conditionContext?: string;
+  authorizationModelId: string;
+  createdTime: string;
+}
+
+export interface BizCheckRequest {
+  appId: string;
+  authorizationModelId?: string;
+  tupleKey: BizTupleKey;
+  contextualTuples?: BizTupleKey[];
+  context?: Record<string, unknown>;
+}
+
+export interface BizCheckResponse {
+  allowed: boolean;
+  resolution?: string;
+}
+
+export interface BizBatchCheckItem {
+  tupleKey: BizTupleKey;
+  contextualTuples?: BizTupleKey[];
+  context?: Record<string, unknown>;
+}
+
+export interface BizBatchCheckRequest {
+  appId: string;
+  authorizationModelId?: string;
+  checks: BizBatchCheckItem[];
+}
+
+export interface BizBatchCheckResultItem {
+  allowed: boolean;
+  resolution?: string;
+  error?: string;
+}
+
+export interface BizBatchCheckResponse {
+  results: BizBatchCheckResultItem[];
+}
+
+export interface BizWriteTupleIn {
+  object: string;
+  relation: string;
+  user: string;
+  conditionName?: string;
+  conditionContext?: string;
+}
+
+export interface BizWriteTuplesRequest {
+  appId: string;
+  authorizationModelId?: string;
+  writes?: BizWriteTupleIn[];
+  deletes?: BizTupleKey[];
+}
+
+export interface BizWriteTuplesResponse {
+  written: number;
+  deleted: number;
+}
+
+export interface BizListObjectsRequest {
+  appId: string;
+  authorizationModelId?: string;
+  objectType: string;
+  relation: string;
+  user: string;
+  contextualTuples?: BizTupleKey[];
+  context?: Record<string, unknown>;
+  pageSize?: number;
+  continuationToken?: string;
+}
+
+export interface BizListObjectsResult {
+  objects: string[];
+  continuationToken?: string;
+}
+
+export interface BizListUsersRequest {
+  appId: string;
+  authorizationModelId?: string;
+  object: string;
+  relation: string;
+  userFilter?: string;
+  contextualTuples?: BizTupleKey[];
+  context?: Record<string, unknown>;
+  pageSize?: number;
+  continuationToken?: string;
+}
+
+export interface BizListUsersResult {
+  users: string[];
+  continuationToken?: string;
+}
+
+export interface BizExpandObjectRelation {
+  object?: string;
+  relation: string;
+}
+
+export interface BizExpandTupleToUserset {
+  tupleset: BizExpandObjectRelation;
+  computed: BizExpandObjectRelation;
+}
+
+/**
+ * BizExpandNode mirrors the recursive ExpandNode from the Go engine.
+ * `kind` tags the rewrite; exactly one of the other fields is
+ * populated per node (`Users` for `this`, `Computed` for
+ * `computed_userset`, etc. — see docs/rebac-spec.md §6.2).
+ */
+export interface BizExpandNode {
+  kind: string;
+  users?: string[];
+  computed?: BizExpandObjectRelation;
+  tupleToUserset?: BizExpandTupleToUserset;
+  children?: BizExpandNode[];
+  base?: BizExpandNode;
+  subtract?: BizExpandNode;
+  truncated?: boolean;
+}
+
+export interface BizExpandResult {
+  root: BizExpandNode;
+}
+
+// 1. biz-write-authorization-model
+export function saveBizAuthorizationModel(appId: string, schemaDsl: string) {
+  return request<SaveAuthorizationModelResult>(
+    "POST",
+    `/api/biz-write-authorization-model?appId=${encodeURIComponent(appId)}`,
+    { schemaDsl },
+  );
+}
+
+// 2. biz-read-authorization-model
+export function getBizAuthorizationModel(appId: string, id?: string) {
+  const q = id
+    ? `appId=${encodeURIComponent(appId)}&id=${encodeURIComponent(id)}`
+    : `appId=${encodeURIComponent(appId)}`;
+  return request<BizAuthorizationModel>("GET", `/api/biz-read-authorization-model?${q}`);
+}
+
+// 3. biz-list-authorization-models
+export function listBizAuthorizationModels(appId: string) {
+  return request<BizAuthorizationModel[]>(
+    "GET",
+    `/api/biz-list-authorization-models?appId=${encodeURIComponent(appId)}`,
+  );
+}
+
+// 4. biz-check
+export function bizCheck(req: BizCheckRequest) {
+  return request<BizCheckResponse>("POST", "/api/biz-check", req);
+}
+
+// 5. biz-batch-check
+export function bizBatchCheck(req: BizBatchCheckRequest) {
+  return request<BizBatchCheckResponse>("POST", "/api/biz-batch-check", req);
+}
+
+// 6. biz-write-tuples
+export function writeBizTuples(req: BizWriteTuplesRequest) {
+  return request<BizWriteTuplesResponse>("POST", "/api/biz-write-tuples", req);
+}
+
+// 7. biz-read-tuples
+export function readBizTuples(
+  appId: string,
+  filter: { object?: string; relation?: string; user?: string } = {},
+) {
+  const params = new URLSearchParams({ appId });
+  if (filter.object) params.set("object", filter.object);
+  if (filter.relation) params.set("relation", filter.relation);
+  if (filter.user) params.set("user", filter.user);
+  return request<BizTuple[]>("GET", `/api/biz-read-tuples?${params.toString()}`);
+}
+
+// 8. biz-list-objects
+export function bizListObjects(req: BizListObjectsRequest) {
+  return request<BizListObjectsResult>("POST", "/api/biz-list-objects", req);
+}
+
+// 9. biz-list-users
+export function bizListUsers(req: BizListUsersRequest) {
+  return request<BizListUsersResult>("POST", "/api/biz-list-users", req);
+}
+
+// 10. biz-expand
+export function bizExpand(appId: string, object: string, relation: string, id?: string) {
+  const params = new URLSearchParams({ appId, object, relation });
+  if (id) params.set("id", id);
+  return request<BizExpandResult>("GET", `/api/biz-expand?${params.toString()}`);
 }
 
 // ── Helpers ──
