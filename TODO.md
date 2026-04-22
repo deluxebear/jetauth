@@ -716,17 +716,17 @@ func (c *Client) applyResponse(resp WatchResponse) {
   - [x] union / intersection / difference (Tasks 7–9)
   - [x] 请求级 memo map 去重 (Task 3 + verification Task 10)
   - [x] maxDepth=25 深度限制 (Task 11)
-- [ ] 实现 `ReBACListObjects(owner, appName, objectType, relation, subject)` — 列出可访问对象 (CP-5)
-- [ ] 实现 `ReBACListUsers(owner, appName, object, relation)` — 列出有权限的用户 (CP-5)
+- [x] 实现 `ReBACListObjects(owner, appName, objectType, relation, subject)` — 列出可访问对象 (CP-5)
+- [x] 实现 `ReBACListUsers(owner, appName, object, relation)` — 列出有权限的用户 (CP-5)
 - [x] 单元测试覆盖：直接关系、userset、继承链、循环检测、深度限制 (CP-3 + openfga consolidated suite 112/134)
 
 ### P3: API 层（2 天）
 
 - [ ] `BizEnforce` / `BizBatchEnforce` 按 `config.ModelType` 路由到 Casbin 或 ReBAC 引擎
-- [ ] 新增路由：`biz-write-tuples` / `biz-delete-tuples` / `biz-read-tuples`
+- [x] 新增路由：`biz-write-tuples` / `biz-read-tuples` (CP-5 — delete 合并在 write 批次里,无独立 delete-tuples)
 - [x] 新增路由：`biz-check` / `biz-batch-check` (CP-4)
-- [ ] 新增路由：`biz-list-objects` / `biz-list-users` (CP-5)
-- [ ] 新增路由：`biz-expand`（展开关系树，调试用）(CP-5)
+- [x] 新增路由：`biz-list-objects` / `biz-list-users` (CP-5)
+- [x] 新增路由：`biz-expand`（展开关系树，调试用）(CP-5)
 - [ ] ReBAC 模式下适配 `biz-get-user-roles` / `biz-get-user-permissions`
 
 ### P4: 前端 Schema + Tuple（3-4 天）
