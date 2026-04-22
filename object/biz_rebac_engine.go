@@ -61,12 +61,19 @@ type CheckResult struct {
 // inside a single ReBACCheck call: the loaded store/model, the caller's
 // contextual tuples, and a memo that collapses repeat sub-queries across
 // sibling branches.
+//
+// evalCount is a test-only hook: when non-nil, ctx.check increments it
+// every time a key progresses past the memo lookup into real dispatch.
+// Production callers never set it — its zero value (nil) makes the check
+// free. Kept on the struct, not in a global, so concurrent tests don't
+// cross-contaminate each other's counters.
 type checkContext struct {
 	storeId        string
 	model          *openfgav1.AuthorizationModel
 	contextual     []TupleKey
 	requestContext map[string]any
 	memo           sync.Map // key: "object#relation@user" → bool
+	evalCount      *atomic.Int64
 }
 
 // parseStoreId splits "{owner}/{appName}" back into its two parts, the
@@ -170,6 +177,11 @@ func (ctx *checkContext) check(key TupleKey, depth int) (bool, error) {
 
 	if v, ok := ctx.memo.Load(memoKey(key)); ok {
 		return v.(bool), nil
+	}
+	// Past the memo short-circuit — this is real dispatch work. Counter
+	// lets memo-collapse tests prove sibling sub-queries share results.
+	if ctx.evalCount != nil {
+		ctx.evalCount.Add(1)
 	}
 
 	objType, _, err := parseObjectString(key.Object)

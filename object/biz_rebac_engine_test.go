@@ -16,6 +16,7 @@ package object
 import (
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 
 	openfgav1 "github.com/openfga/api/proto/openfga/v1"
@@ -220,6 +221,71 @@ func TestCheck_NilUserset(t *testing.T) {
 	_, err := ctx.check(TupleKey{Object: "document:d1", Relation: "viewer", User: "user:a"}, 0)
 	if err == nil || !strings.Contains(err.Error(), "no userset type") {
 		t.Fatalf("want 'no userset type' error, got: %v", err)
+	}
+}
+
+// TestCheck_Memo_CollapsesRepeatSubquery proves a sub-userset reached from
+// multiple points in the evaluation tree is evaluated exactly once. The
+// schema `define viewer: a but not a` calls check(a) twice — base and
+// subtract — but the memo must collapse the second to a hit.
+//
+// Contextual tuples are used so the helper never enters ReadBizTuples; the
+// test stays pure and doesn't require the DB adapter.
+func TestCheck_Memo_CollapsesRepeatSubquery(t *testing.T) {
+	const dsl = `model
+  schema 1.1
+
+type user
+
+type document
+  relations
+    define a: [user]
+    define viewer: a but not a
+`
+	ctx := dispatchTestCtx(t, dsl)
+	ctx.contextual = []TupleKey{
+		{Object: "document:d1", Relation: "a", User: "user:alice"},
+	}
+	var cnt atomic.Int64
+	ctx.evalCount = &cnt
+
+	allowed, err := ctx.check(TupleKey{Object: "document:d1", Relation: "viewer", User: "user:alice"}, 0)
+	if err != nil {
+		t.Fatalf("check: %v", err)
+	}
+	// Base a=true, Subtract a=true (memo hit) → difference returns
+	// !subtract, i.e. false. The result shape is incidental; the
+	// interesting invariant is the dispatch count.
+	if allowed {
+		t.Fatalf("want denied (a minus a), got allowed")
+	}
+	// Expected dispatches: viewer(1) + a(1). Without the memo we'd see a
+	// second a dispatch for the subtract branch → count 3.
+	if got := cnt.Load(); got != 2 {
+		t.Fatalf("evalCount = %d, want 2 — memo should collapse the repeated check(a)", got)
+	}
+}
+
+// TestCheck_MaxDepth_CycleErrors constructs a schema with a mutual cycle
+// (a depends on b, b depends on a) and verifies the cap surfaces as an
+// error rather than the engine returning a silent false. Schema parser
+// allows the cycle; the runtime cap is the guard.
+func TestCheck_MaxDepth_CycleErrors(t *testing.T) {
+	const dsl = `model
+  schema 1.1
+
+type user
+
+type document
+  relations
+    define a: b
+    define b: a
+`
+	ctx := dispatchTestCtx(t, dsl)
+
+	_, err := ctx.check(TupleKey{Object: "document:d1", Relation: "a", User: "user:alice"}, 0)
+	if err == nil || !strings.Contains(err.Error(), "max resolution depth") {
+		t.Fatalf("want 'max resolution depth' error on cycle, got: %v", err)
 	}
 }
 
