@@ -192,6 +192,14 @@ func DeleteBizAppConfig(config *BizAppConfig) (bool, error) {
 
 	if affected != 0 {
 		ClearBizEnforcerCache(config.Owner, config.AppName)
+		// ReBAC cascade (spec §4.2, §4.3): tuples and authorization models are
+		// per-app and have no standalone delete path, so they must be reaped
+		// when the owning config disappears. Errors are swallowed so a
+		// partially-cleaned row set can still be reported to the caller as
+		// "config deleted" — the alternative is leaving the config half-gone
+		// while surfacing a confusing error.
+		_, _ = DeleteBizTuplesForApp(config.Owner, config.AppName)
+		_, _ = DeleteBizAuthorizationModelsForApp(config.Owner, config.AppName)
 	}
 
 	return affected != 0, nil
