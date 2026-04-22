@@ -201,6 +201,111 @@ func TestListObjects_UnknownObjectType(t *testing.T) {
 	}
 }
 
+// --- ListUsers (Task 2) ---------------------------------------------------
+
+func TestListUsers_DirectGrants(t *testing.T) {
+	ensureDBForConsolidated(t)
+	storeId, modelId := seedThisApp(t)
+	owner, appName, _ := parseStoreId(storeId)
+
+	if _, err := AddBizTuples([]*BizTuple{
+		{Owner: owner, AppName: appName, Object: "document:d1", Relation: "viewer", User: "user:alice", AuthorizationModelId: modelId},
+		{Owner: owner, AppName: appName, Object: "document:d1", Relation: "viewer", User: "user:bob", AuthorizationModelId: modelId},
+		{Owner: owner, AppName: appName, Object: "document:d2", Relation: "viewer", User: "user:carol", AuthorizationModelId: modelId},
+	}); err != nil {
+		t.Fatalf("seed: %v", err)
+	}
+
+	res, err := ReBACListUsers(&ListUsersRequest{
+		StoreId: storeId, AuthorizationModelId: modelId,
+		Object: "document:d1", Relation: "viewer",
+	})
+	if err != nil {
+		t.Fatalf("list_users: %v", err)
+	}
+	if len(res.Users) != 2 {
+		t.Fatalf("want 2 users on d1, got %+v", res.Users)
+	}
+	if res.Users[0] != "user:alice" || res.Users[1] != "user:bob" {
+		t.Fatalf("order / content drift: %+v", res.Users)
+	}
+}
+
+func TestListUsers_Wildcard(t *testing.T) {
+	ensureDBForConsolidated(t)
+	// Schema must explicitly allow the `user:*` type restriction for
+	// the tuple to be visible — a plain `[user]` restriction filters
+	// it out (spec §5.2 wildcard form is opt-in).
+	owner := "rebac-lu-wc-" + util.GenerateUUID()[:8]
+	appName := "app_lu_wildcard"
+	seedRebacAppConfigForTest(t, owner, appName)
+	dsl := `model
+  schema 1.1
+
+type user
+
+type document
+  relations
+    define viewer: [user, user:*]
+`
+	res, err := SaveAuthorizationModel(owner, appName, dsl, "test-user")
+	if err != nil || res.Outcome != SaveOutcomeAdvanced {
+		t.Fatalf("save: err=%v outcome=%v", err, res)
+	}
+	modelId := res.AuthorizationModelId
+	storeId := BuildStoreId(owner, appName)
+
+	if _, err := AddBizTuples([]*BizTuple{{
+		Owner: owner, AppName: appName,
+		Object: "document:d1", Relation: "viewer", User: "user:*",
+		AuthorizationModelId: modelId,
+	}}); err != nil {
+		t.Fatalf("seed: %v", err)
+	}
+	luRes, err := ReBACListUsers(&ListUsersRequest{
+		StoreId: storeId, AuthorizationModelId: modelId,
+		Object: "document:d1", Relation: "viewer",
+	})
+	if err != nil {
+		t.Fatalf("list_users: %v", err)
+	}
+	if len(luRes.Users) != 1 || luRes.Users[0] != "user:*" {
+		t.Fatalf("want [user:*], got %+v", luRes.Users)
+	}
+}
+
+func TestListUsers_ContextualTuple(t *testing.T) {
+	ensureDBForConsolidated(t)
+	storeId, modelId := seedThisApp(t)
+
+	res, err := ReBACListUsers(&ListUsersRequest{
+		StoreId: storeId, AuthorizationModelId: modelId,
+		Object: "document:d1", Relation: "viewer",
+		ContextualTuples: []TupleKey{
+			{Object: "document:d1", Relation: "viewer", User: "user:contextual"},
+		},
+	})
+	if err != nil {
+		t.Fatalf("list_users: %v", err)
+	}
+	if len(res.Users) != 1 || res.Users[0] != "user:contextual" {
+		t.Fatalf("want [user:contextual], got %+v", res.Users)
+	}
+}
+
+func TestListUsers_UnknownObjectType(t *testing.T) {
+	ensureDBForConsolidated(t)
+	storeId, modelId := seedThisApp(t)
+
+	_, err := ReBACListUsers(&ListUsersRequest{
+		StoreId: storeId, AuthorizationModelId: modelId,
+		Object: "widget:w1", Relation: "viewer",
+	})
+	if err == nil {
+		t.Fatal("expected unknown-type error")
+	}
+}
+
 // TestListObjects_TTURecursion verifies the list path works with a
 // schema whose allowed relation is computed via tuple_to_userset.
 // Canditate generation catches document:1 because it has a parent

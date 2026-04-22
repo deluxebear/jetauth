@@ -208,6 +208,230 @@ func ReBACListObjects(req *ListObjectsRequest) (*ListObjectsResult, error) {
 	return &ListObjectsResult{Objects: allowed, ContinuationToken: next}, nil
 }
 
+// ListUsersRequest / ListUsersResult: see spec §6.4. Inverse of
+// ListObjects — given an (object, relation), enumerate the users who
+// hold the relation.
+type ListUsersRequest struct {
+	StoreId              string
+	AuthorizationModelId string
+	Object               string
+	Relation             string
+	// UserFilter restricts the returned users to this type (or
+	// "type#relation" form). Matches OpenFGA's ListUsers filter: pass
+	// "user" to get only plain users; pass "team#member" to get team
+	// usersets; empty means "all types".
+	UserFilter           string
+	ContextualTuples     []TupleKey
+	Context              map[string]any
+	PageSize             int
+	ContinuationToken    string
+}
+
+type ListUsersResult struct {
+	Users             []string `json:"users"`
+	ContinuationToken string   `json:"continuationToken,omitempty"`
+}
+
+// ReBACListUsers is the inverse of ReBACListObjects: given an (object,
+// relation), enumerate users who hold the relation. Candidate generation
+// pulls every distinct User string appearing in tuples for (store, object,
+// relation) — plus contextual contributions — and dispatches each through
+// ReBACCheck to filter via the full rewrite rules (so a userset like
+// `team:eng#member` correctly surfaces individual user_ids when asked for
+// plain `user` filter).
+//
+// Userset-granted users are NOT flattened in this MVP — spec §6.4 leaves
+// the flattening strategy open, and a follow-up CP can add it. For now we
+// return the raw user strings that appear in tuples (or contextual), as
+// filtered by the requested type.
+func ReBACListUsers(req *ListUsersRequest) (*ListUsersResult, error) {
+	if req == nil {
+		return nil, fmt.Errorf("rebac list_users: nil request")
+	}
+	if req.StoreId == "" || req.Object == "" || req.Relation == "" {
+		return nil, fmt.Errorf("rebac list_users: storeId, object, relation are all required")
+	}
+
+	owner, appName, err := parseStoreId(req.StoreId)
+	if err != nil {
+		return nil, err
+	}
+
+	model, err := resolveAuthorizationModel(req.StoreId, req.AuthorizationModelId)
+	if err != nil {
+		return nil, err
+	}
+
+	objType, _, err := parseObjectString(req.Object)
+	if err != nil {
+		return nil, fmt.Errorf("rebac list_users: object: %w", err)
+	}
+	if !schemaHasType(model, objType) {
+		return nil, fmt.Errorf("rebac list_users: object type %q not in schema", objType)
+	}
+	if !schemaHasRelation(model, objType, req.Relation) {
+		return nil, fmt.Errorf("rebac list_users: relation %q not defined on type %q", req.Relation, objType)
+	}
+	for i, ct := range req.ContextualTuples {
+		if err := validateCheckRequestTuple(model, ct, fmt.Sprintf("contextual tuple #%d", i), true); err != nil {
+			return nil, err
+		}
+	}
+
+	// Parse UserFilter: "type" or "type#relation".
+	var filterType, filterRelation string
+	if req.UserFilter != "" {
+		if idx := splitHash(req.UserFilter); idx >= 0 {
+			filterType = req.UserFilter[:idx]
+			filterRelation = req.UserFilter[idx+1:]
+		} else {
+			filterType = req.UserFilter
+		}
+		if !schemaHasType(model, filterType) {
+			return nil, fmt.Errorf("rebac list_users: filter type %q not in schema", filterType)
+		}
+	}
+
+	cursor, err := parseListCursor(req.ContinuationToken)
+	if err != nil {
+		return nil, err
+	}
+
+	pageSize := req.PageSize
+	if pageSize <= 0 {
+		pageSize = defaultListPageSize
+	}
+	if pageSize > maxListPageSize {
+		pageSize = maxListPageSize
+	}
+
+	candidates, err := gatherCandidateUsers(owner, appName, req.Object, req.Relation, req.ContextualTuples, cursor.LastUser, filterType, filterRelation)
+	if err != nil {
+		return nil, err
+	}
+
+	timeoutCtx, cancel := context.WithTimeout(context.Background(), listTimeout)
+	defer cancel()
+
+	var allowed []string
+	var lastProcessed string
+	for _, user := range candidates {
+		if err := timeoutCtx.Err(); err != nil {
+			break
+		}
+		res, err := ReBACCheck(&CheckRequest{
+			StoreId:              req.StoreId,
+			AuthorizationModelId: req.AuthorizationModelId,
+			TupleKey:             TupleKey{Object: req.Object, Relation: req.Relation, User: user},
+			ContextualTuples:     req.ContextualTuples,
+			Context:              req.Context,
+		})
+		if err != nil {
+			// A candidate user with a shape we can't Check (e.g. unknown
+			// userset relation) shouldn't poison the whole list. Skip it.
+			if errors.Is(err, errSchemaMissing) {
+				continue
+			}
+			return nil, fmt.Errorf("rebac list_users: check %s: %w", user, err)
+		}
+		lastProcessed = user
+		if res.Allowed {
+			allowed = append(allowed, user)
+			if len(allowed) >= pageSize {
+				break
+			}
+		}
+	}
+
+	next := ""
+	if lastProcessed != "" && lastProcessed != candidates[len(candidates)-1] {
+		next = encodeListCursor(listCursor{LastUser: lastProcessed})
+	} else if errors.Is(timeoutCtx.Err(), context.DeadlineExceeded) && lastProcessed != "" {
+		next = encodeListCursor(listCursor{LastUser: lastProcessed})
+	}
+
+	return &ListUsersResult{Users: allowed, ContinuationToken: next}, nil
+}
+
+// splitHash returns the index of the last `#` in s, or -1 if absent.
+// Used by the UserFilter parser; a tiny helper to keep the dispatch
+// readable.
+func splitHash(s string) int {
+	for i := len(s) - 1; i >= 0; i-- {
+		if s[i] == '#' {
+			return i
+		}
+	}
+	return -1
+}
+
+// gatherCandidateUsers returns the sorted union of distinct user strings
+// that appear in any tuple for (storeId, object, relation) — plus
+// contextual contributions — filtered by the optional UserFilter type
+// (and optional #relation) and cursor. Caller then Check-filters each.
+func gatherCandidateUsers(owner, appName, object, relation string, contextual []TupleKey, lastUser, filterType, filterRelation string) ([]string, error) {
+	seen := map[string]bool{}
+
+	matches := func(userStr string) bool {
+		if filterType == "" {
+			return true
+		}
+		userType, _, userRel, err := parseUserString(userStr)
+		if err != nil {
+			return false
+		}
+		if userType != filterType {
+			return false
+		}
+		// Filter "user" accepts plain users AND wildcards (user:*),
+		// rejects usersets (user:id#rel). Filter "team#member" only
+		// accepts matching usersets.
+		if filterRelation == "" {
+			return userRel == ""
+		}
+		return userRel == filterRelation
+	}
+
+	for _, t := range contextual {
+		if t.Object != object || t.Relation != relation {
+			continue
+		}
+		if !matches(t.User) {
+			continue
+		}
+		if lastUser != "" && t.User <= lastUser {
+			continue
+		}
+		seen[t.User] = true
+	}
+
+	if ormer != nil {
+		storeId := BuildStoreId(owner, appName)
+		session := ormer.Engine.
+			Table(&BizTuple{}).
+			Where("store_id = ? AND object = ? AND relation = ?", storeId, object, relation)
+		if lastUser != "" {
+			session = session.And("user > ?", lastUser)
+		}
+		rows := []*BizTuple{}
+		if err := session.Cols("user").Find(&rows); err != nil {
+			return nil, fmt.Errorf("rebac list_users: scan: %w", err)
+		}
+		for _, r := range rows {
+			if matches(r.User) {
+				seen[r.User] = true
+			}
+		}
+	}
+
+	out := make([]string, 0, len(seen))
+	for k := range seen {
+		out = append(out, k)
+	}
+	sort.Strings(out)
+	return out, nil
+}
+
 // gatherCandidateObjects returns the sorted union of object ids (of
 // objectType) appearing anywhere in the store plus any contextual tuples
 // — the full candidate set for a single ListObjects page. Objects ≤
