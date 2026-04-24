@@ -3553,6 +3553,10 @@ const zh: Record<string, string> = {
   "rebac.schema.graph.noTypes": "尚未定义任何类型",
   "rebac.schema.graph.noRelations": "该类型没有 relation",
   "rebac.schema.graph.pickType": "点击左侧节点查看 relation 列表",
+  "rebac.schema.graph.edgeDirect": "直接",
+  "rebac.schema.graph.edgeInherit": "继承",
+  "rebac.schema.graph.legendDirect": "直接主体",
+  "rebac.schema.graph.legendInherit": "继承 (X from Y)",
 
   // Type / relation panels
   "rebac.types.label": "类型",

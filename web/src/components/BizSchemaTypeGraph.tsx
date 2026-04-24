@@ -9,11 +9,15 @@ import { extractTypeGraph, type SchemaAST } from "./bizSchemaAst";
 //   - Nodes on a circle, evenly spaced; "user" pinned to the left if
 //     present (subject types conventionally anchor the graph).
 //   - Edges: solid line = direct (this-subject), dashed = inherit
-//     (tuple_to_userset).
+//     (tuple_to_userset). Arrowheads point at the *target* type to
+//     make direction readable.
 // Interaction:
 //   - Click a node → selectedType; sidebar lists its relations.
 //   - Click a relation → highlights edges originating from that
 //     relation on the selected type.
+//   - Hover an edge → native tooltip shows "{relation} · {kind}" so
+//     the admin can see the origin without clicking.
+// Visual legend in the bottom-right explains solid-vs-dashed.
 
 interface Props {
   ast: SchemaAST;
@@ -24,6 +28,10 @@ const CX = 200;
 const CY = 180;
 const NODE_W = 100;
 const NODE_H = 36;
+// Distance to pull an edge back from each node's center so the
+// arrowhead sits just outside the rect rather than being hidden behind
+// it. Half the node width + a 4px gap.
+const EDGE_GAP = NODE_W / 2 + 4;
 
 export default function BizSchemaTypeGraph({ ast }: Props) {
   const { t } = useTranslation();
@@ -72,6 +80,40 @@ export default function BizSchemaTypeGraph({ ast }: Props) {
           aria-label={t("rebac.schema.graph.title")}
           className="w-full h-[360px]"
         >
+          <defs>
+            {/* Two arrow markers: one uses the neutral border color,
+                one uses the accent color for highlighted edges. Both
+                share geometry — just differ in fill. */}
+            <marker
+              id="biz-graph-arrow"
+              viewBox="0 0 10 10"
+              refX="9"
+              refY="5"
+              markerWidth="6"
+              markerHeight="6"
+              orient="auto-start-reverse"
+            >
+              <path
+                d="M0,0 L10,5 L0,10 Z"
+                fill="var(--color-border)"
+              />
+            </marker>
+            <marker
+              id="biz-graph-arrow-accent"
+              viewBox="0 0 10 10"
+              refX="9"
+              refY="5"
+              markerWidth="7"
+              markerHeight="7"
+              orient="auto-start-reverse"
+            >
+              <path
+                d="M0,0 L10,5 L0,10 Z"
+                fill="var(--color-accent)"
+              />
+            </marker>
+          </defs>
+
           {/* Edges */}
           {graph.edges.map((e, i) => {
             const from = positions.get(e.from);
@@ -81,24 +123,66 @@ export default function BizSchemaTypeGraph({ ast }: Props) {
               selectedRelation !== null &&
               e.relation === selectedRelation &&
               e.from === selectedType;
+            const isDimmed = selectedRelation !== null && !isHighlighted;
+
+            // Pull the endpoints back so the arrow sits just outside
+            // the target node's rect (otherwise it's hidden behind).
+            const dx = to.x - from.x;
+            const dy = to.y - from.y;
+            const len = Math.hypot(dx, dy);
+            const nx = dx / len;
+            const ny = dy / len;
+            const startX = from.x + nx * EDGE_GAP;
+            const startY = from.y + ny * EDGE_GAP;
+            const endX = to.x - nx * EDGE_GAP;
+            const endY = to.y - ny * EDGE_GAP;
+
+            const kindLabel = t(
+              e.kind === "direct"
+                ? "rebac.schema.graph.edgeDirect"
+                : "rebac.schema.graph.edgeInherit",
+            );
+            const tooltip = `${e.from} . ${e.relation} → ${e.to}  ·  ${kindLabel}`;
+
             return (
-              <line
-                key={i}
-                x1={from.x}
-                y1={from.y}
-                x2={to.x}
-                y2={to.y}
-                strokeWidth={isHighlighted ? 2.5 : 1}
-                stroke={
-                  isHighlighted
-                    ? "var(--color-accent, #0891b2)"
-                    : "var(--color-border, #d4d4d8)"
-                }
-                strokeDasharray={e.kind === "inherit" ? "4 3" : undefined}
-                opacity={selectedRelation && !isHighlighted ? 0.35 : 1}
-              />
+              <g key={i} opacity={isDimmed ? 0.25 : 1}>
+                {/* Wide invisible stroke for hover/tooltip hit-testing —
+                    the visible line is thin but hovering within ~8px
+                    still triggers the <title>. */}
+                <line
+                  x1={startX}
+                  y1={startY}
+                  x2={endX}
+                  y2={endY}
+                  strokeWidth={12}
+                  stroke="transparent"
+                  style={{ cursor: "help" }}
+                />
+                {/* Visible line. */}
+                <line
+                  x1={startX}
+                  y1={startY}
+                  x2={endX}
+                  y2={endY}
+                  strokeWidth={isHighlighted ? 2 : 1}
+                  stroke={
+                    isHighlighted
+                      ? "var(--color-accent)"
+                      : "var(--color-border)"
+                  }
+                  strokeDasharray={e.kind === "inherit" ? "4 3" : undefined}
+                  markerEnd={
+                    isHighlighted
+                      ? "url(#biz-graph-arrow-accent)"
+                      : "url(#biz-graph-arrow)"
+                  }
+                  pointerEvents="none"
+                />
+                <title>{tooltip}</title>
+              </g>
             );
           })}
+
           {/* Nodes */}
           {graph.nodes.map((n) => {
             const p = positions.get(n.name);
@@ -118,8 +202,8 @@ export default function BizSchemaTypeGraph({ ast }: Props) {
                   width={NODE_W}
                   height={NODE_H}
                   rx={6}
-                  fill={sel ? "var(--color-accent, #0891b2)" : "var(--color-surface-2, #f4f4f5)"}
-                  stroke="var(--color-border, #d4d4d8)"
+                  fill={sel ? "var(--color-accent)" : "var(--color-surface-2)"}
+                  stroke="var(--color-border)"
                 />
                 <text
                   x={NODE_W / 2}
@@ -128,7 +212,7 @@ export default function BizSchemaTypeGraph({ ast }: Props) {
                   dominantBaseline="middle"
                   className="font-mono"
                   fontSize={12}
-                  fill={sel ? "#fff" : "var(--color-text-primary, #18181b)"}
+                  fill={sel ? "#fff" : "var(--color-text-primary)"}
                 >
                   {n.name}
                 </text>
@@ -138,13 +222,55 @@ export default function BizSchemaTypeGraph({ ast }: Props) {
                   textAnchor="middle"
                   dominantBaseline="middle"
                   fontSize={10}
-                  fill={sel ? "rgba(255,255,255,0.8)" : "var(--color-text-muted, #71717a)"}
+                  fill={sel ? "rgba(255,255,255,0.8)" : "var(--color-text-muted)"}
                 >
                   {n.relationCount} {n.relationCount === 1 ? "relation" : "relations"}
                 </text>
               </g>
             );
           })}
+
+          {/* Legend (bottom-right). Fixed position so it doesn't move
+              as types come and go. */}
+          <g transform="translate(285, 322)" pointerEvents="none">
+            <line
+              x1={0}
+              y1={4}
+              x2={22}
+              y2={4}
+              stroke="var(--color-border)"
+              strokeWidth={1}
+              markerEnd="url(#biz-graph-arrow)"
+            />
+            <text
+              x={28}
+              y={4}
+              dominantBaseline="middle"
+              fontSize={9}
+              fill="var(--color-text-muted)"
+            >
+              {t("rebac.schema.graph.legendDirect")}
+            </text>
+            <line
+              x1={0}
+              y1={18}
+              x2={22}
+              y2={18}
+              stroke="var(--color-border)"
+              strokeWidth={1}
+              strokeDasharray="4 3"
+              markerEnd="url(#biz-graph-arrow)"
+            />
+            <text
+              x={28}
+              y={18}
+              dominantBaseline="middle"
+              fontSize={9}
+              fill="var(--color-text-muted)"
+            >
+              {t("rebac.schema.graph.legendInherit")}
+            </text>
+          </g>
         </svg>
       </div>
 

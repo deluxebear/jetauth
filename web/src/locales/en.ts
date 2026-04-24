@@ -3563,6 +3563,10 @@ const en = {
   "rebac.schema.graph.noTypes": "No types defined yet",
   "rebac.schema.graph.noRelations": "This type has no relations",
   "rebac.schema.graph.pickType": "Click a node to see its relations",
+  "rebac.schema.graph.edgeDirect": "direct",
+  "rebac.schema.graph.edgeInherit": "inherit",
+  "rebac.schema.graph.legendDirect": "Direct subject",
+  "rebac.schema.graph.legendInherit": "Inherit (X from Y)",
 
   // Type / relation panels
   "rebac.types.label": "Types",
