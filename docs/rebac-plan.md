@@ -198,7 +198,8 @@ CP-4 和 CP-8 是**门槛 checkpoint**(spec §15 定义):
 | CP-5 ListObjects/Users/Expand | ✅ 完成 (feature/rebac-cp3) | ReBACListObjects + ReBACListUsers (reverse-index + cursor + 10s timeout) + ReBACExpand (rewrite tree) + 5 new HTTP endpoints (biz-write-tuples / biz-read-tuples / biz-list-objects / biz-list-users / biz-expand); spec §7.1 10-endpoint inventory complete |
 | CP-6 缓存 L2/L3 | ✅ 完成 (L2; L3 follow-up) (feature/rebac-cp3) | sync.Map L2 tupleset cache (10s TTL) + precise write-path invalidation + schema-advance store flush. L3 Redis 作为后续;现有 biz_redis_cache.go 模式可复用。 |
 | CP-7 Frontend(含全功能可视化) | ✅ 完成 (feature/rebac-cp3) | 11 tasks landed: 10 backend-wrapper + i18n scaffold + tab dispatch + DSL editor (dryRun) + AST + recursive rewrite editor + type-restriction editor + DSL↔Visual container + TupleManager + Tester + SDK snippets tab + wizard modelType picker + overview dashboard. 可视化编辑器全功能 OQ-3 达标。 |
-| CP-8 产品级验收 | ⬜ 未开始 | **门槛** |
+| CP-7.5 配置管理员体验优化 | ✅ 完成 (feature/rebac-cp3) | 18 tasks via subagent-driven-development. 8 新能力:场景模板空状态、DSL snippets+lint、Tester 测试用例集、Schema 变更 Plan(diff+级联清理)、身份浏览器(By User / By Object)、Type 关系图谱、批量授权向导、a11y polish。新增组件:BizReBACBrowser/BizSchemaTypeGraph/BizSchemaChangePlan/BizTupleBulkGrantWizard;新增纯模块:bizSchemaLint/bizSchemaDiff/bizRebacTemplates。220 tests / 3375 i18n keys parity。 |
+| CP-8 产品级验收 | ⬜ 未开始 | **门槛**(BizEnforce 分派、OQ-2 指引、限流、Prometheus、SLA 实测) |
 
 ---
 

@@ -3,7 +3,11 @@ import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import BizReBACOverview from "../BizReBACOverview";
 import * as BizBackend from "../../backend/BizBackend";
 import type { ApiResponse } from "../../backend/request";
-import type { BizAuthorizationModel, BizWriteTuplesResponse } from "../../backend/BizBackend";
+import type {
+  BizAuthorizationModel,
+  BizWriteTuplesResponse,
+  SaveAuthorizationModelResult,
+} from "../../backend/BizBackend";
 
 vi.mock("../../backend/BizBackend");
 
@@ -67,8 +71,12 @@ describe("BizReBACOverview empty state", () => {
     vi.mocked(BizBackend.saveBizAuthorizationModel).mockResolvedValue({
       status: "ok",
       msg: "",
-      data: { outcome: "saved" } as unknown as BizAuthorizationModel,
-    } satisfies ApiResponse<BizAuthorizationModel>);
+      data: {
+        outcome: "advanced",
+        id: "m1",
+        conflicts: [],
+      } as unknown as SaveAuthorizationModelResult,
+    } satisfies ApiResponse<SaveAuthorizationModelResult>);
     vi.mocked(BizBackend.writeBizTuples).mockResolvedValue({
       status: "ok",
       msg: "",

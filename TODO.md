@@ -744,6 +744,17 @@ func (c *Client) applyResponse(resp WatchResponse) {
 - [x] 集成 Tab 补充 ReBAC 模式的 SDK 代码示例(Go / TypeScript / Python,带 copy-to-clipboard)(CP-7 Task 9)
 - [x] 概览 Tab 适配 ReBAC 统计信息(类型数、关系数、元组数、Model id、最后更新时间)(CP-7 Task 11)
 
+### P5.5: 配置管理员体验优化 (CP-7.5)
+
+- [x] 场景模板空状态 — Overview 新建应用空状态提供 3 个一键模板(文档协作 / 团队 SaaS / 资源分享)
+- [x] A11y polish — Tester/Editor/TupleManager 补 focus-visible ring;Overview skeleton;StatCard tabular-nums;Tester 结果 aria-live;Tuple 空状态引导
+- [x] DSL 编辑器 — Snippets 下拉(9 个常用片段)+ Lint 侧栏(orphan-type / missing-subject-type)
+- [x] Tester 测试用例集 — 历史 ⭐ 为用例,cases 视图 + Run All 批量重跑 + pass/fail 标记
+- [x] Schema 变更 Plan — 保存冲突时弹 ChangePlan 模态(结构 diff + DSL 行 diff + 冲突按 relation 聚合 + 级联清理)
+- [x] 身份浏览器(§B ROI 最高)— By User / By Object 双模式,调 bizListObjects / bizListUsers,Why? → Tester 预填自动 Check
+- [x] Type 关系图谱 — Schema Tab 第三个子 Tab,自绘 SVG 俯视类型依赖(direct 实线 / inherit 虚线)
+- [x] 批量授权向导 — 4 步 wizard(subject pattern / object pattern / relation / preview),一键批量写 tuple
+
 ### P6: 缓存优化（2 天）
 
 - [x] sync.Map 元组查询结果缓存 + 写入时失效 (CP-6, biz_rebac_cache.go)
