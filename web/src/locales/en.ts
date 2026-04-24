@@ -3533,6 +3533,12 @@ const en = {
   "rebac.schema.plan.saveAnyway": "Save anyway",
   "rebac.schema.plan.savePartialFailure": "Conflict tuples deleted, but saving model failed. Please retry.",
 
+  // Type Graph
+  "rebac.schema.graph.title": "Type Graph",
+  "rebac.schema.graph.noTypes": "No types defined yet",
+  "rebac.schema.graph.noRelations": "This type has no relations",
+  "rebac.schema.graph.pickType": "Click a node to see its relations",
+
   // Type / relation panels
   "rebac.types.label": "Types",
   "rebac.types.add": "Add type",

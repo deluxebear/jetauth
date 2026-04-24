@@ -3523,6 +3523,12 @@ const zh: Record<string, string> = {
   "rebac.schema.plan.saveAnyway": "仍然保存",
   "rebac.schema.plan.savePartialFailure": "冲突 tuple 已删除,但保存模型失败,请重试",
 
+  // Type Graph
+  "rebac.schema.graph.title": "Type 关系图谱",
+  "rebac.schema.graph.noTypes": "尚未定义任何类型",
+  "rebac.schema.graph.noRelations": "该类型没有 relation",
+  "rebac.schema.graph.pickType": "点击左侧节点查看 relation 列表",
+
   // Type / relation panels
   "rebac.types.label": "类型",
   "rebac.types.add": "添加类型",
