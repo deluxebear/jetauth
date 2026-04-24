@@ -52,6 +52,7 @@ web.AppConfig.String(key)  ─── 命中 ────▶ 用 app.conf 的值
 | `ldapsCertId`               | `""`                                     | string  | ✅             |
 | `redisEndpoint`             | `""`（用内存 session）                   | string  | ✅             |
 | `bizPolicyCacheEnabled`     | `false`                                  | bool    | ✅             |
+| `bizReBACCacheL3Enabled`    | `false`                                  | bool    | ✅             |
 | `origin`                    | `""`（回调用当前请求 host）              | string  | ✅             |
 | `originFrontend`            | `""`                                     | string  | ✅             |
 | `authState`                 | `jetauth`                                | string  | ✅             |
@@ -201,6 +202,18 @@ web.AppConfig.String(key)  ─── 命中 ────▶ 用 app.conf 的值
 - **用途**：把 Casbin 策略/模型缓存到 Redis，SDK 通过 `/api/biz-get-policies`
   拉取时走 Redis；进程内 `sync.Map` 缓存仍在。**多实例部署时进程内缓存陈旧
   问题尚未解决**，详见 `TODO.md` *Redis 缓存 — 多实例部署支持*。
+
+### `bizReBACCacheL3Enabled` — 启用 ReBAC tupleset Redis 缓存（L3 层）
+
+**Type:** bool
+**Default:** false
+
+Enables the L3 Redis-backed tier for the ReBAC tupleset cache. When off (default),
+ReBAC uses only the in-process L2 cache (`InMemoryBizReBACCache`). When on, requires
+`redisEndpoint` to be set — reads go through Redis before falling back to the DB,
+writes are mirrored to Redis, and invalidations are broadcast to all instances via a
+`jetauth:rebac:invalidations` pub/sub channel so that a tuple write on instance A
+immediately flushes the matching L2 entry on instance B. CP-8 C6.
 
 ---
 
