@@ -15,6 +15,7 @@ import type {
   SaveAuthorizationModelResult,
 } from "../backend/BizBackend";
 import BizSchemaDslEditor from "./BizSchemaDslEditor";
+import BizSchemaChangePlan from "./BizSchemaChangePlan";
 import BizSchemaVisualEditor from "./BizSchemaVisualEditor";
 import {
   emptyAST,
@@ -84,6 +85,8 @@ export default function BizSchemaEditor({ appId }: Props) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [dryRun, setDryRun] = useState<DryRunState>({ kind: "idle" });
+  const [planOpen, setPlanOpen] = useState(false);
+  const [pendingConflicts, setPendingConflicts] = useState<BizSchemaConflict[]>([]);
   const leadSourceRef = useRef<LeadSource>("user-dsl");
 
   const reqIdRef = useRef(0);
@@ -255,7 +258,8 @@ export default function BizSchemaEditor({ appId }: Props) {
           return;
         case "conflict":
           setDryRun({ kind: "conflict", conflicts: r.conflicts || [] });
-          modal.toast(t("rebac.schema.outcomeConflict"), "error");
+          setPendingConflicts(r.conflicts ?? []);
+          setPlanOpen(true);
           return;
       }
     } catch (err) {
@@ -264,6 +268,51 @@ export default function BizSchemaEditor({ appId }: Props) {
       setSaving(false);
     }
   }, [appId, canSave, dsl, modal, t]);
+
+  const handleForceCleanup = async () => {
+    setSaving(true);
+    try {
+      const deletes = pendingConflicts.map((c) => ({
+        object: c.object,
+        relation: c.relation,
+        user: c.user,
+      }));
+      if (deletes.length > 0) {
+        const delRes = await BizBackend.writeBizTuples({ appId, deletes });
+        if (delRes.status !== "ok") {
+          modal.toast(delRes.msg || t("rebac.common.error"), "error");
+          return;
+        }
+      }
+      const res = await BizBackend.saveBizAuthorizationModel(appId, dsl, false);
+      if (res.status !== "ok" || !res.data) {
+        modal.toast(res.msg || t("rebac.common.error"), "error");
+        return;
+      }
+      const r = res.data as SaveAuthorizationModelResult;
+      if (r.outcome === "conflict") {
+        // Race: more tuples were written between our delete and save.
+        // Refresh the conflict list and keep the modal open.
+        setDryRun({ kind: "conflict", conflicts: r.conflicts || [] });
+        setPendingConflicts(r.conflicts ?? []);
+        return;
+      }
+      // advanced | unchanged — save succeeded.
+      leadSourceRef.current = "user-dsl";
+      setSavedDsl(dsl);
+      setDryRun({ kind: "unchanged" });
+      if (r.schemaJson) {
+        dispatch({ type: "LOAD", ast: parseSchemaJson(r.schemaJson) });
+      }
+      modal.toast(t("rebac.schema.outcomeAdvanced"), "success");
+      setPlanOpen(false);
+      setPendingConflicts([]);
+    } catch (err) {
+      modal.toast(err instanceof Error ? err.message : String(err), "error");
+    } finally {
+      setSaving(false);
+    }
+  };
 
   // Ctrl/Cmd-S global shortcut. Gated on canSave so this behaves
   // identically to the visible Save button.
@@ -428,6 +477,18 @@ export default function BizSchemaEditor({ appId }: Props) {
           </div>
         </div>
       )}
+
+      <BizSchemaChangePlan
+        open={planOpen}
+        savedDsl={savedDsl}
+        nextDsl={dsl}
+        conflicts={pendingConflicts}
+        onCancel={() => {
+          setPlanOpen(false);
+          setPendingConflicts([]);
+        }}
+        onForceCleanupAndSave={() => void handleForceCleanup()}
+      />
     </div>
   );
 }
