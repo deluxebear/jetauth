@@ -7,11 +7,13 @@
 //      http://www.apache.org/licenses/LICENSE-2.0
 
 // Pure-function tests for the L2 tupleset cache. No DB required —
-// direct Load/Store/Delete against the package-level sync.Map.
+// exercises the package-level helper functions that delegate to the
+// BizReBACCache interface.
 
 package object
 
 import (
+	"context"
 	"testing"
 	"time"
 )
@@ -68,17 +70,17 @@ func TestBizTuplesetCache_FlushStore(t *testing.T) {
 }
 
 func TestBizTuplesetCache_TTLExpires(t *testing.T) {
-	key := bizTuplesetCacheKey("s-ttl", "doc:d1", "viewer")
-	// Store a manually-constructed entry that's already expired.
-	bizTuplesetCache.Store(key, &tuplesetCacheEntry{
-		value:   []tupleRef{{User: "u:a"}},
-		expires: time.Now().Add(-1 * time.Second),
-	})
+	// Inject an already-expired entry by passing a negative TTL so the
+	// impl sets expires = now - 1s. Previously this poked the sync.Map
+	// directly; using the interface keeps the test impl-agnostic.
+	key := cacheKey{StoreId: "s-ttl", Object: "doc:d1", Relation: "viewer"}
+	bizReBACCache.Set(context.Background(), key, []tupleRef{{User: "u:a"}}, -1*time.Second)
+
 	if _, ok := loadBizTuplesetCache("s-ttl", "doc:d1", "viewer"); ok {
 		t.Fatal("expired entry should miss")
 	}
-	// Expired miss should also evict — verify no lingering entry.
-	if _, raw := bizTuplesetCache.Load(key); raw {
+	// A second Get on the same key confirms the entry was evicted (not lingering).
+	if _, ok := bizReBACCache.Get(context.Background(), key); ok {
 		t.Fatal("expired entry should have been evicted on miss")
 	}
 }

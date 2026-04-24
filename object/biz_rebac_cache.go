@@ -31,78 +31,49 @@
 package object
 
 import (
-	"sync"
+	"context"
 	"time"
 )
 
+// bizTuplesetCacheTTL is the TTL applied when a tupleset is cached
+// at the tier-1 (in-memory) layer. Kept as a package constant so
+// callers share the same value with every cache tier.
 const bizTuplesetCacheTTL = 10 * time.Second
 
-// tuplesetCacheEntry wraps the cached value with its expiry. Using
-// value-type (not pointer) so sync.Map stores the copy; no shared
-// mutation after Store.
-type tuplesetCacheEntry struct {
-	value   []tupleRef
-	expires time.Time
+// bizReBACCache is the active tupleset cache for this process.
+// Default is the in-memory L2 impl (BizReBACCache interface from
+// biz_rebac_cache_interface.go). CP-8 C6 will replace this with a
+// TieredCache(L2, L3Redis) at boot when bizReBACCacheL3Enabled=true.
+var bizReBACCache BizReBACCache = NewInMemoryBizReBACCache()
+
+// SetBizReBACCache replaces the process-wide tupleset cache. Intended
+// for main.go boot-time wiring; tests may also swap in fakes. Not
+// safe to call concurrently with cache access — call once at init.
+func SetBizReBACCache(c BizReBACCache) {
+	bizReBACCache = c
 }
 
-// bizTuplesetCache is keyed by "{storeId}|{object}#{relation}" →
-// *tuplesetCacheEntry. Package-level so multiple Check requests across
-// the same app share the cache. Cleared entirely on schema advance via
-// flushBizTuplesetCacheForStore.
-var bizTuplesetCache sync.Map // string -> *tuplesetCacheEntry
-
-func bizTuplesetCacheKey(storeId, object, relation string) string {
-	return storeId + "|" + object + "#" + relation
-}
-
-// loadBizTuplesetCache returns the cached tupleset for
-// (storeId, object, relation) or nil,false if missing/expired.
+// loadBizTuplesetCache returns cached tuplerefs for (storeId, object, relation)
+// or (nil, false) on miss / expired. Preserves the pre-CP-8 package API.
 func loadBizTuplesetCache(storeId, object, relation string) ([]tupleRef, bool) {
-	v, ok := bizTuplesetCache.Load(bizTuplesetCacheKey(storeId, object, relation))
-	if !ok {
-		return nil, false
-	}
-	entry := v.(*tuplesetCacheEntry)
-	if time.Now().After(entry.expires) {
-		bizTuplesetCache.Delete(bizTuplesetCacheKey(storeId, object, relation))
-		return nil, false
-	}
-	return entry.value, true
+	return bizReBACCache.Get(context.Background(), cacheKey{StoreId: storeId, Object: object, Relation: relation})
 }
 
 // storeBizTuplesetCache writes an entry with the default TTL. Callers
 // pass the already-deduplicated refs slice from the DB path.
 func storeBizTuplesetCache(storeId, object, relation string, refs []tupleRef) {
-	bizTuplesetCache.Store(
-		bizTuplesetCacheKey(storeId, object, relation),
-		&tuplesetCacheEntry{
-			value:   refs,
-			expires: time.Now().Add(bizTuplesetCacheTTL),
-		},
-	)
+	bizReBACCache.Set(context.Background(), cacheKey{StoreId: storeId, Object: object, Relation: relation}, refs, bizTuplesetCacheTTL)
 }
 
-// invalidateBizTuplesetCacheKey evicts a single (storeId, object,
-// relation) slot. Called by tuple writes / deletes that touched only
-// that slot's rows.
+// invalidateBizTuplesetCacheKey evicts a single tupleset from the cache.
+// Called after tuple writes/deletes that change that exact (object, relation) set.
 func invalidateBizTuplesetCacheKey(storeId, object, relation string) {
-	bizTuplesetCache.Delete(bizTuplesetCacheKey(storeId, object, relation))
+	bizReBACCache.Invalidate(context.Background(), cacheKey{StoreId: storeId, Object: object, Relation: relation})
 }
 
-// flushBizTuplesetCacheForStore evicts every entry belonging to the
-// store. Called when the app's authorization model advances — a schema
-// change can reclassify which subjects are valid under which relation,
-// so a pre-advance cached set might be stale.
+// flushBizTuplesetCacheForStore evicts every entry for a store. Called on
+// schema advance, which can change which tuples are admitted by type
+// restrictions.
 func flushBizTuplesetCacheForStore(storeId string) {
-	prefix := storeId + "|"
-	bizTuplesetCache.Range(func(k, _ any) bool {
-		ks, ok := k.(string)
-		if !ok {
-			return true
-		}
-		if len(ks) >= len(prefix) && ks[:len(prefix)] == prefix {
-			bizTuplesetCache.Delete(ks)
-		}
-		return true
-	})
+	bizReBACCache.FlushStore(context.Background(), storeId)
 }
