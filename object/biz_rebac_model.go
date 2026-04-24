@@ -182,8 +182,8 @@ type SaveAuthorizationModelResult struct {
 //   - (result=unchanged, parsed=<ignored>, nil)   — DSL already stored.
 //   - (result=conflict,  parsed=<ignored>, nil)   — destructive change.
 //   - (result=nil,       parsed=<clean>,   nil)   — safe to advance;
-//                                                   caller decides
-//                                                   whether to insert.
+//     caller decides
+//     whether to insert.
 //   - (nil, nil, err) on any pipeline error.
 //
 // Keeping this private to the package preserves the public API of
@@ -233,7 +233,7 @@ func evaluateAuthorizationModel(owner, appName, dsl string) (*SaveAuthorizationM
 //   - unchanged: DSL matches the latest model already on disk.
 //   - advanced:  DSL is new and would produce a clean insert.
 //   - conflict:  DSL drops types/relations still referenced by tuples;
-//                the Conflicts list tells the admin what to clean up.
+//     the Conflicts list tells the admin what to clean up.
 func ValidateAuthorizationModel(owner, appName, dsl string) (*SaveAuthorizationModelResult, error) {
 	done, parsed, err := evaluateAuthorizationModel(owner, appName, dsl)
 	if err != nil {

@@ -133,7 +133,6 @@ func TestCheck_MemoHit(t *testing.T) {
 	}
 }
 
-
 // TestCheck_NilUserset verifies the defensive branch for a pathological
 // proto whose relation has no oneof populated. The DSL parser never emits
 // this, but a malformed JSON payload or partial proto could; the dispatcher

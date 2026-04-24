@@ -220,11 +220,11 @@ type ListUsersRequest struct {
 	// "type#relation" form). Matches OpenFGA's ListUsers filter: pass
 	// "user" to get only plain users; pass "team#member" to get team
 	// usersets; empty means "all types".
-	UserFilter           string
-	ContextualTuples     []TupleKey
-	Context              map[string]any
-	PageSize             int
-	ContinuationToken    string
+	UserFilter        string
+	ContextualTuples  []TupleKey
+	Context           map[string]any
+	PageSize          int
+	ContinuationToken string
 }
 
 type ListUsersResult struct {

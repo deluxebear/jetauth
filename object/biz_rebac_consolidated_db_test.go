@@ -125,7 +125,6 @@ var skippedTests = map[string]string{
 	"check_with_invalid_tuple_in_store": "CP-2 conflict scanner rejects schema migration (spec OQ-3 by design)",
 	"ttu_some_parent_type_removed":      "CP-2 conflict scanner rejects schema migration (spec OQ-3 by design)",
 
-
 	// list_objects_with_subcheck_encounters_cycle contains listObjects
 	// assertions that are CP-5 work. Its checkAssertions run, but the
 	// test as a whole still exercises ListObjects semantics we don't
