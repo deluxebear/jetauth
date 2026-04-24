@@ -39,7 +39,9 @@ ADMIN_USER="${ADMIN_USER:-admin}"
 ADMIN_PASSWORD="${ADMIN_PASSWORD:-123}"
 TS="$(date +%s)"
 ORG_NAME="${ORG_NAME:-rebac-smoke-${TS}}"
-APP_NAME="${APP_NAME:-rebac-smoke-app-${TS}}"
+# App name is used verbatim as the Casbin policy-table suffix; that
+# table name must match `[a-zA-Z_][a-zA-Z0-9_]{0,63}`, so no hyphens.
+APP_NAME="${APP_NAME:-rebac_smoke_app_${TS}}"
 APP_ID="${ORG_NAME}/${APP_NAME}"
 WAIT_TIMEOUT="${WAIT_TIMEOUT:-30}"
 KEEP_ON_FAIL="${KEEP_ON_FAIL:-0}"
