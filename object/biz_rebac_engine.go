@@ -22,6 +22,7 @@ import (
 	"strings"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	openfgav1 "github.com/openfga/api/proto/openfga/v1"
 	"golang.org/x/sync/errgroup"
@@ -917,7 +918,25 @@ func (ctx *checkContext) checkDifference(key TupleKey, d *openfgav1.Difference, 
 // on req.TupleKey.Object within the given store. Implements OpenFGA v1.1
 // Check semantics: resolve the app's authorization model, then recursively
 // evaluate rewrites with request-scoped memoisation and a depth cap.
-func ReBACCheck(req *CheckRequest) (*CheckResult, error) {
+//
+// Every call emits biz_rebac_check_duration_seconds with outcome label
+// allowed|denied|error and, on error, bumps biz_rebac_engine_errors_total
+// under a coarse kind taxonomy. Observation is deferred so an early
+// validation return still reports as "error" rather than silently dropping.
+func ReBACCheck(req *CheckRequest) (res *CheckResult, err error) {
+	start := time.Now()
+	defer func() {
+		outcome := "allowed"
+		switch {
+		case err != nil:
+			outcome = "error"
+			recordReBACEngineError(err)
+		case res == nil || !res.Allowed:
+			outcome = "denied"
+		}
+		observeReBACCheck(outcome, time.Since(start))
+	}()
+
 	if req == nil {
 		return nil, fmt.Errorf("rebac check: nil request")
 	}

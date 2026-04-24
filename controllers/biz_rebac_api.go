@@ -16,6 +16,16 @@ import (
 	"github.com/deluxebear/jetauth/util"
 )
 
+// rebacRateLimited finishes the response with HTTP 429 + Retry-After: 1
+// and bumps biz_rebac_ratelimit_rejected_total. Kept as a helper so the
+// two list handlers (objects/users) share a single emit site.
+func rebacRateLimited(c *ApiController, endpoint string) {
+	object.RecordBizReBACRateLimitRejected(endpoint)
+	c.Ctx.Output.SetStatus(429)
+	c.Ctx.Output.Header("Retry-After", "1")
+	c.ResponseError(fmt.Sprintf("rebac %s: rate limited; retry after 1s", endpoint))
+}
+
 // writeAuthorizationModelRequest is the JSON body accepted by
 // BizWriteAuthorizationModel. Keeping it close to the handler keeps the
 // Swagger annotations self-contained.
@@ -351,8 +361,14 @@ func (c *ApiController) BizListObjects() {
 		return
 	}
 
+	storeId := object.BuildStoreId(owner, appName)
+	if !object.AllowBizReBACListObjects(storeId, body.User) {
+		rebacRateLimited(c, "list_objects")
+		return
+	}
+
 	res, err := object.ReBACListObjects(&object.ListObjectsRequest{
-		StoreId:              object.BuildStoreId(owner, appName),
+		StoreId:              storeId,
 		AuthorizationModelId: body.AuthorizationModelId,
 		ObjectType:           body.ObjectType,
 		Relation:             body.Relation,
@@ -412,8 +428,17 @@ func (c *ApiController) BizListUsers() {
 		return
 	}
 
+	storeId := object.BuildStoreId(owner, appName)
+	// ListUsers cardinality is driven by the object being queried, not the
+	// caller's user identity. Using object as the bucket key means a script
+	// enumerating one object's grants can't starve other objects' quota.
+	if !object.AllowBizReBACListObjects(storeId, body.Object) {
+		rebacRateLimited(c, "list_users")
+		return
+	}
+
 	res, err := object.ReBACListUsers(&object.ListUsersRequest{
-		StoreId:              object.BuildStoreId(owner, appName),
+		StoreId:              storeId,
 		AuthorizationModelId: body.AuthorizationModelId,
 		Object:               body.Object,
 		Relation:             body.Relation,

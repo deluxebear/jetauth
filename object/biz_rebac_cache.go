@@ -50,7 +50,13 @@ const bizTuplesetCacheTTL = 10 * time.Second
 var bizReBACCache atomic.Pointer[BizReBACCache]
 
 func init() {
-	bizReBACCache.Store(ptrTo[BizReBACCache](NewInMemoryBizReBACCache()))
+	// Default install: L2 wrapped in an instrumented decorator so the
+	// biz_rebac_cache_hits_total{level="l2"} / _misses_total families
+	// tick even when L3 is disabled (bizReBACCacheL3Enabled=false is
+	// the default). InitBizReBACCache will swap in a TieredCache at
+	// boot if L3 is enabled; TieredCache emits its own per-tier
+	// counters inline, so the wrapper is only used on the default path.
+	bizReBACCache.Store(ptrTo[BizReBACCache](NewInstrumentedBizReBACCache(NewInMemoryBizReBACCache(), "l2")))
 }
 
 // ptrTo returns a pointer to v. Used with atomic.Pointer[interface] where

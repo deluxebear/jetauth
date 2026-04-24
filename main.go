@@ -17,6 +17,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"strconv"
 
 	"github.com/beego/beego/v2/core/logs"
 	"github.com/beego/beego/v2/server/web"
@@ -32,6 +33,28 @@ import (
 	"github.com/deluxebear/jetauth/service"
 	"github.com/deluxebear/jetauth/util"
 )
+
+// rebacListObjectsRPS / rebacListObjectsBurst read the configured limiter
+// tuning, falling back to spec §6.3.1 defaults (20 rps, 40 burst) if the
+// keys are empty or malformed. Kept in main.go so the rate limiter in
+// the object package doesn't depend on the conf package directly.
+func rebacListObjectsRPS() float64 {
+	if raw := conf.GetConfigString("rebacListObjectsRPS"); raw != "" {
+		if v, err := strconv.ParseFloat(raw, 64); err == nil && v > 0 {
+			return v
+		}
+	}
+	return 20
+}
+
+func rebacListObjectsBurst() int {
+	if raw := conf.GetConfigString("rebacListObjectsBurst"); raw != "" {
+		if v, err := strconv.Atoi(raw); err == nil && v > 0 {
+			return v
+		}
+	}
+	return 40
+}
 
 func main() {
 	web.BConfig.WebConfig.Session.SessionOn = true
@@ -55,6 +78,10 @@ func main() {
 	object.InitDb()
 	object.InitCustomHttpEmailMigration()
 	object.InitBizReBACCache()
+	object.InitBizReBACRateLimiter(
+		rebacListObjectsRPS(),
+		rebacListObjectsBurst(),
+	)
 
 	// Handle export command
 	if object.ShouldExportData() {

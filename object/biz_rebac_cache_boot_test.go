@@ -15,24 +15,25 @@ import (
 
 // TestInitBizReBACCache_DefaultIsL2Only verifies that InitBizReBACCache is a
 // no-op when bizReBACCacheL3Enabled=false (the default). The process-wide
-// cache must still be the in-memory L2 installed by init().
+// cache must remain non-tiered so behavior matches pre-CP-8.
 func TestInitBizReBACCache_DefaultIsL2Only(t *testing.T) {
 	origCache := *bizReBACCache.Load()
 	defer SetBizReBACCache(origCache)
 
-	// Reset to known L2 baseline so the test is hermetic.
-	fresh := NewInMemoryBizReBACCache()
+	// Reset to a known baseline mirroring init(): an instrumented L2 wrapper.
+	fresh := NewInstrumentedBizReBACCache(NewInMemoryBizReBACCache(), "l2")
 	SetBizReBACCache(fresh)
 
 	// No env flag set → InitBizReBACCache should not touch the cache.
 	_ = os.Unsetenv("bizReBACCacheL3Enabled")
 	InitBizReBACCache()
 
-	if got := *bizReBACCache.Load(); got != fresh {
-		t.Fatalf("L3 disabled by default: expected L2 untouched, got different instance")
+	got := *bizReBACCache.Load()
+	if got != fresh {
+		t.Fatalf("L3 disabled by default: expected cache untouched, got different instance")
 	}
-	if _, ok := (*bizReBACCache.Load()).(*InMemoryBizReBACCache); !ok {
-		t.Fatalf("expected *InMemoryBizReBACCache after default init, got %T", *bizReBACCache.Load())
+	if _, tiered := got.(*TieredCache); tiered {
+		t.Fatalf("expected non-tiered cache when L3 disabled, got *TieredCache")
 	}
 }
 
@@ -43,7 +44,7 @@ func TestInitBizReBACCache_EnabledWithoutAddrStaysL2(t *testing.T) {
 	origCache := *bizReBACCache.Load()
 	defer SetBizReBACCache(origCache)
 
-	fresh := NewInMemoryBizReBACCache()
+	fresh := NewInstrumentedBizReBACCache(NewInMemoryBizReBACCache(), "l2")
 	SetBizReBACCache(fresh)
 
 	t.Setenv("bizReBACCacheL3Enabled", "true")

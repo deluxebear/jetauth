@@ -105,7 +105,23 @@ func parseListCursor(token string) (listCursor, error) {
 // directly-related tuple for the requested relation may still grant
 // via TTU / computed_userset), so we rely on ReBACCheck to be the
 // authoritative filter. Optimisations land in CP-6.
-func ReBACListObjects(req *ListObjectsRequest) (*ListObjectsResult, error) {
+func ReBACListObjects(req *ListObjectsRequest) (res *ListObjectsResult, err error) {
+	start := time.Now()
+	defer func() {
+		outcome := "allowed"
+		switch {
+		case err != nil:
+			outcome = "error"
+			recordReBACEngineError(err)
+		case res == nil || len(res.Objects) == 0:
+			// Empty result on a successful enumeration: record as "denied"
+			// so dashboards can distinguish "no object is reachable for
+			// this user" from a happy-path hit.
+			outcome = "denied"
+		}
+		observeReBACListObjects("objects", outcome, time.Since(start))
+	}()
+
 	if req == nil {
 		return nil, fmt.Errorf("rebac list_objects: nil request")
 	}
@@ -244,7 +260,20 @@ type ListUsersResult struct {
 // the flattening strategy open, and a follow-up CP can add it. For now we
 // return the raw user strings that appear in tuples (or contextual), as
 // filtered by the requested type.
-func ReBACListUsers(req *ListUsersRequest) (*ListUsersResult, error) {
+func ReBACListUsers(req *ListUsersRequest) (res *ListUsersResult, err error) {
+	start := time.Now()
+	defer func() {
+		outcome := "allowed"
+		switch {
+		case err != nil:
+			outcome = "error"
+			recordReBACEngineError(err)
+		case res == nil || len(res.Users) == 0:
+			outcome = "denied"
+		}
+		observeReBACListObjects("users", outcome, time.Since(start))
+	}()
+
 	if req == nil {
 		return nil, fmt.Errorf("rebac list_users: nil request")
 	}

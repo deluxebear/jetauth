@@ -72,20 +72,22 @@ func NewTieredCache(l2, l3 BizReBACCache) *TieredCache {
 
 // buildFlushL2 returns the flush-L2 closure used both as the test handle
 // and by NewTieredCacheWithRedis. Factored out because the star-flush
-// path needs access to the L2 reference for the type assertion.
+// path needs access to the L2 reference for the flushAller dispatch.
 func (t *TieredCache) buildFlushL2() func(storeId string) {
 	return func(storeId string) {
 		if storeId == "*" {
-			if fresh, ok := t.l2.(*InMemoryBizReBACCache); ok {
+			// flushAller is the narrow "drop every entry" capability
+			// exposed by InMemoryBizReBACCache and the metrics wrapper.
+			// Any L2 that doesn't implement it falls through to WARNING.
+			if fresh, ok := t.l2.(flushAller); ok {
 				fresh.flushAll()
 				return
 			}
-			// Non-InMemory L2 can't flush-all via the current interface.
-			// This is the pessimistic-recovery path: a silent no-op here
-			// means the cache may serve stale data until TTLs expire on
-			// cross-instance writes that arrived during a pub/sub outage.
-			// Log at WARNING so operators can detect the mismatch.
-			logs.Warning("rebac tiered cache: star-flush requested but L2 is not *InMemoryBizReBACCache — cache may serve stale data after pub/sub disconnect")
+			// Pessimistic-recovery path: a silent no-op here means the
+			// cache may serve stale data until TTLs expire on cross-
+			// instance writes that arrived during a pub/sub outage. Log
+			// at WARNING so operators can detect the mismatch.
+			logs.Warning("rebac tiered cache: star-flush requested but L2 does not implement flushAll — cache may serve stale data after pub/sub disconnect")
 			return
 		}
 		t.l2.FlushStore(context.Background(), storeId)
@@ -126,15 +128,22 @@ func NewTieredCacheWithRedis(redisOpts RedisBizReBACCacheOptions) (*TieredCache,
 
 // Get checks L2 first, falls through to L3 on miss. On L3 hit, copies
 // the value into L2 with L2's TTL so subsequent reads within the TTL
-// are local-only.
+// are local-only. Emits per-tier cache hit/miss metrics inline — we
+// deliberately DO NOT wrap the sub-tiers with InstrumentedBizReBACCache
+// here, because the fall-through semantics ("l3 hit also means l2 miss")
+// are easier to model at this layer than inside two separate wrappers.
 func (t *TieredCache) Get(ctx context.Context, k cacheKey) ([]tupleRef, bool) {
 	if refs, ok := t.l2.Get(ctx, k); ok {
+		recordReBACCacheHit("l2")
 		return refs, true
 	}
+	recordReBACCacheMiss("l2")
 	if refs, ok := t.l3.Get(ctx, k); ok {
+		recordReBACCacheHit("l3")
 		t.l2.Set(ctx, k, refs, bizTuplesetCacheTTL)
 		return refs, true
 	}
+	recordReBACCacheMiss("l3")
 	return nil, false
 }
 
@@ -142,10 +151,7 @@ func (t *TieredCache) Get(ctx context.Context, k cacheKey) ([]tupleRef, bool) {
 // bizTuplesetCacheTTL) so L2 never outlives L3. The invariant that
 // L2's TTL ≤ L3's TTL is enforced here.
 func (t *TieredCache) Set(ctx context.Context, k cacheKey, refs []tupleRef, ttl time.Duration) {
-	l2TTL := ttl
-	if l2TTL > bizTuplesetCacheTTL {
-		l2TTL = bizTuplesetCacheTTL
-	}
+	l2TTL := min(ttl, bizTuplesetCacheTTL)
 	t.l2.Set(ctx, k, refs, l2TTL)
 	t.l3.Set(ctx, k, refs, ttl)
 }
