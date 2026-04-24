@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Play, History, Trash2, CheckCircle2, XCircle, Star } from "lucide-react";
 import { useTranslation } from "../i18n";
 import { useModal } from "./Modal";
@@ -242,6 +242,13 @@ export default function BizReBACTester({ appId, initialRequest }: Props) {
     }
   }, [appId, form, formValid, modal, t]);
 
+  // Keep a ref to the latest runCheck so the prefill effect below can
+  // invoke the freshest closure without adding runCheck to its dep array.
+  const runCheckRef = useRef(runCheck);
+  useEffect(() => {
+    runCheckRef.current = runCheck;
+  }, [runCheck]);
+
   // Prefill handshake from the Browser tab's "Why?" button. We read the
   // prop, patch the form, and schedule a Check on the next tick so
   // state has settled. The effect re-runs only when the tuple changes.
@@ -253,10 +260,14 @@ export default function BizReBACTester({ appId, initialRequest }: Props) {
       object: initialRequest.object,
       relation: initialRequest.relation,
     }));
-    const id = window.setTimeout(() => void runCheck(), 50);
+    // The ref always points to the latest runCheck, so by the time the
+    // timeout fires, it picks up the re-rendered closure with the patched
+    // form values. The 50ms delay is still needed to let React re-render
+    // after the setForm above settles.
+    const id = window.setTimeout(() => {
+      void runCheckRef.current();
+    }, 50);
     return () => window.clearTimeout(id);
-    // runCheck is stable enough; we intentionally depend on tuple fields
-    // so a second "Why?" click on the same Browser session re-runs.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     initialRequest?.object,
