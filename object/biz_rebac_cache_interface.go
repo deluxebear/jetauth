@@ -89,3 +89,14 @@ func (c *InMemoryBizReBACCache) FlushStore(_ context.Context, storeId string) {
 }
 
 func (c *InMemoryBizReBACCache) Close() error { return nil }
+
+// flushAll drops every entry — used by the TieredCache pessimistic
+// recovery path on pub/sub disconnect. Not part of the BizReBACCache
+// interface because "flush everything" is a tier-composition concern,
+// not a per-tier operation.
+func (c *InMemoryBizReBACCache) flushAll() {
+	c.m.Range(func(k, _ any) bool {
+		c.m.Delete(k)
+		return true
+	})
+}
