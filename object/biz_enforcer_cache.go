@@ -173,7 +173,9 @@ const (
 	BizAuthzKindNotFound    BizAuthzKind = "not_found"
 	BizAuthzKindDisabled    BizAuthzKind = "disabled"
 	BizAuthzKindEngineError BizAuthzKind = "engine_error"
-	BizAuthzKindBadRequest  BizAuthzKind = "bad_request"
+	// BizAuthzKindBadRequest signals a malformed enforcement request
+	// (wrong arity, wrong types, no type prefix). Maps to HTTP 400.
+	BizAuthzKindBadRequest BizAuthzKind = "bad_request"
 )
 
 // BizEnforceWithKind runs BizEnforce and reports the outcome kind so callers

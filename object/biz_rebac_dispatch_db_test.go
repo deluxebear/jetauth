@@ -61,9 +61,6 @@ func TestBizEnforceDispatch_ReBACApp(t *testing.T) {
 	}}); err != nil {
 		t.Fatalf("add tuple: %v", err)
 	}
-	t.Cleanup(func() {
-		_, _ = DeleteBizTuplesForApp(owner, appName)
-	})
 
 	allowed, kind, err := BizEnforceWithKind(owner, appName, []interface{}{"document:d1", "editor", "user:alice"})
 	if err != nil {
@@ -90,5 +87,36 @@ func TestBizEnforceDispatch_CasbinUnchanged(t *testing.T) {
 	}
 	if err == nil {
 		t.Error("want non-nil error for missing app")
+	}
+}
+
+// TestBizEnforceDispatch_ReBACApp_Deny verifies that BizEnforceWithKind returns
+// allowed=false with BizAuthzKindDenied when the app is a ReBAC app but no
+// tuple grants access (no relation exists for the subject).
+func TestBizEnforceDispatch_ReBACApp_Deny(t *testing.T) {
+	if ormer == nil {
+		t.Skip("DB unavailable")
+	}
+	owner := "dispatch-deny-" + util.GenerateUUID()[:8]
+	appName := "app_dispatch_rebac_deny"
+	seedRebacAppConfigForTest(t, owner, appName)
+
+	res, err := SaveAuthorizationModel(owner, appName, editorDSL, "test-user")
+	if err != nil || res.Outcome != SaveOutcomeAdvanced {
+		t.Fatalf("save editorDSL: err=%v outcome=%v", err, res)
+	}
+
+	// Do NOT seed a tuple — user has no relation to the object
+	allowed, kind, err := BizEnforceWithKind(owner, appName, []interface{}{
+		"document:d1", "editor", "user:nobody",
+	})
+	if err != nil {
+		t.Fatalf("unexpected err: %v", err)
+	}
+	if allowed {
+		t.Error("expected deny (no tuple exists), got allow")
+	}
+	if kind != BizAuthzKindDenied {
+		t.Errorf("expected BizAuthzKindDenied, got %s", kind)
 	}
 }
