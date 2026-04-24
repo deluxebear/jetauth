@@ -190,7 +190,12 @@ function usePersistedPrefs(
   }, [persistKey, enabled, sort, hidden, widths, pageSize]);
 }
 
-export default function DataTable<T extends Record<string, unknown>>({
+// Constraint is `object` rather than `Record<string, unknown>` so
+// callers can pass interface-shaped rows (e.g. BizTuple) without a
+// widening cast at every call-site. The two internal indexed-access
+// sites cast locally — the row-level generic stays plain `T` everywhere
+// else so consumers get full field typing in render functions.
+export default function DataTable<T extends object>({
   columns,
   data,
   rowKey,
@@ -224,7 +229,10 @@ export default function DataTable<T extends Record<string, unknown>>({
   const { t } = useTranslation();
 
   const getKey = useCallback(
-    (r: T) => (typeof rowKey === "function" ? rowKey(r) : String(r[rowKey])),
+    (r: T) =>
+      typeof rowKey === "function"
+        ? rowKey(r)
+        : String((r as Record<string, unknown>)[rowKey]),
     [rowKey],
   );
 
@@ -518,8 +526,8 @@ export default function DataTable<T extends Record<string, unknown>>({
     const cmp = col.sortFn
       ? col.sortFn
       : (a: T, b: T) => {
-          const av = a[col.key];
-          const bv = b[col.key];
+          const av = (a as Record<string, unknown>)[col.key];
+          const bv = (b as Record<string, unknown>)[col.key];
           if (typeof av === "number" && typeof bv === "number") return av - bv;
           return String(av ?? "").localeCompare(String(bv ?? ""));
         };
@@ -768,9 +776,12 @@ export default function DataTable<T extends Record<string, unknown>>({
                             col.mono ? "font-mono text-text-secondary" : "text-text-primary"
                           } ${stickyClass(col)} ${needsBg ? cellStickyBg : ""}`}
                         >
-                          {col.render
-                            ? col.render(record[col.key], record, idx)
-                            : (record[col.key] as React.ReactNode) ?? "—"}
+                          {(() => {
+                            const cell = (record as Record<string, unknown>)[col.key];
+                            return col.render
+                              ? col.render(cell, record, idx)
+                              : ((cell as React.ReactNode) ?? "—");
+                          })()}
                         </td>
                       );
                     })}

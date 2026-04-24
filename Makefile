@@ -56,6 +56,10 @@ ut: ## UT test
 	go test -v -cover -coverprofile=coverage.out ./...
 	go tool cover -func=coverage.out
 
+.PHONY: rebac-bench
+rebac-bench: ## Run ReBAC engine SLA benchmarks (requires local DB; not in CI)
+	go test -bench 'BenchmarkReBAC' -benchmem -benchtime=10s -run '^$$' -tags skipCi ./object
+
 ##@ Build
 
 .PHONY: backend

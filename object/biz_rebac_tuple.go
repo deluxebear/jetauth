@@ -152,6 +152,8 @@ func (t *BizTuple) PopulateDerived() error {
 // AddBizTuples batch-inserts a slice of tuples in a single engine call.
 // PopulateDerived is called on each tuple before insert so derived columns are
 // always consistent (spec §4.3). CreatedTime is auto-filled when left empty.
+// L2 tuple cache is invalidated per (store, object, relation) slot so a
+// Check immediately after an Add sees the new row (spec §6.6).
 //
 // An empty slice is a no-op — returns (0, nil) without touching the database.
 func AddBizTuples(tuples []*BizTuple) (int64, error) {
@@ -171,6 +173,9 @@ func AddBizTuples(tuples []*BizTuple) (int64, error) {
 	if err != nil {
 		return 0, err
 	}
+	for _, tup := range tuples {
+		invalidateBizTuplesetCacheKey(tup.StoreId, tup.Object, tup.Relation)
+	}
 	return affected, nil
 }
 
@@ -187,6 +192,9 @@ func DeleteBizTuple(owner, appName, object, relation, user string) (int64, error
 		Delete(&BizTuple{})
 	if err != nil {
 		return 0, err
+	}
+	if affected > 0 {
+		invalidateBizTuplesetCacheKey(storeId, object, relation)
 	}
 	return affected, nil
 }
@@ -213,6 +221,15 @@ func ReadBizTuples(owner, appName, object, relation, user string) ([]*BizTuple, 
 	return tuples, nil
 }
 
+// CountBizTuples returns the total number of tuples in (owner, appName)'s
+// store. Backs the admin Overview's tuple count — fetching every row just
+// to measure .length would be a multi-MB payload for 10k+ stores (review
+// finding R3).
+func CountBizTuples(owner, appName string) (int64, error) {
+	storeId := BuildStoreId(owner, appName)
+	return ormer.Engine.Where("store_id = ?", storeId).Count(new(BizTuple))
+}
+
 // ListBizTuplesForApp returns all tuples for (owner, appName). Used by
 // administrative list endpoints and schema migration tooling.
 func ListBizTuplesForApp(owner, appName string) ([]*BizTuple, error) {
@@ -224,9 +241,86 @@ func ListBizTuplesForApp(owner, appName string) ([]*BizTuple, error) {
 	return tuples, nil
 }
 
+// WriteBizTuples applies a batch of writes and deletes atomically inside
+// a single xorm transaction. Writes go through PopulateDerived so the
+// derived columns (StoreId, ObjectType, UserType, UserRelation) stay
+// consistent. Deletes match on the full tuple key. A failure anywhere
+// rolls back the whole batch — partial commits are never visible.
+//
+// Empty writes + empty deletes is a no-op (returns 0, 0, nil).
+func WriteBizTuples(writes []*BizTuple, deletes []*BizTuple) (written int64, deleted int64, err error) {
+	if len(writes) == 0 && len(deletes) == 0 {
+		return 0, 0, nil
+	}
+	now := util.GetCurrentTime()
+	for _, w := range writes {
+		if perr := w.PopulateDerived(); perr != nil {
+			return 0, 0, perr
+		}
+		if w.CreatedTime == "" {
+			w.CreatedTime = now
+		}
+	}
+
+	session := ormer.Engine.NewSession()
+	defer session.Close()
+
+	if err = session.Begin(); err != nil {
+		return 0, 0, fmt.Errorf("rebac write_tuples: begin: %w", err)
+	}
+
+	for _, w := range writes {
+		affected, ierr := session.Insert(w)
+		if ierr != nil {
+			_ = session.Rollback()
+			return 0, 0, fmt.Errorf("rebac write_tuples: insert (%s/%s %s#%s@%s): %w",
+				w.Owner, w.AppName, w.Object, w.Relation, w.User, ierr)
+		}
+		written += affected
+	}
+
+	for _, d := range deletes {
+		storeId := BuildStoreId(d.Owner, d.AppName)
+		affected, derr := session.
+			Where("store_id = ? AND object = ? AND relation = ? AND user = ?",
+				storeId, d.Object, d.Relation, d.User).
+			Delete(&BizTuple{})
+		if derr != nil {
+			_ = session.Rollback()
+			return 0, 0, fmt.Errorf("rebac write_tuples: delete (%s#%s@%s): %w",
+				d.Object, d.Relation, d.User, derr)
+		}
+		deleted += affected
+	}
+
+	if err = session.Commit(); err != nil {
+		return 0, 0, fmt.Errorf("rebac write_tuples: commit: %w", err)
+	}
+
+	// Precise L2 invalidation after a successful commit. Every
+	// (storeId, object, relation) slot touched by a write or delete
+	// drops its cache entry so a Check immediately after the batch
+	// sees the new state.
+	touched := map[string]struct{ storeId, object, relation string }{}
+	for _, w := range writes {
+		key := w.StoreId + "|" + w.Object + "|" + w.Relation
+		touched[key] = struct{ storeId, object, relation string }{w.StoreId, w.Object, w.Relation}
+	}
+	for _, d := range deletes {
+		storeId := BuildStoreId(d.Owner, d.AppName)
+		key := storeId + "|" + d.Object + "|" + d.Relation
+		touched[key] = struct{ storeId, object, relation string }{storeId, d.Object, d.Relation}
+	}
+	for _, t := range touched {
+		invalidateBizTuplesetCacheKey(t.storeId, t.object, t.relation)
+	}
+	return written, deleted, nil
+}
+
 // DeleteBizTuplesForApp removes ALL tuples for (owner, appName). This is the
 // cascade path called when an application is torn down — it mirrors the
 // equivalent function in biz_rebac_model.go (spec §4.3 cascade semantics).
+// Whole-store cache flush since every slot is now stale.
 func DeleteBizTuplesForApp(owner, appName string) (int64, error) {
 	storeId := BuildStoreId(owner, appName)
 	affected, err := ormer.Engine.
@@ -234,6 +328,9 @@ func DeleteBizTuplesForApp(owner, appName string) (int64, error) {
 		Delete(&BizTuple{})
 	if err != nil {
 		return 0, err
+	}
+	if affected > 0 {
+		flushBizTuplesetCacheForStore(storeId)
 	}
 	return affected, nil
 }

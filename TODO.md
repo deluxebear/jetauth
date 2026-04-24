@@ -708,51 +708,65 @@ func (c *Client) applyResponse(resp WatchResponse) {
 
 ### P2: 图遍历引擎（3-4 天）
 
-- [ ] 实现 `ReBACCheck(owner, appName, object, relation, subject)` — 核心 Check 算法
-  - 直接关系查找
-  - userset 展开（`team:eng#member`）
-  - also 展开（同对象隐含关系，如 `owner → editor`）
-  - from 展开（关联对象继承，如 `parent.editor`）
-  - 请求级 memo map 去重
-  - maxDepth=15 深度限制
-- [ ] 实现 `ReBACListObjects(owner, appName, objectType, relation, subject)` — 列出可访问对象
-- [ ] 实现 `ReBACListUsers(owner, appName, object, relation)` — 列出有权限的用户
-- [ ] 单元测试覆盖：直接关系、userset、继承链、循环检测、深度限制
+- [x] 实现 `ReBACCheck(owner, appName, object, relation, subject)` — 核心 Check 算法 (CP-3, feature/rebac-cp3)
+  - [x] 直接关系查找 (Task 4 — `this`)
+  - [x] userset 展开（`team:eng#member`）(Task 4 — integrated)
+  - [x] also 展开（同对象隐含关系，如 `owner → editor`）(Task 5 — computed_userset)
+  - [x] from 展开（关联对象继承，如 `parent.editor`）(Task 6 — tuple_to_userset)
+  - [x] union / intersection / difference (Tasks 7–9)
+  - [x] 请求级 memo map 去重 (Task 3 + verification Task 10)
+  - [x] maxDepth=25 深度限制 (Task 11)
+- [x] 实现 `ReBACListObjects(owner, appName, objectType, relation, subject)` — 列出可访问对象 (CP-5)
+- [x] 实现 `ReBACListUsers(owner, appName, object, relation)` — 列出有权限的用户 (CP-5)
+- [x] 单元测试覆盖：直接关系、userset、继承链、循环检测、深度限制 (CP-3 + openfga consolidated suite 112/134)
 
 ### P3: API 层（2 天）
 
 - [ ] `BizEnforce` / `BizBatchEnforce` 按 `config.ModelType` 路由到 Casbin 或 ReBAC 引擎
-- [ ] 新增路由：`biz-write-tuples` / `biz-delete-tuples` / `biz-read-tuples`
-- [ ] 新增路由：`biz-list-objects` / `biz-list-users`
-- [ ] 新增路由：`biz-expand`（展开关系树，调试用）
+- [x] 新增路由：`biz-write-tuples` / `biz-read-tuples` (CP-5 — delete 合并在 write 批次里,无独立 delete-tuples)
+- [x] 新增路由：`biz-check` / `biz-batch-check` (CP-4)
+- [x] 新增路由：`biz-list-objects` / `biz-list-users` (CP-5)
+- [x] 新增路由：`biz-expand`（展开关系树，调试用）(CP-5)
 - [ ] ReBAC 模式下适配 `biz-get-user-roles` / `biz-get-user-permissions`
 
 ### P4: 前端 Schema + Tuple（3-4 天）
 
-- [ ] 创建向导步骤 2 增加模型类型选择（RBAC / ReBAC 卡片）
-- [ ] `AppAuthorizationPage` 按 `modelType` 显示不同 Tab（概览/类型定义/关系数据/测试/集成）
-- [ ] 新建 `BizSchemaEditor.tsx` — 可视化编辑对象类型和关系定义
-- [ ] 新建 `BizTupleManager.tsx` — 元组管理表格（增删查 + 批量导入）
-- [ ] `BizBackend.ts` 增加 tuple API 调用函数
-- [ ] i18n 中英文翻译
+- [x] 创建向导步骤 2 增加模型类型选择（RBAC / ReBAC 卡片）(CP-7 Task 10)
+- [x] `AppAuthorizationPage` 按 `modelType` 显示不同 Tab（概览/Schema/元组/测试/集成）(CP-7 Task 3)
+- [x] 新建 `BizSchemaEditor.tsx` — DSL + 可视化(query-builder)双 Tab,共享 AST(CP-7 Task 4-6)
+- [x] 新建 `BizTupleManager.tsx` — 元组管理表格(增删查 + 批量导入 CSV/JSON + 批量删除)(CP-7 Task 7)
+- [x] `BizBackend.ts` 增加 10 个 ReBAC API 调用函数 + 类型(CP-7 Task 1)
+- [x] i18n 中英文翻译 — 86 个 `rebac.*` 键,parity 3286/3286 (CP-7 Task 2 + 增量)
 
-### P5: 前端测试 + 集成（1-2 天）
+### P5: 前端测试 + 集成(1-2 天)
 
-- [ ] 新建 `BizReBACTester.tsx` — Check 测试器（输入主体/对象/关系，显示结果 + 路径）
-- [ ] 集成 Tab 补充 ReBAC 模式的 SDK 代码示例（Go / TypeScript）
-- [ ] 概览 Tab 适配 ReBAC 统计信息（类型数、关系数、元组数）
+- [x] 新建 `BizReBACTester.tsx` — Check 测试器(输入主体/对象/关系,显示结果 + Expand 树 + 20 条本地历史)(CP-7 Task 8)
+- [x] 集成 Tab 补充 ReBAC 模式的 SDK 代码示例(Go / TypeScript / Python,带 copy-to-clipboard)(CP-7 Task 9)
+- [x] 概览 Tab 适配 ReBAC 统计信息(类型数、关系数、元组数、Model id、最后更新时间)(CP-7 Task 11)
+
+### P5.5: 配置管理员体验优化 (CP-7.5)
+
+- [x] 场景模板空状态 — Overview 新建应用空状态提供 3 个一键模板(文档协作 / 团队 SaaS / 资源分享)
+- [x] A11y polish — Tester/Editor/TupleManager 补 focus-visible ring;Overview skeleton;StatCard tabular-nums;Tester 结果 aria-live;Tuple 空状态引导
+- [x] DSL 编辑器 — Snippets 下拉(9 个常用片段)+ Lint 侧栏(orphan-type / missing-subject-type)
+- [x] Tester 测试用例集 — 历史 ⭐ 为用例,cases 视图 + Run All 批量重跑 + pass/fail 标记
+- [x] Schema 变更 Plan — 保存冲突时弹 ChangePlan 模态(结构 diff + DSL 行 diff + 冲突按 relation 聚合 + 级联清理)
+- [x] 身份浏览器(§B ROI 最高)— By User / By Object 双模式,调 bizListObjects / bizListUsers,Why? → Tester 预填自动 Check
+- [x] Type 关系图谱 — Schema Tab 第三个子 Tab,自绘 SVG 俯视类型依赖(direct 实线 / inherit 虚线)
+- [x] 批量授权向导 — 4 步 wizard(subject pattern / object pattern / relation / preview),一键批量写 tuple
 
 ### P6: 缓存优化（2 天）
 
-- [ ] sync.Map 元组查询结果缓存 + 写入时失效
-- [ ] 可选 Redis 缓存层（复用 `bizPolicyCacheEnabled` 配置）
-- [ ] ListObjects 并发遍历 + context 超时控制
+- [x] sync.Map 元组查询结果缓存 + 写入时失效 (CP-6, biz_rebac_cache.go)
+- [ ] 可选 Redis L3 缓存层（复用 `bizPolicyCacheEnabled` 配置）— CP-6 follow-up
+- [x] ListObjects context 超时控制 (CP-5 — 10s 硬超时)
+- [ ] ListObjects 并发遍历 (CP-8 产品级验收)
 
 ### 清理
 
-- [ ] **CP-4 接入 cel-go 真正导入后，删除 `object/biz_rebac_anchor.go`**
+- [x] **CP-4 接入 cel-go 真正导入后，删除 `object/biz_rebac_anchor.go`**
   占位文件，仅为阻止 `go mod tidy` 在第一次真实使用前把 cel-go 从 vendor/ 剔除。
-  锚点文件里已注明移除条件。
+  已随 CP-4 Task 1 移除（`object/biz_rebac_condition.go` 现在真实导入 cel-go）。
 
 ### 相关代码位置
 

@@ -165,10 +165,87 @@ const (
 
 // SaveAuthorizationModelResult bundles the outcome with the resulting
 // model id (on advance / unchanged) or the conflict list (on conflict).
+// SchemaJSON is populated on unchanged/advanced so the admin UI's
+// visual editor can ingest the parsed model without a second request.
 type SaveAuthorizationModelResult struct {
 	Outcome              SaveAuthorizationModelOutcome `json:"outcome"`
 	AuthorizationModelId string                        `json:"authorizationModelId,omitempty"`
+	SchemaJSON           string                        `json:"schemaJson,omitempty"`
 	Conflicts            []SchemaConflict              `json:"conflicts,omitempty"`
+}
+
+// evaluateAuthorizationModel is the shared pipeline behind
+// ValidateAuthorizationModel and SaveAuthorizationModel: verify app
+// exists → parse DSL → hash-match short-circuit → conflict scan. It
+// returns one of:
+//
+//   - (result=unchanged, parsed=<ignored>, nil)   — DSL already stored.
+//   - (result=conflict,  parsed=<ignored>, nil)   — destructive change.
+//   - (result=nil,       parsed=<clean>,   nil)   — safe to advance;
+//     caller decides
+//     whether to insert.
+//   - (nil, nil, err) on any pipeline error.
+//
+// Keeping this private to the package preserves the public API of
+// Save/Validate while guaranteeing the two paths can never drift on
+// validation semantics (post-review I2).
+func evaluateAuthorizationModel(owner, appName, dsl string) (*SaveAuthorizationModelResult, *ParsedSchema, error) {
+	if _, err := getBizAppConfigOrError(owner, appName); err != nil {
+		return nil, nil, err
+	}
+
+	parsed, err := ParseSchemaDSL(dsl)
+	if err != nil {
+		return nil, nil, fmt.Errorf("schema parse: %w", err)
+	}
+
+	hash := computeSchemaHash(dsl)
+	if existing, err := FindLatestBizAuthorizationModelByHash(owner, appName, hash); err != nil {
+		return nil, nil, fmt.Errorf("lookup by hash: %w", err)
+	} else if existing != nil {
+		return &SaveAuthorizationModelResult{
+			Outcome:              SaveOutcomeUnchanged,
+			AuthorizationModelId: existing.Id,
+			SchemaJSON:           existing.SchemaJSON,
+		}, nil, nil
+	}
+
+	conflicts, err := ScanSchemaConflictsForApp(owner, appName, parsed)
+	if err != nil {
+		return nil, nil, fmt.Errorf("scan conflicts: %w", err)
+	}
+	if len(conflicts) > 0 {
+		return &SaveAuthorizationModelResult{
+			Outcome:   SaveOutcomeConflict,
+			Conflicts: conflicts,
+		}, nil, nil
+	}
+
+	return nil, parsed, nil
+}
+
+// ValidateAuthorizationModel runs the shared validation pipeline
+// without inserting a row or advancing the app pointer. It is the
+// backing call for the admin UI's dry-run DSL editor (spec §8.2 "DSL
+// 编辑器实时校验"). The result mirrors what a real save *would* return
+// so the frontend can render the same three outcomes without a
+// separate error channel:
+//   - unchanged: DSL matches the latest model already on disk.
+//   - advanced:  DSL is new and would produce a clean insert.
+//   - conflict:  DSL drops types/relations still referenced by tuples;
+//     the Conflicts list tells the admin what to clean up.
+func ValidateAuthorizationModel(owner, appName, dsl string) (*SaveAuthorizationModelResult, error) {
+	done, parsed, err := evaluateAuthorizationModel(owner, appName, dsl)
+	if err != nil {
+		return nil, err
+	}
+	if done != nil {
+		return done, nil
+	}
+	return &SaveAuthorizationModelResult{
+		Outcome:    SaveOutcomeAdvanced,
+		SchemaJSON: parsed.JSON,
+	}, nil
 }
 
 // SaveAuthorizationModel parses the DSL, scans for tuple conflicts, and
@@ -183,43 +260,16 @@ type SaveAuthorizationModelResult struct {
 // will be added then; for PR1 the conflict scan already blocks the
 // destructive-change race that matters most.
 func SaveAuthorizationModel(owner, appName, dsl, createdBy string) (*SaveAuthorizationModelResult, error) {
-	// Verify the app exists before doing any DSL work — getBizAppConfigOrError
-	// returns a descriptive error for missing configs. The config itself isn't
-	// needed here because pointer advance below uses a targeted single-column
-	// update by (owner, appName).
-	if _, err := getBizAppConfigOrError(owner, appName); err != nil {
+	done, parsed, err := evaluateAuthorizationModel(owner, appName, dsl)
+	if err != nil {
 		return nil, err
 	}
-
-	parsed, err := ParseSchemaDSL(dsl)
-	if err != nil {
-		return nil, fmt.Errorf("schema parse: %w", err)
+	if done != nil {
+		// Unchanged or conflict — no row written.
+		return done, nil
 	}
 
 	hash := computeSchemaHash(dsl)
-
-	// Short-circuit: identical DSL already saved → no-op.
-	if existing, err := FindLatestBizAuthorizationModelByHash(owner, appName, hash); err != nil {
-		return nil, fmt.Errorf("lookup by hash: %w", err)
-	} else if existing != nil {
-		return &SaveAuthorizationModelResult{
-			Outcome:              SaveOutcomeUnchanged,
-			AuthorizationModelId: existing.Id,
-		}, nil
-	}
-
-	// Conflict scan — only matters if we're about to ADVANCE.
-	conflicts, err := ScanSchemaConflictsForApp(owner, appName, parsed)
-	if err != nil {
-		return nil, fmt.Errorf("scan conflicts: %w", err)
-	}
-	if len(conflicts) > 0 {
-		return &SaveAuthorizationModelResult{
-			Outcome:   SaveOutcomeConflict,
-			Conflicts: conflicts,
-		}, nil
-	}
-
 	m := &BizAuthorizationModel{
 		Owner:       owner,
 		AppName:     appName,
@@ -241,8 +291,15 @@ func SaveAuthorizationModel(owner, appName, dsl, createdBy string) (*SaveAuthori
 		return nil, fmt.Errorf("advance current model pointer: %w", err)
 	}
 
+	// Schema advance may reclassify which tuples are admissible under
+	// each relation's type restriction; the L2 tupleset cache's
+	// pre-advance snapshot is no longer safe to serve. Flush the entire
+	// store's cache entries (spec §6.6 "schema 切换时整 store flush").
+	flushBizTuplesetCacheForStore(BuildStoreId(owner, appName))
+
 	return &SaveAuthorizationModelResult{
 		Outcome:              SaveOutcomeAdvanced,
 		AuthorizationModelId: m.Id,
+		SchemaJSON:           m.SchemaJSON,
 	}, nil
 }

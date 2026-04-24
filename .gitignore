@@ -40,6 +40,8 @@ server
 jetauth
 jetauth_server
 .gstack/
+.agent/
+.agents/
 .DS_Store
 casdoor.db
 jetauth.db
