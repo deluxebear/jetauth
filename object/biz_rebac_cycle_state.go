@@ -36,9 +36,11 @@ const (
 	// StateDenied means the check provably fails from this rewrite node.
 	StateDenied checkState = iota
 	// StateCycle means resolution hit a cycle before a definite answer.
-	// Lower in priority than Allowed, higher than Denied for union
-	// (allowed wins over cycle wins over denied); lower than Denied for
-	// intersection (denied wins over cycle wins over allowed).
+	// Lattice role:
+	//   - Union: allowed beats cycle beats denied (an upper-bound op; allowed
+	//     wins outright, but a pending cycle beats a definite deny elsewhere).
+	//   - Intersection: denied is absorbing (denied beats cycle beats allowed).
+	//   - Difference: cycle in either operand usually propagates — see diffState.
 	StateCycle
 	// StateAllowed means the check provably succeeds from this node.
 	StateAllowed
@@ -66,6 +68,20 @@ func intersectState(a, b checkState) checkState {
 		return StateCycle
 	}
 	return StateAllowed
+}
+
+// String implements fmt.Stringer so test failure messages and logs show
+// human-readable names (allowed/denied/cycle) instead of raw iota ints.
+func (s checkState) String() string {
+	switch s {
+	case StateAllowed:
+		return "allowed"
+	case StateDenied:
+		return "denied"
+	case StateCycle:
+		return "cycle"
+	}
+	return "unknown"
 }
 
 // diffState implements "a AND NOT b".
