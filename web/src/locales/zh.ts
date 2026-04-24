@@ -3581,6 +3581,15 @@ const zh: Record<string, string> = {
   "rebac.tester.recent": "最近 Check 历史",
   "rebac.tester.clearHistory": "清空历史",
   "rebac.tester.copy": "复制",
+  "rebac.tester.tabHistory": "历史",
+  "rebac.tester.tabCases": "用例",
+  "rebac.tester.saveAsCase": "收藏为用例",
+  "rebac.tester.caseName": "给这个用例起个名字",
+  "rebac.tester.caseSaved": "已保存为用例",
+  "rebac.tester.casesEmpty": "从历史记录里⭐一个 Check 保存为用例",
+  "rebac.tester.runAll": "全部重跑",
+  "rebac.tester.runAllResultSuffix": "用例通过",
+  "rebac.tester.deleteCase": "删除用例",
 
   // Integration
   "rebac.integration.lang.go": "Go",

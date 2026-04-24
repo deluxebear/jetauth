@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Play, History, Trash2, CheckCircle2, XCircle } from "lucide-react";
+import { Play, History, Trash2, CheckCircle2, XCircle, Star } from "lucide-react";
 import { useTranslation } from "../i18n";
 import { useModal } from "./Modal";
 import * as BizBackend from "../backend/BizBackend";
@@ -44,6 +44,39 @@ interface CheckFormState {
 const HISTORY_KEY_PREFIX = "rebac-tester-history:";
 const HISTORY_LIMIT = 20;
 
+interface CaseEntry {
+  id: string; // uuid
+  name: string; // user-provided alias
+  request: CheckFormState;
+  expected: "allow" | "deny";
+  lastRun?: { allowed: boolean; at: number };
+}
+
+const CASES_KEY_PREFIX = "rebac-tester-cases:";
+
+function casesKey(appId: string) {
+  return `${CASES_KEY_PREFIX}${appId}`;
+}
+
+function loadCases(appId: string): CaseEntry[] {
+  try {
+    const raw = localStorage.getItem(casesKey(appId));
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveCases(appId: string, cases: CaseEntry[]) {
+  try {
+    localStorage.setItem(casesKey(appId), JSON.stringify(cases));
+  } catch {
+    // quota / disabled — cases are non-critical
+  }
+}
+
 function historyKey(appId: string) {
   return `${HISTORY_KEY_PREFIX}${appId}`;
 }
@@ -85,9 +118,15 @@ export default function BizReBACTester({ appId }: Props) {
     loadHistory(appId),
   );
   const [showHistory, setShowHistory] = useState(false);
+  const [cases, setCases] = useState<CaseEntry[]>(() => loadCases(appId));
+  const [view, setView] = useState<"history" | "cases">("history");
 
   useEffect(() => {
     setHistory(loadHistory(appId));
+  }, [appId]);
+
+  useEffect(() => {
+    setCases(loadCases(appId));
   }, [appId]);
 
   const formValid = useMemo(
@@ -211,6 +250,163 @@ export default function BizReBACTester({ appId }: Props) {
     setShowHistory(false);
   };
 
+  function renderHistoryList() {
+    return (
+      <>
+        {history.length === 0 ? (
+          <p className="text-[12px] text-text-muted p-2">(empty)</p>
+        ) : (
+          <>
+            <div className="flex justify-end">
+              <button
+                type="button"
+                className="inline-flex items-center gap-1 text-[11px] text-text-muted hover:text-danger px-2 py-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary/40 rounded"
+                onClick={clearHistory}
+                aria-label={t("rebac.tester.clearHistory")}
+              >
+                <Trash2 className="w-3 h-3" />
+                {t("rebac.tester.clearHistory")}
+              </button>
+            </div>
+            <ul className="divide-y divide-border">
+              {history.map((e, i) => (
+                <li
+                  key={i}
+                  className="px-2 py-1.5 flex items-center gap-2 cursor-pointer hover:bg-surface-2"
+                  onClick={() => loadFromHistory(e)}
+                >
+                  {e.allowed ? (
+                    <CheckCircle2 className="w-3.5 h-3.5 text-success shrink-0" />
+                  ) : (
+                    <XCircle className="w-3.5 h-3.5 text-danger shrink-0" />
+                  )}
+                  <button
+                    type="button"
+                    aria-label={t("rebac.tester.saveAsCase")}
+                    className="text-text-muted hover:text-accent-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary/40 rounded shrink-0"
+                    onClick={(ev) => {
+                      ev.stopPropagation();
+                      const name = window.prompt(t("rebac.tester.caseName"));
+                      if (!name) return;
+                      const newCase: CaseEntry = {
+                        id:
+                          typeof crypto !== "undefined" && crypto.randomUUID
+                            ? crypto.randomUUID()
+                            : String(Date.now()) +
+                              Math.random().toString(36).slice(2),
+                        name,
+                        request: e.request,
+                        expected: e.allowed ? "allow" : "deny",
+                      };
+                      const next = [...cases, newCase];
+                      setCases(next);
+                      saveCases(appId, next);
+                      modal.toast(t("rebac.tester.caseSaved"), "success");
+                    }}
+                  >
+                    <Star className="w-3.5 h-3.5" />
+                  </button>
+                  <span className="flex-1 text-[12px] font-mono truncate">
+                    {e.request.object}#{e.request.relation}@{e.request.user}
+                  </span>
+                  <span className="text-[11px] text-text-muted shrink-0">
+                    {new Date(e.at).toLocaleTimeString()}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </>
+        )}
+      </>
+    );
+  }
+
+  function renderCasesList() {
+    if (cases.length === 0)
+      return (
+        <p className="text-[12px] text-text-muted p-2">
+          {t("rebac.tester.casesEmpty")}
+        </p>
+      );
+    return (
+      <ul className="divide-y divide-border">
+        {cases.map((c) => {
+          const passed =
+            c.lastRun !== undefined &&
+            (c.expected === "allow") === c.lastRun.allowed;
+          return (
+            <li key={c.id} className="px-2 py-1.5 flex items-center gap-2">
+              <span
+                className={
+                  c.lastRun
+                    ? passed
+                      ? "w-1.5 h-1.5 rounded-full bg-success"
+                      : "w-1.5 h-1.5 rounded-full bg-danger"
+                    : "w-1.5 h-1.5 rounded-full bg-text-muted/40"
+                }
+                aria-label={c.lastRun ? (passed ? "pass" : "fail") : "not run"}
+              />
+              <span className="flex-1 text-[12px] truncate" title={c.name}>
+                {c.name}
+              </span>
+              <span className="text-[11px] text-text-muted font-mono truncate max-w-[200px]">
+                {c.request.object}#{c.request.relation}@{c.request.user}
+              </span>
+              <button
+                type="button"
+                aria-label={t("rebac.tester.deleteCase")}
+                className="text-text-muted hover:text-danger focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary/40 rounded"
+                onClick={() => {
+                  const next = cases.filter((x) => x.id !== c.id);
+                  setCases(next);
+                  saveCases(appId, next);
+                }}
+              >
+                <Trash2 className="w-3 h-3" />
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+    );
+  }
+
+  const runAllCases = useCallback(async () => {
+    if (cases.length === 0) return;
+    const checks = cases.map((c) => ({
+      tupleKey: {
+        object: c.request.object,
+        relation: c.request.relation,
+        user: c.request.user,
+      },
+    }));
+    const res = await BizBackend.bizBatchCheck({ appId, checks });
+    if (res.status !== "ok" || !res.data?.results) {
+      modal.toast(res.msg || t("rebac.common.error"), "error");
+      return;
+    }
+    const now = Date.now();
+    const results = res.data.results;
+    const next = cases.map((c, i) => ({
+      ...c,
+      lastRun: {
+        allowed: results[i]?.allowed ?? false,
+        at: now,
+      },
+    }));
+    setCases(next);
+    saveCases(appId, next);
+    const pass = next.filter(
+      (c) =>
+        c.lastRun !== undefined &&
+        (c.expected === "allow") === c.lastRun.allowed,
+    ).length;
+    modal.toast(
+      `${pass} / ${next.length} ${t("rebac.tester.runAllResultSuffix")}`,
+      pass === next.length ? "success" : "error",
+    );
+  }, [appId, cases, modal, t]);
+
   return (
     <div className="flex flex-col gap-3">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
@@ -279,43 +475,43 @@ export default function BizReBACTester({ appId }: Props) {
 
       {showHistory && (
         <div className="rounded-lg border border-border bg-surface-1 p-2">
-          {history.length === 0 ? (
-            <p className="text-[12px] text-text-muted p-2">(empty)</p>
-          ) : (
-            <>
-              <div className="flex justify-end">
-                <button
-                  type="button"
-                  className="inline-flex items-center gap-1 text-[11px] text-text-muted hover:text-danger px-2 py-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary/40"
-                  onClick={clearHistory}
-                >
-                  <Trash2 className="w-3 h-3" />
-                  {t("rebac.tester.clearHistory")}
-                </button>
-              </div>
-              <ul className="divide-y divide-border">
-                {history.map((e, i) => (
-                  <li
-                    key={i}
-                    className="px-2 py-1.5 flex items-center gap-2 cursor-pointer hover:bg-surface-2"
-                    onClick={() => loadFromHistory(e)}
-                  >
-                    {e.allowed ? (
-                      <CheckCircle2 className="w-3.5 h-3.5 text-success shrink-0" />
-                    ) : (
-                      <XCircle className="w-3.5 h-3.5 text-danger shrink-0" />
-                    )}
-                    <span className="flex-1 text-[12px] font-mono truncate">
-                      {e.request.object}#{e.request.relation}@{e.request.user}
-                    </span>
-                    <span className="text-[11px] text-text-muted shrink-0">
-                      {new Date(e.at).toLocaleTimeString()}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            </>
-          )}
+          <div className="flex items-center gap-2 mb-2 px-1">
+            <div className="inline-flex items-center gap-0.5 rounded border border-border p-0.5">
+              <button
+                type="button"
+                className={`px-2 py-0.5 rounded text-[11px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary/40 ${
+                  view === "history"
+                    ? "bg-surface-2 font-medium"
+                    : "text-text-muted"
+                }`}
+                onClick={() => setView("history")}
+              >
+                {t("rebac.tester.tabHistory")} ({history.length})
+              </button>
+              <button
+                type="button"
+                className={`px-2 py-0.5 rounded text-[11px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary/40 ${
+                  view === "cases"
+                    ? "bg-surface-2 font-medium"
+                    : "text-text-muted"
+                }`}
+                onClick={() => setView("cases")}
+              >
+                {t("rebac.tester.tabCases")} ({cases.length})
+              </button>
+            </div>
+            {view === "cases" && cases.length > 0 && (
+              <button
+                type="button"
+                className="ml-auto inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded border border-border hover:bg-surface-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary/40"
+                onClick={() => void runAllCases()}
+              >
+                <Play className="w-3 h-3" />
+                {t("rebac.tester.runAll")}
+              </button>
+            )}
+          </div>
+          {view === "history" ? renderHistoryList() : renderCasesList()}
         </div>
       )}
 

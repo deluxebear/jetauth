@@ -3591,6 +3591,15 @@ const en = {
   "rebac.tester.recent": "Recent Check history",
   "rebac.tester.clearHistory": "Clear history",
   "rebac.tester.copy": "Copy",
+  "rebac.tester.tabHistory": "History",
+  "rebac.tester.tabCases": "Cases",
+  "rebac.tester.saveAsCase": "Save as case",
+  "rebac.tester.caseName": "Name this case",
+  "rebac.tester.caseSaved": "Saved as case",
+  "rebac.tester.casesEmpty": "Star a Check from history to save as case",
+  "rebac.tester.runAll": "Run all",
+  "rebac.tester.runAllResultSuffix": "cases passed",
+  "rebac.tester.deleteCase": "Delete case",
 
   // Integration
   "rebac.integration.lang.go": "Go",
