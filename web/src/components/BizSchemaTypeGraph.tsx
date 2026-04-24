@@ -91,7 +91,7 @@ export default function BizSchemaTypeGraph({ ast }: Props) {
                 strokeWidth={isHighlighted ? 2.5 : 1}
                 stroke={
                   isHighlighted
-                    ? "var(--color-accent-primary, #3b82f6)"
+                    ? "var(--color-accent, #0891b2)"
                     : "var(--color-border, #d4d4d8)"
                 }
                 strokeDasharray={e.kind === "inherit" ? "4 3" : undefined}
@@ -118,7 +118,7 @@ export default function BizSchemaTypeGraph({ ast }: Props) {
                   width={NODE_W}
                   height={NODE_H}
                   rx={6}
-                  fill={sel ? "var(--color-accent-primary, #3b82f6)" : "var(--color-surface-2, #f4f4f5)"}
+                  fill={sel ? "var(--color-accent, #0891b2)" : "var(--color-surface-2, #f4f4f5)"}
                   stroke="var(--color-border, #d4d4d8)"
                 />
                 <text
