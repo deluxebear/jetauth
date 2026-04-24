@@ -33,6 +33,39 @@ type reBACEnforceTuple struct {
 	Object, Relation, User string
 }
 
+// dispatchEnforceIfReBAC routes a BizEnforce call to the ReBAC engine when
+// the app's ModelType selects it. Returns handled=false when the app is not
+// ReBAC so the caller falls through to the Casbin path.
+//
+// On ReBAC apps, request must be a 3-element []any: [object, relation, user].
+// Malformed input returns handled=true with BizAuthzKindBadRequest so the
+// caller stops (do NOT fall back to Casbin — that would silently allow/deny
+// on the wrong engine).
+func dispatchEnforceIfReBAC(config *BizAppConfig, request []any) (allowed bool, kind BizAuthzKind, handled bool, err error) {
+	if config == nil || config.ModelType != ModelTypeReBAC {
+		return false, "", false, nil
+	}
+	tuple, parseErr := parseReBACEnforceRequest(request)
+	if parseErr != nil {
+		return false, BizAuthzKindBadRequest, true, parseErr
+	}
+	result, checkErr := ReBACCheck(&CheckRequest{
+		StoreId: BuildStoreId(config.Owner, config.AppName),
+		TupleKey: TupleKey{
+			Object:   tuple.Object,
+			Relation: tuple.Relation,
+			User:     tuple.User,
+		},
+	})
+	if checkErr != nil {
+		return false, BizAuthzKindEngineError, true, checkErr
+	}
+	if result.Allowed {
+		return true, BizAuthzKindAllowed, true, nil
+	}
+	return false, BizAuthzKindDenied, true, nil
+}
+
 func parseReBACEnforceRequest(request []any) (*reBACEnforceTuple, error) {
 	if len(request) != 3 {
 		return nil, fmt.Errorf("%w: got %d", errBadReBACArity, len(request))

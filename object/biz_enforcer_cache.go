@@ -173,6 +173,7 @@ const (
 	BizAuthzKindNotFound    BizAuthzKind = "not_found"
 	BizAuthzKindDisabled    BizAuthzKind = "disabled"
 	BizAuthzKindEngineError BizAuthzKind = "engine_error"
+	BizAuthzKindBadRequest  BizAuthzKind = "bad_request"
 )
 
 // BizEnforceWithKind runs BizEnforce and reports the outcome kind so callers
@@ -188,6 +189,10 @@ func BizEnforceWithKind(owner, appName string, request []interface{}) (bool, Biz
 	}
 	if !config.IsEnabled {
 		return false, BizAuthzKindDisabled, fmt.Errorf("biz app is disabled: %s/%s", owner, appName)
+	}
+
+	if allowed, kind, handled, dispatchErr := dispatchEnforceIfReBAC(config, request); handled {
+		return allowed, kind, dispatchErr
 	}
 
 	e, err := GetBizEnforcer(owner, appName)

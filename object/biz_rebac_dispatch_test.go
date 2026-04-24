@@ -42,3 +42,33 @@ func TestParseReBACEnforceRequest_NoTypePrefix(t *testing.T) {
 		t.Errorf("expected errBadReBACObject, got %v", err)
 	}
 }
+
+func TestDispatchEnforceIfReBAC_NilConfig(t *testing.T) {
+	allowed, kind, handled, err := dispatchEnforceIfReBAC(nil, []any{"doc:1", "viewer", "user:a"})
+	if handled || allowed || kind != "" || err != nil {
+		t.Errorf("nil config must fall through, got allowed=%v kind=%v handled=%v err=%v",
+			allowed, kind, handled, err)
+	}
+}
+
+func TestDispatchEnforceIfReBAC_NonReBACModelType(t *testing.T) {
+	cfg := &BizAppConfig{ModelType: "casbin"}
+	_, _, handled, _ := dispatchEnforceIfReBAC(cfg, []any{"doc:1", "viewer", "user:a"})
+	if handled {
+		t.Error("casbin apps must fall through (handled=false)")
+	}
+	cfg.ModelType = ""
+	_, _, handled, _ = dispatchEnforceIfReBAC(cfg, []any{"doc:1", "viewer", "user:a"})
+	if handled {
+		t.Error("empty ModelType must fall through")
+	}
+}
+
+func TestDispatchEnforceIfReBAC_MalformedInput(t *testing.T) {
+	cfg := &BizAppConfig{ModelType: ModelTypeReBAC, Owner: "x", AppName: "y"}
+	_, kind, handled, err := dispatchEnforceIfReBAC(cfg, []any{"a", "b"})
+	if !handled || kind != BizAuthzKindBadRequest || err == nil {
+		t.Errorf("malformed input expected handled=true kind=bad_request err!=nil, got handled=%v kind=%v err=%v",
+			handled, kind, err)
+	}
+}
