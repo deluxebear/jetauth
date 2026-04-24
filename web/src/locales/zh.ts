@@ -3553,6 +3553,9 @@ const zh: Record<string, string> = {
   "rebac.tuples.conditionContextLabel": "条件上下文 (JSON)",
   "rebac.tuples.bulkImportPlaceholder": "在此粘贴...",
   "rebac.tuples.empty": "暂无元组",
+  "rebac.tuples.emptyTitle": "还没有关系元组",
+  "rebac.tuples.emptyHint": "新建第一条 tuple,或从 CSV/JSON 批量导入",
+  "rebac.tuples.addFirst": "新建第一条",
 
   // Tester
   "rebac.tester.check": "执行 Check",

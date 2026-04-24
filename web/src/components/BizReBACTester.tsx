@@ -320,7 +320,11 @@ export default function BizReBACTester({ appId }: Props) {
       )}
 
       {result && (
-        <div className="rounded-lg border border-border bg-surface-1 p-4 flex flex-col gap-2">
+        <div
+          role="status"
+          aria-live="polite"
+          className="rounded-lg border border-border bg-surface-1 p-4 flex flex-col gap-2"
+        >
           <div className="flex items-center gap-2">
             {result.allowed ? (
               <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-success/10 text-success text-[13px] font-medium">

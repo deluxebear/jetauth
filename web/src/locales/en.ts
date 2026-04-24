@@ -3563,6 +3563,9 @@ const en = {
   "rebac.tuples.conditionContextLabel": "Condition context (JSON)",
   "rebac.tuples.bulkImportPlaceholder": "Paste here...",
   "rebac.tuples.empty": "No tuples",
+  "rebac.tuples.emptyTitle": "No tuples yet",
+  "rebac.tuples.emptyHint": "Add your first tuple, or bulk import from CSV/JSON",
+  "rebac.tuples.addFirst": "Add your first",
 
   // Tester
   "rebac.tester.check": "Run Check",

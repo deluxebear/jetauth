@@ -150,6 +150,8 @@ export default function BizTupleManager({ appId }: Props) {
     [],
   );
 
+  const hasFilters = Boolean(filter.object || filter.relation || filter.user);
+
   return (
     <div className="flex flex-col gap-3">
       <div className="flex items-center justify-between flex-wrap gap-2">
@@ -199,33 +201,53 @@ export default function BizTupleManager({ appId }: Props) {
         </div>
       </div>
 
-      <DataTable
-        columns={columns}
-        data={tuples}
-        rowKey={rowKey}
-        loading={loading}
-        emptyText={t("rebac.tuples.empty")}
-        selectable
-        clientSort
-        persistKey={`biz-tuples:${appId}`}
-        bulkActions={({ selected, clear }) => (
+      {!loading && tuples.length === 0 && !hasFilters ? (
+        <div className="rounded-xl border border-dashed border-border bg-surface-1 p-8 text-center">
+          <Upload className="w-8 h-8 text-text-muted mx-auto mb-2" aria-hidden />
+          <p className="text-[14px] font-semibold text-text-primary mb-1">
+            {t("rebac.tuples.emptyTitle")}
+          </p>
+          <p className="text-[12px] text-text-muted mb-3">
+            {t("rebac.tuples.emptyHint")}
+          </p>
           <button
             type="button"
-            className="inline-flex items-center gap-1.5 px-3 py-1 rounded text-[12px] bg-danger/10 text-danger hover:bg-danger/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary/40"
-            onClick={() => {
-              modal.showConfirm(
-                `${t("rebac.tuples.bulkDelete")} (${selected.length})`,
-                () => {
-                  void handleDelete(selected).then(() => clear());
-                },
-              );
-            }}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[13px] bg-accent-primary text-white hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary/40"
+            onClick={() => setAddOpen(true)}
           >
-            <Trash2 className="w-3.5 h-3.5" />
-            {t("rebac.tuples.bulkDelete")} ({selected.length})
+            <Plus className="w-3.5 h-3.5" />
+            {t("rebac.tuples.addFirst")}
           </button>
-        )}
-      />
+        </div>
+      ) : (
+        <DataTable
+          columns={columns}
+          data={tuples}
+          rowKey={rowKey}
+          loading={loading}
+          emptyText={t("rebac.tuples.empty")}
+          selectable
+          clientSort
+          persistKey={`biz-tuples:${appId}`}
+          bulkActions={({ selected, clear }) => (
+            <button
+              type="button"
+              className="inline-flex items-center gap-1.5 px-3 py-1 rounded text-[12px] bg-danger/10 text-danger hover:bg-danger/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary/40"
+              onClick={() => {
+                modal.showConfirm(
+                  `${t("rebac.tuples.bulkDelete")} (${selected.length})`,
+                  () => {
+                    void handleDelete(selected).then(() => clear());
+                  },
+                );
+              }}
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              {t("rebac.tuples.bulkDelete")} ({selected.length})
+            </button>
+          )}
+        />
+      )}
 
       {addOpen && (
         <AddTupleDialog

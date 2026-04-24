@@ -116,8 +116,13 @@ export default function BizReBACOverview({ appId }: Props) {
 
   if (loading) {
     return (
-      <div className="rounded-lg border border-border bg-surface-1 p-6 text-center text-[13px] text-text-muted">
-        {t("rebac.common.loading")}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3" aria-busy="true">
+        {[0, 1, 2, 3].map((i) => (
+          <div
+            key={i}
+            className="rounded-lg border border-border bg-surface-1 p-3 h-[88px] animate-pulse"
+          />
+        ))}
       </div>
     );
   }
@@ -223,7 +228,7 @@ function StatCard({
         {icon}
         {label}
       </div>
-      <div className="text-[24px] font-bold text-text-primary">{value}</div>
+      <div className="text-[24px] font-bold text-text-primary tabular-nums">{value}</div>
       {hint && (
         <div className="text-[11px] text-text-muted font-mono truncate">
           {hint}
