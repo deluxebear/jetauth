@@ -3627,6 +3627,16 @@ const en = {
   "rebac.common.confirm": "Confirm",
   "rebac.common.loading": "Loading...",
   "rebac.common.error": "Error",
+  "rebac.browser.byUser": "By User",
+  "rebac.browser.byObject": "By Object",
+  "rebac.browser.objectType": "Object type",
+  "rebac.browser.relation": "Relation",
+  "rebac.browser.userFilter": "User filter",
+  "rebac.browser.search": "Search",
+  "rebac.browser.resultsFound": "result(s)",
+  "rebac.browser.loadMore": "Load more",
+  "rebac.browser.why": "Why?",
+  "rebac.browser.noSchemaYet": "Define an authorization model in the Schema tab first",
 };
 
 export default en;

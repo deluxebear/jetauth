@@ -3617,6 +3617,16 @@ const zh: Record<string, string> = {
   "rebac.common.confirm": "确认",
   "rebac.common.loading": "加载中...",
   "rebac.common.error": "错误",
+  "rebac.browser.byUser": "按用户浏览",
+  "rebac.browser.byObject": "按对象浏览",
+  "rebac.browser.objectType": "对象类型",
+  "rebac.browser.relation": "关系",
+  "rebac.browser.userFilter": "用户过滤",
+  "rebac.browser.search": "查询",
+  "rebac.browser.resultsFound": "条结果",
+  "rebac.browser.loadMore": "加载更多",
+  "rebac.browser.why": "为什么?",
+  "rebac.browser.noSchemaYet": "请先在 Schema 页定义授权模型",
 };
 
 export default zh;
