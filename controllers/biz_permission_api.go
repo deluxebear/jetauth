@@ -1453,6 +1453,16 @@ func (c *ApiController) BizGetUserRoles() {
 		return
 	}
 
+	config, cfgErr := object.GetBizAppConfig(appId)
+	if cfgErr != nil {
+		c.ResponseError(cfgErr.Error())
+		return
+	}
+	if config != nil && config.ModelType == object.ModelTypeReBAC {
+		writeNotSupportedInReBAC(c.Ctx.ResponseWriter, "/api/biz-list-objects")
+		return
+	}
+
 	roles, err := object.BizGetUserRoles(owner, appName, userId)
 	if err != nil {
 		c.ResponseError(err.Error())
@@ -1479,6 +1489,16 @@ func (c *ApiController) BizGetUserPermissions() {
 	owner, appName, err := util.GetOwnerAndNameFromIdWithError(appId)
 	if err != nil {
 		c.ResponseError(err.Error())
+		return
+	}
+
+	config, cfgErr := object.GetBizAppConfig(appId)
+	if cfgErr != nil {
+		c.ResponseError(cfgErr.Error())
+		return
+	}
+	if config != nil && config.ModelType == object.ModelTypeReBAC {
+		writeNotSupportedInReBAC(c.Ctx.ResponseWriter, "/api/biz-list-objects")
 		return
 	}
 
