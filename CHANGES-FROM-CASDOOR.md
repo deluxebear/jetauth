@@ -106,12 +106,57 @@ flow) — not a port of the upstream `PermissionEditPage`.
 Docs: `docs/business-permission-architecture.md`,
 `docs/enterprise-authorization-plan.md`, `docs/authorization-guide.md`.
 
-### ReBAC (Zanzibar-style) — planned integration
+### ReBAC (Zanzibar-style) — shipped alongside Casbin
 
-Planned extension of the application-authorization module: let admins pick
-RBAC (Casbin) or ReBAC per application at creation time. Lightweight
-self-built graph engine (reuses the existing DB + cache, zero extra infra).
-Six-phase rollout tracked in `TODO.md` and `docs/rebac-integration-plan.md`.
+Extension of the application-authorization module: each `BizAppConfig`
+now declares a `ModelType` field (`"casbin"` default or `"rebac"`), and
+the `BizEnforce` dispatcher (`object/biz_rebac_dispatch.go`) steers
+`/api/biz-enforce` to the matching engine. The ReBAC implementation is
+an OpenFGA v1.1-compatible graph engine living entirely in the existing
+`object/` package — no extra services required for single-instance
+deployments.
+
+- **Schema management** — Authorization models are append-only, saved via
+  `/api/biz-write-authorization-model` with a CAS-safe dry-run mode. The
+  DSL front door reuses `openfga/language` v0.2.1 for DSL ↔ Proto ↔
+  JSON conversion; conflict scanner refuses destructive migrations that
+  orphan existing tuples.
+- **Engine** — `ReBACCheck` implements all five OpenFGA rewrites (`this`,
+  `computed_userset`, `tuple_to_userset`, `union`, `intersection`,
+  `difference`) with per-request memoisation, a 25-depth cap, and
+  ternary cycle-state propagation so `difference` paths with cycles
+  conservatively deny (CP-8 C7). `consolidated_1_1_tests.yaml`: 130/134
+  pass + 4 documented skips.
+- **CEL Conditions** — compiled per `(authorizationModelId, conditionName)`
+  and cached; merges tuple-side and request-side contexts; evaluation
+  failure surfaces as `BizAuthzKindConditionFailed`, not silent deny.
+- **Contextual tuples** — request-only grants validated against schema,
+  merged into the checkContext without persisting.
+- **List / Expand** — `ReBACListObjects`, `ReBACListUsers`, `ReBACExpand`
+  each use reverse-index candidate generation + per-candidate Check,
+  `base64`-encoded opaque cursors, and a 10s internal timeout (returns
+  partial results + token on cut-off).
+- **Cache** — two tiers behind `BizReBACCache`. L2 is the default
+  in-memory `sync.Map` with 10s TTL. L3 is an optional `RedisBizReBACCache`
+  (enabled via `bizReBACCacheL3Enabled=true`) with pub/sub invalidation on
+  `jetauth:rebac:invalidations` for cross-instance freshness; heartbeat
+  detection triggers pessimistic `flushAll` on disconnect.
+- **Ops layer** — per-`(store,user)` token-bucket rate limiting
+  (`rebacListObjectsRPS` / `rebacListObjectsBurst`, defaults 20 rps / 40
+  burst, HTTP 429 + `Retry-After: 1` on reject), six Prometheus metric
+  families under `biz_rebac_*`, `useAccessibleResources` React hook with
+  transparent 429 back-off + pagination, end-to-end smoke script at
+  `web/scripts/rebac-e2e-smoke.sh`, and benchmark harness gated by
+  `make rebac-bench` (SLA targets: Check p99<50ms, ListObjects p99<300ms).
+- **Guidance errors** — ReBAC apps returning HTTP 400 with
+  `msg=BIZ_API_NOT_SUPPORTED_IN_REBAC` when a caller hits the
+  Casbin-only endpoints (`biz-get-user-roles`, `biz-get-user-permissions`,
+  `biz-get-permissions-for-subject`), pointing at the right replacement
+  endpoint and doc URL.
+
+Docs: `docs/rebac-spec.md`, `docs/rebac-plan.md`,
+`docs/rebac-operations-guide.md`, `docs/rebac-implementation-status.md`,
+`docs/rebac-sla-baseline.md`, `docs/rebac-integration-plan.md`.
 
 ### Built-in RADIUS server — removed
 

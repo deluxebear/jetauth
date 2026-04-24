@@ -4,7 +4,7 @@
 **对应 Spec**:[`rebac-spec.md`](rebac-spec.md)
 **对应 Plan**:[`rebac-plan.md`](rebac-plan.md)
 **对应操作手册**:[`rebac-operations-guide.md`](rebac-operations-guide.md)
-**最后更新**:2026-04-24
+**最后更新**:2026-04-25
 
 > 本文目标:把仓库里"已经能做什么、到哪里为止、哪些事还没做"梳理清楚,作为功能验收、对接评估与排期排障的单一事实源。所有结论都对应到仓库里的真实代码/测试,未落地的项目都标注"未实现/待做"。
 
@@ -12,10 +12,9 @@
 
 ## 1. 总体结论
 
-- **可用的能力**:OpenFGA v1.1 兼容的 Schema 管理、11 个 ReBAC HTTP 接口、Check/BatchCheck/ListObjects/ListUsers/Expand/WriteTuples/ReadTuples/CountTuples、CEL Conditions、Contextual Tuples、L2 进程内缓存、完整前端(DSL+可视化双向编辑、Tuple 管理、Tester、SDK 集成、概览)。
-- **暂未打通的路径**:`BizEnforce` 分派(走老 `biz-enforce` 仍只走 Casbin)、`biz-get-user-roles/permissions` 在 ReBAC 模式下的指引错误体、L3 Redis 缓存、ListObjects 的限流/Prometheus/SLA 基线(CP-8 全部未开工)。
-- **一致性基线**:OpenFGA `consolidated_1_1_tests.yaml` 当前 **129/134 通过 + 5 条显式 skip(有理由)**。
-- **是否可供生产使用**:**管理员 / 业务后端开发者侧的能力闭环已就绪**;面向业务运行时的 SLA、限流、多实例失效广播仍是 CP-8 的工作。
+- **可用的能力**:OpenFGA v1.1 兼容的 Schema 管理、11 个 ReBAC HTTP 接口、Check/BatchCheck/ListObjects/ListUsers/Expand/WriteTuples/ReadTuples/CountTuples、CEL Conditions、Contextual Tuples、L2/L3 两层缓存(L3 Redis 带 pub/sub 跨实例失效,可按开关启用)、每 `(store,user)` 令牌桶限流(20 rps/40 突发,超限 429 + `Retry-After`)、完整 Prometheus 指标族(6 个 `biz_rebac_*` 指标)、`BizEnforce` 按 `ModelType` 自动分派到 ReBAC 引擎、OQ-2 指引错误体(ReBAC 模式下访问 Casbin-only 接口返 400 + `BIZ_API_NOT_SUPPORTED_IN_REBAC`)、完整前端(DSL+可视化双向编辑、Tuple 管理、Tester、SDK 集成、概览、`useAccessibleResources` 分页 hook)。
+- **基线测试**:OpenFGA `consolidated_1_1_tests.yaml` 当前 **130/134 通过 + 4 条显式 skip(有理由)**(ternary cycle 传播已在 CP-8 C7 里修复,原第 5 条 `true_butnot_cycle_return_false` 解锁)。
+- **是否可供生产使用**:**CP-8 产品级能力全部就位**。最后一个合并前动作是把 `docs/rebac-sla-baseline.md` 的占位数据替换成发布工程师在参考硬件上跑出的真实数值(`make rebac-bench`)。
 
 ---
 
@@ -28,11 +27,11 @@
 | CP-3 Check 五 rewrite | `this` / `computed_userset` / `tuple_to_userset` / `union` / `intersection` / `difference` + 深度限制 + memo | ✅ 完成 | `object/biz_rebac_engine.go`、`object/biz_rebac_consolidated_db_test.go` |
 | CP-4 Conditions + Contextual tuples | CEL 编译缓存、类型保真、per-branch cycle、请求 & tuple 上下文合并 | ✅ 完成 | `object/biz_rebac_condition.go`、`controllers/biz_rebac_api.go`(BizCheck / BizBatchCheck) |
 | CP-5 List/Expand + Tuple CRUD | ListObjects / ListUsers(反向索引 + cursor + 10s 硬超时)、Expand rewrite 树、write/read/count tuples | ✅ 完成 | `object/biz_rebac_list.go`、`object/biz_rebac_expand.go`、`controllers/biz_rebac_api.go`(BizListObjects/Users/Expand/WriteTuples/ReadTuples/CountTuples) |
-| CP-6 L2 缓存 | `sync.Map` tupleset 缓存(10s TTL) + 精准失效 + schema 推进整 store flush | ✅ 完成(**L2**;**L3 Redis 未做**) | `object/biz_rebac_cache.go` |
+| CP-6 L2 缓存 | `sync.Map` tupleset 缓存(10s TTL) + 精准失效 + schema 推进整 store flush | ✅ 完成(**L2**;CP-8 C6 补齐 L3) | `object/biz_rebac_cache.go` |
 | CP-7 前端 | 向导选型、AppAuthorizationPage Tab 分派、DSL + 可视化编辑器、Tuple 管理、Tester、SDK 集成、概览 | ✅ 完成(`feature/rebac-cp3`) | `web/src/components/BizSchemaEditor.tsx` 等 11 个组件 |
-| CP-8 产品级验收 | ListObjects SLA / 限流 / Prometheus / `BizEnforce` 分派 / OQ-2 错误体 / SDK 端到端 | ⬜ **未开工** | — |
+| CP-8 产品级验收 | `BizEnforce` 分派 / OQ-2 错误体 / `useAccessibleResources` hook / Redis L3 + pub/sub / 三态 cycle 传播 / Prometheus 指标 / 速率限制 / SDK 冒烟 / SLA 基线 / 文档同步 | ✅ 完成(`feature/rebac-cp3`) | `object/biz_rebac_metrics.go`、`object/biz_rebac_ratelimit.go`、`object/biz_rebac_cache_redis.go`、`object/biz_rebac_cache_tiered.go`、`object/biz_rebac_cache_boot.go`、`web/scripts/rebac-e2e-smoke.sh`、`docs/rebac-sla-baseline.md` |
 
-> **门槛**:CP-4、CP-8 是 Plan §6 定义的硬门槛。CP-4 已过(consolidated 测试通过率达标);CP-8 是 **mergeback 到 main 的准入条件**,目前未满足。
+> **门槛**:CP-4、CP-8 是 Plan §6 定义的硬门槛。CP-4 已过(consolidated 测试通过率达标);**CP-8 已过**,代码侧 mergeback 到 `main` 的准入条件就绪,仅等 SLA 基线实测数据写入 `docs/rebac-sla-baseline.md`。
 
 ---
 
@@ -87,7 +86,7 @@
   - **Type restriction 在 Check 时执行**:对 `this` 命中的 tuple,要过 `findDirectlyRelatedUserTypes` + `subjectMatchesTypeRestriction` 两道校验,不满足类型约束的 tuple 视为不存在;
   - **Wildcard**:支持 `user:*` — Check 时除精确 user 外额外查一次 `{userType}:*`;
   - **Cycle 检测**:visited 路径记录,遇到回环返回(false, nil)。
-- **一致性基线**:`object/biz_rebac_consolidated_db_test.go` 跑 OpenFGA `consolidated_1_1_tests.yaml`,**129/134 通过,5 条 skip**(详见 §5)。
+- **一致性基线**:`object/biz_rebac_consolidated_db_test.go` 跑 OpenFGA `consolidated_1_1_tests.yaml`,**130/134 通过,4 条 skip**(CP-8 C7 的三态 cycle 传播解锁了 `true_butnot_cycle_return_false`;详见 §5)。
 
 ### 3.4 Conditions + Contextual Tuples(CP-4)
 
@@ -122,16 +121,16 @@
   - `GET  /api/biz-read-tuples`
   - `GET  /api/biz-count-tuples`
 
-### 3.6 L2 缓存(CP-6)
+### 3.6 L2 缓存(CP-6) + L3 Redis(CP-8 C6)
 
-- **位置**:`object/biz_rebac_cache.go`;package-level `sync.Map`。
-- **键**:`{storeId}|{object}#{relation}` → `[]tupleRef`。
-- **TTL**:10 秒(`bizTuplesetCacheTTL`)。
-- **失效策略**:
+- **L2(L2-only 默认路径)**:`object/biz_rebac_cache.go` + `object/biz_rebac_cache_interface.go`;package-level `sync.Map`;键 `{storeId}|{object}#{relation}` → `[]tupleRef`;TTL 10 秒(`bizTuplesetCacheTTL`)。
+- **失效策略(共享)**:
   - `invalidateBizTuplesetCacheKey(storeId, object, relation)`:tuple write/delete 后精确失效;
   - `flushBizTuplesetCacheForStore(storeId)`:schema 推进时整 store flush(新 schema 会改变哪些 subject 合法,不 flush 会命中过期判定);
   - **contextual tuples 永不缓存**。
-- **未做**:L3 Redis 缓存层、跨实例失效广播(TODO,CP-8 准备用 Redis pub/sub 解决)。
+- **L3 Redis + 跨实例失效(CP-8 C6)**:`object/biz_rebac_cache_redis.go` + `object/biz_rebac_cache_tiered.go`;键前缀 `jetauth:rebac:{storeId}:{object}:{relation}`;pub/sub 频道 `jetauth:rebac:invalidations` 把 write/delete 广播给所有实例,接收端回调清 L2;心跳检测 pub/sub 断开,恢复时悲观 `flushAll` 避免脏读。`TieredCache.Set` 把 L2 TTL 硬上限为 `min(caller_ttl, bizTuplesetCacheTTL)` 保证 L2 ≤ L3 不变量。
+- **启用**:`bizReBACCacheL3Enabled=true` + `bizReBACCacheL3Addr`(或复用 `redisEndpoint`)。默认关,关时行为与 pre-CP-8 字节一致。`InitBizReBACCache` 在 Redis 不可达时退化为 L2-only 并记录 WARNING,不会阻塞启动。
+- **指标**:`biz_rebac_cache_hits_total{level=l2|l3}` / `biz_rebac_cache_misses_total{level}`。
 
 ### 3.7 前端(CP-7)
 
@@ -170,48 +169,47 @@ GET   /api/biz-expand                       BizExpand
 
 ---
 
-## 4. 当前能力边界(尚未实现 / 已知不足)
+## 4. 能力边界(已消化的 CP-8 项目 + 剩余约束)
 
-本节是**功能评估的重点**。这些能力在 spec 里存在但尚未落地,不应该承诺给业务方。
+CP-8 已把原来列在本节的五大缺口全部闭环。下面从"做了什么"入手,再列真正剩余的已知限制。
 
-### 4.1 `BizEnforce` 分派未接入
+### 4.1 `BizEnforce` 分派(CP-8 C1)✅
 
-- **现象**:`/api/biz-enforce` 和 `/api/biz-batch-enforce` 仍然只走 Casbin,和 `ModelType` 无关。
-- **证据**:`object/biz_enforcer_cache.go:159 BizEnforceWithKind` 里没有 `if config.ModelType == "rebac"` 的分派。
-- **影响**:如果业务方 App 选了 ReBAC,但调用了旧的 `biz-enforce` 接口,会得到 `Casbin enforcer 空 → deny`,而不是走 ReBAC 引擎。
-- **对应任务**:TODO.md §P3 "`BizEnforce` / `BizBatchEnforce` 按 `config.ModelType` 路由"仍然未勾选。
-- **规避**:目前 ReBAC 调用统一用 `/api/biz-check`;**请勿在 ReBAC 模式下使用 `/api/biz-enforce`**。
+- `object/biz_rebac_dispatch.go` 的 `dispatchEnforceIfReBAC` 在 `BizEnforce` / `BizBatchEnforce` / `BizEnforceEx` 入口按 `BizAppConfig.ModelType` 分派:ReBAC 走 `ReBACCheck`,否则落回 Casbin。
+- ReBAC 模式下 `POST /api/biz-enforce` 接受 OpenFGA 3 元组请求体(`[object, relation, user]`),行为与 `POST /api/biz-check` 一致。
 
-### 4.2 OQ-2 指引错误体未接入
+### 4.2 OQ-2 指引错误体(CP-8 C2)✅
 
-- **现象**:`/api/biz-get-user-roles` 和 `/api/biz-get-user-permissions` 在 ReBAC 模式下仍然走 Casbin 路径(很可能返回空或 500),没有 spec §7.2 要求的 `BIZ_API_NOT_SUPPORTED_IN_REBAC` 指引错误体。
-- **证据**:全仓搜索 `BizAuthzKindNotSupportedInReBAC` / `BIZ_API_NOT_SUPPORTED_IN_REBAC` 无命中。
-- **对应任务**:TODO.md §P3 "ReBAC 模式下适配 `biz-get-user-roles` / `biz-get-user-permissions`" 未勾选。
-- **规避**:ReBAC 模式下请用 `/api/biz-list-objects` 代替。
+- `controllers/biz_rebac_guidance.go` 把 `biz-get-user-roles` / `biz-get-user-permissions` / `biz-get-permissions-for-subject` 在 ReBAC 模式下拦成 `HTTP 400` + `msg=BIZ_API_NOT_SUPPORTED_IN_REBAC` + `data={suggestUse, docsUrl}`,让 SDK 调用方立刻知道要换接口,而不是收到空列表误以为"没权限"。
+- 前端 `web/src/hooks/useAccessibleResources.ts` 在这条错误上自动提示,并附带文档链接。
 
-### 4.3 L3 Redis 缓存 & 跨实例失效未实现
+### 4.3 L3 Redis 缓存 & 跨实例失效(CP-8 C6)✅
 
-- **现象**:`biz_rebac_cache.go` 只是进程内 `sync.Map`;多实例部署下,A 实例写 tuple 后,B 实例的 L2 缓存要等 10s TTL 自然过期才能收敛。
-- **对应任务**:TODO.md §P6 "可选 Redis L3 缓存层"未勾选;Plan R 项风险 R5 未缓解。
-- **规避**:单实例部署目前完全没问题;多实例部署时建议在写 tuple 后主动轮询 Check 校验,或把 `bizTuplesetCacheTTL` 调短。
+- `object/biz_rebac_cache_redis.go` 实现 `BizReBACCache` 的 L3 impl(JSON 值 + `SCAN`+`DEL` 的 store flush + pub/sub 心跳重连);`object/biz_rebac_cache_tiered.go` 组合成 `TieredCache`;`InitBizReBACCache` 在 `bizReBACCacheL3Enabled=true` 时通过 `NewTieredCacheWithRedis` 装机,Redis 不可达则回退 L2-only 并 WARNING。
+- 跨实例失效广播:每次 `Invalidate`/`FlushStore` 都经 `jetauth:rebac:invalidations` 频道扇出,接收端回调本地 L2。pub/sub 断开时心跳在重连后悲观 `flushAll` 避免脏读。
 
-### 4.4 CP-8 产品级未开工(整体)
+### 4.4 产品级能力全集(CP-8)✅
 
-全部是 spec §6.3.1 / §14 的产品级门槛,未来合到 main 的必要条件:
+全部 spec §6.3.1 / §14 硬门槛均已达成,详情:
 
-| 项 | 状态 | 对应 spec 要求 |
+| 项 | 状态 | 对应实现 |
 |---|---|---|
-| ListObjects 限流 (token bucket 20/s per store+user, 突发 40) | ⬜ 未做 | §6.3.1,超限返 429;当前无限流 |
-| Prometheus 指标 `biz_rebac_list_objects_duration_seconds` | ⬜ 未做 | §6.3.1,无任何 `biz_rebac_*` 指标埋点 |
-| ListObjects SLA 实测 (1 store 10k tuples, p50 < 50ms, p99 < 300ms) | ⬜ 未做 | §6.3.1;目前只有功能性测试,没有压测基线 |
-| 业务前端 React hook `useAccessibleResources`(分页循环 + 429 退避) | ⬜ 未做 | §8 / §14 |
-| 端到端业务 SDK 实测(新建 App → schema → tuples → Tester) | ⬜ 未做 | §14 |
-| 跨实例失效广播(Redis pub/sub)| ⬜ 未做 | Plan R5 |
-| 文档 `CHANGES-FROM-CASDOOR.md` / `CLAUDE.md` 同步 | ⬜ 未做 | §14 |
+| `BizEnforce` 分派 | ✅ | `object/biz_rebac_dispatch.go` |
+| OQ-2 指引错误体 | ✅ | `controllers/biz_rebac_guidance.go` |
+| 三态 cycle 传播(修 `true_butnot_cycle_return_false`)| ✅ | `object/biz_rebac_cycle_state.go` + `biz_rebac_engine.go` |
+| 缓存接口 + 内存 L2 | ✅ | `object/biz_rebac_cache_interface.go` |
+| Redis L3 + pub/sub 失效广播 | ✅ | `object/biz_rebac_cache_redis.go` + `biz_rebac_cache_tiered.go` + `biz_rebac_cache_boot.go` |
+| `useAccessibleResources` hook(分页 + 429 退避)| ✅ | `web/src/hooks/useAccessibleResources.ts` |
+| 6 个 Prometheus `biz_rebac_*` 指标(Check/List 直方图 + 缓存命中 + 限流拒绝 + 引擎错误)| ✅ | `object/biz_rebac_metrics.go` |
+| 每 `(store, user/object)` 令牌桶限流(20 rps / 40 burst, 超限 429 + `Retry-After: 1`)| ✅ | `object/biz_rebac_ratelimit.go` + `controllers/biz_rebac_api.go` |
+| 端到端冒烟脚本 | ✅ | `web/scripts/rebac-e2e-smoke.sh` |
+| 压测脚手架(10k tuples)| ✅ | `object/biz_rebac_bench_test.go` + `make rebac-bench` |
+| SLA 基线文档(目标 p99 Check<50ms、List<300ms)| ⚠️ 结构就位,等实测数据 | `docs/rebac-sla-baseline.md`(占位待发布工程师补)|
+| 文档同步(CLAUDE.md / CHANGES-FROM-CASDOOR.md / 本文)| ✅ | 本 PR |
 
-### 4.5 OpenFGA 一致性 5 条 skip
+### 4.5 OpenFGA 一致性 4 条 skip(CP-8 C7 解锁了第 5 条)
 
-`object/biz_rebac_consolidated_db_test.go:115` 的 `skippedTests` 有 5 条**显式跳过**,分别说明:
+`object/biz_rebac_consolidated_db_test.go` 的 `skippedTests` 现在有 4 条**显式跳过**,均为产品级有意分歧或 assertion 形式差异,没有纯引擎 follow-up:
 
 | # | 测试名 | 跳过原因 | 分类 |
 |---|---|---|---|
@@ -219,9 +217,10 @@ GET   /api/biz-expand                       BizExpand
 | 2 | `list_objects_with_subcheck_encounters_cycle` | checkAssertions 恰好走的是 listObjects 断言 | 同上 |
 | 3 | `check_with_invalid_tuple_in_store` | JetAuth CP-2 的冲突扫描**设计上**拒绝会孤立 tuple 的破坏性 schema 变更(spec OQ-3);OpenFGA 允许保存、Check 时过滤 | **产品级有意分歧** |
 | 4 | `ttu_some_parent_type_removed` | 同上 | **产品级有意分歧** |
-| 5 | `true_butnot_cycle_return_false` | `difference` 的 subtract 分支里出现 cycle,OpenFGA 保守 deny;JetAuth 当前把 cycle 当 false,导致 `true - false = true`。需要三态 (true/false/cycle) 状态传播才能修。 | CP-4 follow-up,未列入当期 |
 
-**结论**:spec §11.2 要求"100% 通过或豁免书面化",当前 5 条均有书面理由,2 条是产品级有意分歧,2 条是 CP-5 assertion 形式差异,1 条是真正的 follow-up。
+> 原第 5 条 `true_butnot_cycle_return_false` 已在 CP-8 C7(`object/biz_rebac_cycle_state.go` + 引擎内 `StateAllowed/StateDenied/StateCycle` 三态传播)通过,`difference` 分支里的 cycle 会正确保守 deny。
+
+**结论**:spec §11.2 要求"100% 通过或豁免书面化",当前 4 条 skip 全部书面化,且均不是纯引擎缺陷。
 
 ### 4.6 其他已知限制
 
@@ -333,6 +332,4 @@ go test -v $(go list ./...) -tags skipCi   # CI 等价(跳过 DB 集成测试)
 
 ## 8. 一句话总结
 
-**CP-1 ~ CP-7 已形成闭环,可覆盖 ReBAC 的定义 / 写入 / 查询 / 前端管理 / 可视化编辑 / 一致性验证完整链路**;
-**`/api/biz-check` 系统是 ReBAC 模式下的权威入口**;
-**生产上线之前还差 CP-8 的 `BizEnforce` 分派、OQ-2 指引、限流、可观测与 SLA 基线** —— 这是后续合到 `main` 的准入条件,也是本分支当前的核心剩余工作。
+**CP-1 ~ CP-8 已全部闭环**:OpenFGA v1.1 兼容的 Schema / Check / List / Expand 引擎、三态 cycle 传播、CEL Conditions、Contextual Tuples、L2+L3 两层缓存与跨实例 pub/sub 失效、每 `(store,user)` 令牌桶限流、6 个 Prometheus 指标族、按 `ModelType` 自动分派的 `BizEnforce`、OQ-2 指引错误体、`useAccessibleResources` 分页 hook、端到端冒烟与 SLA 压测脚手架;**`feature/rebac-cp3` → `main` 的代码侧 mergeback 准入条件已满足**,发布前只需把 `docs/rebac-sla-baseline.md` 里参考硬件的 p50/p99 实测数据补齐即可。
