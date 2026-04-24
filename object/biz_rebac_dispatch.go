@@ -26,11 +26,14 @@ var (
 	errNotReBACModel   = errors.New("rebac: not a ReBAC app")
 )
 
+// reBACEnforceTuple is the parsed form of a ReBAC-mode BizEnforce request.
+// Mirrors OpenFGA TupleKey: Object is 'type:id', Relation is the relation name,
+// User is 'type:id' or 'type:id#relation' (userset) or 'type:*' (wildcard).
 type reBACEnforceTuple struct {
 	Object, Relation, User string
 }
 
-func parseReBACEnforceRequest(request []interface{}) (*reBACEnforceTuple, error) {
+func parseReBACEnforceRequest(request []any) (*reBACEnforceTuple, error) {
 	if len(request) != 3 {
 		return nil, fmt.Errorf("%w: got %d", errBadReBACArity, len(request))
 	}
