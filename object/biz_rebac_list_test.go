@@ -86,7 +86,7 @@ func TestGatherCandidateObjects_ContextualOnly(t *testing.T) {
 		{Object: "folder:f1", Relation: "viewer", User: "user:a"},
 		{Object: "document:d2", Relation: "viewer", User: "user:a"},
 	}
-	cands, err := gatherCandidateObjects("owner", "app", "document", contextual, "")
+	cands, err := gatherCandidateObjects("owner", "app", "document", nil, contextual, "")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -107,7 +107,7 @@ func TestGatherCandidateObjects_CursorFilter(t *testing.T) {
 		{Object: "document:d2", Relation: "viewer", User: "user:a"},
 		{Object: "document:d3", Relation: "viewer", User: "user:a"},
 	}
-	cands, err := gatherCandidateObjects("owner", "app", "document", contextual, "document:d1")
+	cands, err := gatherCandidateObjects("owner", "app", "document", nil, contextual, "document:d1")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
