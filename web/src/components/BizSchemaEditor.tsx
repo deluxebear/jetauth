@@ -286,7 +286,14 @@ export default function BizSchemaEditor({ appId }: Props) {
       }
       const res = await BizBackend.saveBizAuthorizationModel(appId, dsl, false);
       if (res.status !== "ok" || !res.data) {
-        modal.toast(res.msg || t("rebac.common.error"), "error");
+        // Deletes already succeeded — don't leave the modal showing phantom
+        // "affected" tuples, and surface a specific message so the admin knows
+        // which step failed.
+        setPendingConflicts([]);
+        modal.toast(
+          `${t("rebac.schema.plan.savePartialFailure")}${res.msg ? `: ${res.msg}` : ""}`,
+          "error",
+        );
         return;
       }
       const r = res.data as SaveAuthorizationModelResult;
@@ -483,6 +490,7 @@ export default function BizSchemaEditor({ appId }: Props) {
         savedDsl={savedDsl}
         nextDsl={dsl}
         conflicts={pendingConflicts}
+        saving={saving}
         onCancel={() => {
           setPlanOpen(false);
           setPendingConflicts([]);

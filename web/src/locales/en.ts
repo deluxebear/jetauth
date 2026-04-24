@@ -3530,6 +3530,7 @@ const en = {
   "rebac.schema.plan.tuplesAffected": "tuple(s) affected",
   "rebac.schema.plan.cleanupAndSave": "Clean up affected tuples and save",
   "rebac.schema.plan.saveAnyway": "Save anyway",
+  "rebac.schema.plan.savePartialFailure": "Conflict tuples deleted, but saving model failed. Please retry.",
 
   // Type / relation panels
   "rebac.types.label": "Types",

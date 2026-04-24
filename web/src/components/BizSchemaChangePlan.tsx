@@ -25,6 +25,7 @@ interface Props {
   savedAst?: SchemaAST;
   nextAst?: SchemaAST;
   conflicts: BizSchemaConflict[];
+  saving?: boolean;
   onCancel: () => void;
   onForceCleanupAndSave: () => void;
 }
@@ -36,6 +37,7 @@ export default function BizSchemaChangePlan({
   savedAst,
   nextAst,
   conflicts,
+  saving,
   onCancel,
   onForceCleanupAndSave,
 }: Props) {
@@ -225,7 +227,8 @@ export default function BizSchemaChangePlan({
           </button>
           <button
             type="button"
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[13px] font-medium bg-danger text-white hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-danger/40"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[13px] font-medium bg-danger text-white hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-danger/40"
+            disabled={saving}
             onClick={onForceCleanupAndSave}
           >
             <ArrowRight className="w-3.5 h-3.5" />

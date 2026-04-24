@@ -3520,6 +3520,7 @@ const zh: Record<string, string> = {
   "rebac.schema.plan.tuplesAffected": "条 tuple 受影响",
   "rebac.schema.plan.cleanupAndSave": "清理受影响 tuple 并保存",
   "rebac.schema.plan.saveAnyway": "仍然保存",
+  "rebac.schema.plan.savePartialFailure": "冲突 tuple 已删除,但保存模型失败,请重试",
 
   // Type / relation panels
   "rebac.types.label": "类型",
