@@ -72,3 +72,26 @@ func TestDispatchEnforceIfReBAC_MalformedInput(t *testing.T) {
 			handled, kind, err)
 	}
 }
+
+func TestDispatchEnforceExIfReBAC_NilConfig(t *testing.T) {
+	trace, handled, err := dispatchEnforceExIfReBAC(nil, []any{"doc:1", "viewer", "user:a"}, "en")
+	if handled || trace != nil || err != nil {
+		t.Errorf("nil config must fall through, got trace=%v handled=%v err=%v", trace, handled, err)
+	}
+}
+
+func TestDispatchEnforceExIfReBAC_NonReBACModelType(t *testing.T) {
+	cfg := &BizAppConfig{ModelType: "casbin"}
+	_, handled, _ := dispatchEnforceExIfReBAC(cfg, []any{"doc:1", "viewer", "user:a"}, "en")
+	if handled {
+		t.Error("casbin apps must fall through (handled=false)")
+	}
+}
+
+func TestDispatchEnforceExIfReBAC_MalformedInput(t *testing.T) {
+	cfg := &BizAppConfig{ModelType: ModelTypeReBAC, Owner: "x", AppName: "y"}
+	_, handled, err := dispatchEnforceExIfReBAC(cfg, []any{"a", "b"}, "en")
+	if !handled || err == nil {
+		t.Errorf("malformed input expected handled=true err!=nil, got handled=%v err=%v", handled, err)
+	}
+}

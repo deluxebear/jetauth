@@ -120,3 +120,45 @@ func TestBizEnforceDispatch_ReBACApp_Deny(t *testing.T) {
 		t.Errorf("expected BizAuthzKindDenied, got %s", kind)
 	}
 }
+
+// TestBizEnforceDispatch_Ex_ReBACApp verifies that BizEnforceEx routes to the
+// ReBAC engine and returns a populated EnforceTraceResult when a tuple exists.
+func TestBizEnforceDispatch_Ex_ReBACApp(t *testing.T) {
+	if ormer == nil {
+		t.Skip("DB unavailable")
+	}
+	owner := "dispatch-ex-" + util.GenerateUUID()[:8]
+	appName := "app_dispatch_ex_rebac"
+	seedRebacAppConfigForTest(t, owner, appName)
+
+	res, err := SaveAuthorizationModel(owner, appName, editorDSL, "test-user")
+	if err != nil || res.Outcome != SaveOutcomeAdvanced {
+		t.Fatalf("save editorDSL: err=%v outcome=%v", err, res)
+	}
+	modelId := res.AuthorizationModelId
+
+	if _, err := AddBizTuples([]*BizTuple{{
+		Owner:                owner,
+		AppName:              appName,
+		Object:               "document:d1",
+		Relation:             "editor",
+		User:                 "user:alice",
+		AuthorizationModelId: modelId,
+	}}); err != nil {
+		t.Fatalf("add tuple: %v", err)
+	}
+
+	trace, err := BizEnforceEx(owner, appName, []interface{}{"document:d1", "editor", "user:alice"}, "en")
+	if err != nil {
+		t.Fatalf("BizEnforceEx: %v", err)
+	}
+	if trace == nil || !trace.Allowed {
+		t.Fatalf("expected Allowed=true, got trace=%+v", trace)
+	}
+	if len(trace.MatchedPolicy) != 3 {
+		t.Errorf("expected 3-elem MatchedPolicy, got %v", trace.MatchedPolicy)
+	}
+	if trace.Reason == "" {
+		t.Error("Reason must be non-empty")
+	}
+}

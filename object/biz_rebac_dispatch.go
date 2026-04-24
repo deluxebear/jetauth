@@ -12,6 +12,8 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+
+	"github.com/deluxebear/jetauth/i18n"
 )
 
 // ModelTypeReBAC is the exact string BizAppConfig.ModelType must match for
@@ -82,4 +84,60 @@ func parseReBACEnforceRequest(request []any) (*reBACEnforceTuple, error) {
 		return nil, fmt.Errorf("%w: got %q", errBadReBACObject, strs[0])
 	}
 	return &reBACEnforceTuple{Object: strs[0], Relation: strs[1], User: strs[2]}, nil
+}
+
+// dispatchEnforceExIfReBAC routes a BizEnforceEx call to the ReBAC engine
+// when the app's ModelType selects it. On ReBAC apps the trace is minimal:
+// MatchedPolicy holds the checked tuple in array form (for display symmetry
+// with Casbin's matched policy row), SubjectRoles is empty (ReBAC has no
+// role concept at this tier — the graph relation IS the role).
+//
+// Returns handled=false on non-ReBAC apps so the caller falls through to
+// Casbin.
+func dispatchEnforceExIfReBAC(config *BizAppConfig, request []any, lang string) (*EnforceTraceResult, bool, error) {
+	if config == nil || config.ModelType != ModelTypeReBAC {
+		return nil, false, nil
+	}
+	tuple, err := parseReBACEnforceRequest(request)
+	if err != nil {
+		return nil, true, err
+	}
+	result, err := ReBACCheck(&CheckRequest{
+		StoreId: BuildStoreId(config.Owner, config.AppName),
+		TupleKey: TupleKey{
+			Object:   tuple.Object,
+			Relation: tuple.Relation,
+			User:     tuple.User,
+		},
+	})
+	if err != nil {
+		return nil, true, err
+	}
+	trace := &EnforceTraceResult{
+		Allowed:       result.Allowed,
+		MatchedPolicy: []string{tuple.Object, tuple.Relation, tuple.User},
+		SubjectRoles:  []string{},
+		Reason:        reBACTraceReason(lang, result.Allowed),
+	}
+	return trace, true, nil
+}
+
+// reBACTraceReason returns a short localized explanation for the Tester UI.
+// Falls back to English if the i18n key is missing so admins always see
+// something readable.
+func reBACTraceReason(lang string, allowed bool) string {
+	key := "biz:Denied by ReBAC (no path from user to object#relation)"
+	if allowed {
+		key = "biz:Allowed by ReBAC"
+	}
+	localized := i18n.Translate(lang, key)
+	if localized == "" || localized == key {
+		// i18n.Translate returns the key unchanged when missing. Strip the
+		// "biz:" prefix for a clean human-readable fallback.
+		if allowed {
+			return "Allowed by ReBAC"
+		}
+		return "Denied by ReBAC (no path from user to object#relation)"
+	}
+	return localized
 }

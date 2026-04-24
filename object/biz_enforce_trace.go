@@ -51,6 +51,10 @@ func BizEnforceEx(owner, appName string, request []interface{}, lang string) (*E
 		return nil, fmt.Errorf("biz app is disabled: %s/%s", owner, appName)
 	}
 
+	if trace, handled, err := dispatchEnforceExIfReBAC(config, request, lang); handled {
+		return trace, err
+	}
+
 	e, err := GetBizEnforcer(owner, appName)
 	if err != nil {
 		return nil, err
