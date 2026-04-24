@@ -785,10 +785,9 @@ func (ctx *checkContext) checkUnion(key TupleKey, u *openfgav1.Usersets, depth i
 
 	var g errgroup.Group
 	var found atomic.Bool
-	// sawCycle records whether any branch returned StateCycle so a
-	// denied-plus-cycle union surfaces as StateCycle (conservative) rather
-	// than StateDenied. Branches run concurrently; protected by a mutex
-	// because a plain atomic bool can't express the unionState reduction.
+	// sawCycle is monotone (false→true latch), so a plain atomic.Bool
+	// suffices — no mutex needed. Losing a late cycle observation when
+	// `found` short-circuits is safe: unionState(Allowed, Cycle) == Allowed.
 	sawCycle := atomic.Bool{}
 	for _, c := range children {
 		c := c
@@ -917,9 +916,7 @@ func (ctx *checkContext) checkDifference(key TupleKey, d *openfgav1.Difference, 
 // ReBACCheck evaluates whether req.TupleKey.User has req.TupleKey.Relation
 // on req.TupleKey.Object within the given store. Implements OpenFGA v1.1
 // Check semantics: resolve the app's authorization model, then recursively
-// evaluate rewrites with request-scoped memoisation and a depth cap. The
-// individual rewrite bodies are stubs in this commit; see evaluate() for
-// the dispatch table.
+// evaluate rewrites with request-scoped memoisation and a depth cap.
 func ReBACCheck(req *CheckRequest) (*CheckResult, error) {
 	if req == nil {
 		return nil, fmt.Errorf("rebac check: nil request")
