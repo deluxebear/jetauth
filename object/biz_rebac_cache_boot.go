@@ -76,6 +76,14 @@ func InitBizReBACCache() {
 		logs.Warning("biz rebac cache: L3 Redis connect failed at %s, staying on L2-only: %v", addr, err)
 		return
 	}
+	// Close any prior cache (from a previous init — common in tests /
+	// hot-reload flows) before swapping. Without this, re-init leaks one
+	// Redis pub/sub subscriber goroutine + one TCP connection per call.
+	// Plain InMemory / Instrumented wrappers Close() to a no-op, so this
+	// is safe regardless of the outgoing impl type.
+	if prior := *bizReBACCache.Load(); prior != nil {
+		_ = prior.Close()
+	}
 	SetBizReBACCache(tc)
 	logs.Info("biz rebac cache: L3 Redis connected at %s (prefix=%q, channel=%q)", addr, opts.KeyPrefix, opts.ChannelKey)
 }

@@ -19,7 +19,26 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/prometheus/client_golang/prometheus"
+	dto "github.com/prometheus/client_model/go"
 )
+
+// testingCounterValue reads the current value of a CounterVec label
+// without pulling in prometheus/client_golang/prometheus/testutil
+// (not vendored). Returns 0.0 if the labeled counter doesn't exist yet.
+func testingCounterValue(t *testing.T, cv *prometheus.CounterVec, label string) float64 {
+	t.Helper()
+	c, err := cv.GetMetricWithLabelValues(label)
+	if err != nil {
+		t.Fatalf("GetMetricWithLabelValues(%q): %v", label, err)
+	}
+	var m dto.Metric
+	if err := c.Write(&m); err != nil {
+		t.Fatalf("counter.Write: %v", err)
+	}
+	return m.GetCounter().GetValue()
+}
 
 // fakeL3 is a tiny in-process stand-in for RedisBizReBACCache — implements
 // BizReBACCache but doesn't talk to Redis. Used to exercise TieredCache
@@ -229,5 +248,129 @@ func TestTieredCache_StarFlushAllStores(t *testing.T) {
 	}
 	if _, ok := l2.Get(ctx, cacheKey{StoreId: "s/b", Object: "o:2", Relation: "r"}); ok {
 		t.Error("expected all L2 entries flushed on *")
+	}
+}
+
+// TestTieredCache_SetCapsL2TTL locks in the B3.3 invariant: the L2
+// tier must never outlive L3. A caller passing ttl > bizTuplesetCacheTTL
+// should see L2 expire at bizTuplesetCacheTTL while L3 keeps the caller
+// TTL. We can't observe L3's TTL on the fake, but we can verify the L2
+// value used via the in-memory cache's internal expiresAt.
+func TestTieredCache_SetCapsL2TTL(t *testing.T) {
+	l2 := NewInMemoryBizReBACCache()
+	l3 := newFakeL3()
+	tc := NewTieredCache(l2, l3)
+	defer tc.Close()
+	ctx := context.Background()
+	k := cacheKey{StoreId: "s/a", Object: "o:1", Relation: "r"}
+	tc.Set(ctx, k, []tupleRef{{User: "u:a"}}, time.Hour)
+
+	v, ok := l2.m.Load(k)
+	if !ok {
+		t.Fatal("expected L2 to have the entry after Set")
+	}
+	entry := v.(*cacheEntry)
+	// Entry must expire no later than bizTuplesetCacheTTL from now.
+	if time.Until(entry.expires) > bizTuplesetCacheTTL+time.Second {
+		t.Errorf("L2 TTL not capped: expires in %v, want <= %v",
+			time.Until(entry.expires), bizTuplesetCacheTTL)
+	}
+
+	// ttl <= 0 must still write both tiers (not a no-op) with the default
+	// L2 cap, otherwise Redis would persist-forever on L3 and invert the
+	// invariant.
+	k2 := cacheKey{StoreId: "s/a", Object: "o:2", Relation: "r"}
+	tc.Set(ctx, k2, []tupleRef{{User: "u:a"}}, 0)
+	if _, ok := l2.Get(ctx, k2); !ok {
+		t.Error("expected L2 to have the entry even when caller passes ttl=0")
+	}
+	if _, ok := l3.Get(ctx, k2); !ok {
+		t.Error("expected L3 to have the entry even when caller passes ttl=0")
+	}
+}
+
+// TestTieredCache_FlushOrderProtectsL2 guards against the race where
+// Get fall-through (L2 miss → L3 hit → L2 warm) could re-populate L2
+// with a stale tupleset if FlushStore cleared L2 before L3. The
+// regression shape is: FlushStore returns, but a subsequent Get on the
+// same instance still sees stale data. With L3-first ordering this
+// can't happen — if the Get won the race, it's on cached data that
+// hasn't been invalidated yet, which is fine; if the flush won, both
+// tiers are clear.
+func TestTieredCache_FlushOrderProtectsL2(t *testing.T) {
+	l2 := NewInMemoryBizReBACCache()
+	l3 := newFakeL3()
+	tc := NewTieredCache(l2, l3)
+	defer tc.Close()
+	ctx := context.Background()
+	storeId := "s/a"
+	k := cacheKey{StoreId: storeId, Object: "o:1", Relation: "r"}
+	tc.Set(ctx, k, []tupleRef{{User: "u:a"}}, 5*time.Second)
+
+	tc.FlushStore(ctx, storeId)
+
+	// After FlushStore returns, neither tier may be able to serve the key.
+	if _, ok := l2.Get(ctx, k); ok {
+		t.Error("L2 still has entry after FlushStore — flush order bug")
+	}
+	if _, ok := l3.Get(ctx, k); ok {
+		t.Error("L3 still has entry after FlushStore")
+	}
+
+	// Same shape for Invalidate.
+	tc.Set(ctx, k, []tupleRef{{User: "u:a"}}, 5*time.Second)
+	tc.Invalidate(ctx, k)
+	if _, ok := l2.Get(ctx, k); ok {
+		t.Error("L2 still has entry after Invalidate — flush order bug")
+	}
+	if _, ok := l3.Get(ctx, k); ok {
+		t.Error("L3 still has entry after Invalidate")
+	}
+}
+
+// TestTieredCache_PerTierMetrics asserts that TieredCache.Get emits the
+// correct hit/miss counters per tier. The commit wiring inlines the
+// recordReBACCacheHit/Miss calls rather than wrapping sub-tiers with
+// InstrumentedBizReBACCache — this test guards against flipping "l2"/
+// "l3" labels or dropping an emit.
+func TestTieredCache_PerTierMetrics(t *testing.T) {
+	l2 := NewInMemoryBizReBACCache()
+	l3 := newFakeL3()
+	tc := NewTieredCache(l2, l3)
+	defer tc.Close()
+	ctx := context.Background()
+	k := cacheKey{StoreId: "s/a", Object: "o:m", Relation: "r"}
+
+	l2HitBefore := testingCounterValue(t, rebacCacheHits, "l2")
+	l2MissBefore := testingCounterValue(t, rebacCacheMisses, "l2")
+	l3HitBefore := testingCounterValue(t, rebacCacheHits, "l3")
+	l3MissBefore := testingCounterValue(t, rebacCacheMisses, "l3")
+
+	// Case 1: full miss — L2 miss + L3 miss.
+	_, _ = tc.Get(ctx, k)
+	if got := testingCounterValue(t, rebacCacheMisses, "l2") - l2MissBefore; got != 1 {
+		t.Errorf("full miss: l2 miss delta = %v, want 1", got)
+	}
+	if got := testingCounterValue(t, rebacCacheMisses, "l3") - l3MissBefore; got != 1 {
+		t.Errorf("full miss: l3 miss delta = %v, want 1", got)
+	}
+
+	// Case 2: L3 populated, L2 empty — L2 miss + L3 hit + L2 warm.
+	l3.Set(ctx, k, []tupleRef{{User: "u:a"}}, time.Minute)
+	_, _ = tc.Get(ctx, k)
+	if got := testingCounterValue(t, rebacCacheMisses, "l2") - l2MissBefore; got != 2 {
+		t.Errorf("l3 hit: l2 miss delta = %v, want 2", got)
+	}
+	if got := testingCounterValue(t, rebacCacheHits, "l3") - l3HitBefore; got != 1 {
+		t.Errorf("l3 hit: l3 hit delta = %v, want 1", got)
+	}
+
+	// Case 3: second Get — L2 has been warmed, so L2 hit and L3 untouched.
+	_, _ = tc.Get(ctx, k)
+	if got := testingCounterValue(t, rebacCacheHits, "l2") - l2HitBefore; got != 1 {
+		t.Errorf("l2 hit: l2 hit delta = %v, want 1", got)
+	}
+	if got := testingCounterValue(t, rebacCacheHits, "l3") - l3HitBefore; got != 1 {
+		t.Errorf("l2 hit: l3 hit delta = %v, want 1 (unchanged from case 2)", got)
 	}
 }

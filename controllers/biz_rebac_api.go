@@ -9,8 +9,10 @@
 package controllers
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
+	"time"
 
 	"github.com/deluxebear/jetauth/object"
 	"github.com/deluxebear/jetauth/util"
@@ -660,13 +662,29 @@ func (c *ApiController) BizCountTuples() {
 	c.ResponseOk(bizCountTuplesResponse{Count: count})
 }
 
+// maxBizBatchCheckItems caps a single BizBatchCheck body. Each item
+// runs a full ReBACCheck serially, so a hostile caller with no cap can
+// pin an API worker for seconds on a single request. 100 matches the
+// OpenFGA reference and is an order of magnitude above what any admin
+// UI batches in practice.
+const maxBizBatchCheckItems = 100
+
+// bizBatchCheckTimeout hard-caps the wall clock of one batch. The engine
+// has no per-call deadline today (CP-5 scope), so we enforce one here.
+// 15s is 3× the listTimeout used by ListObjects/ListUsers, giving 100
+// serial Checks a comfortable budget even under p99 latency.
+const bizBatchCheckTimeout = 15 * time.Second
+
 // BizBatchCheck
 // @Summary BizBatchCheck
 // @Tags Business Permission API
 // @Description Evaluate multiple Check requests against the same app /
 // authorization model in one call. Response preserves input order; each
 // item carries its own allowed flag and (on failure) an error string.
-// Per-item appId is not supported — the batch is app-scoped.
+// Per-item appId is not supported — the batch is app-scoped. Hard caps:
+// at most `maxBizBatchCheckItems` items per call; `bizBatchCheckTimeout`
+// wall-clock budget across the batch (remaining items short-circuit to
+// a timeout error when the deadline fires).
 // @Param   appId   query    string  false  "The app id (owner/appName); required via body if absent"
 // @Param   body    body     controllers.bizBatchCheckRequest  true  "Batch check request"
 // @Success 200 {object} controllers.bizBatchCheckResponse "Ordered results, one per input"
@@ -688,6 +706,10 @@ func (c *ApiController) BizBatchCheck() {
 		c.ResponseError("checks must not be empty")
 		return
 	}
+	if len(body.Checks) > maxBizBatchCheckItems {
+		c.ResponseError(fmt.Sprintf("batch size %d exceeds limit of %d", len(body.Checks), maxBizBatchCheckItems))
+		return
+	}
 	owner, appName, err := util.GetOwnerAndNameFromIdWithError(body.AppId)
 	if err != nil {
 		c.ResponseError(err.Error())
@@ -695,8 +717,18 @@ func (c *ApiController) BizBatchCheck() {
 	}
 	storeId := object.BuildStoreId(owner, appName)
 
+	deadlineCtx, cancel := context.WithTimeout(c.Ctx.Request.Context(), bizBatchCheckTimeout)
+	defer cancel()
+
 	results := make([]bizBatchCheckResponseItem, len(body.Checks))
 	for i, item := range body.Checks {
+		// Short-circuit once the batch-wide deadline has expired. Remaining
+		// items report the deadline verbatim so callers can resubmit in
+		// smaller batches rather than guessing which items ran.
+		if err := deadlineCtx.Err(); err != nil {
+			results[i] = bizBatchCheckResponseItem{Error: fmt.Sprintf("batch deadline exceeded: %v", err)}
+			continue
+		}
 		res, err := object.ReBACCheck(&object.CheckRequest{
 			StoreId:              storeId,
 			AuthorizationModelId: body.AuthorizationModelId,

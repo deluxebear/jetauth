@@ -26,6 +26,7 @@ package object
 
 import (
 	"context"
+	"strings"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -106,50 +107,36 @@ func recordReBACEngineError(err error) {
 // metric labels. Kept open-ended ("unknown" fallback) so new error paths
 // don't silently drop off the dashboard — they show up as "unknown" and
 // someone can promote them to a dedicated label when the pattern repeats.
+//
+// Ordering matters: "schema" is checked before "resolve_model" and
+// "tuple_read" because schema errors often mention models/tuples too,
+// and we'd rather see them under the more specific label.
 func classifyReBACError(err error) string {
 	if err == nil {
 		return ""
 	}
 	msg := err.Error()
 	switch {
-	case containsAny(msg, "not in schema", "not defined", "validateCheckRequestTuple", "schema"):
+	case containsAnyOf(msg, "not in schema", "not defined", "validateCheckRequestTuple", "schema"):
 		return "schema"
-	case containsAny(msg, "resolve authorization model", "resolveAuthorizationModel"):
+	case containsAnyOf(msg, "resolve authorization model", "resolveAuthorizationModel"):
 		return "resolve_model"
-	case containsAny(msg, "tuple", "tupleset", "db"):
+	case containsAnyOf(msg, "tuple", "tupleset", "db"):
 		return "tuple_read"
 	default:
 		return "unknown"
 	}
 }
 
-// containsAny returns true if s contains any of the provided substrings.
-// Matches are case-sensitive — all engine error strings are stable ASCII.
-func containsAny(s string, subs ...string) bool {
+// containsAnyOf returns true if s contains any of the provided substrings.
+// Thin wrapper over strings.Contains to keep the switch above readable.
+func containsAnyOf(s string, subs ...string) bool {
 	for _, sub := range subs {
-		if indexOf(s, sub) >= 0 {
+		if strings.Contains(s, sub) {
 			return true
 		}
 	}
 	return false
-}
-
-// indexOf is a tiny strings.Index shim to avoid pulling in the package
-// just for one call — keeps the import block lean in this hot-path file.
-func indexOf(s, sub string) int {
-	n, m := len(s), len(sub)
-	if m == 0 {
-		return 0
-	}
-	if m > n {
-		return -1
-	}
-	for i := 0; i <= n-m; i++ {
-		if s[i:i+m] == sub {
-			return i
-		}
-	}
-	return -1
 }
 
 // InstrumentedBizReBACCache decorates a BizReBACCache with hit/miss

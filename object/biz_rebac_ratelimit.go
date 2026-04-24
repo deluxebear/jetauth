@@ -108,19 +108,17 @@ func (r *reBACRateLimiter) size() int {
 	return len(r.buckets)
 }
 
-// Close stops the GC goroutine. Safe to call multiple times. Blocks
-// until the GC loop observes stopCh and exits, so callers can rely on
-// "no more GC ticks" after this returns.
+// Close stops the GC goroutine. Safe to call multiple times — stopOnce
+// guards the channel close, and a second caller simply re-reads the
+// already-closed gcStopped channel (reads from a closed channel return
+// the zero value immediately). Blocks until the GC loop observes stopCh
+// and exits, so callers can rely on "no more GC ticks" after this
+// returns. Only valid on instances built via newReBACRateLimiter.
 func (r *reBACRateLimiter) Close() {
 	r.stopOnce.Do(func() {
 		close(r.stopCh)
 	})
-	// Drain the done channel if the GC goroutine was actually running.
-	// Nil-guard makes Close safe on a zero-value (which shouldn't exist
-	// in practice, but defense-in-depth beats a panic).
-	if r.gcStopped != nil {
-		<-r.gcStopped
-	}
+	<-r.gcStopped
 }
 
 func (r *reBACRateLimiter) gcLoop() {

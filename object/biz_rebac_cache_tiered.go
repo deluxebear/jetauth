@@ -149,25 +149,36 @@ func (t *TieredCache) Get(ctx context.Context, k cacheKey) ([]tupleRef, bool) {
 
 // Set writes to both tiers synchronously. L2 TTL is min(caller TTL,
 // bizTuplesetCacheTTL) so L2 never outlives L3. The invariant that
-// L2's TTL ≤ L3's TTL is enforced here.
+// L2's TTL ≤ L3's TTL is enforced here. ttl ≤ 0 is treated as "use the
+// default L2 TTL on both tiers" — L3's Redis client would otherwise
+// interpret zero as persist-forever, inverting the tier relationship.
 func (t *TieredCache) Set(ctx context.Context, k cacheKey, refs []tupleRef, ttl time.Duration) {
+	if ttl <= 0 {
+		ttl = bizTuplesetCacheTTL
+	}
 	l2TTL := min(ttl, bizTuplesetCacheTTL)
 	t.l2.Set(ctx, k, refs, l2TTL)
 	t.l3.Set(ctx, k, refs, ttl)
 }
 
-// Invalidate evicts the key from both tiers. L3's Invalidate broadcasts
-// on the pub/sub channel, causing a return-trip that also invalidates
-// the local L2 — that second call is idempotent.
+// Invalidate evicts the key from both tiers. L3 is hit BEFORE L2 so
+// that a concurrent Get on this instance can't read the stale value
+// from L3, warm it back into L2 (Get's read-through path writes L2 on
+// L3-hit), and survive the flush. L3's Invalidate broadcasts on the
+// pub/sub channel, causing a return-trip that also invalidates the
+// local L2 — that second call is idempotent.
 func (t *TieredCache) Invalidate(ctx context.Context, k cacheKey) {
-	t.l2.Invalidate(ctx, k)
 	t.l3.Invalidate(ctx, k)
+	t.l2.Invalidate(ctx, k)
 }
 
-// FlushStore evicts an entire store from both tiers.
+// FlushStore evicts an entire store from both tiers. Same ordering as
+// Invalidate — L3 first, then L2 — so a concurrent Get on the same
+// instance can't repopulate L2 from a stale L3 tupleset during the
+// flush window.
 func (t *TieredCache) FlushStore(ctx context.Context, storeId string) {
-	t.l2.FlushStore(ctx, storeId)
 	t.l3.FlushStore(ctx, storeId)
+	t.l2.FlushStore(ctx, storeId)
 }
 
 // Close closes both tiers. Returns the first non-nil error encountered.
