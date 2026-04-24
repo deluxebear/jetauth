@@ -64,17 +64,21 @@ describe("useAccessibleResources", () => {
   });
 
   it("aborts in-flight request on unmount without leaking setState", async () => {
-    // Fetch never resolves — we rely on abort fired via AbortController.signal
-    let rejectFn: ((e: Error) => void) | null = null;
+    // Fetch never resolves — we rely on abort fired via AbortController.signal.
+    // The reject callback escapes through a Promise executor closure, which
+    // TS's control-flow analysis can't narrow across; wrap it in an object
+    // so the field type stays `((e: Error) => void) | null` at the call site
+    // instead of narrowing to the initializer's `null` → `never`.
+    const rejectRef: { fn: ((e: Error) => void) | null } = { fn: null };
     vi.spyOn(globalThis, "fetch").mockImplementationOnce(
-      () => new Promise((_resolve, reject) => { rejectFn = reject; }),
+      () => new Promise((_resolve, reject) => { rejectRef.fn = reject; }),
     );
     const { unmount } = renderHook(() => useAccessibleResources({
       appId: "o/a", type: "doc", relation: "viewer", user: "user:alice",
     }));
     unmount();
-    // Simulate AbortController.abort() path
-    if (rejectFn) rejectFn(Object.assign(new Error("aborted"), { name: "AbortError" }));
+    // Simulate AbortController.abort() path.
+    rejectRef.fn?.(Object.assign(new Error("aborted"), { name: "AbortError" }));
     // No assertion needed — absence of "setState on unmounted component" warning suffices
   });
 

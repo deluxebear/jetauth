@@ -151,7 +151,7 @@ func seedBenchFixture(tb testing.TB) *benchFixture {
 		case 0:
 			tuples = append(tuples, &BizTuple{
 				Owner: owner, AppName: appName,
-				Object: fmt.Sprintf("group:g%03d", r.IntN(100)),
+				Object:   fmt.Sprintf("group:g%03d", r.IntN(100)),
 				Relation: "member", User: uid,
 			})
 		case 1:

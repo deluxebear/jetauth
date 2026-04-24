@@ -60,11 +60,13 @@ func (f *fakeL3) Get(_ context.Context, k cacheKey) ([]tupleRef, bool) {
 	v, ok := f.data[k]
 	return v, ok
 }
+
 func (f *fakeL3) Set(_ context.Context, k cacheKey, refs []tupleRef, _ time.Duration) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	f.data[k] = refs
 }
+
 func (f *fakeL3) Invalidate(_ context.Context, k cacheKey) {
 	f.mu.Lock()
 	f.invalidated = append(f.invalidated, k)
@@ -75,6 +77,7 @@ func (f *fakeL3) Invalidate(_ context.Context, k cacheKey) {
 		f.onInvalidate(k)
 	}
 }
+
 func (f *fakeL3) FlushStore(_ context.Context, storeId string) {
 	f.mu.Lock()
 	f.flushed = append(f.flushed, storeId)
