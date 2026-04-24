@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"runtime"
 	"sort"
+	"strings"
 	"time"
 
 	"golang.org/x/sync/errgroup"
@@ -258,7 +259,14 @@ func ReBACListObjects(req *ListObjectsRequest) (res *ListObjectsResult, err erro
 		pageSize = maxListPageSize
 	}
 
-	candidates, err := gatherCandidateObjects(owner, appName, req.ObjectType, req.ContextualTuples, cursor.LastObjectId)
+	// Preselect hints narrow the candidate scan by the caller's
+	// effective subject set + the relation's reachable-via paths.
+	// buildPreselectHints returns nil when the request shape isn't
+	// preselect-safe (wildcard/userset caller, unknown rewrite AST,
+	// empty hint sets) — gatherCandidateObjects then falls back to
+	// the unfiltered scan.
+	hints := buildPreselectHints(model, owner, appName, req.ObjectType, req.Relation, req.User)
+	candidates, err := gatherCandidateObjects(owner, appName, req.ObjectType, hints, req.ContextualTuples, cursor.LastObjectId)
 	if err != nil {
 		return nil, err
 	}
@@ -594,12 +602,22 @@ func gatherCandidateUsers(owner, appName, object, relation string, contextual []
 }
 
 // gatherCandidateObjects returns the sorted union of object ids (of
-// objectType) appearing anywhere in the store plus any contextual tuples
-// — the full candidate set for a single ListObjects page. Objects ≤
-// lastObjectId are skipped so cursor-based pagination walks forward
-// deterministically. DB scan uses idx_reverse (store_id + object_type
-// columns) for an index seek.
-func gatherCandidateObjects(owner, appName, objectType string, contextual []TupleKey, lastObjectId string) ([]string, error) {
+// objectType) that COULD grant the caller `relation` via some rewrite
+// path, plus any contextual tuples — the candidate set for a single
+// ListObjects page. Objects ≤ lastObjectId are skipped so cursor-based
+// pagination walks forward deterministically. DB scan uses idx_reverse
+// (store_id + object_type columns) for an index seek.
+//
+// When `hints` is non-nil (computed via buildPreselectHints) the scan
+// narrows to objects where either:
+//   - any of hints.effectiveSubjects appears as `user` under one of
+//     hints.directRelations (covers `this` + computed_userset paths),
+//   - OR any tuple under one of hints.ttuSourceRelations exists
+//     (over-approximation of TTU chains).
+//
+// With hints nil the legacy full-scan path runs — callers fall back
+// to that whenever preselect isn't safe for the request shape.
+func gatherCandidateObjects(owner, appName, objectType string, hints *preselectHints, contextual []TupleKey, lastObjectId string) ([]string, error) {
 	seen := map[string]bool{}
 	for _, t := range contextual {
 		objType, _, perr := parseObjectString(t.Object)
@@ -620,6 +638,32 @@ func gatherCandidateObjects(owner, appName, objectType string, contextual []Tupl
 		if lastObjectId != "" {
 			session = session.And("object > ?", lastObjectId)
 		}
+		if hints != nil {
+			// Build a single OR'd WHERE clause: (relation IN direct AND
+			// user IN subjects) OR (relation IN ttuSrc). Keeping both
+			// arms in one query lets the index planner pick a single
+			// plan instead of forcing two separate scans.
+			fragments := []string{}
+			args := []any{}
+			if len(hints.directRelations) > 0 && len(hints.effectiveSubjects) > 0 {
+				fragments = append(fragments, "(relation IN ("+placeholders(len(hints.directRelations))+") AND user IN ("+placeholders(len(hints.effectiveSubjects))+"))")
+				for _, r := range hints.directRelations {
+					args = append(args, r)
+				}
+				for _, s := range hints.effectiveSubjects {
+					args = append(args, s)
+				}
+			}
+			if len(hints.ttuSourceRelations) > 0 {
+				fragments = append(fragments, "relation IN ("+placeholders(len(hints.ttuSourceRelations))+")")
+				for _, r := range hints.ttuSourceRelations {
+					args = append(args, r)
+				}
+			}
+			if len(fragments) > 0 {
+				session = session.And("("+strings.Join(fragments, " OR ")+")", args...)
+			}
+		}
 		rows := []*BizTuple{}
 		if err := session.Cols("object").Find(&rows); err != nil {
 			return nil, fmt.Errorf("rebac list_objects: reverse scan: %w", err)
@@ -635,4 +679,20 @@ func gatherCandidateObjects(owner, appName, objectType string, contextual []Tupl
 	}
 	sort.Strings(out)
 	return out, nil
+}
+
+// placeholders returns a comma-separated "?, ?, ?" string for use in
+// SQL IN clauses. Tiny helper that keeps the WHERE assembly readable.
+func placeholders(n int) string {
+	if n <= 0 {
+		return ""
+	}
+	out := make([]byte, 0, 2*n)
+	for i := 0; i < n; i++ {
+		if i > 0 {
+			out = append(out, ',')
+		}
+		out = append(out, '?')
+	}
+	return string(out)
 }
