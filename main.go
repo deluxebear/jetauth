@@ -54,6 +54,7 @@ func main() {
 
 	object.InitDb()
 	object.InitCustomHttpEmailMigration()
+	object.InitBizReBACCache()
 
 	// Handle export command
 	if object.ShouldExportData() {
