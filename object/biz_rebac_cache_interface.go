@@ -18,6 +18,10 @@ import (
 // L2 (in-memory) and L3 (Redis, added in CP-8 C6) both satisfy it.
 // Callers interact only through this interface; tier-specific
 // behavior (TTL, pub/sub invalidation) lives in each impl.
+//
+// Note: uses unexported cacheKey and tupleRef types; all impls must
+// live in package object. Cross-package adapters are out of scope —
+// extend the existing package rather than introducing a new one.
 type BizReBACCache interface {
 	Get(ctx context.Context, key cacheKey) ([]tupleRef, bool)
 	Set(ctx context.Context, key cacheKey, refs []tupleRef, ttl time.Duration)
@@ -55,7 +59,11 @@ func (c *InMemoryBizReBACCache) Get(_ context.Context, key cacheKey) ([]tupleRef
 	if !ok {
 		return nil, false
 	}
-	e := v.(*cacheEntry)
+	e, ok := v.(*cacheEntry)
+	if !ok {
+		c.m.Delete(key)
+		return nil, false
+	}
 	if time.Now().After(e.expires) {
 		c.m.Delete(key)
 		return nil, false
