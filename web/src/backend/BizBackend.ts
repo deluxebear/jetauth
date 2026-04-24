@@ -954,6 +954,30 @@ export function bizListObjects(req: BizListObjectsRequest) {
   return request<BizListObjectsResult>("POST", "/api/biz-list-objects", req);
 }
 
+/**
+ * listAccessibleObjectsAll paginates bizListObjects until exhausted and
+ * returns the flattened list. Honors HTTP 429 via the generic `request`
+ * helper's error surface; callers that want backoff should prefer the
+ * useAccessibleResources hook (hook loops internally and exposes
+ * rateLimited state).
+ */
+export async function listAccessibleObjectsAll(
+  req: BizListObjectsRequest,
+): Promise<string[]> {
+  const objects: string[] = [];
+  let token = req.continuationToken ?? "";
+  // Hard cap to prevent runaway loops if the backend mis-reports tokens.
+  for (let i = 0; i < 1000; i++) {
+    const res = await bizListObjects({ ...req, continuationToken: token });
+    // request<T> returns ApiResponse<T> = { status, msg, data: T }
+    const data = res.data;
+    objects.push(...(data.objects ?? []));
+    token = data.continuationToken ?? "";
+    if (!token) break;
+  }
+  return objects;
+}
+
 // 9. biz-list-users
 export function bizListUsers(req: BizListUsersRequest) {
   return request<BizListUsersResult>("POST", "/api/biz-list-users", req);
