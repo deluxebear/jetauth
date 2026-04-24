@@ -25,7 +25,6 @@ var (
 	errBadReBACArity   = errors.New("rebac: request must be 3 elements [object, relation, user]")
 	errBadReBACElement = errors.New("rebac: every element must be a string")
 	errBadReBACObject  = errors.New("rebac: object must be in form 'type:id'")
-	errNotReBACModel   = errors.New("rebac: not a ReBAC app")
 )
 
 // reBACEnforceTuple is the parsed form of a ReBAC-mode BizEnforce request.
@@ -123,21 +122,12 @@ func dispatchEnforceExIfReBAC(config *BizAppConfig, request []any, lang string) 
 }
 
 // reBACTraceReason returns a short localized explanation for the Tester UI.
-// Falls back to English if the i18n key is missing so admins always see
-// something readable.
+// i18n.Translate strips the "biz:" namespace prefix when a key is missing,
+// so the post-colon suffix is always human-readable on its own — we don't
+// need a separate fallback branch.
 func reBACTraceReason(lang string, allowed bool) string {
-	key := "biz:Denied by ReBAC (no path from user to object#relation)"
 	if allowed {
-		key = "biz:Allowed by ReBAC"
+		return i18n.Translate(lang, "biz:Allowed by ReBAC")
 	}
-	localized := i18n.Translate(lang, key)
-	if localized == "" || localized == key {
-		// i18n.Translate returns the key unchanged when missing. Strip the
-		// "biz:" prefix for a clean human-readable fallback.
-		if allowed {
-			return "Allowed by ReBAC"
-		}
-		return "Denied by ReBAC (no path from user to object#relation)"
-	}
-	return localized
+	return i18n.Translate(lang, "biz:Denied by ReBAC (no path from user to object#relation)")
 }

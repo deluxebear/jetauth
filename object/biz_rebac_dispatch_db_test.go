@@ -121,6 +121,41 @@ func TestBizEnforceDispatch_ReBACApp_Deny(t *testing.T) {
 	}
 }
 
+// TestBizEnforceDispatch_Ex_ReBACApp_Deny verifies that BizEnforceEx returns
+// a populated trace with Allowed=false when the app is ReBAC but no tuple
+// grants access (deny path parity with TestBizEnforceDispatch_ReBACApp_Deny).
+func TestBizEnforceDispatch_Ex_ReBACApp_Deny(t *testing.T) {
+	if ormer == nil {
+		t.Skip("DB unavailable")
+	}
+	owner := "dispatch-ex-deny-" + util.GenerateUUID()[:8]
+	appName := "app_dispatch_ex_rebac_deny"
+	seedRebacAppConfigForTest(t, owner, appName)
+
+	res, err := SaveAuthorizationModel(owner, appName, editorDSL, "test-user")
+	if err != nil || res.Outcome != SaveOutcomeAdvanced {
+		t.Fatalf("save editorDSL: err=%v outcome=%v", err, res)
+	}
+
+	// No tuple seeded — expect deny
+	trace, err := BizEnforceEx(owner, appName, []interface{}{"document:d1", "editor", "user:nobody"}, "en")
+	if err != nil {
+		t.Fatalf("BizEnforceEx: %v", err)
+	}
+	if trace == nil {
+		t.Fatal("expected non-nil trace")
+	}
+	if trace.Allowed {
+		t.Error("expected Allowed=false (no tuple), got true")
+	}
+	if len(trace.MatchedPolicy) != 3 {
+		t.Errorf("expected 3-elem MatchedPolicy even on deny, got %v", trace.MatchedPolicy)
+	}
+	if trace.Reason == "" {
+		t.Error("Reason must be non-empty on deny")
+	}
+}
+
 // TestBizEnforceDispatch_Ex_ReBACApp verifies that BizEnforceEx routes to the
 // ReBAC engine and returns a populated EnforceTraceResult when a tuple exists.
 func TestBizEnforceDispatch_Ex_ReBACApp(t *testing.T) {
