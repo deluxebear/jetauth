@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Plus, Trash2, Upload, X as XIcon } from "lucide-react";
+import { Plus, Trash2, Upload, Wand2, X as XIcon } from "lucide-react";
 import { useTranslation } from "../i18n";
 import DataTable, { type Column } from "./DataTable";
 import { useModal } from "./Modal";
 import * as BizBackend from "../backend/BizBackend";
 import type { BizTuple, BizWriteTuplesRequest } from "../backend/BizBackend";
+import BizTupleBulkGrantWizard from "./BizTupleBulkGrantWizard";
+import { parseSchemaJson, type SchemaAST } from "./bizSchemaAst";
 
 // BizTupleManager — Task 7. List + filter + add + bulk import + bulk
 // delete of (object, relation, user) tuples for one ReBAC app. The
@@ -39,6 +41,27 @@ export default function BizTupleManager({ appId }: Props) {
   const [filter, setFilter] = useState({ object: "", relation: "", user: "" });
   const [addOpen, setAddOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
+  const [wizardOpen, setWizardOpen] = useState(false);
+  const [schema, setSchema] = useState<SchemaAST | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    void BizBackend.getBizAuthorizationModel(appId).then((res) => {
+      if (cancelled) return;
+      if (res.status === "ok" && res.data?.schemaJson) {
+        try {
+          setSchema(parseSchemaJson(res.data.schemaJson));
+        } catch {
+          setSchema(null);
+        }
+      } else {
+        setSchema(null);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [appId]);
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -192,6 +215,15 @@ export default function BizTupleManager({ appId }: Props) {
           </button>
           <button
             type="button"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[13px] border border-border hover:bg-surface-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary/40 disabled:opacity-50 disabled:cursor-not-allowed"
+            onClick={() => setWizardOpen(true)}
+            disabled={!schema || schema.types.length === 0}
+          >
+            <Wand2 className="w-3.5 h-3.5" />
+            {t("rebac.wizard.title")}
+          </button>
+          <button
+            type="button"
             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[13px] font-medium bg-accent-primary text-white hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary/40"
             onClick={() => setAddOpen(true)}
           >
@@ -286,6 +318,20 @@ export default function BizTupleManager({ appId }: Props) {
             );
             void refresh();
             return true;
+          }}
+        />
+      )}
+
+      {schema && (
+        <BizTupleBulkGrantWizard
+          open={wizardOpen}
+          appId={appId}
+          ast={schema}
+          onCancel={() => setWizardOpen(false)}
+          onApply={(n) => {
+            setWizardOpen(false);
+            modal.toast(`${n} ${t("rebac.wizard.appliedSuffix")}`, "success");
+            void refresh();
           }}
         />
       )}
