@@ -34,11 +34,11 @@ export default function BizReBACOverview({ appId }: Props) {
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
   const [reloadKey, setReloadKey] = useState(0);
+  const [applying, setApplying] = useState(false);
   const modal = useModal();
 
   useEffect(() => {
     let cancelled = false;
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoading(true);
     Promise.all([
       BizBackend.getBizAuthorizationModel(appId),
@@ -86,25 +86,32 @@ export default function BizReBACOverview({ appId }: Props) {
   }, [appId, reloadKey]);
 
   async function applyTemplate(tpl: ReBACTemplate) {
-    const saveRes = await BizBackend.saveBizAuthorizationModel(appId, tpl.dsl);
-    if (saveRes.status !== "ok" || saveRes.data?.outcome === "conflict") {
-      modal.toast(saveRes.msg || t("rebac.common.error"), "error");
-      return;
+    setApplying(true);
+    try {
+      const saveRes = await BizBackend.saveBizAuthorizationModel(appId, tpl.dsl);
+      if (saveRes.status !== "ok" || saveRes.data?.outcome === "conflict") {
+        modal.toast(saveRes.msg || t("rebac.common.error"), "error");
+        return;
+      }
+      const writeRes = await BizBackend.writeBizTuples({
+        appId,
+        writes: tpl.sampleTuples.map((tk) => ({
+          object: tk.object,
+          relation: tk.relation,
+          user: tk.user,
+        })),
+      });
+      if (writeRes.status !== "ok") {
+        modal.toast(writeRes.msg || t("rebac.common.error"), "error");
+        return;
+      }
+      modal.toast(t("rebac.templates.applied"), "success");
+      setReloadKey((k) => k + 1);
+    } catch (err) {
+      modal.toast(err instanceof Error ? err.message : String(err), "error");
+    } finally {
+      setApplying(false);
     }
-    const writeRes = await BizBackend.writeBizTuples({
-      appId,
-      writes: tpl.sampleTuples.map((tk) => ({
-        object: tk.object,
-        relation: tk.relation,
-        user: tk.user,
-      })),
-    });
-    if (writeRes.status !== "ok") {
-      modal.toast(writeRes.msg || t("rebac.common.error"), "error");
-      return;
-    }
-    modal.toast(t("rebac.templates.applied"), "success");
-    setReloadKey((k) => k + 1);
   }
 
   if (loading) {
@@ -142,8 +149,9 @@ export default function BizReBACOverview({ appId }: Props) {
               <button
                 key={tpl.id}
                 type="button"
-                aria-label={`apply template ${tpl.i18nKey}`}
-                className="text-left rounded-lg border border-border bg-surface-2 p-4 hover:border-accent-primary/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary/40 transition"
+                aria-label={t("rebac.overview.applyTemplateLabel", { name: t(`rebac.templates.${tpl.i18nKey}.title`) })}
+                disabled={applying}
+                className="text-left rounded-lg border border-border bg-surface-2 p-4 hover:border-accent-primary/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary/40 transition disabled:opacity-50 disabled:cursor-not-allowed"
                 onClick={() => void applyTemplate(tpl)}
               >
                 <Icon className="w-5 h-5 text-accent-primary mb-2" aria-hidden />

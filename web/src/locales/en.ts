@@ -3472,6 +3472,7 @@ const en = {
   "rebac.overview.emptyState": "No schema saved yet — visit the Schema tab to create one.",
   "rebac.overview.emptyTitle": "Pick a scenario template to start",
   "rebac.overview.emptyHint": "Templates seed schema + sample tuples so you can try the Tester in 30 seconds",
+  "rebac.overview.applyTemplateLabel": "Apply template: {{name}}",
 
   // Scenario templates
   "rebac.templates.applied": "Template applied, initializing",

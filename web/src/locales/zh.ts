@@ -3462,6 +3462,7 @@ const zh: Record<string, string> = {
   "rebac.overview.emptyState": "尚未保存 Schema,请前往 Schema 页签创建",
   "rebac.overview.emptyTitle": "选择一个场景模板快速开始",
   "rebac.overview.emptyHint": "模板会写入 schema 与几条示例 tuple,30 秒内即可试用 Tester",
+  "rebac.overview.applyTemplateLabel": "应用模板:{{name}}",
 
   // Scenario templates
   "rebac.templates.applied": "模板已应用,正在初始化",
