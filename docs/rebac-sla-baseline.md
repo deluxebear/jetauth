@@ -1,9 +1,11 @@
 # ReBAC SLA baseline
 
-> Status: CP-8 initial baseline (captured 2026-04-24). Re-run `make
-> rebac-bench` whenever the engine hot path changes; append new rows
-> to the history table below rather than overwriting the canonical
-> numbers.
+> Status: **CP-8 initial baseline captured 2026-04-25 — `ReBACCheck`
+> passes (95 µs mean); `ReBACListObjects` MISSES the p99<300ms gate
+> (801 ms mean on 2500-doc fixture)**. ListObjects hotpath needs
+> optimization before cutting a release — see §Blockers below. Re-run
+> `make rebac-bench` whenever the engine hot path changes; append new
+> rows to the history table rather than overwriting.
 
 This document is the canonical record of the ReBAC engine's measured
 latency against the SLA targets set in spec §6.3.1 and §SC-5:
@@ -52,38 +54,99 @@ from `/debug/pprof/`).
 For CI-like numbers, pin CPU to performance mode and disable turbo
 boost where supported — we want a conservative baseline.
 
-## Baseline — 2026-04-24
+## Baseline — 2026-04-25
 
-> ⚠ **Placeholder** — populate this section after running
-> `make rebac-bench` on the release engineer's machine. The
-> placeholder entries below outline the required shape; delete the
-> ⚠ banner when they're replaced with real numbers.
-
-| Metric | ns/op | p50 (ms) | p99 (ms) | Target | Verdict |
+| Metric | ns/op (mean) | p50 est. (ms) | p99 est. (ms) | Target | Verdict |
 |---|---:|---:|---:|---:|:---:|
-| `BenchmarkReBAC_Check`        | _tbd_ | _tbd_ | _tbd_ | < 50  | _tbd_ |
-| `BenchmarkReBAC_ListObjects`  | _tbd_ | _tbd_ | _tbd_ | < 300 | _tbd_ |
+| `BenchmarkReBAC_Check`        |      95 175 |      ~0.1 |    ~0.3 | < 50  | ✅ **PASS** (500× headroom) |
+| `BenchmarkReBAC_ListObjects`  | 801 686 212 |    ~800   |  ~1 600 | < 300 | ❌ **FAIL** (~2.7× over mean; p99 projected ~5×) |
+
+> Go benchmarks report mean `ns/op`, not percentiles. p50/p99 above are
+> eyeball estimates derived from the per-op variance visible in 10s runs
+> (Check is hot-path uniform; ListObjects has long-tail driven by candidate
+> count × recursive rewrites). For authoritative p99, run the bench with a
+> per-iteration timer and dump to a CSV — or rerun with
+> `-cpuprofile=bench.prof` and inspect via `go tool pprof`.
+
+### Raw bench output (M2 Max, 2026-04-25)
+
+```
+goos: darwin
+goarch: arm64
+pkg: github.com/deluxebear/jetauth/object
+cpu: Apple M2 Max
+BenchmarkReBAC_Check-12          128868     95175 ns/op      30936 B/op        767 allocs/op
+BenchmarkReBAC_ListObjects-12        13 801686212 ns/op  256999862 B/op    6054808 allocs/op
+```
 
 ### Hardware / software
 
 | Field | Value |
 |---|---|
-| Host | _tbd_ (e.g. MacBook Pro 14", M2 Pro, 32 GB) |
-| OS | _tbd_ (e.g. macOS 15.2 / Darwin 25.x) |
-| Go | `go version` output |
-| DB | SQLite (`./jetauth.db`) or MySQL _x.y_ |
-| Commit | `git rev-parse --short HEAD` |
+| Host | MacBook Pro (Apple M2 Max, 12-core, 32 GB RAM) |
+| OS | macOS / Darwin 25.4.0 (arm64) |
+| Go | `go version go1.25.8 darwin/arm64` |
+| DB | SQLite (`./jetauth.db?cache=shared`) |
+| Commit | merge commit `1e0a73bb` (PR #2 merged to `main` at 2026-04-24) |
+| Fixture | 10 000 tuples × 4 rewrite branches × 2500 documents × 2500 users × 100 groups × 50 folders |
+| Cache | `bizReBACCacheL3Enabled=false` — L2 only (pessimistic baseline; warm L3 would reduce repeated DB reads) |
 
 ### Notes
 
-- _tbd_ — capture any caveats here: cold cache vs warm cache, whether
-  bizReBACCacheL3Enabled was on, benchmark CPU count, etc.
+- `ReBACCheck` at 95 µs mean has ~500× headroom against the 50 ms p99
+  target. Even assuming 10× tail latency, we're at 950 µs p99 ≪ 50 ms.
+  Holds comfortably.
+- `ReBACListObjects` at 801 ms mean with 2500 candidate documents tells
+  the story: candidate enumeration + serial `ReBACCheck` per candidate
+  scales as `N × Check`. With N≈2500 and Check≈300 µs per reachable
+  document (rewrite chains make reached documents far more expensive
+  than the 95 µs average), we land at ~750 ms, matching the observed
+  mean.
+- 6.05 M allocations per ListObjects call is the actionable signal —
+  each recursive rewrite allocates new `TupleKey`s, memo maps,
+  visited slices, and errgroup scaffolding.
+
+## Blockers
+
+### B1 — ReBACListObjects p99 > 300 ms target
+
+**Status:** OPEN, discovered 2026-04-25 by CP-8 baseline run.
+
+**Scope:** single-store, 10 k tuples, pageSize=100. On a 12-core Apple
+M2 Max with local SQLite and a warm process, one call averages 801 ms
+across 13 iterations; that is ~2.7× the 300 ms hard gate from spec
+§6.3.1. p99 is almost certainly worse.
+
+**Likely fix directions** (ordered by bang/buck):
+
+1. **Parallel candidate Check.** Current loop in
+   `object/biz_rebac_list.go:182` is serial; each candidate's Check is
+   independent. An `errgroup` with `GOMAXPROCS/2` workers should drop
+   wall-clock ~linearly with cores — targeted 4-6× speedup on an 8-core
+   runner, enough to clear 300 ms.
+2. **Short-circuit direct grants.** For candidates where the user
+   holds the relation via `this` (direct tuple), we can skip the full
+   rewrite tree; a cheap `ExistsDirectTuple(store, object, rel, user)`
+   would answer tens of candidates in one indexed query.
+3. **Reverse-relation index query.** Today `gatherCandidateObjects`
+   returns every object in the type, regardless of whether any grant
+   exists for `(user, relation)` at all. A `SELECT DISTINCT object
+   FROM biz_tuple WHERE store=… AND user=… AND object LIKE 'type:%'`
+   preselects candidates that have any tuple in play.
+4. **Allocation reduction.** 6 M allocs/call is the smoking gun for
+   CPU time. Pool the per-request `checkContext`, reuse the memo map,
+   avoid rebuilding `visited []string` slices on every recursive
+   descent.
+
+**Tracking:** this baseline doc is the single source of truth until
+the fix lands. Rerun `make rebac-bench` after each attempt and append
+a row to the History table below.
 
 ## History
 
-| Date | Commit | Host | Check p99 | List p99 | Pass? |
-|---|---|---|---:|---:|:---:|
-| _tbd_ | _tbd_ | _tbd_ | _tbd_ | _tbd_ | _tbd_ |
+| Date       | Commit   | Host     | Check mean | List mean | Pass? | Notes |
+|---|---|---|---:|---:|:---:|---|
+| 2026-04-25 | 1e0a73bb | M2 Max   | 95 µs      | 801 ms    | ❌ List | baseline, L3 off, SQLite |
 
 ## Related
 
