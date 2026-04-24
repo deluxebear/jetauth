@@ -3518,6 +3518,18 @@ const en = {
   "rebac.schema.snippets.userset": "Userset  [team#member]",
   "rebac.schema.snippets.condition": "Conditional subject  [user with cond]",
   "rebac.schema.snippets.condDecl": "Declare condition",
+  "rebac.schema.plan.title": "Change Plan",
+  "rebac.schema.plan.summary": "Structural Summary",
+  "rebac.schema.plan.typesAdded": "types added",
+  "rebac.schema.plan.typesRemoved": "types removed",
+  "rebac.schema.plan.relationsAdded": "relations added",
+  "rebac.schema.plan.relationsRemoved": "relations removed",
+  "rebac.schema.plan.noStructuralChange": "DSL changed, but no type/relation structure changes",
+  "rebac.schema.plan.diff": "DSL Diff",
+  "rebac.schema.plan.conflicts": "Conflicting Tuples",
+  "rebac.schema.plan.tuplesAffected": "tuple(s) affected",
+  "rebac.schema.plan.cleanupAndSave": "Clean up affected tuples and save",
+  "rebac.schema.plan.saveAnyway": "Save anyway",
 
   // Type / relation panels
   "rebac.types.label": "Types",

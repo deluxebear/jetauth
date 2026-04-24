@@ -3508,6 +3508,18 @@ const zh: Record<string, string> = {
   "rebac.schema.snippets.userset": "userset  [team#member]",
   "rebac.schema.snippets.condition": "条件主体  [user with cond]",
   "rebac.schema.snippets.condDecl": "声明 condition",
+  "rebac.schema.plan.title": "变更 Plan",
+  "rebac.schema.plan.summary": "结构变更摘要",
+  "rebac.schema.plan.typesAdded": "类型新增",
+  "rebac.schema.plan.typesRemoved": "类型删除",
+  "rebac.schema.plan.relationsAdded": "关系新增",
+  "rebac.schema.plan.relationsRemoved": "关系删除",
+  "rebac.schema.plan.noStructuralChange": "DSL 有改动,但类型/关系结构未变",
+  "rebac.schema.plan.diff": "DSL Diff",
+  "rebac.schema.plan.conflicts": "冲突的 tuple",
+  "rebac.schema.plan.tuplesAffected": "条 tuple 受影响",
+  "rebac.schema.plan.cleanupAndSave": "清理受影响 tuple 并保存",
+  "rebac.schema.plan.saveAnyway": "仍然保存",
 
   // Type / relation panels
   "rebac.types.label": "类型",
