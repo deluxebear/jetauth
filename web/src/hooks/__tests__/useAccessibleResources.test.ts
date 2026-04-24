@@ -87,6 +87,26 @@ describe("useAccessibleResources", () => {
     expect(result.current.isLoading).toBe(false);
     expect(result.current.objects).toEqual([]);
   });
+
+  it("treats non-numeric Retry-After as default 1s (RFC 7231 HTTP-date safety)", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    vi.spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(new Response("", {
+        status: 429,
+        headers: { "Retry-After": "Sun, 06 Nov 1994 08:49:37 GMT" },
+      }))
+      .mockResolvedValueOnce(okRes({ objects: ["doc:1"], continuationToken: "" }));
+
+    const { result } = renderHook(() => useAccessibleResources({
+      appId: "o/a", type: "doc", relation: "viewer", user: "user:alice",
+    }));
+    await waitFor(() => expect(result.current.rateLimited).toBe(true));
+    // Default 1s delay kicks in for non-numeric Retry-After
+    await vi.advanceTimersByTimeAsync(1100);
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    expect(result.current.objects).toEqual(["doc:1"]);
+    vi.useRealTimers();
+  });
 });
 
 function okRes(body: unknown): Response {

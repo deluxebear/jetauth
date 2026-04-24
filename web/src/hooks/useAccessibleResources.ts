@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 
 export interface UseAccessibleResourcesParams {
   appId: string;
@@ -28,6 +28,14 @@ export interface UseAccessibleResourcesResult {
  * access" list — e.g. the user's document list, rooms, workspaces. Not
  * intended as the admin Tester (which calls /biz-check directly).
  */
+
+// Absolute safety cap on pagination iterations. The backend's pageSize
+// default is 100 and max is 1000, so 500 pages is 50k-500k objects —
+// way past any realistic UI use case. Exceeding this is a backend bug
+// (broken continuation token) and should surface as an error so the
+// caller knows data is incomplete, not silently truncate.
+const MAX_PAGES = 500;
+
 export function useAccessibleResources({
   appId,
   type,
@@ -41,7 +49,6 @@ export function useAccessibleResources({
   const [error, setError] = useState<Error | null>(null);
   const [isLoading, setIsLoading] = useState(enabled);
   const [rateLimited, setRateLimited] = useState(false);
-  const abortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
     if (!enabled) {
@@ -49,7 +56,6 @@ export function useAccessibleResources({
       return;
     }
     const ac = new AbortController();
-    abortRef.current = ac;
     let cancelled = false;
 
     const run = async () => {
@@ -78,21 +84,33 @@ export function useAccessibleResources({
           );
           if (res.status === 429) {
             setRateLimited(true);
-            const retryAfter = parseFloat(res.headers.get("Retry-After") || "1");
-            await sleep(Math.max(retryAfter, 0) * 1000);
+            const raw = res.headers.get("Retry-After") ?? "";
+            // RFC 7231 allows HTTP-date format too, but our backend sends integer
+            // seconds. Accept only numeric form; anything else defaults to 1s.
+            const secs = /^\d+(\.\d+)?$/.test(raw) ? parseFloat(raw) : 1;
+            // Floor at 100ms to prevent tight event-loop spin on Retry-After=0.
+            const delayMs = Math.max(secs, 0.1) * 1000;
+            await sleep(delayMs);
             continue;
           }
           if (!res.ok) {
             throw new Error(`list-objects failed: HTTP ${res.status}`);
           }
-          const body = await res.json();
-          const page = (body?.data ?? body) as {
-            objects?: string[];
-            continuationToken?: string;
+          const body = await res.json() as {
+            status?: string;
+            msg?: string;
+            data?: {
+              objects?: string[];
+              continuationToken?: string;
+            };
           };
+          const page = body.data ?? {};
           acc.push(...(page.objects ?? []));
           pages += 1;
           token = page.continuationToken ?? "";
+          if (pages >= MAX_PAGES) {
+            throw new Error(`useAccessibleResources: exceeded ${MAX_PAGES}-page cap`);
+          }
           if (!token) break;
         }
         if (!cancelled) {

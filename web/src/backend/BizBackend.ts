@@ -966,16 +966,18 @@ export async function listAccessibleObjectsAll(
 ): Promise<string[]> {
   const objects: string[] = [];
   let token = req.continuationToken ?? "";
-  // Hard cap to prevent runaway loops if the backend mis-reports tokens.
-  for (let i = 0; i < 1000; i++) {
+  const MAX_ITERATIONS = 1000;
+  for (let i = 0; i < MAX_ITERATIONS; i++) {
     const res = await bizListObjects({ ...req, continuationToken: token });
-    // request<T> returns ApiResponse<T> = { status, msg, data: T }
-    const data = res.data;
+    const data = res.data as BizListObjectsResult; // request<T> always wraps in ApiResponse<T>
     objects.push(...(data.objects ?? []));
     token = data.continuationToken ?? "";
-    if (!token) break;
+    if (!token) return objects;
   }
-  return objects;
+  throw new Error(
+    `listAccessibleObjectsAll: exceeded ${MAX_ITERATIONS}-page cap ` +
+    `— check backend continuation token logic`,
+  );
 }
 
 // 9. biz-list-users
