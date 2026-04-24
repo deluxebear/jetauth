@@ -71,4 +71,30 @@ describe("BizSchemaTypeGraph", () => {
     );
     expect(screen.getByText(/noTypes|no types|尚未定义任何类型/i)).toBeInTheDocument();
   });
+
+  it("renders all N types on distinct positions when user + 3 others (regression: user overlap bug)", () => {
+    // The previous full-circle layout spaced `total = N+1` nodes
+    // around 2π and happened to land one other at angle π — exactly
+    // where user was pinned — hiding user behind it. Exercise that
+    // case.
+    const manyTypesAst: SchemaAST = {
+      schemaVersion: "1.1",
+      types: [
+        { id: "u", name: "user", relations: [] },
+        { id: "t", name: "team", relations: [] },
+        { id: "w", name: "workspace", relations: [] },
+        { id: "d", name: "doc", relations: [] },
+      ],
+    };
+    const { container } = render(<BizSchemaTypeGraph ast={manyTypesAst} />);
+    for (const name of ["user", "team", "workspace", "doc"]) {
+      expect(screen.getByText(name)).toBeInTheDocument();
+    }
+    // Also verify no two node groups share the same (x, y) translate —
+    // overlap would hide a node visually even if its text is in DOM.
+    const groups = container.querySelectorAll("svg g[transform^='translate']");
+    const transforms = Array.from(groups).map((g) => g.getAttribute("transform"));
+    const unique = new Set(transforms);
+    expect(unique.size).toBe(transforms.length);
+  });
 });

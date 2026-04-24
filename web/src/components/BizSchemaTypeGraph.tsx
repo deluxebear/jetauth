@@ -6,8 +6,11 @@ import { extractTypeGraph, type SchemaAST } from "./bizSchemaAst";
 // deterministic radial layout — good enough for schemas with < 20
 // types (the realistic ceiling for a business permission model).
 // Layout:
-//   - Nodes on a circle, evenly spaced; "user" pinned to the left if
-//     present (subject types conventionally anchor the graph).
+//   - If "user" is present (the conventional subject type) it is
+//     pinned to the left anchor (angle π). The remaining types are
+//     distributed across a *half-circle on the right* so no slot can
+//     ever collide with user's angle, no matter how many types exist.
+//   - Without "user", all types spread around the full circle.
 //   - Edges: solid line = direct (this-subject), dashed = inherit
 //     (tuple_to_userset). Arrowheads point at the *target* type to
 //     make direction readable.
@@ -15,9 +18,10 @@ import { extractTypeGraph, type SchemaAST } from "./bizSchemaAst";
 //   - Click a node → selectedType; sidebar lists its relations.
 //   - Click a relation → highlights edges originating from that
 //     relation on the selected type.
-//   - Hover an edge → native tooltip shows "{relation} · {kind}" so
-//     the admin can see the origin without clicking.
-// Visual legend in the bottom-right explains solid-vs-dashed.
+//   - Hover an edge → native tooltip shows "{from}.{rel} → {to}  ·
+//     {kind}" so the admin can see the origin without clicking.
+// Legend is rendered as plain HTML *below* the SVG so it never
+// competes with nodes for canvas space.
 
 interface Props {
   ast: SchemaAST;
@@ -43,21 +47,40 @@ export default function BizSchemaTypeGraph({ ast }: Props) {
     const pos = new Map<string, { x: number; y: number }>();
     const nodeNames = graph.nodes.map((n) => n.name);
     const hasUser = nodeNames.includes("user");
-    if (hasUser) pos.set("user", { x: CX - RADIUS, y: CY });
     const others = hasUser ? nodeNames.filter((n) => n !== "user") : nodeNames;
-    const total = others.length + (hasUser ? 1 : 0);
-    if (total === 0) return pos;
-    // Spread non-user nodes around the remaining arc.
-    others.forEach((name, i) => {
-      // Start from -π/2 (top) and walk clockwise; if user is present,
-      // skip the left slot (π) by adding the right offset.
-      const step = (2 * Math.PI) / total;
-      const angle = -Math.PI / 2 + step * (i + (hasUser ? 1 : 0));
-      pos.set(name, {
-        x: CX + Math.cos(angle) * RADIUS,
-        y: CY + Math.sin(angle) * RADIUS,
-      });
-    });
+
+    if (hasUser) {
+      pos.set("user", { x: CX - RADIUS, y: CY });
+      // Distribute others across the right half-circle (from -π/2 top,
+      // sweeping through 0 right, to +π/2 bottom). A half-circle sweep
+      // guarantees no slot can land on angle π where user sits. We use
+      // a half-step offset so nodes avoid the exact top/bottom poles
+      // (looks more balanced).
+      const n = others.length;
+      if (n > 0) {
+        const step = Math.PI / n;
+        others.forEach((name, i) => {
+          const angle = -Math.PI / 2 + step * (i + 0.5);
+          pos.set(name, {
+            x: CX + Math.cos(angle) * RADIUS,
+            y: CY + Math.sin(angle) * RADIUS,
+          });
+        });
+      }
+    } else {
+      // No user anchor — spread all types around the full circle.
+      const n = nodeNames.length;
+      if (n > 0) {
+        const step = (2 * Math.PI) / n;
+        nodeNames.forEach((name, i) => {
+          const angle = -Math.PI / 2 + step * i;
+          pos.set(name, {
+            x: CX + Math.cos(angle) * RADIUS,
+            y: CY + Math.sin(angle) * RADIUS,
+          });
+        });
+      }
+    }
     return pos;
   }, [graph]);
 
@@ -230,48 +253,40 @@ export default function BizSchemaTypeGraph({ ast }: Props) {
             );
           })}
 
-          {/* Legend (bottom-right). Fixed position so it doesn't move
-              as types come and go. */}
-          <g transform="translate(285, 322)" pointerEvents="none">
-            <line
-              x1={0}
-              y1={4}
-              x2={22}
-              y2={4}
-              stroke="var(--color-border)"
-              strokeWidth={1}
-              markerEnd="url(#biz-graph-arrow)"
-            />
-            <text
-              x={28}
-              y={4}
-              dominantBaseline="middle"
-              fontSize={9}
-              fill="var(--color-text-muted)"
-            >
-              {t("rebac.schema.graph.legendDirect")}
-            </text>
-            <line
-              x1={0}
-              y1={18}
-              x2={22}
-              y2={18}
-              stroke="var(--color-border)"
-              strokeWidth={1}
-              strokeDasharray="4 3"
-              markerEnd="url(#biz-graph-arrow)"
-            />
-            <text
-              x={28}
-              y={18}
-              dominantBaseline="middle"
-              fontSize={9}
-              fill="var(--color-text-muted)"
-            >
-              {t("rebac.schema.graph.legendInherit")}
-            </text>
-          </g>
         </svg>
+        {/* Legend — rendered outside the SVG so it never collides
+            with nodes on the canvas regardless of type count. */}
+        <div className="flex items-center gap-4 px-2 pt-1 text-[10px] text-text-muted">
+          <span className="inline-flex items-center gap-1.5">
+            <svg width="22" height="8" viewBox="0 0 22 8" aria-hidden>
+              <line
+                x1={0}
+                y1={4}
+                x2={15}
+                y2={4}
+                stroke="currentColor"
+                strokeWidth={1}
+              />
+              <path d="M15,1 L21,4 L15,7 Z" fill="currentColor" />
+            </svg>
+            {t("rebac.schema.graph.legendDirect")}
+          </span>
+          <span className="inline-flex items-center gap-1.5">
+            <svg width="22" height="8" viewBox="0 0 22 8" aria-hidden>
+              <line
+                x1={0}
+                y1={4}
+                x2={15}
+                y2={4}
+                stroke="currentColor"
+                strokeWidth={1}
+                strokeDasharray="3 2"
+              />
+              <path d="M15,1 L21,4 L15,7 Z" fill="currentColor" />
+            </svg>
+            {t("rebac.schema.graph.legendInherit")}
+          </span>
+        </div>
       </div>
 
       <aside className="rounded-lg border border-border bg-surface-1 p-3">
