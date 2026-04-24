@@ -3567,6 +3567,10 @@ const en = {
   "rebac.schema.graph.edgeInherit": "inherit",
   "rebac.schema.graph.legendDirect": "Direct subject",
   "rebac.schema.graph.legendInherit": "Inherit (X from Y)",
+  "rebac.schema.graph.zoomIn": "Zoom in",
+  "rebac.schema.graph.zoomOut": "Zoom out",
+  "rebac.schema.graph.resetView": "Reset view",
+  "rebac.schema.graph.panZoomHint": "Scroll to zoom · drag to pan",
 
   // Type / relation panels
   "rebac.types.label": "Types",

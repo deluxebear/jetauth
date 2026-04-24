@@ -72,6 +72,38 @@ describe("BizSchemaTypeGraph", () => {
     expect(screen.getByText(/noTypes|no types|尚未定义任何类型/i)).toBeInTheDocument();
   });
 
+  it("shows the pan/zoom hint text and renders the three viewport control buttons", () => {
+    render(<BizSchemaTypeGraph ast={ast} />);
+    // Pan/zoom hint sits in the legend row below the SVG.
+    expect(
+      screen.getByText(/panZoomHint|scroll.*zoom|滚轮/i),
+    ).toBeInTheDocument();
+    // Three floating viewport controls: zoom-in, zoom-out, reset.
+    expect(
+      screen.getByRole("button", { name: /zoomIn|zoom in|放大/i }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /zoomOut|zoom out|缩小/i }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /resetView|reset view|重置/i }),
+    ).toBeInTheDocument();
+  });
+
+  it("clicking zoom-in changes the SVG viewBox width (shrinks to zoom)", () => {
+    const { container } = render(<BizSchemaTypeGraph ast={ast} />);
+    const svg = container.querySelector("svg[role='img']")!;
+    const before = svg.getAttribute("viewBox")!;
+    const beforeW = parseFloat(before.split(/\s+/)[2]!);
+    fireEvent.click(
+      screen.getByRole("button", { name: /zoomIn|zoom in|放大/i }),
+    );
+    const after = svg.getAttribute("viewBox")!;
+    const afterW = parseFloat(after.split(/\s+/)[2]!);
+    // Zoom in shrinks the viewBox width (same content, smaller window).
+    expect(afterW).toBeLessThan(beforeW);
+  });
+
   it("renders all N types on distinct positions when user + 3 others (regression: user overlap bug)", () => {
     // The previous full-circle layout spaced `total = N+1` nodes
     // around 2π and happened to land one other at angle π — exactly

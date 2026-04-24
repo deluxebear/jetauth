@@ -3557,6 +3557,10 @@ const zh: Record<string, string> = {
   "rebac.schema.graph.edgeInherit": "继承",
   "rebac.schema.graph.legendDirect": "直接主体",
   "rebac.schema.graph.legendInherit": "继承 (X from Y)",
+  "rebac.schema.graph.zoomIn": "放大",
+  "rebac.schema.graph.zoomOut": "缩小",
+  "rebac.schema.graph.resetView": "重置视图",
+  "rebac.schema.graph.panZoomHint": "滚轮缩放 · 拖拽平移",
 
   // Type / relation panels
   "rebac.types.label": "类型",
