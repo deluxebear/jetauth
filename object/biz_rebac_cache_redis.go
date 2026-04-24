@@ -36,6 +36,11 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
+// Compile-time guard that RedisBizReBACCache satisfies the BizReBACCache
+// interface. If a method is ever renamed or its signature drifts, this
+// assertion fails at build time rather than at first cache access.
+var _ BizReBACCache = (*RedisBizReBACCache)(nil)
+
 // RedisBizReBACCacheOptions configures a RedisBizReBACCache.
 type RedisBizReBACCacheOptions struct {
 	// Addr is the Redis host:port. Required.
@@ -55,9 +60,16 @@ type RedisBizReBACCacheOptions struct {
 	// arrives on the pub/sub channel — used by the TieredCache wrapper to
 	// flush matching L2 entries. Runs in the subscriber goroutine; should
 	// not block or panic.
+	//
+	// Note: the publishing instance also receives its own broadcast, so
+	// OnInvalidate must be idempotent (the TieredCache will call
+	// Invalidate directly AND receive the echo).
 	OnInvalidate func(k cacheKey)
 	// OnFlushStore, if non-nil, is called when a store-flush broadcast
-	// arrives. Same threading contract as OnInvalidate.
+	// arrives. Same threading contract as OnInvalidate: idempotent, non-
+	// blocking. Receives the string "*" when the subscriber detects a
+	// pub/sub disconnect — callers should treat "*" as "flush all
+	// locally-cached stores" (pessimistic recovery).
 	OnFlushStore func(storeId string)
 }
 
@@ -98,16 +110,21 @@ func NewRedisBizReBACCache(opts RedisBizReBACCacheOptions) (*RedisBizReBACCache,
 		DB:       opts.DB,
 	})
 	pingCtx, cancelPing := context.WithTimeout(context.Background(), 3*time.Second)
-	defer cancelPing()
 	if err := client.Ping(pingCtx).Err(); err != nil {
+		cancelPing()
 		_ = client.Close()
 		return nil, fmt.Errorf("rebac redis cache: ping failed: %w", err)
 	}
+	cancelPing()
+
 	subCtx, cancelSub := context.WithCancel(context.Background())
 	sub := client.Subscribe(subCtx, opts.ChannelKey)
 	// Wait for the subscription to actually register — Subscribe returns
 	// immediately but the SUBSCRIBE command runs async on the connection.
-	if _, err := sub.Receive(pingCtx); err != nil {
+	// Fresh 3s budget for the subscription ACK — don't share with ping.
+	subAckCtx, cancelSubAck := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancelSubAck()
+	if _, err := sub.Receive(subAckCtx); err != nil {
 		cancelSub()
 		_ = sub.Close()
 		_ = client.Close()
@@ -241,16 +258,52 @@ func (c *RedisBizReBACCache) publish(ctx context.Context, msg redisInvalidateMsg
 	}
 }
 
-// consumeInvalidations is the subscriber goroutine. Exits when subCtx is
-// cancelled (by Close). Logs at WARN on errors and continues; if the
-// subscription permanently fails, the caller's L2 will fall out of sync
-// until the next restart — but the cache remains functional for reads.
+// pubsubHeartbeatInterval is how often we ping the pub/sub connection to
+// detect silent TCP drops (keepalive timeouts, Redis restarts). go-redis
+// auto-reconnects command connections but NOT PubSub.Channel(), so we
+// have to poll. 30s is short enough to bound staleness, long enough to
+// be negligible on wire traffic.
+const pubsubHeartbeatInterval = 30 * time.Second
+
+// pubsubPingTimeout caps a single heartbeat round-trip.
+const pubsubPingTimeout = 3 * time.Second
+
+// consumeInvalidations is the subscriber goroutine. Exits when ctx is
+// cancelled (by Close). On heartbeat failure (Redis unreachable), fires
+// OnFlushStore("*") once so the TieredCache pessimistically drops its
+// L2 — invalidations may have been missed during the outage. Does not
+// attempt auto-reconnect; if the pub/sub connection is permanently dead
+// the cache still serves reads but loses cross-instance invalidation
+// until the process restarts.
 func (c *RedisBizReBACCache) consumeInvalidations(ctx context.Context) {
 	ch := c.sub.Channel()
+	ticker := time.NewTicker(pubsubHeartbeatInterval)
+	defer ticker.Stop()
+	var disconnected bool
 	for {
 		select {
 		case <-ctx.Done():
 			return
+		case <-ticker.C:
+			pingCtx, cancel := context.WithTimeout(ctx, pubsubPingTimeout)
+			err := c.sub.Ping(pingCtx)
+			cancel()
+			if err != nil {
+				if !disconnected {
+					logs.Warning("rebac redis cache: pub/sub heartbeat failed, L2 may be stale: %v", err)
+					// Pessimistic flush across all stores — L2 callers
+					// should treat this as "every cached entry is
+					// suspect". Only fires once per disconnect epoch
+					// to avoid thrash.
+					if c.opts.OnFlushStore != nil {
+						c.opts.OnFlushStore("*")
+					}
+					disconnected = true
+				}
+			} else if disconnected {
+				logs.Info("rebac redis cache: pub/sub heartbeat recovered")
+				disconnected = false
+			}
 		case m, ok := <-ch:
 			if !ok {
 				return
