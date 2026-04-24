@@ -92,6 +92,14 @@ export default function BizSchemaEditor({ appId }: Props) {
 
   const reqIdRef = useRef(0);
   const debounceRef = useRef<number | null>(null);
+  // Ref-mirror of ast so the dry-run effect can read it without
+  // depending on its identity. A real dep would cause an infinite
+  // loop: dry-run success → dispatch LOAD → ast identity changes →
+  // effect re-fires → another dry-run → LOAD → …
+  const astRef = useRef(ast);
+  useEffect(() => {
+    astRef.current = ast;
+  }, [ast]);
 
   // Initial load: populate canonical DSL + parsed AST in one go.
   useEffect(() => {
@@ -152,7 +160,7 @@ export default function BizSchemaEditor({ appId }: Props) {
     // sees a friendly nudge instead of the raw `mismatched input ']'`
     // backend error while they're still editing.
     if (leadSourceRef.current === "visual") {
-      const incomplete = findIncompleteRelations(ast);
+      const incomplete = findIncompleteRelations(astRef.current);
       if (incomplete.length > 0) {
         const sample = incomplete
           .slice(0, 3)
@@ -209,7 +217,10 @@ export default function BizSchemaEditor({ appId }: Props) {
     return () => {
       if (debounceRef.current) window.clearTimeout(debounceRef.current);
     };
-  }, [appId, dsl, loading, t, ast]);
+    // `ast` is read via astRef above to avoid re-firing this effect
+    // every time LOAD changes ast identity (would cause infinite
+    // dry-run loop).
+  }, [appId, dsl, loading, t]);
 
   const dirty = dsl !== savedDsl;
 
