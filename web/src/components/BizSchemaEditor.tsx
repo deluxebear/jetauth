@@ -17,6 +17,7 @@ import type {
 import BizSchemaDslEditor from "./BizSchemaDslEditor";
 import BizSchemaChangePlan from "./BizSchemaChangePlan";
 import BizSchemaVisualEditor from "./BizSchemaVisualEditor";
+import BizSchemaTypeGraph from "./BizSchemaTypeGraph";
 import {
   emptyAST,
   findIncompleteRelations,
@@ -80,7 +81,7 @@ export default function BizSchemaEditor({ appId }: Props) {
   const [dsl, setDsl] = useState<string>("");
   const [savedDsl, setSavedDsl] = useState<string>("");
   const [ast, dispatch] = useReducer(schemaReducer, emptyAST());
-  const [subTab, setSubTab] = useState<"dsl" | "visual">("dsl");
+  const [subTab, setSubTab] = useState<"dsl" | "visual" | "graph">("dsl");
   const [selectedTypeId, setSelectedTypeId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -385,6 +386,17 @@ export default function BizSchemaEditor({ appId }: Props) {
             >
               {t("rebac.schema.tabVisual")}
             </button>
+            <button
+              type="button"
+              className={`px-3 py-1 rounded text-[12px] font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary/40 ${
+                subTab === "graph"
+                  ? "bg-accent-primary text-white"
+                  : "text-text-muted hover:text-text-primary"
+              }`}
+              onClick={() => setSubTab("graph")}
+            >
+              {t("rebac.schema.tabGraph")}
+            </button>
           </div>
           <DryRunPill state={dryRun} dirty={dirty} t={t} />
         </div>
@@ -425,7 +437,7 @@ export default function BizSchemaEditor({ appId }: Props) {
             leadSourceRef.current = "user-dsl";
           }}
         />
-      ) : (
+      ) : subTab === "visual" ? (
         <>
           {dryRun.kind === "error" ? (
             <div className="rounded-lg border border-warning/40 bg-warning/5 p-3 text-[12px] text-text-muted">
@@ -439,6 +451,8 @@ export default function BizSchemaEditor({ appId }: Props) {
             onSelectType={setSelectedTypeId}
           />
         </>
+      ) : (
+        <BizSchemaTypeGraph ast={ast} />
       )}
 
       {dryRun.kind === "error" && (
