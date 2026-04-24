@@ -3437,6 +3437,29 @@ const zh: Record<string, string> = {
   "adminPreview.theme.label": "主题",
 
   // ── ReBAC (Phase 2 — OpenFGA-compatible) ──
+  // 批量授权向导
+  "rebac.wizard.title": "批量授权向导",
+  "rebac.wizard.stepLabel": "步骤",
+  "rebac.wizard.step1Hint": "选择主体(subject)形式",
+  "rebac.wizard.step2Hint": "选择对象(object)形式",
+  "rebac.wizard.step3Hint": "选择要授予的 relation",
+  "rebac.wizard.subjSingle": "单用户",
+  "rebac.wizard.subjUserset": "Userset(如 team:eng#member)",
+  "rebac.wizard.subjWildcard": "通配(user:*)",
+  "rebac.wizard.subjValue": "主体值",
+  "rebac.wizard.objSingle": "单对象",
+  "rebac.wizard.objMulti": "多对象(每行一个)",
+  "rebac.wizard.objPrefix": "按前缀从现有 tuple 中匹配",
+  "rebac.wizard.objValue": "对象值",
+  "rebac.wizard.noRelationsForType": "类型 {{type}} 没有可用的 relation",
+  "rebac.wizard.previewPrefix": "前缀模式将在写入时实时匹配现有 tuple,此处不预览",
+  "rebac.wizard.tuplesToWrite": "条将写入",
+  "rebac.wizard.nothingToWrite": "没有 tuple 可写",
+  "rebac.wizard.back": "上一步",
+  "rebac.wizard.next": "下一步",
+  "rebac.wizard.apply": "应用",
+  "rebac.wizard.appliedSuffix": "条 tuple 已写入",
+
   // App wizard — model type selection
   "rebac.wizard.modelType.title": "选择授权模型",
   "rebac.wizard.modelType.rbac.title": "RBAC (Casbin)",

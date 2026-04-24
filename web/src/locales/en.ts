@@ -3447,6 +3447,29 @@ const en = {
   "adminPreview.theme.label": "Theme",
 
   // ── ReBAC (Phase 2 — OpenFGA-compatible) ──
+  // Bulk grant wizard
+  "rebac.wizard.title": "Bulk grant wizard",
+  "rebac.wizard.stepLabel": "Step",
+  "rebac.wizard.step1Hint": "Choose the subject pattern",
+  "rebac.wizard.step2Hint": "Choose the object pattern",
+  "rebac.wizard.step3Hint": "Pick the relation to grant",
+  "rebac.wizard.subjSingle": "Single user",
+  "rebac.wizard.subjUserset": "Userset (e.g. team:eng#member)",
+  "rebac.wizard.subjWildcard": "Wildcard (user:*)",
+  "rebac.wizard.subjValue": "Subject value",
+  "rebac.wizard.objSingle": "Single object",
+  "rebac.wizard.objMulti": "Multiple objects (one per line)",
+  "rebac.wizard.objPrefix": "Match existing tuples by prefix",
+  "rebac.wizard.objValue": "Object value",
+  "rebac.wizard.noRelationsForType": "Type {{type}} has no relations",
+  "rebac.wizard.previewPrefix": "Prefix mode resolves at apply-time; no preview here",
+  "rebac.wizard.tuplesToWrite": "tuple(s) will be written",
+  "rebac.wizard.nothingToWrite": "No tuples to write",
+  "rebac.wizard.back": "Back",
+  "rebac.wizard.next": "Next",
+  "rebac.wizard.apply": "Apply",
+  "rebac.wizard.appliedSuffix": "tuple(s) written",
+
   // App wizard — model type selection
   "rebac.wizard.modelType.title": "Authorization model",
   "rebac.wizard.modelType.rbac.title": "RBAC (Casbin)",
