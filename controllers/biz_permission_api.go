@@ -1459,6 +1459,8 @@ func (c *ApiController) BizGetUserRoles() {
 		return
 	}
 	if config != nil && config.ModelType == object.ModelTypeReBAC {
+		// Use HTTP 400 here (not ResponseError's 200) — wrong-engine is a caller
+		// programming error, not a runtime/config failure.
 		writeNotSupportedInReBAC(c.Ctx.ResponseWriter, "/api/biz-list-objects")
 		return
 	}
@@ -1498,6 +1500,8 @@ func (c *ApiController) BizGetUserPermissions() {
 		return
 	}
 	if config != nil && config.ModelType == object.ModelTypeReBAC {
+		// Use HTTP 400 here (not ResponseError's 200) — wrong-engine is a caller
+		// programming error, not a runtime/config failure.
 		writeNotSupportedInReBAC(c.Ctx.ResponseWriter, "/api/biz-list-objects")
 		return
 	}

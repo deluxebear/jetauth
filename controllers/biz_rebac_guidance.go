@@ -13,10 +13,11 @@ import (
 	"net/http"
 )
 
-// reBACOperationsGuideURL is the path relative to the JetAuth admin UI where
-// operators can read about the ReBAC API surface. Exposed via the guidance
-// error payload so SDK users hit the right reference on their first "wrong
-// endpoint" error rather than having to grep the source.
+// reBACOperationsGuideURL is echoed in the "docsUrl" field of the guidance
+// error payload. It's a repo-relative path to the operator docs in this
+// codebase (docs/rebac-operations-guide.md). Clients decide how to render
+// it — e.g. admin UIs can map "/docs/..." to a bundled markdown renderer
+// route; SDK users treat it as a documentation reference.
 const reBACOperationsGuideURL = "/docs/rebac-operations-guide.md"
 
 // writeNotSupportedInReBAC emits the spec §7.2 "BIZ_API_NOT_SUPPORTED_IN_REBAC"
