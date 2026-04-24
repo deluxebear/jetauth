@@ -279,6 +279,23 @@ go test -v ./object -run TestReBAC
 go test -v ./object -run BizReBAC
 ```
 
+### 10.1 端到端冒烟（CP-8 起）
+
+`web/scripts/rebac-e2e-smoke.sh` 是一键式“从建应用到下线”的全链路冒烟脚本，覆盖：登录 → 建组织与 ReBAC 应用 → 保存 schema → 写 tuple → `/api/biz-enforce` 校验允许 → `/api/biz-list-objects` 验证返回非空 → `/api/biz-get-user-roles` 验证 HTTP 400 + `BIZ_API_NOT_SUPPORTED_IN_REBAC` 指引错误 → 清理。**不在 CI 里跑**，需要先 `make run` 启本地后端：
+
+```bash
+make run &     # 等 :8000 起来
+BASE_URL=http://localhost:8000 \
+  ADMIN_USER=admin ADMIN_PASSWORD=123 \
+  bash web/scripts/rebac-e2e-smoke.sh
+```
+
+`KEEP_ON_FAIL=1` 可在断言失败时保留组织/应用以便人工查看。退出码 0 表示全部通过，1 表示断言失败。依赖 `curl` + `jq`。
+
+### 10.2 SLA 基线
+
+`object/biz_rebac_bench_test.go`（`//go:build skipCi`）是 ReBAC 引擎的压测脚手架，`make rebac-bench` 触发。基线记录在 `docs/rebac-sla-baseline.md`；硬门槛是 `ReBACCheck p99 < 50ms`、`ReBACListObjects p99 < 300ms`。回归超过 20 % 先开 blocker。
+
 ---
 
 ## 11. 最容易踩坑的 8 个点
