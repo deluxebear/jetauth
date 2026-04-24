@@ -3450,6 +3450,7 @@ const zh: Record<string, string> = {
   "rebac.tab.overview": "概览",
   "rebac.tab.schema": "Schema",
   "rebac.tab.tuples": "关系元组",
+  "rebac.tab.browser": "浏览",
   "rebac.tab.tester": "测试",
   "rebac.tab.integration": "集成",
 

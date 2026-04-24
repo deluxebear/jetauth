@@ -3460,6 +3460,7 @@ const en = {
   "rebac.tab.overview": "Overview",
   "rebac.tab.schema": "Schema",
   "rebac.tab.tuples": "Tuples",
+  "rebac.tab.browser": "Browse",
   "rebac.tab.tester": "Tester",
   "rebac.tab.integration": "Integration",
 

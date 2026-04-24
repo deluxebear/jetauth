@@ -24,6 +24,8 @@ import type {
 
 interface Props {
   appId: string;
+  /** When set, pre-fill the form with this tuple and auto-run Check. */
+  initialRequest?: { object: string; relation: string; user: string };
 }
 
 interface HistoryEntry {
@@ -100,7 +102,7 @@ function saveHistory(appId: string, entries: HistoryEntry[]) {
   }
 }
 
-export default function BizReBACTester({ appId }: Props) {
+export default function BizReBACTester({ appId, initialRequest }: Props) {
   const { t } = useTranslation();
   const modal = useModal();
 
@@ -239,6 +241,28 @@ export default function BizReBACTester({ appId }: Props) {
       setRunning(false);
     }
   }, [appId, form, formValid, modal, t]);
+
+  // Prefill handshake from the Browser tab's "Why?" button. We read the
+  // prop, patch the form, and schedule a Check on the next tick so
+  // state has settled. The effect re-runs only when the tuple changes.
+  useEffect(() => {
+    if (!initialRequest) return;
+    setForm((f) => ({
+      ...f,
+      user: initialRequest.user,
+      object: initialRequest.object,
+      relation: initialRequest.relation,
+    }));
+    const id = window.setTimeout(() => void runCheck(), 50);
+    return () => window.clearTimeout(id);
+    // runCheck is stable enough; we intentionally depend on tuple fields
+    // so a second "Why?" click on the same Browser session re-runs.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    initialRequest?.object,
+    initialRequest?.relation,
+    initialRequest?.user,
+  ]);
 
   const clearHistory = () => {
     setHistory([]);

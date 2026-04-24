@@ -3,12 +3,13 @@ import { useQuery, useQueryClient, keepPreviousData } from "@tanstack/react-quer
 import { bizKeys } from "../backend/bizQueryKeys";
 import { useParams, useNavigate, useSearchParams, Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ArrowLeft, Plus, Play, Copy, Check, X, RefreshCw, RotateCcw, Pencil, Trash2, LayoutDashboard, Crown, ShieldCheck, FlaskConical, Code, Target } from "lucide-react";
+import { ArrowLeft, Plus, Play, Copy, Check, X, RefreshCw, RotateCcw, Pencil, Trash2, LayoutDashboard, Crown, ShieldCheck, FlaskConical, Code, Target, Eye } from "lucide-react";
 import DataTable, { type Column, useTablePrefs, ColumnsMenu } from "../components/DataTable";
 import BizAppResourceTab from "../components/BizAppResourceTab";
 import BizSchemaEditor from "../components/BizSchemaEditor";
 import BizTupleManager from "../components/BizTupleManager";
 import BizReBACTester from "../components/BizReBACTester";
+import BizReBACBrowser from "../components/BizReBACBrowser";
 import BizIntegrationTab from "../components/BizIntegrationTab";
 import BizReBACOverview from "../components/BizReBACOverview";
 import { useTranslation } from "../i18n";
@@ -30,6 +31,7 @@ type TabKey =
   | "integration"
   | "schema"
   | "tuples"
+  | "browser"
   | "tester";
 
 // Shared helper for RolesTab + PermissionsTab: turns a bulk-delete API
@@ -61,7 +63,7 @@ function showBulkDeleteToast(
 }
 
 const CASBIN_TABS: TabKey[] = ["overview", "roles", "permissions", "resources", "test", "integration"];
-const REBAC_TABS: TabKey[] = ["overview", "schema", "tuples", "tester", "integration"];
+const REBAC_TABS: TabKey[] = ["overview", "schema", "tuples", "browser", "tester", "integration"];
 
 // Local relative-time helper — mirrors the one in AuthorizationPage. Kept
 // here to avoid a cross-page import cycle; both functions are short.
@@ -165,6 +167,10 @@ export default function AppAuthorizationPage() {
   const isReBAC = config?.modelType === "rebac";
   const activeTab = parseTab(searchParams.get("tab"), config?.modelType);
 
+  const [testerPrefill, setTesterPrefill] = useState<
+    { object: string; relation: string; user: string } | null
+  >(null);
+
   const appIcon = useMemo(() => {
     const app = appMetaQuery.data as any;
     return app ? pickAppIcon(app) : "";
@@ -228,6 +234,7 @@ export default function AppAuthorizationPage() {
     { key: "overview", label: t("rebac.tab.overview"), icon: <LayoutDashboard size={14} /> },
     { key: "schema", label: t("rebac.tab.schema"), icon: <ShieldCheck size={14} /> },
     { key: "tuples", label: t("rebac.tab.tuples"), icon: <Target size={14} /> },
+    { key: "browser", label: t("rebac.tab.browser"), icon: <Eye size={14} /> },
     { key: "tester", label: t("rebac.tab.tester"), icon: <FlaskConical size={14} /> },
     { key: "integration", label: t("rebac.tab.integration"), icon: <Code size={14} /> },
   ];
@@ -326,8 +333,17 @@ export default function AppAuthorizationPage() {
         {isReBAC && activeTab === "tuples" && (
           <RebacTuplesTab appId={appId} t={t} />
         )}
+        {isReBAC && activeTab === "browser" && (
+          <BizReBACBrowser
+            appId={appId}
+            onInvestigate={(tuple) => {
+              setTesterPrefill(tuple);
+              setActiveTab("tester");
+            }}
+          />
+        )}
         {isReBAC && activeTab === "tester" && (
-          <RebacTesterTab appId={appId} t={t} />
+          <RebacTesterTab appId={appId} t={t} initialRequest={testerPrefill ?? undefined} />
         )}
         {isReBAC && activeTab === "integration" && (
           <RebacIntegrationTab appId={appId} t={t} />
@@ -2214,8 +2230,8 @@ function RebacTuplesTab({ appId, t: _t }: { appId: string; t: (k: any) => string
   return <BizTupleManager appId={appId} />;
 }
 
-function RebacTesterTab({ appId, t: _t }: { appId: string; t: (k: any) => string }) {
-  return <BizReBACTester appId={appId} />;
+function RebacTesterTab({ appId, t: _t, initialRequest }: { appId: string; t: (k: any) => string; initialRequest?: { object: string; relation: string; user: string } }) {
+  return <BizReBACTester appId={appId} initialRequest={initialRequest} />;
 }
 
 function RebacIntegrationTab({ appId, t: _t }: { appId: string; t: (k: any) => string }) {
