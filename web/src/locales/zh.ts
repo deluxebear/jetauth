@@ -3460,6 +3460,17 @@ const zh: Record<string, string> = {
   "rebac.overview.currentModel": "当前 Schema 版本",
   "rebac.overview.lastUpdated": "最近更新",
   "rebac.overview.emptyState": "尚未保存 Schema,请前往 Schema 页签创建",
+  "rebac.overview.emptyTitle": "选择一个场景模板快速开始",
+  "rebac.overview.emptyHint": "模板会写入 schema 与几条示例 tuple,30 秒内即可试用 Tester",
+
+  // Scenario templates
+  "rebac.templates.applied": "模板已应用,正在初始化",
+  "rebac.templates.documentCollab.title": "文档协作",
+  "rebac.templates.documentCollab.subtitle": "folder / document 层级继承,owner→editor→viewer",
+  "rebac.templates.teamSaas.title": "团队 SaaS",
+  "rebac.templates.teamSaas.subtitle": "team 成员关系 + workspace 归属",
+  "rebac.templates.resourceShare.title": "资源分享",
+  "rebac.templates.resourceShare.subtitle": "user:* 通配 + owner / shared_with / viewer",
 
   // Schema editor shell
   "rebac.schema.tabDsl": "DSL",

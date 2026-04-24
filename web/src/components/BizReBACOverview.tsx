@@ -1,8 +1,12 @@
 import { useEffect, useState } from "react";
-import { LayoutDashboard, Hash, Users, FileText, Calendar } from "lucide-react";
+import { Hash, Users, FileText, Calendar, Building2, Share2, Wand2 } from "lucide-react";
 import { useTranslation } from "../i18n";
 import * as BizBackend from "../backend/BizBackend";
 import { parseSchemaJson } from "./bizSchemaAst";
+import { REBAC_TEMPLATES, type ReBACTemplate } from "./bizRebacTemplates";
+import { useModal } from "./Modal";
+
+const ICONS = { FileText, Building2, Share2 } as const;
 
 // BizReBACOverview — Task 11. A read-only dashboard for a ReBAC app
 // showing type/relation/tuple counts and the current authorization
@@ -29,9 +33,12 @@ export default function BizReBACOverview({ appId }: Props) {
   const { t } = useTranslation();
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [reloadKey, setReloadKey] = useState(0);
+  const modal = useModal();
 
   useEffect(() => {
     let cancelled = false;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoading(true);
     Promise.all([
       BizBackend.getBizAuthorizationModel(appId),
@@ -76,7 +83,29 @@ export default function BizReBACOverview({ appId }: Props) {
     return () => {
       cancelled = true;
     };
-  }, [appId]);
+  }, [appId, reloadKey]);
+
+  async function applyTemplate(tpl: ReBACTemplate) {
+    const saveRes = await BizBackend.saveBizAuthorizationModel(appId, tpl.dsl);
+    if (saveRes.status !== "ok" || saveRes.data?.outcome === "conflict") {
+      modal.toast(saveRes.msg || t("rebac.common.error"), "error");
+      return;
+    }
+    const writeRes = await BizBackend.writeBizTuples({
+      appId,
+      writes: tpl.sampleTuples.map((tk) => ({
+        object: tk.object,
+        relation: tk.relation,
+        user: tk.user,
+      })),
+    });
+    if (writeRes.status !== "ok") {
+      modal.toast(writeRes.msg || t("rebac.common.error"), "error");
+      return;
+    }
+    modal.toast(t("rebac.templates.applied"), "success");
+    setReloadKey((k) => k + 1);
+  }
 
   if (loading) {
     return (
@@ -96,14 +125,38 @@ export default function BizReBACOverview({ appId }: Props) {
 
   if (!stats.hasSchema) {
     return (
-      <div className="rounded-xl border border-dashed border-border bg-surface-1 p-12 text-center">
-        <LayoutDashboard className="w-10 h-10 text-text-muted mx-auto mb-3" />
-        <p className="text-[14px] font-semibold text-text-primary mb-2">
-          {t("rebac.tab.overview")}
-        </p>
-        <p className="text-[12px] text-text-muted">
-          {t("rebac.overview.emptyState")}
-        </p>
+      <div className="rounded-xl border border-dashed border-border bg-surface-1 p-8">
+        <div className="text-center mb-6">
+          <Wand2 className="w-10 h-10 text-text-muted mx-auto mb-3" aria-hidden />
+          <p className="text-[15px] font-semibold text-text-primary mb-1">
+            {t("rebac.overview.emptyTitle")}
+          </p>
+          <p className="text-[13px] text-text-muted">
+            {t("rebac.overview.emptyHint")}
+          </p>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          {REBAC_TEMPLATES.map((tpl) => {
+            const Icon = ICONS[tpl.icon];
+            return (
+              <button
+                key={tpl.id}
+                type="button"
+                aria-label={`apply template ${tpl.i18nKey}`}
+                className="text-left rounded-lg border border-border bg-surface-2 p-4 hover:border-accent-primary/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary/40 transition"
+                onClick={() => void applyTemplate(tpl)}
+              >
+                <Icon className="w-5 h-5 text-accent-primary mb-2" aria-hidden />
+                <p className="text-[13px] font-semibold text-text-primary mb-1">
+                  {t(`rebac.templates.${tpl.i18nKey}.title`)}
+                </p>
+                <p className="text-[12px] text-text-muted">
+                  {t(`rebac.templates.${tpl.i18nKey}.subtitle`)}
+                </p>
+              </button>
+            );
+          })}
+        </div>
       </div>
     );
   }

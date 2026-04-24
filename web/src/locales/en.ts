@@ -3470,6 +3470,17 @@ const en = {
   "rebac.overview.currentModel": "Current schema version",
   "rebac.overview.lastUpdated": "Last updated",
   "rebac.overview.emptyState": "No schema saved yet — visit the Schema tab to create one.",
+  "rebac.overview.emptyTitle": "Pick a scenario template to start",
+  "rebac.overview.emptyHint": "Templates seed schema + sample tuples so you can try the Tester in 30 seconds",
+
+  // Scenario templates
+  "rebac.templates.applied": "Template applied, initializing",
+  "rebac.templates.documentCollab.title": "Document Collaboration",
+  "rebac.templates.documentCollab.subtitle": "folder / document hierarchy, owner→editor→viewer",
+  "rebac.templates.teamSaas.title": "Team SaaS",
+  "rebac.templates.teamSaas.subtitle": "team membership + workspace ownership",
+  "rebac.templates.resourceShare.title": "Resource Sharing",
+  "rebac.templates.resourceShare.subtitle": "user:* wildcard + owner / shared_with / viewer",
 
   // Schema editor shell
   "rebac.schema.tabDsl": "DSL",
