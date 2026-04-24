@@ -39,7 +39,10 @@ const (
 	benchTupleCount     = 10000
 	benchObjectTypes    = 3
 	benchRelationsPerTy = 5
-	benchUsers          = 1000
+	// benchUsers must be ≥ benchTupleCount/4 so the collision-free slot
+	// indexing in seedBenchFixture (case 0: member tuples keyed by slot)
+	// never reuses a user across slots.
+	benchUsers = 2500
 )
 
 // benchSchema is the DSL seeded for the benchmark — a three-type fan-out
@@ -137,43 +140,52 @@ func seedBenchFixture(tb testing.TB) *benchFixture {
 		users[i] = fmt.Sprintf("user:u%04d", i)
 	}
 
-	// Generate tuples that lean on every interesting rewrite branch:
-	//   - user:uN   member     group:gX
-	//   - user:uN   owner      document:dY
-	//   - group:gX#member viewer document:dY
-	//   - folder:fZ parent     document:dY
-	r := rand.New(rand.NewPCG(1, 2))
+	// Generate tuples that lean on every interesting rewrite branch. Each
+	// case uses a collision-free indexing strategy so the 10k-row seed
+	// never fires UNIQUE(store, object, relation, user):
+	//   - user:uN   member     group:gX          — 2500 rows, unique (user,group) pairs
+	//   - user:uN   owner      document:dY       — 2500 rows, unique docs
+	//   - group:gX#member viewer document:dY     — 2500 rows, unique docs
+	//   - folder:fZ parent     document:dY       — 2500 rows, unique docs
 	tuples := make([]*BizTuple, 0, benchTupleCount)
-	objects := make([]string, 0, benchTupleCount/3)
+	objects := make([]string, 0, benchTupleCount/4)
 	for i := 0; i < benchTupleCount; i++ {
-		uid := users[r.IntN(benchUsers)]
+		slot := i / 4      // 0..2499 within each case
+		uid := users[slot] // benchUsers=2500 guarantees one user per slot
 		switch i % 4 {
 		case 0:
+			// group:gX fans out over 100 groups; user supplies uniqueness.
 			tuples = append(tuples, &BizTuple{
 				Owner: owner, AppName: appName,
-				Object:   fmt.Sprintf("group:g%03d", r.IntN(100)),
+				Object:   fmt.Sprintf("group:g%03d", slot%100),
 				Relation: "member", User: uid,
 			})
 		case 1:
-			doc := fmt.Sprintf("document:d%05d", i)
+			// Unique document per slot, owner = user slot.
+			doc := fmt.Sprintf("document:d%05d", slot)
 			objects = append(objects, doc)
 			tuples = append(tuples, &BizTuple{
 				Owner: owner, AppName: appName,
 				Object: doc, Relation: "owner", User: uid,
 			})
 		case 2:
-			doc := fmt.Sprintf("document:d%05d", r.IntN(benchTupleCount/3))
+			// Distinct document namespace from case 1 (dv prefix) so the
+			// viewer grant doesn't collide with the owner grant above,
+			// and group subject varies by slot.
+			doc := fmt.Sprintf("document:dv%04d", slot)
 			tuples = append(tuples, &BizTuple{
 				Owner: owner, AppName: appName,
 				Object: doc, Relation: "viewer",
-				User: fmt.Sprintf("group:g%03d#member", r.IntN(100)),
+				User: fmt.Sprintf("group:g%03d#member", slot%100),
 			})
 		case 3:
-			doc := fmt.Sprintf("document:d%05d", r.IntN(benchTupleCount/3))
+			// Distinct document namespace from cases 1/2 (dp prefix),
+			// folder subject varies by slot.
+			doc := fmt.Sprintf("document:dp%04d", slot)
 			tuples = append(tuples, &BizTuple{
 				Owner: owner, AppName: appName,
 				Object: doc, Relation: "parent",
-				User: fmt.Sprintf("folder:f%03d", r.IntN(50)),
+				User: fmt.Sprintf("folder:f%03d", slot%50),
 			})
 		}
 	}
