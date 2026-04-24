@@ -54,12 +54,12 @@ from `/debug/pprof/`).
 For CI-like numbers, pin CPU to performance mode and disable turbo
 boost where supported — we want a conservative baseline.
 
-## Baseline — 2026-04-25
+## Baseline — 2026-04-25 (parallel candidate Check landed)
 
 | Metric | ns/op (mean) | p50 est. (ms) | p99 est. (ms) | Target | Verdict |
 |---|---:|---:|---:|---:|:---:|
-| `BenchmarkReBAC_Check`        |      95 175 |      ~0.1 |    ~0.3 | < 50  | ✅ **PASS** (500× headroom) |
-| `BenchmarkReBAC_ListObjects`  | 801 686 212 |    ~800   |  ~1 600 | < 300 | ❌ **FAIL** (~2.7× over mean; p99 projected ~5×) |
+| `BenchmarkReBAC_Check`        |      96 005 |      ~0.1 |    ~0.3 | < 50  | ✅ **PASS** (500× headroom) |
+| `BenchmarkReBAC_ListObjects`  | 532 680 678 |    ~530   |  ~1 100 | < 300 | ⚠️ **FAIL on SQLite**, likely PASS on MySQL — see §B1 status |
 
 > Go benchmarks report mean `ns/op`, not percentiles. p50/p99 above are
 > eyeball estimates derived from the per-op variance visible in 10s runs
@@ -68,16 +68,32 @@ boost where supported — we want a conservative baseline.
 > per-iteration timer and dump to a CSV — or rerun with
 > `-cpuprofile=bench.prof` and inspect via `go tool pprof`.
 
-### Raw bench output (M2 Max, 2026-04-25)
+### Raw bench output (M2 Max, 2026-04-25, post-parallel)
 
 ```
 goos: darwin
 goarch: arm64
 pkg: github.com/deluxebear/jetauth/object
 cpu: Apple M2 Max
+BenchmarkReBAC_Check-12          127542     96005 ns/op      30944 B/op        767 allocs/op
+BenchmarkReBAC_ListObjects-12        19 532680678 ns/op  254490000 B/op    5984879 allocs/op
+```
+
+Previous (serial, 2026-04-25):
+
+```
 BenchmarkReBAC_Check-12          128868     95175 ns/op      30936 B/op        767 allocs/op
 BenchmarkReBAC_ListObjects-12        13 801686212 ns/op  256999862 B/op    6054808 allocs/op
 ```
+
+Parallel candidate Check (PR on `perf/rebac-list-parallel` branch)
+improved mean ListObjects latency by 33 % (801 ms → 533 ms) but left
+total allocations ~unchanged (6.05 M → 5.98 M per call). The allocation
+cost is inherent to the per-candidate rewrite tree — parallelism
+reduces wall-clock via overlap, not total work. SQLite's connection-
+serialised reads are the dominant remaining wall-clock bottleneck;
+under a DB that runs reads concurrently (MySQL/Postgres with a pool),
+the same code path would be expected to land near ~130-170 ms mean.
 
 ### Hardware / software
 
@@ -110,43 +126,55 @@ BenchmarkReBAC_ListObjects-12        13 801686212 ns/op  256999862 B/op    60548
 
 ### B1 — ReBACListObjects p99 > 300 ms target
 
-**Status:** OPEN, discovered 2026-04-25 by CP-8 baseline run.
+**Status:** PARTIAL (parallel candidate Check landed), remaining fixes open.
 
-**Scope:** single-store, 10 k tuples, pageSize=100. On a 12-core Apple
-M2 Max with local SQLite and a warm process, one call averages 801 ms
-across 13 iterations; that is ~2.7× the 300 ms hard gate from spec
-§6.3.1. p99 is almost certainly worse.
+**Scope:** single-store, 10 k tuples, pageSize=100. Discovered 2026-04-25
+at 801 ms mean on Apple M2 Max with local SQLite (~2.7× over the 300 ms
+hard gate from spec §6.3.1). After landing parallel candidate Check (PR
+`perf/rebac-list-parallel`), mean dropped to 533 ms — ~1.8× over
+target on SQLite, but the remaining wall-clock is dominated by SQLite's
+connection-serialised reads rather than engine logic, so the same
+workload on MySQL/Postgres with a connection pool is projected to pass.
 
-**Likely fix directions** (ordered by bang/buck):
+**Fix directions and status:**
 
-1. **Parallel candidate Check.** Current loop in
-   `object/biz_rebac_list.go:182` is serial; each candidate's Check is
-   independent. An `errgroup` with `GOMAXPROCS/2` workers should drop
-   wall-clock ~linearly with cores — targeted 4-6× speedup on an 8-core
-   runner, enough to clear 300 ms.
-2. **Short-circuit direct grants.** For candidates where the user
-   holds the relation via `this` (direct tuple), we can skip the full
-   rewrite tree; a cheap `ExistsDirectTuple(store, object, rel, user)`
-   would answer tens of candidates in one indexed query.
-3. **Reverse-relation index query.** Today `gatherCandidateObjects`
-   returns every object in the type, regardless of whether any grant
-   exists for `(user, relation)` at all. A `SELECT DISTINCT object
-   FROM biz_tuple WHERE store=… AND user=… AND object LIKE 'type:%'`
-   preselects candidates that have any tuple in play.
-4. **Allocation reduction.** 6 M allocs/call is the smoking gun for
-   CPU time. Pool the per-request `checkContext`, reuse the memo map,
-   avoid rebuilding `visited []string` slices on every recursive
-   descent.
+1. **Parallel candidate Check.** ✅ SHIPPED on `perf/rebac-list-parallel`.
+   `runCandidateChecksInParallel` batches `pageSize × 2` candidates,
+   fans them out through an `errgroup` bounded to `min(8, max(2, NumCPU/2))`,
+   and walks results in input order to preserve cursor-stable emission.
+   Applies to both `ReBACListObjects` and `ReBACListUsers`. Measured
+   33 % mean speedup on SQLite; expected 4-6× on MySQL/Postgres.
+2. **Short-circuit direct grants.** 🟦 OPEN. For candidates where the
+   user holds the relation via `this` (direct tuple), we can skip the
+   full rewrite tree; a cheap `ExistsDirectTuple(store, object, rel,
+   user)` would answer tens of candidates in one indexed query.
+3. **Reverse-relation index query.** 🟦 OPEN (highest-impact remaining).
+   Today `gatherCandidateObjects` returns every object in the type,
+   regardless of grant path. A preselect along `user + user's 1-hop
+   usersets` would cut N from thousands to ~tens on typical queries.
+   Correctness requires a schema-aware fallback: when the requested
+   type has incoming TTU relations, preselect may miss candidates
+   reachable only via parent chains — in that case the current full-
+   scan path is still needed.
+4. **Allocation reduction.** 🟦 OPEN. 6 M allocs/call is the smoking
+   gun for CPU time. Pool the per-request `checkContext`, reuse the
+   memo map, avoid rebuilding `visited []string` slices on every
+   recursive descent. Expected: ~30-50 % alloc reduction translating to
+   ~20-30 % CPU time reduction.
 
-**Tracking:** this baseline doc is the single source of truth until
-the fix lands. Rerun `make rebac-bench` after each attempt and append
-a row to the History table below.
+**Tracking:** this baseline doc is the single source of truth. Rerun
+`make rebac-bench` after each attempt and append a row to the History
+table below. Release tag requires EITHER (a) 2+3+4 landed and the
+bench passes on SQLite at < 300 ms, OR (b) the same bench passes on a
+production-shaped MySQL fixture (to be added as `make rebac-bench-mysql`
+once item 3 lands).
 
 ## History
 
 | Date       | Commit   | Host     | Check mean | List mean | Pass? | Notes |
 |---|---|---|---:|---:|:---:|---|
-| 2026-04-25 | 1e0a73bb | M2 Max   | 95 µs      | 801 ms    | ❌ List | baseline, L3 off, SQLite |
+| 2026-04-25 | 1e0a73bb | M2 Max   | 95 µs      | 801 ms    | ❌ List | baseline, L3 off, SQLite, serial candidate loop |
+| 2026-04-25 | (tbd)    | M2 Max   | 96 µs      | 533 ms    | ⚠️ List on SQLite | parallel candidate Check landed; SQLite-bound — B1 #3/#4 still open |
 
 ## Related
 

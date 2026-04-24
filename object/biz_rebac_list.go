@@ -20,8 +20,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"runtime"
 	"sort"
 	"time"
+
+	"golang.org/x/sync/errgroup"
 )
 
 // listTimeout is the internal hard timeout for a single ListObjects or
@@ -29,6 +32,82 @@ import (
 // objects/users collected so far plus a continuation token so the caller
 // can resume — avoids cancelling the whole request and losing work.
 const listTimeout = 10 * time.Second
+
+// listBatchSizeMultiplier controls how many candidates we Check in
+// parallel per batch relative to the caller's pageSize. 2× gives the
+// worker pool enough runway to overlap I/O across candidates without
+// wasting work on candidates past the page boundary when the page
+// fills fast (common case: most candidates deny, a handful allow).
+const listBatchSizeMultiplier = 2
+
+// listCandidateWorkers sets the per-batch parallelism cap. Picks half
+// the CPU count (bounded to [2, 8]) to leave room for other traffic on
+// the API worker and avoid over-parallelising on laptop-sized hosts.
+// The list pipeline is not the only consumer of the tupleset cache —
+// saturating all cores here would starve Check on adjacent requests.
+func listCandidateWorkers() int {
+	n := runtime.NumCPU() / 2
+	if n < 2 {
+		return 2
+	}
+	if n > 8 {
+		return 8
+	}
+	return n
+}
+
+// candidateCheckResult is the per-candidate outcome inside a batch.
+// Kept as a struct (rather than parallel []bool + []error slices) so
+// additions like "resolution string" or "cycle" flag don't require
+// touching the fan-in loop.
+type candidateCheckResult struct {
+	allowed bool
+	err     error
+}
+
+// runCandidateChecksInParallel runs `check` on each candidate in
+// `batch` concurrently, bounded by listCandidateWorkers workers.
+// Results are returned in input order so the caller can walk them
+// sequentially to preserve cursor-stable ordering. Per-candidate
+// errors are captured into result[i].err and do NOT abort the batch —
+// the caller decides whether to fail the whole list or skip the
+// candidate (ListObjects fails, ListUsers skips on errSchemaMissing).
+// Honours ctx cancellation: once ctx expires, in-flight workers drain
+// without starting new ones, which is what the per-call listTimeout
+// needs to bound wall-clock under pathological candidate lists.
+func runCandidateChecksInParallel(
+	ctx context.Context,
+	batch []string,
+	check func(candidate string) (bool, error),
+) []candidateCheckResult {
+	results := make([]candidateCheckResult, len(batch))
+	if len(batch) == 0 {
+		return results
+	}
+	g, gCtx := errgroup.WithContext(ctx)
+	g.SetLimit(listCandidateWorkers())
+	for i, candidate := range batch {
+		if gCtx.Err() != nil {
+			// Deadline already fired — stop enqueueing, let in-flight drain.
+			break
+		}
+		g.Go(func() error {
+			if gCtx.Err() != nil {
+				results[i].err = gCtx.Err()
+				return nil
+			}
+			allowed, err := check(candidate)
+			results[i] = candidateCheckResult{allowed: allowed, err: err}
+			// Never propagate the per-candidate error to errgroup — a
+			// single bad candidate must not cancel siblings, and the
+			// error is already captured per-slot for the caller to
+			// inspect in order.
+			return nil
+		})
+	}
+	_ = g.Wait()
+	return results
+}
 
 // defaultListPageSize / maxListPageSize mirror spec §6.3 ListObjects
 // parameter bounds. The upper limit protects against hostile clients
@@ -189,25 +268,54 @@ func ReBACListObjects(req *ListObjectsRequest) (res *ListObjectsResult, err erro
 
 	var allowed []string
 	var lastProcessed string
-	for _, obj := range candidates {
+	batchSize := pageSize * listBatchSizeMultiplier
+
+pageLoop:
+	for start := 0; start < len(candidates); start += batchSize {
 		if err := timeoutCtx.Err(); err != nil {
 			break
 		}
-		res, err := ReBACCheck(&CheckRequest{
-			StoreId:              req.StoreId,
-			AuthorizationModelId: req.AuthorizationModelId,
-			TupleKey:             TupleKey{Object: obj, Relation: req.Relation, User: req.User},
-			ContextualTuples:     req.ContextualTuples,
-			Context:              req.Context,
-		})
-		if err != nil {
-			return nil, fmt.Errorf("rebac list_objects: check %s: %w", obj, err)
+		end := start + batchSize
+		if end > len(candidates) {
+			end = len(candidates)
 		}
-		lastProcessed = obj
-		if res.Allowed {
-			allowed = append(allowed, obj)
-			if len(allowed) >= pageSize {
-				break
+		batch := candidates[start:end]
+
+		results := runCandidateChecksInParallel(timeoutCtx, batch, func(obj string) (bool, error) {
+			res, err := ReBACCheck(&CheckRequest{
+				StoreId:              req.StoreId,
+				AuthorizationModelId: req.AuthorizationModelId,
+				TupleKey:             TupleKey{Object: obj, Relation: req.Relation, User: req.User},
+				ContextualTuples:     req.ContextualTuples,
+				Context:              req.Context,
+			})
+			if err != nil {
+				return false, err
+			}
+			return res.Allowed, nil
+		})
+
+		// Walk results in candidate-list order to preserve cursor-stable
+		// emission. A per-candidate error aborts the whole call (matches
+		// the pre-parallel serial semantics).
+		for i, obj := range batch {
+			r := results[i]
+			// Deadline-cancelled slots report ctx.Err via r.err; those
+			// aren't "check failures", they're budget exhaustion. Stop
+			// the walk so the cursor lands on the last successfully-
+			// processed candidate, not on a half-run one.
+			if errors.Is(r.err, context.DeadlineExceeded) || errors.Is(r.err, context.Canceled) {
+				break pageLoop
+			}
+			if r.err != nil {
+				return nil, fmt.Errorf("rebac list_objects: check %s: %w", obj, r.err)
+			}
+			lastProcessed = obj
+			if r.allowed {
+				allowed = append(allowed, obj)
+				if len(allowed) >= pageSize {
+					break pageLoop
+				}
 			}
 		}
 	}
@@ -344,30 +452,54 @@ func ReBACListUsers(req *ListUsersRequest) (res *ListUsersResult, err error) {
 
 	var allowed []string
 	var lastProcessed string
-	for _, user := range candidates {
+	batchSize := pageSize * listBatchSizeMultiplier
+
+pageLoop:
+	for start := 0; start < len(candidates); start += batchSize {
 		if err := timeoutCtx.Err(); err != nil {
 			break
 		}
-		res, err := ReBACCheck(&CheckRequest{
-			StoreId:              req.StoreId,
-			AuthorizationModelId: req.AuthorizationModelId,
-			TupleKey:             TupleKey{Object: req.Object, Relation: req.Relation, User: user},
-			ContextualTuples:     req.ContextualTuples,
-			Context:              req.Context,
-		})
-		if err != nil {
-			// A candidate user with a shape we can't Check (e.g. unknown
-			// userset relation) shouldn't poison the whole list. Skip it.
-			if errors.Is(err, errSchemaMissing) {
-				continue
-			}
-			return nil, fmt.Errorf("rebac list_users: check %s: %w", user, err)
+		end := start + batchSize
+		if end > len(candidates) {
+			end = len(candidates)
 		}
-		lastProcessed = user
-		if res.Allowed {
-			allowed = append(allowed, user)
-			if len(allowed) >= pageSize {
-				break
+		batch := candidates[start:end]
+
+		results := runCandidateChecksInParallel(timeoutCtx, batch, func(user string) (bool, error) {
+			res, err := ReBACCheck(&CheckRequest{
+				StoreId:              req.StoreId,
+				AuthorizationModelId: req.AuthorizationModelId,
+				TupleKey:             TupleKey{Object: req.Object, Relation: req.Relation, User: user},
+				ContextualTuples:     req.ContextualTuples,
+				Context:              req.Context,
+			})
+			if err != nil {
+				return false, err
+			}
+			return res.Allowed, nil
+		})
+
+		for i, user := range batch {
+			r := results[i]
+			if errors.Is(r.err, context.DeadlineExceeded) || errors.Is(r.err, context.Canceled) {
+				break pageLoop
+			}
+			if r.err != nil {
+				// Schema-missing for a candidate user shape (e.g. an
+				// unknown userset relation) is not poison — skip the
+				// candidate and advance the cursor past it.
+				if errors.Is(r.err, errSchemaMissing) {
+					lastProcessed = user
+					continue
+				}
+				return nil, fmt.Errorf("rebac list_users: check %s: %w", user, r.err)
+			}
+			lastProcessed = user
+			if r.allowed {
+				allowed = append(allowed, user)
+				if len(allowed) >= pageSize {
+					break pageLoop
+				}
 			}
 		}
 	}
