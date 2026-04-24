@@ -534,3 +534,112 @@ function parseRelationReference(ref: Record<string, unknown>): TypeRestriction {
   return { kind: "direct", type };
 }
 
+// ── Type graph extraction (Task 13) ────────────────────────────────
+//
+// Flattens the AST into nodes (types) + edges for the Type Graph view.
+// Edge kinds:
+//   - direct: type A has a relation whose typeRestrictions include
+//     type B as a direct/wildcard/userset subject ("A.rel allows B
+//     to be the subject").
+//   - inherit: type A has a relation that references type B via
+//     tuple_to_userset ("A.rel = ... from B.something"). The target
+//     type is inferred from the referenced relation's direct
+//     typeRestrictions on A itself.
+// Self-edges (A→A) are dropped — they add noise to the visual
+// without expressing new structure.
+
+export interface TypeGraphNode {
+  id: string;
+  name: string;
+  relationCount: number;
+}
+
+export interface TypeGraphEdge {
+  from: string; // source type name
+  to: string; // target type name
+  relation: string; // which relation on `from` originated this edge
+  kind: "direct" | "inherit";
+}
+
+export interface TypeGraph {
+  nodes: TypeGraphNode[];
+  edges: TypeGraphEdge[];
+}
+
+export function extractTypeGraph(ast: SchemaAST): TypeGraph {
+  const nodes: TypeGraphNode[] = ast.types.map((t) => ({
+    id: t.id,
+    name: t.name,
+    relationCount: t.relations.length,
+  }));
+  const edges: TypeGraphEdge[] = [];
+  const typeByName = new Map(ast.types.map((t) => [t.name, t]));
+
+  for (const td of ast.types) {
+    for (const rd of td.relations) {
+      // direct: restrictions that name a type, skipping self-references
+      for (const tr of rd.typeRestrictions) {
+        if (
+          (tr.kind === "direct" ||
+            tr.kind === "wildcard" ||
+            tr.kind === "userset") &&
+          typeByName.has(tr.type) &&
+          tr.type !== td.name
+        ) {
+          edges.push({
+            from: td.name,
+            to: tr.type,
+            relation: rd.name,
+            kind: "direct",
+          });
+        }
+      }
+      // inherit: tuple_to_userset `X from Y` → edge to Y's target type
+      collectInheritEdges(td, rd.name, rd.rewrite, typeByName, edges);
+    }
+  }
+  return { nodes, edges };
+}
+
+function collectInheritEdges(
+  td: TypeDef,
+  relName: string,
+  node: RewriteNode,
+  typeByName: Map<string, TypeDef>,
+  out: TypeGraphEdge[],
+) {
+  switch (node.kind) {
+    case "tupleToUserset": {
+      const ttuRel = td.relations.find((r) => r.name === node.tupleset);
+      if (ttuRel) {
+        for (const tr of ttuRel.typeRestrictions) {
+          if (
+            tr.kind === "direct" &&
+            typeByName.has(tr.type) &&
+            tr.type !== td.name
+          ) {
+            out.push({
+              from: td.name,
+              to: tr.type,
+              relation: relName,
+              kind: "inherit",
+            });
+          }
+        }
+      }
+      return;
+    }
+    case "union":
+    case "intersection":
+      for (const c of node.children)
+        collectInheritEdges(td, relName, c, typeByName, out);
+      return;
+    case "difference":
+      collectInheritEdges(td, relName, node.base, typeByName, out);
+      collectInheritEdges(td, relName, node.subtract, typeByName, out);
+      return;
+    default:
+      return;
+  }
+}
+

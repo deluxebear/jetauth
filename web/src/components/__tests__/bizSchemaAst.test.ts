@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   emptyAST,
+  extractTypeGraph,
   parseSchemaJson,
   schemaReducer,
   serializeAstToDsl,
@@ -469,5 +470,208 @@ describe("parseSchemaJson — protojson shape", () => {
       tupleset: "parent",
       computedUserset: "editor",
     });
+  });
+});
+
+describe("extractTypeGraph", () => {
+  it("builds one node per type with relationCount", () => {
+    const { nodes } = extractTypeGraph({
+      schemaVersion: "1.1",
+      types: [
+        { id: "u", name: "user", relations: [] },
+        {
+          id: "d",
+          name: "document",
+          relations: [
+            {
+              id: "r1",
+              name: "viewer",
+              rewrite: { kind: "this" },
+              typeRestrictions: [{ kind: "direct", type: "user" }],
+            },
+            {
+              id: "r2",
+              name: "editor",
+              rewrite: { kind: "this" },
+              typeRestrictions: [{ kind: "direct", type: "user" }],
+            },
+          ],
+        },
+      ],
+    });
+    expect(nodes).toHaveLength(2);
+    expect(nodes.find((n) => n.name === "user")?.relationCount).toBe(0);
+    expect(nodes.find((n) => n.name === "document")?.relationCount).toBe(2);
+  });
+
+  it("emits direct edges for typeRestrictions (this-subjects)", () => {
+    const { edges } = extractTypeGraph({
+      schemaVersion: "1.1",
+      types: [
+        { id: "u", name: "user", relations: [] },
+        {
+          id: "f",
+          name: "folder",
+          relations: [
+            {
+              id: "fo",
+              name: "owner",
+              rewrite: { kind: "this" },
+              typeRestrictions: [{ kind: "direct", type: "user" }],
+            },
+          ],
+        },
+      ],
+    });
+    const direct = edges.filter((e) => e.kind === "direct");
+    expect(
+      direct.some(
+        (e) => e.from === "folder" && e.to === "user" && e.relation === "owner",
+      ),
+    ).toBe(true);
+  });
+
+  it("emits inherit edges for tuple_to_userset", () => {
+    const { edges } = extractTypeGraph({
+      schemaVersion: "1.1",
+      types: [
+        { id: "u", name: "user", relations: [] },
+        {
+          id: "f",
+          name: "folder",
+          relations: [
+            {
+              id: "fo",
+              name: "owner",
+              rewrite: { kind: "this" },
+              typeRestrictions: [{ kind: "direct", type: "user" }],
+            },
+          ],
+        },
+        {
+          id: "d",
+          name: "document",
+          relations: [
+            {
+              id: "dp",
+              name: "parent",
+              rewrite: { kind: "this" },
+              typeRestrictions: [{ kind: "direct", type: "folder" }],
+            },
+            {
+              id: "dv",
+              name: "viewer",
+              rewrite: {
+                kind: "tupleToUserset",
+                tupleset: "parent",
+                computedUserset: "owner",
+              },
+              typeRestrictions: [],
+            },
+          ],
+        },
+      ],
+    });
+    const inherit = edges.filter((e) => e.kind === "inherit");
+    // document.viewer inherits from folder (via parent relation)
+    expect(
+      inherit.some(
+        (e) =>
+          e.from === "document" &&
+          e.to === "folder" &&
+          e.relation === "viewer",
+      ),
+    ).toBe(true);
+  });
+
+  it("handles nested rewrite (union/intersection/difference) in inherit traversal", () => {
+    const { edges } = extractTypeGraph({
+      schemaVersion: "1.1",
+      types: [
+        { id: "u", name: "user", relations: [] },
+        {
+          id: "f",
+          name: "folder",
+          relations: [
+            {
+              id: "fo",
+              name: "owner",
+              rewrite: { kind: "this" },
+              typeRestrictions: [{ kind: "direct", type: "user" }],
+            },
+          ],
+        },
+        {
+          id: "d",
+          name: "document",
+          relations: [
+            {
+              id: "dp",
+              name: "parent",
+              rewrite: { kind: "this" },
+              typeRestrictions: [{ kind: "direct", type: "folder" }],
+            },
+            {
+              id: "dv",
+              name: "viewer",
+              rewrite: {
+                kind: "union",
+                children: [
+                  { kind: "this" },
+                  {
+                    kind: "tupleToUserset",
+                    tupleset: "parent",
+                    computedUserset: "owner",
+                  },
+                ],
+              },
+              typeRestrictions: [{ kind: "direct", type: "user" }],
+            },
+          ],
+        },
+      ],
+    });
+    const inherit = edges.filter((e) => e.kind === "inherit");
+    expect(
+      inherit.some(
+        (e) =>
+          e.from === "document" &&
+          e.to === "folder" &&
+          e.relation === "viewer",
+      ),
+    ).toBe(true);
+  });
+
+  it("does not emit self-edges (direct restriction pointing at own type)", () => {
+    const { edges } = extractTypeGraph({
+      schemaVersion: "1.1",
+      types: [
+        {
+          id: "t",
+          name: "team",
+          relations: [
+            {
+              id: "tm",
+              name: "member",
+              rewrite: { kind: "this" },
+              // userset: team#member — refers back to the same type
+              typeRestrictions: [{ kind: "userset", type: "team", relation: "member" }],
+            },
+          ],
+        },
+      ],
+    });
+    // Self-reference should not emit a team→team edge (noise for graph view)
+    const selfEdges = edges.filter((e) => e.from === e.to);
+    expect(selfEdges).toHaveLength(0);
+  });
+
+  it("returns empty graph for empty AST", () => {
+    const { nodes, edges } = extractTypeGraph({
+      schemaVersion: "1.1",
+      types: [],
+    });
+    expect(nodes).toEqual([]);
+    expect(edges).toEqual([]);
   });
 });
