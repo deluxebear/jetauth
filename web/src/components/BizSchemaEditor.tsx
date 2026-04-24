@@ -23,6 +23,7 @@ import {
   schemaReducer,
   serializeAstToDsl,
 } from "./bizSchemaAst";
+import { lintSchema } from "./bizSchemaLint";
 
 // BizSchemaEditor is the unifying container for the ReBAC schema UI
 // (spec §8.2). It owns:
@@ -219,6 +220,8 @@ export default function BizSchemaEditor({ appId }: Props) {
     return dryRun.kind === "valid" || dryRun.kind === "unchanged";
   }, [loading, saving, dirty, dryRun.kind]);
 
+  const lintWarnings = useMemo(() => lintSchema(ast), [ast]);
+
   const handleSave = useCallback(async () => {
     if (!canSave) return;
     setSaving(true);
@@ -355,7 +358,17 @@ export default function BizSchemaEditor({ appId }: Props) {
       </div>
 
       {subTab === "dsl" ? (
-        <BizSchemaDslEditor value={dsl} onChange={handleDslChange} />
+        <BizSchemaDslEditor
+          value={dsl}
+          onChange={handleDslChange}
+          lintWarnings={lintWarnings}
+          onInsertSnippet={(snippet) => {
+            // Append snippet at end with a newline separator.
+            // Cursor-aware insert is a follow-up.
+            setDsl((d) => d + (d.endsWith("\n") ? "" : "\n") + snippet);
+            leadSourceRef.current = "user-dsl";
+          }}
+        />
       ) : (
         <>
           {dryRun.kind === "error" ? (
