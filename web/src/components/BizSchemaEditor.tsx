@@ -306,7 +306,7 @@ export default function BizSchemaEditor({ appId }: Props) {
           <div className="inline-flex items-center gap-1 rounded-lg border border-border bg-surface-1 p-1">
             <button
               type="button"
-              className={`px-3 py-1 rounded text-[12px] font-medium ${
+              className={`px-3 py-1 rounded text-[12px] font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary/40 ${
                 subTab === "dsl"
                   ? "bg-accent-primary text-white"
                   : "text-text-muted hover:text-text-primary"
@@ -317,7 +317,7 @@ export default function BizSchemaEditor({ appId }: Props) {
             </button>
             <button
               type="button"
-              className={`px-3 py-1 rounded text-[12px] font-medium ${
+              className={`px-3 py-1 rounded text-[12px] font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary/40 ${
                 subTab === "visual"
                   ? "bg-accent-primary text-white"
                   : "text-text-muted hover:text-text-primary"
@@ -332,7 +332,7 @@ export default function BizSchemaEditor({ appId }: Props) {
         <div className="flex items-center gap-2">
           <button
             type="button"
-            className="px-3 py-1.5 rounded-lg text-[13px] border border-border text-text-primary hover:bg-surface-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-3 py-1.5 rounded-lg text-[13px] border border-border text-text-primary hover:bg-surface-2 disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary/40"
             disabled={!dirty || saving}
             onClick={handleReset}
           >
@@ -340,7 +340,7 @@ export default function BizSchemaEditor({ appId }: Props) {
           </button>
           <button
             type="button"
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[13px] font-medium bg-accent-primary text-white hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[13px] font-medium bg-accent-primary text-white hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary/40"
             disabled={!canSave}
             onClick={() => void handleSave()}
           >
@@ -426,7 +426,7 @@ function DryRunPill({
 }: {
   state: DryRunState;
   dirty: boolean;
-  t: (k: any) => string;
+  t: (k: string) => string;
 }) {
   if (state.kind === "validating") {
     return (

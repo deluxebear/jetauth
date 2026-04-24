@@ -127,7 +127,8 @@ export default function BizTupleManager({ appId }: Props) {
         render: (_, r) => (
           <button
             type="button"
-            className="p-1 text-text-muted hover:text-danger hover:bg-danger/10 rounded"
+            className="p-1 text-text-muted hover:text-danger hover:bg-danger/10 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary/40"
+            aria-label={t("rebac.tuples.delete")}
             onClick={(e) => {
               e.stopPropagation();
               modal.showConfirm(
@@ -181,7 +182,7 @@ export default function BizTupleManager({ appId }: Props) {
         <div className="flex items-center gap-2">
           <button
             type="button"
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[13px] border border-border text-text-primary hover:bg-surface-2"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[13px] border border-border text-text-primary hover:bg-surface-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary/40"
             onClick={() => setImportOpen(true)}
           >
             <Upload className="w-3.5 h-3.5" />
@@ -189,7 +190,7 @@ export default function BizTupleManager({ appId }: Props) {
           </button>
           <button
             type="button"
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[13px] font-medium bg-accent-primary text-white hover:opacity-90"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[13px] font-medium bg-accent-primary text-white hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary/40"
             onClick={() => setAddOpen(true)}
           >
             <Plus className="w-3.5 h-3.5" />
@@ -210,7 +211,7 @@ export default function BizTupleManager({ appId }: Props) {
         bulkActions={({ selected, clear }) => (
           <button
             type="button"
-            className="inline-flex items-center gap-1.5 px-3 py-1 rounded text-[12px] bg-danger/10 text-danger hover:bg-danger/20"
+            className="inline-flex items-center gap-1.5 px-3 py-1 rounded text-[12px] bg-danger/10 text-danger hover:bg-danger/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary/40"
             onClick={() => {
               modal.showConfirm(
                 `${t("rebac.tuples.bulkDelete")} (${selected.length})`,
@@ -321,14 +322,14 @@ function AddTupleDialog({
       <div className="flex items-center justify-end gap-2 mt-4">
         <button
           type="button"
-          className="px-3 py-1.5 rounded-lg text-[13px] border border-border hover:bg-surface-2"
+          className="px-3 py-1.5 rounded-lg text-[13px] border border-border hover:bg-surface-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary/40"
           onClick={onClose}
         >
           {t("rebac.common.cancel")}
         </button>
         <button
           type="button"
-          className="px-3 py-1.5 rounded-lg text-[13px] font-medium bg-accent-primary text-white hover:opacity-90 disabled:opacity-50"
+          className="px-3 py-1.5 rounded-lg text-[13px] font-medium bg-accent-primary text-white hover:opacity-90 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary/40"
           disabled={!canSubmit}
           onClick={async () => {
             setSaving(true);
@@ -455,14 +456,14 @@ function BulkImportDialog({
         <div className="flex items-center gap-2">
           <button
             type="button"
-            className="px-3 py-1.5 rounded-lg text-[13px] border border-border hover:bg-surface-2"
+            className="px-3 py-1.5 rounded-lg text-[13px] border border-border hover:bg-surface-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary/40"
             onClick={onClose}
           >
             {t("rebac.common.cancel")}
           </button>
           <button
             type="button"
-            className="px-3 py-1.5 rounded-lg text-[13px] font-medium bg-accent-primary text-white hover:opacity-90 disabled:opacity-50"
+            className="px-3 py-1.5 rounded-lg text-[13px] font-medium bg-accent-primary text-white hover:opacity-90 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary/40"
             disabled={validCount === 0 || saving}
             onClick={async () => {
               setSaving(true);
@@ -508,7 +509,8 @@ function DialogShell({
           </h3>
           <button
             type="button"
-            className="p-1 text-text-muted hover:text-text-primary rounded"
+            className="p-1 text-text-muted hover:text-text-primary rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary/40"
+            aria-label="close"
             onClick={onClose}
           >
             <XIcon className="w-4 h-4" />

@@ -260,7 +260,7 @@ export default function BizReBACTester({ appId }: Props) {
       <div className="flex items-center justify-between">
         <button
           type="button"
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[13px] border border-border hover:bg-surface-2"
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[13px] border border-border hover:bg-surface-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary/40"
           onClick={() => setShowHistory((s) => !s)}
         >
           <History className="w-3.5 h-3.5" />
@@ -268,7 +268,7 @@ export default function BizReBACTester({ appId }: Props) {
         </button>
         <button
           type="button"
-          className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-[13px] font-medium bg-accent-primary text-white hover:opacity-90 disabled:opacity-50"
+          className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-[13px] font-medium bg-accent-primary text-white hover:opacity-90 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary/40"
           onClick={() => void runCheck()}
           disabled={!formValid || running}
         >
@@ -286,7 +286,7 @@ export default function BizReBACTester({ appId }: Props) {
               <div className="flex justify-end">
                 <button
                   type="button"
-                  className="inline-flex items-center gap-1 text-[11px] text-text-muted hover:text-danger px-2 py-0.5"
+                  className="inline-flex items-center gap-1 text-[11px] text-text-muted hover:text-danger px-2 py-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary/40"
                   onClick={clearHistory}
                 >
                   <Trash2 className="w-3 h-3" />
