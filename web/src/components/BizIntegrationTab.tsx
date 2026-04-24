@@ -34,7 +34,7 @@ export default function BizIntegrationTab({ appId }: Props) {
             type="button"
             className={`px-3 py-1 rounded text-[12px] font-medium ${
               lang === l
-                ? "bg-accent-primary text-white"
+                ? "bg-accent text-white"
                 : "text-text-muted hover:text-text-primary"
             }`}
             onClick={() => setLang(l)}

@@ -295,7 +295,7 @@ export default function BizReBACTester({ appId, initialRequest }: Props) {
             <div className="flex justify-end">
               <button
                 type="button"
-                className="inline-flex items-center gap-1 text-[11px] text-text-muted hover:text-danger px-2 py-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary/40 rounded"
+                className="inline-flex items-center gap-1 text-[11px] text-text-muted hover:text-danger px-2 py-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 rounded"
                 onClick={clearHistory}
                 aria-label={t("rebac.tester.clearHistory")}
               >
@@ -318,7 +318,7 @@ export default function BizReBACTester({ appId, initialRequest }: Props) {
                   <button
                     type="button"
                     aria-label={t("rebac.tester.saveAsCase")}
-                    className="text-text-muted hover:text-accent-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary/40 rounded shrink-0"
+                    className="text-text-muted hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 rounded shrink-0"
                     onClick={(ev) => {
                       ev.stopPropagation();
                       const name = window.prompt(t("rebac.tester.caseName"));
@@ -390,7 +390,7 @@ export default function BizReBACTester({ appId, initialRequest }: Props) {
               <button
                 type="button"
                 aria-label={t("rebac.tester.deleteCase")}
-                className="text-text-muted hover:text-danger focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary/40 rounded"
+                className="text-text-muted hover:text-danger focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 rounded"
                 onClick={() => {
                   const next = cases.filter((x) => x.id !== c.id);
                   setCases(next);
@@ -491,7 +491,7 @@ export default function BizReBACTester({ appId, initialRequest }: Props) {
       <div className="flex items-center justify-between">
         <button
           type="button"
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[13px] border border-border hover:bg-surface-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary/40"
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[13px] border border-border hover:bg-surface-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
           onClick={() => setShowHistory((s) => !s)}
         >
           <History className="w-3.5 h-3.5" />
@@ -499,7 +499,7 @@ export default function BizReBACTester({ appId, initialRequest }: Props) {
         </button>
         <button
           type="button"
-          className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-[13px] font-medium bg-accent-primary text-white hover:opacity-90 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary/40"
+          className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-[13px] font-medium bg-accent text-white hover:bg-accent-hover disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
           onClick={() => void runCheck()}
           disabled={!formValid || running}
         >
@@ -514,7 +514,7 @@ export default function BizReBACTester({ appId, initialRequest }: Props) {
             <div className="inline-flex items-center gap-0.5 rounded border border-border p-0.5">
               <button
                 type="button"
-                className={`px-2 py-0.5 rounded text-[11px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary/40 ${
+                className={`px-2 py-0.5 rounded text-[11px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 ${
                   view === "history"
                     ? "bg-surface-2 font-medium"
                     : "text-text-muted"
@@ -525,7 +525,7 @@ export default function BizReBACTester({ appId, initialRequest }: Props) {
               </button>
               <button
                 type="button"
-                className={`px-2 py-0.5 rounded text-[11px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary/40 ${
+                className={`px-2 py-0.5 rounded text-[11px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 ${
                   view === "cases"
                     ? "bg-surface-2 font-medium"
                     : "text-text-muted"
@@ -538,7 +538,7 @@ export default function BizReBACTester({ appId, initialRequest }: Props) {
             {view === "cases" && cases.length > 0 && (
               <button
                 type="button"
-                className="ml-auto inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded border border-border hover:bg-surface-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary/40"
+                className="ml-auto inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded border border-border hover:bg-surface-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
                 onClick={() => void runAllCases()}
               >
                 <Play className="w-3 h-3" />

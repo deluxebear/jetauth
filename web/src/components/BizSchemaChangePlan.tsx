@@ -83,7 +83,7 @@ export default function BizSchemaChangePlan({
           <button
             type="button"
             aria-label={t("rebac.common.cancel")}
-            className="text-text-muted hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary/40 rounded"
+            className="text-text-muted hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 rounded"
             onClick={onCancel}
           >
             <X className="w-4 h-4" />
@@ -220,7 +220,7 @@ export default function BizSchemaChangePlan({
         <footer className="flex items-center justify-end gap-2 px-4 py-3 border-t border-border">
           <button
             type="button"
-            className="px-3 py-1.5 rounded-lg text-[13px] border border-border hover:bg-surface-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary/40"
+            className="px-3 py-1.5 rounded-lg text-[13px] border border-border hover:bg-surface-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
             onClick={onCancel}
           >
             {t("rebac.common.cancel")}

@@ -193,7 +193,7 @@ function TypeRail({
         <button
           type="submit"
           disabled={!draft.trim()}
-          className="inline-flex items-center gap-1 px-2 py-1 rounded bg-accent-primary text-white text-[12px] disabled:opacity-50"
+          className="inline-flex items-center gap-1 px-2 py-1 rounded bg-accent text-white text-[12px] disabled:opacity-50"
         >
           <Plus className="w-3.5 h-3.5" />
           {t("rebac.types.add")}
@@ -391,7 +391,7 @@ function RelationPane({
         <button
           type="submit"
           disabled={!draft.trim()}
-          className="inline-flex items-center gap-1 px-2 py-1 rounded bg-accent-primary text-white text-[12px] disabled:opacity-50"
+          className="inline-flex items-center gap-1 px-2 py-1 rounded bg-accent text-white text-[12px] disabled:opacity-50"
         >
           <Plus className="w-3.5 h-3.5" />
           {t("rebac.relations.add")}

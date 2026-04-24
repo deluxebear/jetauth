@@ -156,10 +156,10 @@ export default function BizReBACOverview({ appId }: Props) {
                 type="button"
                 aria-label={t("rebac.overview.applyTemplateLabel", { name: t(`rebac.templates.${tpl.i18nKey}.title`) })}
                 disabled={applying}
-                className="text-left rounded-lg border border-border bg-surface-2 p-4 hover:border-accent-primary/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary/40 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                className="text-left rounded-lg border border-border bg-surface-2 p-4 hover:border-accent/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 transition disabled:opacity-50 disabled:cursor-not-allowed"
                 onClick={() => void applyTemplate(tpl)}
               >
-                <Icon className="w-5 h-5 text-accent-primary mb-2" aria-hidden />
+                <Icon className="w-5 h-5 text-accent mb-2" aria-hidden />
                 <p className="text-[13px] font-semibold text-text-primary mb-1">
                   {t(`rebac.templates.${tpl.i18nKey}.title`)}
                 </p>

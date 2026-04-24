@@ -172,9 +172,9 @@ export default function BizReBACBrowser({ appId, onInvestigate }: Props) {
       <div className="inline-flex items-center gap-1 rounded-lg border border-border bg-surface-1 p-1 self-start">
         <button
           type="button"
-          className={`px-3 py-1 rounded text-[12px] font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary/40 ${
+          className={`px-3 py-1 rounded text-[12px] font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 ${
             mode === "by-user"
-              ? "bg-accent-primary text-white"
+              ? "bg-accent text-white"
               : "text-text-muted hover:text-text-primary"
           }`}
           onClick={() => setMode("by-user")}
@@ -183,9 +183,9 @@ export default function BizReBACBrowser({ appId, onInvestigate }: Props) {
         </button>
         <button
           type="button"
-          className={`px-3 py-1 rounded text-[12px] font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary/40 ${
+          className={`px-3 py-1 rounded text-[12px] font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 ${
             mode === "by-object"
-              ? "bg-accent-primary text-white"
+              ? "bg-accent text-white"
               : "text-text-muted hover:text-text-primary"
           }`}
           onClick={() => setMode("by-object")}
@@ -220,7 +220,7 @@ export default function BizReBACBrowser({ appId, onInvestigate }: Props) {
           />
           <button
             type="button"
-            className="self-end inline-flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-[13px] font-medium bg-accent-primary text-white hover:opacity-90 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary/40"
+            className="self-end inline-flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-[13px] font-medium bg-accent text-white hover:bg-accent-hover disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
             disabled={!formValid || running}
             onClick={() => void runByUser(false)}
           >
@@ -254,7 +254,7 @@ export default function BizReBACBrowser({ appId, onInvestigate }: Props) {
           />
           <button
             type="button"
-            className="self-end inline-flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-[13px] font-medium bg-accent-primary text-white hover:opacity-90 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary/40"
+            className="self-end inline-flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-[13px] font-medium bg-accent text-white hover:bg-accent-hover disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
             disabled={!formValid || running}
             onClick={() => void runByObject(false)}
           >
@@ -284,7 +284,7 @@ export default function BizReBACBrowser({ appId, onInvestigate }: Props) {
                   <button
                     type="button"
                     aria-label={t("rebac.browser.why")}
-                    className="text-text-muted hover:text-accent-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary/40 rounded"
+                    className="text-text-muted hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 rounded"
                     onClick={() =>
                       onInvestigate(
                         mode === "by-user"
@@ -303,7 +303,7 @@ export default function BizReBACBrowser({ appId, onInvestigate }: Props) {
             <div className="px-3 py-2 border-t border-border">
               <button
                 type="button"
-                className="inline-flex items-center gap-1 text-[12px] text-text-muted hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary/40 rounded"
+                className="inline-flex items-center gap-1 text-[12px] text-text-muted hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 rounded"
                 disabled={running}
                 onClick={() =>
                   void (mode === "by-user" ? runByUser(true) : runByObject(true))
@@ -335,7 +335,7 @@ function LabeledInput({
     <label className="flex flex-col gap-1">
       <span className="text-[11px] text-text-muted font-medium">{label}</span>
       <input
-        className="px-2 py-1 rounded border border-border bg-surface-1 text-[13px] font-mono focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary/40"
+        className="px-2 py-1 rounded border border-border bg-surface-1 text-[13px] font-mono focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
@@ -362,7 +362,7 @@ function LabeledSelect({
       <span className="text-[11px] text-text-muted font-medium">{label}</span>
       <select
         aria-label={label}
-        className="px-2 py-1 rounded border border-border bg-surface-1 text-[13px] font-mono focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary/40 disabled:opacity-50"
+        className="px-2 py-1 rounded border border-border bg-surface-1 text-[13px] font-mono focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 disabled:opacity-50"
         value={value}
         onChange={(e) => onChange(e.target.value)}
         disabled={disabled}

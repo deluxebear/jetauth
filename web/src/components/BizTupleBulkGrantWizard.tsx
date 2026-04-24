@@ -127,7 +127,7 @@ export default function BizTupleBulkGrantWizard({
       <div className="w-full max-w-2xl rounded-xl bg-surface-1 border border-border shadow-xl flex flex-col">
         <header className="flex items-center justify-between px-4 py-3 border-b border-border">
           <div className="flex items-center gap-2">
-            <Wand2 className="w-4 h-4 text-accent-primary" aria-hidden />
+            <Wand2 className="w-4 h-4 text-accent" aria-hidden />
             <h2 className="text-[14px] font-semibold text-text-primary">
               {t("rebac.wizard.title")} · {t("rebac.wizard.stepLabel")} {step} / 4
             </h2>
@@ -135,7 +135,7 @@ export default function BizTupleBulkGrantWizard({
           <button
             type="button"
             aria-label={t("rebac.common.cancel")}
-            className="text-text-muted hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary/40 rounded"
+            className="text-text-muted hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 rounded"
             onClick={onCancel}
           >
             <X className="w-4 h-4" />
@@ -157,7 +157,7 @@ export default function BizTupleBulkGrantWizard({
                 </span>
                 <input
                   aria-label={t("rebac.wizard.subjValue")}
-                  className="px-2 py-1 rounded border border-border bg-surface-1 text-[13px] font-mono focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary/40"
+                  className="px-2 py-1 rounded border border-border bg-surface-1 text-[13px] font-mono focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
                   value={subjValue}
                   onChange={(e) => setSubjValue(e.target.value)}
                   placeholder={
@@ -186,7 +186,7 @@ export default function BizTupleBulkGrantWizard({
                 {objMode === "multi" ? (
                   <textarea
                     aria-label={t("rebac.wizard.objValue")}
-                    className="px-2 py-1 rounded border border-border bg-surface-1 text-[12px] font-mono min-h-[120px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary/40"
+                    className="px-2 py-1 rounded border border-border bg-surface-1 text-[12px] font-mono min-h-[120px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
                     value={objValue}
                     onChange={(e) => setObjValue(e.target.value)}
                     placeholder={"document:d1\ndocument:d2\ndocument:d3"}
@@ -194,7 +194,7 @@ export default function BizTupleBulkGrantWizard({
                 ) : (
                   <input
                     aria-label={t("rebac.wizard.objValue")}
-                    className="px-2 py-1 rounded border border-border bg-surface-1 text-[13px] font-mono focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary/40"
+                    className="px-2 py-1 rounded border border-border bg-surface-1 text-[13px] font-mono focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
                     value={objValue}
                     onChange={(e) => setObjValue(e.target.value)}
                     placeholder={
@@ -216,7 +216,7 @@ export default function BizTupleBulkGrantWizard({
                 </span>
                 <select
                   aria-label={t("rebac.browser.relation")}
-                  className="px-2 py-1 rounded border border-border bg-surface-1 text-[13px] font-mono focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary/40"
+                  className="px-2 py-1 rounded border border-border bg-surface-1 text-[13px] font-mono focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
                   value={relation}
                   onChange={(e) => setRelation(e.target.value)}
                 >
@@ -260,7 +260,7 @@ export default function BizTupleBulkGrantWizard({
         <footer className="flex items-center justify-between px-4 py-3 border-t border-border">
           <button
             type="button"
-            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-[13px] border border-border hover:bg-surface-2 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary/40"
+            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-[13px] border border-border hover:bg-surface-2 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
             onClick={() =>
               setStep((s) => (s > 1 ? ((s - 1) as 1 | 2 | 3 | 4) : s))
             }
@@ -272,7 +272,7 @@ export default function BizTupleBulkGrantWizard({
           {step < 4 ? (
             <button
               type="button"
-              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-[13px] font-medium bg-accent-primary text-white hover:opacity-90 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary/40"
+              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-[13px] font-medium bg-accent text-white hover:bg-accent-hover disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
               disabled={!canNext}
               onClick={() => setStep((s) => ((s + 1) as 1 | 2 | 3 | 4))}
             >
@@ -282,7 +282,7 @@ export default function BizTupleBulkGrantWizard({
           ) : (
             <button
               type="button"
-              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-[13px] font-medium bg-accent-primary text-white hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary/40"
+              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-[13px] font-medium bg-accent text-white hover:bg-accent-hover disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
               disabled={applying}
               onClick={() => void apply()}
             >

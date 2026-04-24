@@ -164,9 +164,9 @@ export default function BizSchemaTypeGraph({ ast }: Props) {
                   <li key={r.id}>
                     <button
                       type="button"
-                      className={`w-full text-left px-2 py-1 rounded text-[12px] font-mono focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary/40 ${
+                      className={`w-full text-left px-2 py-1 rounded text-[12px] font-mono focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 ${
                         selectedRelation === r.name
-                          ? "bg-accent-primary/10 text-accent-primary"
+                          ? "bg-accent/10 text-accent"
                           : "hover:bg-surface-2"
                       }`}
                       onClick={() =>

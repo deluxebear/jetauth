@@ -6,7 +6,15 @@ import {
   useRef,
   useState,
 } from "react";
-import { AlertTriangle, CheckCircle2, Loader2, Save } from "lucide-react";
+import {
+  AlertTriangle,
+  Blocks,
+  CheckCircle2,
+  Code2,
+  Loader2,
+  Save,
+  Share2,
+} from "lucide-react";
 import { useTranslation } from "../i18n";
 import { useModal } from "./Modal";
 import * as BizBackend from "../backend/BizBackend";
@@ -370,51 +378,63 @@ export default function BizSchemaEditor({ appId }: Props) {
     );
   }
 
+  // Sub-tabs are three *views* of one schema (edit as DSL, edit
+  // visually, or read the type graph) — not three tools. The underline-
+  // tab pattern at smaller scale mirrors the page-level tabs, so the
+  // user's mental model for "navigation" scales down cleanly.
+  const SUB_TABS = [
+    { key: "dsl" as const, label: t("rebac.schema.tabDsl"), Icon: Code2 },
+    { key: "visual" as const, label: t("rebac.schema.tabVisual"), Icon: Blocks },
+    { key: "graph" as const, label: t("rebac.schema.tabGraph"), Icon: Share2 },
+  ];
+
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex items-center justify-between flex-wrap gap-2">
-        <div className="flex items-center gap-3">
-          <div className="inline-flex items-center gap-1 rounded-lg border border-border bg-surface-1 p-1">
-            <button
-              type="button"
-              className={`px-3 py-1 rounded text-[12px] font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary/40 ${
-                subTab === "dsl"
-                  ? "bg-accent-primary text-white"
-                  : "text-text-muted hover:text-text-primary"
-              }`}
-              onClick={() => setSubTab("dsl")}
-            >
-              {t("rebac.schema.tabDsl")}
-            </button>
-            <button
-              type="button"
-              className={`px-3 py-1 rounded text-[12px] font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary/40 ${
-                subTab === "visual"
-                  ? "bg-accent-primary text-white"
-                  : "text-text-muted hover:text-text-primary"
-              }`}
-              onClick={() => setSubTab("visual")}
-            >
-              {t("rebac.schema.tabVisual")}
-            </button>
-            <button
-              type="button"
-              className={`px-3 py-1 rounded text-[12px] font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary/40 ${
-                subTab === "graph"
-                  ? "bg-accent-primary text-white"
-                  : "text-text-muted hover:text-text-primary"
-              }`}
-              onClick={() => setSubTab("graph")}
-            >
-              {t("rebac.schema.tabGraph")}
-            </button>
+      <div className="flex items-end justify-between flex-wrap gap-2 border-b border-border">
+        <div className="flex items-end gap-3 flex-wrap">
+          <div
+            className="flex items-center gap-0"
+            role="tablist"
+            aria-label={t("rebac.schema.subTabsLabel")}
+          >
+            {SUB_TABS.map(({ key, label, Icon }) => {
+              const active = subTab === key;
+              return (
+                <button
+                  key={key}
+                  type="button"
+                  role="tab"
+                  aria-selected={active}
+                  className={[
+                    "group relative inline-flex items-center gap-1.5 px-3 py-2 -mb-px",
+                    "text-[12px] font-medium border-b-2 transition-colors",
+                    "rounded-t-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40",
+                    active
+                      ? "text-accent border-accent"
+                      : "text-text-muted border-transparent hover:text-text-primary hover:border-border",
+                  ].join(" ")}
+                  onClick={() => setSubTab(key)}
+                >
+                  <Icon
+                    className={[
+                      "w-3.5 h-3.5 transition-opacity",
+                      active ? "opacity-100" : "opacity-60 group-hover:opacity-90",
+                    ].join(" ")}
+                    aria-hidden
+                  />
+                  {label}
+                </button>
+              );
+            })}
           </div>
-          <DryRunPill state={dryRun} dirty={dirty} t={t} />
+          <div className="pb-2">
+            <DryRunPill state={dryRun} dirty={dirty} t={t} />
+          </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 pb-2">
           <button
             type="button"
-            className="px-3 py-1.5 rounded-lg text-[13px] border border-border text-text-primary hover:bg-surface-2 disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary/40"
+            className="px-3 py-1.5 rounded-lg text-[13px] border border-border text-text-primary hover:bg-surface-2 disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
             disabled={!dirty || saving}
             onClick={handleReset}
           >
@@ -422,7 +442,7 @@ export default function BizSchemaEditor({ appId }: Props) {
           </button>
           <button
             type="button"
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[13px] font-medium bg-accent-primary text-white hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary/40"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[13px] font-medium bg-accent text-white hover:bg-accent-hover disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
             disabled={!canSave}
             onClick={() => void handleSave()}
           >

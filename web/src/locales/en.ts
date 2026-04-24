@@ -3511,6 +3511,7 @@ const en = {
   "rebac.schema.tabDsl": "DSL",
   "rebac.schema.tabVisual": "Visual",
   "rebac.schema.tabGraph": "Graph",
+  "rebac.schema.subTabsLabel": "Schema views",
   "rebac.schema.save": "Save schema",
   "rebac.schema.saving": "Saving...",
   "rebac.schema.saved": "Saved",

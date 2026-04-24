@@ -3501,6 +3501,7 @@ const zh: Record<string, string> = {
   "rebac.schema.tabDsl": "DSL",
   "rebac.schema.tabVisual": "可视化",
   "rebac.schema.tabGraph": "关系图",
+  "rebac.schema.subTabsLabel": "Schema 视图",
   "rebac.schema.save": "保存 Schema",
   "rebac.schema.saving": "保存中...",
   "rebac.schema.saved": "已保存",

@@ -98,7 +98,7 @@ export default function BizSchemaDslEditor({
           <div className="relative self-start">
             <button
               type="button"
-              className="inline-flex items-center gap-1 px-2 py-1 rounded text-[12px] border border-border bg-surface-1 hover:bg-surface-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary/40"
+              className="inline-flex items-center gap-1 px-2 py-1 rounded text-[12px] border border-border bg-surface-1 hover:bg-surface-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
               onClick={() => setSnippetOpen((o) => !o)}
               aria-label={t("rebac.schema.snippets.insert")}
               aria-haspopup="menu"
@@ -117,7 +117,7 @@ export default function BizSchemaDslEditor({
                     key={s.id}
                     type="button"
                     role="menuitem"
-                    className="w-full text-left px-2 py-1 text-[12px] hover:bg-surface-2 font-mono focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary/40"
+                    className="w-full text-left px-2 py-1 text-[12px] hover:bg-surface-2 font-mono focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
                     onClick={() => {
                       onInsertSnippet(s.text);
                       setSnippetOpen(false);
