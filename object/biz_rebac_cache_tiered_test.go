@@ -74,12 +74,13 @@ func (f *fakeL3) Close() error { return nil }
 func TestTieredCache_Contract(t *testing.T) {
 	l2 := NewInMemoryBizReBACCache()
 	l3 := newFakeL3()
-	tc := NewTieredCache(l2, l3)
-	defer tc.Close()
-	// Wire the L3 callbacks into L2 invalidation (what NewTieredCache does internally
-	// via the OnInvalidate hook; fakeL3 needs manual wiring since it has no constructor).
+	// Wire fake callbacks BEFORE NewTieredCache so the test mirrors the
+	// production order (callbacks set before subscriber goroutine — see
+	// NewTieredCacheWithRedis).
 	l3.onInvalidate = func(k cacheKey) { l2.Invalidate(context.Background(), k) }
 	l3.onFlushStore = func(id string) { l2.FlushStore(context.Background(), id) }
+	tc := NewTieredCache(l2, l3)
+	defer tc.Close()
 	BizReBACCacheContractTest(t, tc)
 }
 
@@ -124,6 +125,11 @@ func TestTieredCache_WriteTouchesBothTiers(t *testing.T) {
 func TestTieredCache_InvalidateTouchesBothTiers(t *testing.T) {
 	l2 := NewInMemoryBizReBACCache()
 	l3 := newFakeL3()
+	// Wire fake callbacks BEFORE NewTieredCache so the test mirrors the
+	// production order (callbacks set before subscriber goroutine — see
+	// NewTieredCacheWithRedis).
+	l3.onInvalidate = func(k cacheKey) { l2.Invalidate(context.Background(), k) }
+	l3.onFlushStore = func(id string) { l2.FlushStore(context.Background(), id) }
 	tc := NewTieredCache(l2, l3)
 	defer tc.Close()
 	ctx := context.Background()
@@ -145,6 +151,11 @@ func TestTieredCache_InvalidateTouchesBothTiers(t *testing.T) {
 func TestTieredCache_FlushStoreTouchesBothTiers(t *testing.T) {
 	l2 := NewInMemoryBizReBACCache()
 	l3 := newFakeL3()
+	// Wire fake callbacks BEFORE NewTieredCache so the test mirrors the
+	// production order (callbacks set before subscriber goroutine — see
+	// NewTieredCacheWithRedis).
+	l3.onInvalidate = func(k cacheKey) { l2.Invalidate(context.Background(), k) }
+	l3.onFlushStore = func(id string) { l2.FlushStore(context.Background(), id) }
 	tc := NewTieredCache(l2, l3)
 	defer tc.Close()
 	ctx := context.Background()
@@ -174,10 +185,11 @@ func TestTieredCache_PubSubEchoInvalidatesL2(t *testing.T) {
 	// publisher). TieredCache.invalidateL2 is that callback's target.
 	l2 := NewInMemoryBizReBACCache()
 	l3 := newFakeL3()
-	// Pre-wire fakeL3's callback BEFORE NewTieredCache consumes it —
-	// actually, inspect how the real code sets the callback: B3.3's
-	// NewTieredCache wires L3.OnInvalidate → L2.Invalidate. With fakeL3
-	// we mirror that wiring via the onInvalidate field.
+	// Wire fake callbacks BEFORE NewTieredCache so the test mirrors the
+	// production order (callbacks set before subscriber goroutine — see
+	// NewTieredCacheWithRedis).
+	l3.onInvalidate = func(k cacheKey) { l2.Invalidate(context.Background(), k) }
+	l3.onFlushStore = func(id string) { l2.FlushStore(context.Background(), id) }
 	tc := NewTieredCache(l2, l3)
 	defer tc.Close()
 	ctx := context.Background()
@@ -198,6 +210,11 @@ func TestTieredCache_StarFlushAllStores(t *testing.T) {
 	// TieredCache must treat "*" as "flush all L2 entries".
 	l2 := NewInMemoryBizReBACCache()
 	l3 := newFakeL3()
+	// Wire fake callbacks BEFORE NewTieredCache so the test mirrors the
+	// production order (callbacks set before subscriber goroutine — see
+	// NewTieredCacheWithRedis).
+	l3.onInvalidate = func(k cacheKey) { l2.Invalidate(context.Background(), k) }
+	l3.onFlushStore = func(id string) { l2.FlushStore(context.Background(), id) }
 	tc := NewTieredCache(l2, l3)
 	defer tc.Close()
 	ctx := context.Background()

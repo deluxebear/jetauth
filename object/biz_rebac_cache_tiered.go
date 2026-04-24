@@ -31,6 +31,8 @@ package object
 import (
 	"context"
 	"time"
+
+	"github.com/beego/beego/v2/core/logs"
 )
 
 // TieredCache is the L2+L3 composition. Safe for concurrent use as long
@@ -51,48 +53,75 @@ type TieredCache struct {
 // Compile-time interface guard.
 var _ BizReBACCache = (*TieredCache)(nil)
 
-// NewTieredCache wires a pair of tiers into one BizReBACCache. If the
-// L3 is a *RedisBizReBACCache whose OnInvalidate / OnFlushStore aren't
-// yet set, this constructor installs callbacks that push L3 broadcasts
-// into L2.
+// NewTieredCache wires a pair of tiers into one BizReBACCache. The caller
+// is responsible for ensuring L3's OnInvalidate/OnFlushStore callbacks
+// are already wired to flush L2 before passing L3 to this constructor —
+// post-hoc mutation would race with the subscriber goroutine. Use
+// NewTieredCacheWithRedis below when starting with raw RedisBizReBACCacheOptions.
 //
-// For fakes / custom L3 impls: the constructor exposes
-// onInvalidateForTest / onFlushStoreForTest so test code can invoke the
-// same callback wiring without a real RedisBizReBACCache.
+// For fakes / custom L3 impls used in tests: wire callbacks on the fake
+// BEFORE calling NewTieredCache so the initialization order matches production.
+// The onInvalidateForTest / onFlushStoreForTest handles expose the same
+// closures this constructor would build internally for direct invocation.
 func NewTieredCache(l2, l3 BizReBACCache) *TieredCache {
 	tc := &TieredCache{l2: l2, l3: l3}
-	invalidateL2 := func(k cacheKey) {
-		l2.Invalidate(context.Background(), k)
-	}
-	flushL2 := func(storeId string) {
+	tc.onInvalidateForTest = func(k cacheKey) { l2.Invalidate(context.Background(), k) }
+	tc.onFlushStoreForTest = tc.buildFlushL2()
+	return tc
+}
+
+// buildFlushL2 returns the flush-L2 closure used both as the test handle
+// and by NewTieredCacheWithRedis. Factored out because the star-flush
+// path needs access to the L2 reference for the type assertion.
+func (t *TieredCache) buildFlushL2() func(storeId string) {
+	return func(storeId string) {
 		if storeId == "*" {
-			// Pessimistic flush: flush every L2 entry. The
-			// InMemoryBizReBACCache doesn't expose a "flush all" method
-			// in the BizReBACCache interface (deliberately — only the
-			// tiered wrapper has the authority to declare "all stores
-			// are suspect"). We delegate to flushAll() on the concrete
-			// type. This is safe as long as no caller holds a direct
-			// reference to the old L2 (the wrapper owns it).
-			if inMem, ok := l2.(*InMemoryBizReBACCache); ok {
-				inMem.flushAll()
+			if fresh, ok := t.l2.(*InMemoryBizReBACCache); ok {
+				fresh.flushAll()
 				return
 			}
-			// For non-InMemory L2 impls we can't flush-all; fall back
-			// to no-op with no warning — the interface doesn't expose
-			// FlushAll by design. Future: add FlushAll if needed.
+			// Non-InMemory L2 can't flush-all via the current interface.
+			// This is the pessimistic-recovery path: a silent no-op here
+			// means the cache may serve stale data until TTLs expire on
+			// cross-instance writes that arrived during a pub/sub outage.
+			// Log at WARNING so operators can detect the mismatch.
+			logs.Warning("rebac tiered cache: star-flush requested but L2 is not *InMemoryBizReBACCache — cache may serve stale data after pub/sub disconnect")
 			return
 		}
-		l2.FlushStore(context.Background(), storeId)
+		t.l2.FlushStore(context.Background(), storeId)
 	}
-	// If L3 is the real Redis impl, install callbacks. Otherwise caller
-	// can wire manually via the test handles.
-	if r, ok := l3.(*RedisBizReBACCache); ok {
-		r.opts.OnInvalidate = invalidateL2
-		r.opts.OnFlushStore = flushL2
+}
+
+// NewTieredCacheWithRedis constructs both tiers together: an
+// in-memory L2 (auto-created) and a RedisBizReBACCache L3 built from
+// `redisOpts`. The callbacks that fan pub/sub invalidations into L2
+// are wired into `redisOpts` BEFORE NewRedisBizReBACCache runs, so
+// the subscriber goroutine sees them at start — no race.
+//
+// This is the constructor main.go's boot wiring (CP-8 B3.4) should use.
+// Tests with a fakeL3 should use NewTieredCache directly and wire their
+// fake's callbacks manually before calling NewTieredCache.
+func NewTieredCacheWithRedis(redisOpts RedisBizReBACCacheOptions) (*TieredCache, error) {
+	l2 := NewInMemoryBizReBACCache()
+	// Pre-populate the flush closure using a throwaway TieredCache so we
+	// can reference t.l2 from the flush closure. We'll replace t.l3 below.
+	tc := &TieredCache{l2: l2}
+	invalidateL2 := func(k cacheKey) { l2.Invalidate(context.Background(), k) }
+	flushL2 := tc.buildFlushL2()
+
+	// Install callbacks before constructing the Redis client so the
+	// subscriber goroutine captures them at startup.
+	redisOpts.OnInvalidate = invalidateL2
+	redisOpts.OnFlushStore = flushL2
+
+	r, err := NewRedisBizReBACCache(redisOpts)
+	if err != nil {
+		return nil, err
 	}
+	tc.l3 = r
 	tc.onInvalidateForTest = invalidateL2
 	tc.onFlushStoreForTest = flushL2
-	return tc
+	return tc, nil
 }
 
 // Get checks L2 first, falls through to L3 on miss. On L3 hit, copies
@@ -109,11 +138,15 @@ func (t *TieredCache) Get(ctx context.Context, k cacheKey) ([]tupleRef, bool) {
 	return nil, false
 }
 
-// Set writes to both tiers synchronously. L2 uses bizTuplesetCacheTTL;
-// the caller's TTL is forwarded to L3 (typically longer, e.g. 5 min).
-// The invariant that L2's TTL ≤ L3's is enforced by convention.
+// Set writes to both tiers synchronously. L2 TTL is min(caller TTL,
+// bizTuplesetCacheTTL) so L2 never outlives L3. The invariant that
+// L2's TTL ≤ L3's TTL is enforced here.
 func (t *TieredCache) Set(ctx context.Context, k cacheKey, refs []tupleRef, ttl time.Duration) {
-	t.l2.Set(ctx, k, refs, bizTuplesetCacheTTL)
+	l2TTL := ttl
+	if l2TTL > bizTuplesetCacheTTL {
+		l2TTL = bizTuplesetCacheTTL
+	}
+	t.l2.Set(ctx, k, refs, l2TTL)
 	t.l3.Set(ctx, k, refs, ttl)
 }
 
