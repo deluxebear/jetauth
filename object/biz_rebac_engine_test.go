@@ -116,20 +116,20 @@ func TestCheck_MaxDepth(t *testing.T) {
 }
 
 // TestCheck_MemoHit verifies a pre-populated memo short-circuits dispatch.
-// We store a `true` for the key under test and confirm check returns true
-// without stepping into the stubbed `this` rewrite (which would error out
-// with "not implemented").
+// We store StateAllowed for the key under test and confirm check returns
+// StateAllowed without stepping into the stubbed `this` rewrite (which
+// would error out with "not implemented").
 func TestCheck_MemoHit(t *testing.T) {
 	ctx := dispatchTestCtx(t, minimalDSL)
 	key := TupleKey{Object: "document:d1", Relation: "viewer", User: "user:a"}
-	ctx.memo.Store(memoKey(key), true)
+	ctx.memo.Store(memoKey(key), StateAllowed)
 
-	allowed, err := ctx.check(key, 0, nil)
+	state, err := ctx.check(key, 0, nil)
 	if err != nil {
 		t.Fatalf("memo hit path errored: %v", err)
 	}
-	if !allowed {
-		t.Fatalf("memo hit returned false, want true")
+	if state != StateAllowed {
+		t.Fatalf("memo hit returned %v, want StateAllowed", state)
 	}
 }
 
@@ -181,15 +181,15 @@ type document
 	var cnt atomic.Int64
 	ctx.evalCount = &cnt
 
-	allowed, err := ctx.check(TupleKey{Object: "document:d1", Relation: "viewer", User: "user:alice"}, 0, nil)
+	state, err := ctx.check(TupleKey{Object: "document:d1", Relation: "viewer", User: "user:alice"}, 0, nil)
 	if err != nil {
 		t.Fatalf("check: %v", err)
 	}
-	// Base a=true, Subtract a=true (memo hit) → difference returns
-	// !subtract, i.e. false. The result shape is incidental; the
-	// interesting invariant is the dispatch count.
-	if allowed {
-		t.Fatalf("want denied (a minus a), got allowed")
+	// Base a=allowed, Subtract a=allowed (memo hit) → difference yields
+	// StateDenied. The result shape is incidental; the interesting
+	// invariant is the dispatch count.
+	if state != StateDenied {
+		t.Fatalf("want StateDenied (a minus a), got %v", state)
 	}
 	// Expected dispatches: viewer(1) + a(1). Without the memo we'd see a
 	// second a dispatch for the subtract branch → count 3.
@@ -220,12 +220,15 @@ type document
 `
 	ctx := dispatchTestCtx(t, dsl)
 
-	allowed, err := ctx.check(TupleKey{Object: "document:d1", Relation: "a", User: "user:alice"}, 0, nil)
+	state, err := ctx.check(TupleKey{Object: "document:d1", Relation: "a", User: "user:alice"}, 0, nil)
 	if err != nil {
 		t.Fatalf("cycle should not error, got: %v", err)
 	}
-	if allowed {
-		t.Fatalf("cycle must deny, got allowed")
+	// Internal: check returns StateCycle on a path-cycle hit. The top-level
+	// ReBACCheck converts that to Allowed=false; see
+	// TestReBACCheck_CycleReturnsDenied for the external surface.
+	if state != StateCycle {
+		t.Fatalf("cycle check returned %v, want StateCycle", state)
 	}
 }
 

@@ -77,12 +77,17 @@ type CheckResult struct {
 // Production callers never set it — its zero value (nil) makes the check
 // free. Kept on the struct, not in a global, so concurrent tests don't
 // cross-contaminate each other's counters.
+//
+// memo stores checkState values (StateAllowed / StateDenied / StateCycle)
+// rather than bool since CP-8 C7. Cycle states are NOT memoised — a cycle
+// is a per-path property; the same key reached via a non-cyclic path must
+// still produce its true answer.
 type checkContext struct {
 	storeId        string
 	model          *openfgav1.AuthorizationModel
 	contextual     []TupleKey
 	requestContext map[string]any
-	memo           sync.Map // key: "object#relation@user" → bool
+	memo           sync.Map // key: "object#relation@user" → checkState
 	evalCount      *atomic.Int64
 }
 
@@ -321,31 +326,35 @@ func findRelation(model *openfgav1.AuthorizationModel, objectType, relation stri
 // visited tracks the resolution path — memoKeys of every ancestor call
 // on this branch. A re-entry of the same memoKey on the same path means
 // the schema has a cycle that "this branch" can't close; we return
-// (false, nil) without memoising, so a legitimate reach of the same key
-// via a different path can still produce its real answer.
+// StateCycle without memoising, so a legitimate reach of the same key
+// via a different path can still produce its real answer. StateCycle is
+// distinct from StateDenied so the subtract branch of a difference can
+// combine "base=allowed" with "subtract=cycle" into a conservative deny
+// instead of naively "allowed and not false = allowed" (spec §11.2,
+// OpenFGA's `true_butnot_cycle_return_false`).
 //
 // Depth is checked before the memo hit on purpose: a misauthored schema
 // that somehow passes the cycle check but still recurses 25+ deep must
-// surface as error, not a silent false.
+// surface as error, not a silent StateDenied.
 //
 // Goroutines in checkUnion / checkIntersection share visited by value —
 // Go slices pass the header by value, underlying array by reference. Each
 // sub-ctx.check that needs to add to visited does append([]string(nil),
 // visited...) first so siblings don't mutate each other's arrays.
-func (ctx *checkContext) check(key TupleKey, depth int, visited []string) (bool, error) {
+func (ctx *checkContext) check(key TupleKey, depth int, visited []string) (checkState, error) {
 	mkey := memoKey(key)
 	for _, v := range visited {
 		if v == mkey {
-			return false, nil
+			return StateCycle, nil
 		}
 	}
 	if depth >= maxResolutionDepth {
-		return false, fmt.Errorf("rebac: max resolution depth %d exceeded on %s#%s",
+		return StateDenied, fmt.Errorf("rebac: max resolution depth %d exceeded on %s#%s",
 			maxResolutionDepth, key.Object, key.Relation)
 	}
 
 	if v, ok := ctx.memo.Load(mkey); ok {
-		return v.(bool), nil
+		return v.(checkState), nil
 	}
 	// Past the memo short-circuit — this is real dispatch work. Counter
 	// lets memo-collapse tests prove sibling sub-queries share results.
@@ -355,12 +364,12 @@ func (ctx *checkContext) check(key TupleKey, depth int, visited []string) (bool,
 
 	objType, _, err := parseObjectString(key.Object)
 	if err != nil {
-		return false, fmt.Errorf("rebac: parse object: %w", err)
+		return StateDenied, fmt.Errorf("rebac: parse object: %w", err)
 	}
 
 	userset, err := findRelation(ctx.model, objType, key.Relation)
 	if err != nil {
-		return false, err
+		return StateDenied, err
 	}
 
 	// Children inherit "this key has been seen" by receiving a fresh
@@ -368,22 +377,25 @@ func (ctx *checkContext) check(key TupleKey, depth int, visited []string) (bool,
 	// standalone backing array so concurrent siblings never stomp one
 	// another when they recurse further.
 	childVisited := append(append([]string(nil), visited...), mkey)
-	allowed, err := ctx.evaluate(userset, key, depth, childVisited)
+	state, err := ctx.evaluate(userset, key, depth, childVisited)
 	if err != nil {
-		return false, err
+		return StateDenied, err
 	}
-	// Only positive or negative *decisions* are memoised — errors are not,
-	// so transient failures don't poison later sibling branches that might
-	// reach the same key via a different path.
-	ctx.memo.Store(mkey, allowed)
-	return allowed, nil
+	// Only definite allow/deny decisions are memoised — StateCycle is a
+	// per-path property (a different resolution path to the same key may
+	// not close the same cycle), and errors are not memoised so transient
+	// failures don't poison later sibling branches.
+	if state != StateCycle {
+		ctx.memo.Store(mkey, state)
+	}
+	return state, nil
 }
 
 // evaluate selects the rewrite implementation by oneof type. visited is
 // forwarded so any helper that recurses via ctx.check carries the
 // resolution path with it — union / intersection / difference don't
 // themselves consume visited; they're rewrites on the current key.
-func (ctx *checkContext) evaluate(userset *openfgav1.Userset, key TupleKey, depth int, visited []string) (bool, error) {
+func (ctx *checkContext) evaluate(userset *openfgav1.Userset, key TupleKey, depth int, visited []string) (checkState, error) {
 	switch u := userset.GetUserset().(type) {
 	case *openfgav1.Userset_This:
 		return ctx.checkThis(key, depth, visited)
@@ -398,9 +410,9 @@ func (ctx *checkContext) evaluate(userset *openfgav1.Userset, key TupleKey, dept
 	case *openfgav1.Userset_Difference:
 		return ctx.checkDifference(key, u.Difference, depth, visited)
 	case nil:
-		return false, fmt.Errorf("rebac: rewrite for %s#%s has no userset type", key.Object, key.Relation)
+		return StateDenied, fmt.Errorf("rebac: rewrite for %s#%s has no userset type", key.Object, key.Relation)
 	default:
-		return false, fmt.Errorf("rebac: unsupported rewrite kind %T on %s#%s", u, key.Object, key.Relation)
+		return StateDenied, fmt.Errorf("rebac: unsupported rewrite kind %T on %s#%s", u, key.Object, key.Relation)
 	}
 }
 
@@ -423,10 +435,10 @@ func (ctx *checkContext) evaluate(userset *openfgav1.Userset, key TupleKey, dept
 // the self-wildcard are never granted by a `{type}:*` row. Userset
 // expansion bumps depth so a malformed schema looping on itself can't
 // outrun the cap.
-func (ctx *checkContext) checkThis(key TupleKey, depth int, visited []string) (bool, error) {
+func (ctx *checkContext) checkThis(key TupleKey, depth int, visited []string) (checkState, error) {
 	userType, userId, userRel, err := parseUserString(key.User)
 	if err != nil {
-		return false, fmt.Errorf("rebac: parse user: %w", err)
+		return StateDenied, fmt.Errorf("rebac: parse user: %w", err)
 	}
 	isUserset := userRel != ""
 	isSelfWildcard := userId == "*"
@@ -434,7 +446,7 @@ func (ctx *checkContext) checkThis(key TupleKey, depth int, visited []string) (b
 
 	refs, err := ctx.tuplesetTuples(key.Object, key.Relation)
 	if err != nil {
-		return false, err
+		return StateDenied, err
 	}
 
 	// Type-restriction filter (spec §5.2 type_restriction). Absent
@@ -443,6 +455,12 @@ func (ctx *checkContext) checkThis(key TupleKey, depth int, visited []string) (b
 	// DirectlyRelatedUserTypes metadata and must not be over-filtered.
 	objType, _, _ := parseObjectString(key.Object)
 	restrictions := findDirectlyRelatedUserTypes(ctx.model, objType, key.Relation)
+
+	// sawCycle: if no ref allowed but at least one userset expansion
+	// returned StateCycle, we surface StateCycle rather than StateDenied
+	// so enclosing difference/intersection combinators can apply the
+	// conservative-deny rule.
+	sawCycle := false
 
 	for _, ref := range refs {
 		if !subjectMatchesTypeRestriction(ref.User, restrictions) {
@@ -454,10 +472,10 @@ func (ctx *checkContext) checkThis(key TupleKey, depth int, visited []string) (b
 		if directMatch {
 			ok, err := ctx.evaluateTupleCondition(ref)
 			if err != nil {
-				return false, err
+				return StateDenied, err
 			}
 			if ok {
-				return true, nil
+				return StateAllowed, nil
 			}
 			// Condition denied this tuple; keep scanning — another tuple
 			// may still grant.
@@ -472,7 +490,7 @@ func (ctx *checkContext) checkThis(key TupleKey, depth int, visited []string) (b
 			// is unmet, we must not recurse through it.
 			ok, err := ctx.evaluateTupleCondition(ref)
 			if err != nil {
-				return false, err
+				return StateDenied, err
 			}
 			if !ok {
 				continue
@@ -482,7 +500,7 @@ func (ctx *checkContext) checkThis(key TupleKey, depth int, visited []string) (b
 			if rowRel == "" {
 				continue
 			}
-			allowed, err := ctx.check(TupleKey{
+			state, err := ctx.check(TupleKey{
 				Object:   rowObj,
 				Relation: rowRel,
 				User:     key.User,
@@ -494,14 +512,20 @@ func (ctx *checkContext) checkThis(key TupleKey, depth int, visited []string) (b
 				if errors.Is(err, errSchemaMissing) {
 					continue
 				}
-				return false, err
+				return StateDenied, err
 			}
-			if allowed {
-				return true, nil
+			switch state {
+			case StateAllowed:
+				return StateAllowed, nil
+			case StateCycle:
+				sawCycle = true
 			}
 		}
 	}
-	return false, nil
+	if sawCycle {
+		return StateCycle, nil
+	}
+	return StateDenied, nil
 }
 
 // evaluateTupleCondition applies the caller-tuple's CEL condition (if
@@ -556,10 +580,10 @@ func (ctx *checkContext) evaluateTupleCondition(ref tupleRef) (bool, error) {
 // The ObjectRelation.Object field is ignored here because computed_userset
 // always refers to the current object. OpenFGA's proto keeps the field for
 // symmetry with tuple_to_userset; the OpenFGA server asserts it's empty.
-func (ctx *checkContext) checkComputedUserset(key TupleKey, cu *openfgav1.ObjectRelation, depth int, visited []string) (bool, error) {
+func (ctx *checkContext) checkComputedUserset(key TupleKey, cu *openfgav1.ObjectRelation, depth int, visited []string) (checkState, error) {
 	target := cu.GetRelation()
 	if target == "" {
-		return false, fmt.Errorf("rebac: computed_userset on %s#%s has empty target relation",
+		return StateDenied, fmt.Errorf("rebac: computed_userset on %s#%s has empty target relation",
 			key.Object, key.Relation)
 	}
 	return ctx.check(TupleKey{
@@ -577,17 +601,17 @@ func (ctx *checkContext) checkComputedUserset(key TupleKey, cu *openfgav1.Object
 // The scan is lazy — we fetch parent tuples on demand rather than
 // pre-materialising every ancestor, so a folder with many documents pays
 // only for the parents it actually needs to consult for a given Check.
-func (ctx *checkContext) checkTupleToUserset(key TupleKey, ttu *openfgav1.TupleToUserset, depth int, visited []string) (bool, error) {
+func (ctx *checkContext) checkTupleToUserset(key TupleKey, ttu *openfgav1.TupleToUserset, depth int, visited []string) (checkState, error) {
 	tupleset := ttu.GetTupleset().GetRelation()
 	computed := ttu.GetComputedUserset().GetRelation()
 	if tupleset == "" || computed == "" {
-		return false, fmt.Errorf("rebac: tuple_to_userset on %s#%s missing tupleset or computed relation",
+		return StateDenied, fmt.Errorf("rebac: tuple_to_userset on %s#%s missing tupleset or computed relation",
 			key.Object, key.Relation)
 	}
 
 	parents, err := ctx.tuplesetTuples(key.Object, tupleset)
 	if err != nil {
-		return false, err
+		return StateDenied, err
 	}
 
 	// Apply the tupleset relation's type restriction — e.g. if schema
@@ -596,6 +620,11 @@ func (ctx *checkContext) checkTupleToUserset(key TupleKey, ttu *openfgav1.TupleT
 	objType, _, _ := parseObjectString(key.Object)
 	tuplesetRestrictions := findDirectlyRelatedUserTypes(ctx.model, objType, tupleset)
 
+	// Aggregate across every parent branch via unionState. A single
+	// StateAllowed short-circuits; otherwise a pending StateCycle dominates
+	// over StateDenied so the caller can apply conservative-deny rules
+	// (e.g. inside a difference subtract).
+	result := StateDenied
 	for _, p := range parents {
 		if !subjectMatchesTypeRestriction(p.User, tuplesetRestrictions) {
 			continue
@@ -611,7 +640,7 @@ func (ctx *checkContext) checkTupleToUserset(key TupleKey, ttu *openfgav1.TupleT
 		// parent for this request.
 		ok, err := ctx.evaluateTupleCondition(p)
 		if err != nil {
-			return false, err
+			return StateDenied, err
 		}
 		if !ok {
 			continue
@@ -624,7 +653,7 @@ func (ctx *checkContext) checkTupleToUserset(key TupleKey, ttu *openfgav1.TupleT
 			parentObject = p.User[:idx]
 		}
 
-		allowed, err := ctx.check(TupleKey{
+		state, err := ctx.check(TupleKey{
 			Object:   parentObject,
 			Relation: computed,
 			User:     key.User,
@@ -636,13 +665,14 @@ func (ctx *checkContext) checkTupleToUserset(key TupleKey, ttu *openfgav1.TupleT
 			if errors.Is(err, errSchemaMissing) {
 				continue
 			}
-			return false, err
+			return StateDenied, err
 		}
-		if allowed {
-			return true, nil
+		result = unionState(result, state)
+		if result == StateAllowed {
+			return StateAllowed, nil
 		}
 	}
-	return false, nil
+	return result, nil
 }
 
 // tupleRef is the engine-internal view of a tuple during Check: the User
@@ -744,10 +774,10 @@ func (ctx *checkContext) tuplesetTuples(object, relation string) ([]tupleRef, er
 // Error handling: if any branch returns true, errors from other branches
 // are swallowed — one positive decision suffices. If no branch is true and
 // any branch errored, the first error surfaces; otherwise false.
-func (ctx *checkContext) checkUnion(key TupleKey, u *openfgav1.Usersets, depth int, visited []string) (bool, error) {
+func (ctx *checkContext) checkUnion(key TupleKey, u *openfgav1.Usersets, depth int, visited []string) (checkState, error) {
 	children := u.GetChild()
 	if len(children) == 0 {
-		return false, nil
+		return StateDenied, nil
 	}
 	if len(children) == 1 {
 		return ctx.evaluate(children[0], key, depth, visited)
@@ -755,30 +785,41 @@ func (ctx *checkContext) checkUnion(key TupleKey, u *openfgav1.Usersets, depth i
 
 	var g errgroup.Group
 	var found atomic.Bool
+	// sawCycle records whether any branch returned StateCycle so a
+	// denied-plus-cycle union surfaces as StateCycle (conservative) rather
+	// than StateDenied. Branches run concurrently; protected by a mutex
+	// because a plain atomic bool can't express the unionState reduction.
+	sawCycle := atomic.Bool{}
 	for _, c := range children {
 		c := c
 		g.Go(func() error {
 			if found.Load() {
 				return nil
 			}
-			allowed, err := ctx.evaluate(c, key, depth, visited)
+			state, err := ctx.evaluate(c, key, depth, visited)
 			if err != nil {
 				return err
 			}
-			if allowed {
+			switch state {
+			case StateAllowed:
 				found.Store(true)
+			case StateCycle:
+				sawCycle.Store(true)
 			}
 			return nil
 		})
 	}
 	err := g.Wait()
 	if found.Load() {
-		return true, nil
+		return StateAllowed, nil
 	}
 	if err != nil {
-		return false, err
+		return StateDenied, err
 	}
-	return false, nil
+	if sawCycle.Load() {
+		return StateCycle, nil
+	}
+	return StateDenied, nil
 }
 
 // checkIntersection resolves `define viewer: [user] and active` — every
@@ -788,72 +829,89 @@ func (ctx *checkContext) checkUnion(key TupleKey, u *openfgav1.Usersets, depth i
 // Error handling mirrors checkUnion's shape but inverted: a single false
 // decision is enough to reject, and errors only surface when no branch
 // was decisive.
-func (ctx *checkContext) checkIntersection(key TupleKey, u *openfgav1.Usersets, depth int, visited []string) (bool, error) {
+func (ctx *checkContext) checkIntersection(key TupleKey, u *openfgav1.Usersets, depth int, visited []string) (checkState, error) {
 	children := u.GetChild()
 	if len(children) == 0 {
 		// Empty intersection is a schema bug — DSL never emits one, but a
 		// malformed proto could. Refuse rather than returning a confusing
 		// "vacuous truth".
-		return false, fmt.Errorf("rebac: empty intersection on %s#%s", key.Object, key.Relation)
+		return StateDenied, fmt.Errorf("rebac: empty intersection on %s#%s", key.Object, key.Relation)
 	}
 	if len(children) == 1 {
 		return ctx.evaluate(children[0], key, depth, visited)
 	}
 
 	var g errgroup.Group
-	var anyFalse atomic.Bool
+	// denied short-circuits; cycle dominates over allowed.
+	var anyDenied atomic.Bool
+	var sawCycle atomic.Bool
 	for _, c := range children {
 		c := c
 		g.Go(func() error {
-			if anyFalse.Load() {
+			if anyDenied.Load() {
 				return nil
 			}
-			allowed, err := ctx.evaluate(c, key, depth, visited)
+			state, err := ctx.evaluate(c, key, depth, visited)
 			if err != nil {
 				return err
 			}
-			if !allowed {
-				anyFalse.Store(true)
+			switch state {
+			case StateDenied:
+				anyDenied.Store(true)
+			case StateCycle:
+				sawCycle.Store(true)
 			}
 			return nil
 		})
 	}
 	err := g.Wait()
-	if anyFalse.Load() {
-		return false, nil
+	if anyDenied.Load() {
+		return StateDenied, nil
 	}
 	if err != nil {
-		return false, err
+		return StateDenied, err
 	}
-	return true, nil
+	if sawCycle.Load() {
+		return StateCycle, nil
+	}
+	return StateAllowed, nil
 }
 
 // checkDifference resolves `define viewer: [user] but not banned` — the
 // base grants, provided the subtract does not also grant. Strictly
-// sequential: if Base is false, Subtract is never consulted — callers
-// often use Subtract for expensive "banlist" lookups, and running them
-// for users who weren't getting access anyway is pure waste.
-func (ctx *checkContext) checkDifference(key TupleKey, d *openfgav1.Difference, depth int, visited []string) (bool, error) {
+// sequential: if Base is denied, Subtract is never consulted — diffState
+// is absorbing on a denied base (diffState(denied, *) = denied), and
+// callers often use Subtract for expensive "banlist" lookups that would
+// waste work for users who weren't getting access anyway.
+//
+// Crucially for CP-8 C7: a Subtract branch returning StateCycle cannot be
+// collapsed to "not false" — if we can't prove the subtract is false, we
+// cannot prove the difference is allowed. diffState threads the cycle
+// through so the enclosing evaluator (or top-level ReBACCheck) sees the
+// conservative deny.
+func (ctx *checkContext) checkDifference(key TupleKey, d *openfgav1.Difference, depth int, visited []string) (checkState, error) {
 	base := d.GetBase()
 	sub := d.GetSubtract()
 	if base == nil || sub == nil {
-		return false, fmt.Errorf("rebac: difference on %s#%s missing base or subtract",
+		return StateDenied, fmt.Errorf("rebac: difference on %s#%s missing base or subtract",
 			key.Object, key.Relation)
 	}
 
-	baseAllowed, err := ctx.evaluate(base, key, depth, visited)
+	baseState, err := ctx.evaluate(base, key, depth, visited)
 	if err != nil {
-		return false, err
+		return StateDenied, err
 	}
-	if !baseAllowed {
-		return false, nil
+	// Equivalent to diffState(StateDenied, *) = StateDenied — short-circuit
+	// to avoid the wasted Subtract evaluation.
+	if baseState == StateDenied {
+		return StateDenied, nil
 	}
 
-	subAllowed, err := ctx.evaluate(sub, key, depth, visited)
+	subState, err := ctx.evaluate(sub, key, depth, visited)
 	if err != nil {
-		return false, err
+		return StateDenied, err
 	}
-	return !subAllowed, nil
+	return diffState(baseState, subState), nil
 }
 
 // ReBACCheck evaluates whether req.TupleKey.User has req.TupleKey.Relation
@@ -902,9 +960,13 @@ func ReBACCheck(req *CheckRequest) (*CheckResult, error) {
 		contextual:     req.ContextualTuples,
 		requestContext: req.Context,
 	}
-	allowed, err := ctx.check(req.TupleKey, 0, nil)
+	state, err := ctx.check(req.TupleKey, 0, nil)
 	if err != nil {
 		return nil, err
 	}
-	return &CheckResult{Allowed: allowed}, nil
+	// StateCycle at the top level maps to Allowed=false (conservative
+	// deny). External API shape is unchanged — the ternary state lives
+	// only inside the engine so lattice combinators can reason about
+	// cycle-in-subtract and similar edge cases correctly.
+	return &CheckResult{Allowed: state == StateAllowed}, nil
 }
