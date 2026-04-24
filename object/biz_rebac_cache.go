@@ -32,6 +32,7 @@ package object
 
 import (
 	"context"
+	"sync/atomic"
 	"time"
 )
 
@@ -44,36 +45,53 @@ const bizTuplesetCacheTTL = 10 * time.Second
 // Default is the in-memory L2 impl (BizReBACCache interface from
 // biz_rebac_cache_interface.go). CP-8 C6 will replace this with a
 // TieredCache(L2, L3Redis) at boot when bizReBACCacheL3Enabled=true.
-var bizReBACCache BizReBACCache = NewInMemoryBizReBACCache()
+// Wrapped in atomic.Pointer so SetBizReBACCache is safe to call
+// concurrently with cache access (e.g. tests swapping fakes in parallel).
+var bizReBACCache atomic.Pointer[BizReBACCache]
 
-// SetBizReBACCache replaces the process-wide tupleset cache. Intended
-// for main.go boot-time wiring; tests may also swap in fakes. Not
-// safe to call concurrently with cache access — call once at init.
-func SetBizReBACCache(c BizReBACCache) {
-	bizReBACCache = c
+func init() {
+	bizReBACCache.Store(ptrTo[BizReBACCache](NewInMemoryBizReBACCache()))
 }
+
+// ptrTo returns a pointer to v. Used with atomic.Pointer[interface] where
+// the compiler requires an addressable value.
+func ptrTo[T any](v T) *T { return &v }
+
+// SetBizReBACCache replaces the process-wide tupleset cache. Intended for
+// main.go boot-time wiring (CP-8 C6 TieredCache); tests may also swap
+// in fakes. Safe to call concurrently with cache access via atomic store.
+// Passing nil panics fast rather than deferring a later NPE.
+func SetBizReBACCache(c BizReBACCache) {
+	if c == nil {
+		panic("SetBizReBACCache: nil cache")
+	}
+	bizReBACCache.Store(&c)
+}
+
+// TODO(CP-8 C6): thread request ctx from engine callers instead of
+// constructing Background() here; matters for Redis L3 Get cancellation.
 
 // loadBizTuplesetCache returns cached tuplerefs for (storeId, object, relation)
 // or (nil, false) on miss / expired. Preserves the pre-CP-8 package API.
 func loadBizTuplesetCache(storeId, object, relation string) ([]tupleRef, bool) {
-	return bizReBACCache.Get(context.Background(), cacheKey{StoreId: storeId, Object: object, Relation: relation})
+	return (*bizReBACCache.Load()).Get(context.Background(), cacheKey{StoreId: storeId, Object: object, Relation: relation})
 }
 
 // storeBizTuplesetCache writes an entry with the default TTL. Callers
 // pass the already-deduplicated refs slice from the DB path.
 func storeBizTuplesetCache(storeId, object, relation string, refs []tupleRef) {
-	bizReBACCache.Set(context.Background(), cacheKey{StoreId: storeId, Object: object, Relation: relation}, refs, bizTuplesetCacheTTL)
+	(*bizReBACCache.Load()).Set(context.Background(), cacheKey{StoreId: storeId, Object: object, Relation: relation}, refs, bizTuplesetCacheTTL)
 }
 
 // invalidateBizTuplesetCacheKey evicts a single tupleset from the cache.
 // Called after tuple writes/deletes that change that exact (object, relation) set.
 func invalidateBizTuplesetCacheKey(storeId, object, relation string) {
-	bizReBACCache.Invalidate(context.Background(), cacheKey{StoreId: storeId, Object: object, Relation: relation})
+	(*bizReBACCache.Load()).Invalidate(context.Background(), cacheKey{StoreId: storeId, Object: object, Relation: relation})
 }
 
 // flushBizTuplesetCacheForStore evicts every entry for a store. Called on
 // schema advance, which can change which tuples are admitted by type
 // restrictions.
 func flushBizTuplesetCacheForStore(storeId string) {
-	bizReBACCache.FlushStore(context.Background(), storeId)
+	(*bizReBACCache.Load()).FlushStore(context.Background(), storeId)
 }

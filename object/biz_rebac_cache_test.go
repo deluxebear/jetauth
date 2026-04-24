@@ -70,17 +70,19 @@ func TestBizTuplesetCache_FlushStore(t *testing.T) {
 }
 
 func TestBizTuplesetCache_TTLExpires(t *testing.T) {
+	t.Cleanup(func() { SetBizReBACCache(NewInMemoryBizReBACCache()) })
+
 	// Inject an already-expired entry by passing a negative TTL so the
 	// impl sets expires = now - 1s. Previously this poked the sync.Map
 	// directly; using the interface keeps the test impl-agnostic.
 	key := cacheKey{StoreId: "s-ttl", Object: "doc:d1", Relation: "viewer"}
-	bizReBACCache.Set(context.Background(), key, []tupleRef{{User: "u:a"}}, -1*time.Second)
+	(*bizReBACCache.Load()).Set(context.Background(), key, []tupleRef{{User: "u:a"}}, -1*time.Second)
 
 	if _, ok := loadBizTuplesetCache("s-ttl", "doc:d1", "viewer"); ok {
 		t.Fatal("expired entry should miss")
 	}
 	// A second Get on the same key confirms the entry was evicted (not lingering).
-	if _, ok := bizReBACCache.Get(context.Background(), key); ok {
+	if _, ok := (*bizReBACCache.Load()).Get(context.Background(), key); ok {
 		t.Fatal("expired entry should have been evicted on miss")
 	}
 }
