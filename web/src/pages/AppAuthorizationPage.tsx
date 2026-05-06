@@ -7,6 +7,7 @@ import { ArrowLeft, Plus, Play, Copy, Check, X, RefreshCw, RotateCcw, Pencil, Tr
 import DataTable, { type Column, useTablePrefs, ColumnsMenu } from "../components/DataTable";
 import BizAppResourceTab from "../components/BizAppResourceTab";
 import BizSchemaEditor from "../components/BizSchemaEditor";
+import BizSchemaVersionList from "../components/BizSchemaVersionList";
 import BizTupleManager from "../components/BizTupleManager";
 import BizReBACTester from "../components/BizReBACTester";
 import BizReBACBrowser from "../components/BizReBACBrowser";
@@ -15,8 +16,9 @@ import BizReBACOverview from "../components/BizReBACOverview";
 import { useTranslation } from "../i18n";
 import { useModal } from "../components/Modal";
 import * as BizBackend from "../backend/BizBackend";
-import type { BizAppConfig, BizRole, BizPermission, PoliciesExport } from "../backend/BizBackend";
+import type { BizAppConfig, BizRole, BizPermission, PoliciesExport, BizAuthorizationModel } from "../backend/BizBackend";
 import { pickAppIcon } from "../utils/appIcon";
+import { downloadFile } from "../util/download";
 
 // Casbin-lane tabs are unchanged. ReBAC-lane tabs are rendered only when
 // the app's modelType is "rebac" (spec §8.2). Since "overview" and
@@ -342,7 +344,7 @@ export default function AppAuthorizationPage() {
           <RebacOverviewTab appId={appId} t={t} onJumpTab={(tab) => setActiveTab(tab)} />
         )}
         {isReBAC && activeTab === "schema" && (
-          <RebacSchemaTab appId={appId} t={t} />
+          <RebacSchemaTab appId={appId} config={config ?? undefined} t={t} />
         )}
         {isReBAC && activeTab === "tuples" && (
           <RebacTuplesTab appId={appId} t={t} />
@@ -2243,9 +2245,104 @@ function RebacOverviewTab({
   return <BizReBACOverview appId={appId} onJumpTab={onJumpTab} />;
 }
 
-function RebacSchemaTab({ appId, t: _t }: { appId: string; t: (k: any) => string }) {
-  // BizSchemaEditor owns the shared AST and the DSL↔Visual sync.
-  return <BizSchemaEditor appId={appId} />;
+function RebacSchemaTab({
+  appId,
+  config,
+  t,
+}: {
+  appId: string;
+  config?: { currentAuthorizationModelId?: string } | undefined;
+  t: (k: any) => string;
+}) {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const modelIdParam = searchParams.get("modelId");
+  const [versions, setVersions] = useState<BizAuthorizationModel[]>([]);
+  const [reloadKey, setReloadKey] = useState(0);
+  const [loadingList, setLoadingList] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoadingList(true);
+    BizBackend.listBizAuthorizationModels(appId)
+      .then((res) => {
+        if (cancelled) return;
+        if (res.status === "ok" && Array.isArray(res.data)) {
+          setVersions(res.data);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingList(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [appId, reloadKey]);
+
+  const setModelId = (id: string | null) => {
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        if (id === null) {
+          next.delete("modelId");
+        } else {
+          next.set("modelId", id);
+        }
+        return next;
+      },
+      { replace: true },
+    );
+  };
+
+  const handleRollback = async (id: string) => {
+    const res = await BizBackend.activateBizAuthorizationModel(appId, id);
+    if (res.status === "ok") {
+      setReloadKey((k) => k + 1);
+    }
+  };
+
+  const handleExportDsl = async () => {
+    const res = await BizBackend.getBizAuthorizationModel(appId);
+    if (res.status === "ok" && res.data?.schemaDsl) {
+      const safeAppId = appId.replace(/\//g, "-");
+      downloadFile(`${safeAppId}-${res.data.id}.fga`, res.data.schemaDsl);
+    }
+  };
+
+  // List view: no modelId in URL.
+  if (!modelIdParam) {
+    if (loadingList) {
+      return (
+        <div className="rounded-lg border border-border bg-surface-1 p-6 text-center text-[13px] text-text-muted">
+          {t("rebac.common.loading" as any)}
+        </div>
+      );
+    }
+    return (
+      <BizSchemaVersionList
+        versions={versions}
+        activeId={config?.currentAuthorizationModelId}
+        onSelect={(id) => setModelId(id)}
+        onRollback={(id) => void handleRollback(id)}
+        onCreateNew={() => setModelId("__new__")}
+        onExportDsl={() => void handleExportDsl()}
+      />
+    );
+  }
+
+  // Detail view. modelId="__new__" → editor loads the active model and
+  // the user publishes a new version on top.
+  return (
+    <BizSchemaEditor
+      appId={appId}
+      modelId={modelIdParam === "__new__" ? undefined : modelIdParam}
+      onPublishNew={(newModelId) => {
+        // Reload the list and navigate to the freshly-active version.
+        setReloadKey((k) => k + 1);
+        setModelId(newModelId);
+      }}
+      onBack={() => setModelId(null)}
+    />
+  );
 }
 
 function RebacTuplesTab({ appId, t: _t }: { appId: string; t: (k: any) => string }) {
