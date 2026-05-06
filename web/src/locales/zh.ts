@@ -3487,6 +3487,11 @@ const zh: Record<string, string> = {
   "rebac.overview.emptyTitle": "选择一个场景模板快速开始",
   "rebac.overview.emptyHint": "模板会写入 schema 与几条示例 tuple,30 秒内即可试用 Tester",
   "rebac.overview.applyTemplateLabel": "应用模板:{{name}}",
+  "rebac.overview.recentWrites": "最近写入",
+  "rebac.overview.viewAll": "查看全部",
+  "rebac.overview.noRecentWrites": "暂无写入记录",
+  "rebac.overview.typeDistribution": "类型分布",
+  "rebac.overview.noTypeData": "暂无类型数据",
 
   // Scenario templates
   "rebac.templates.applied": "模板已应用,正在初始化",

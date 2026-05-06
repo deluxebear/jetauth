@@ -3497,6 +3497,11 @@ const en = {
   "rebac.overview.emptyTitle": "Pick a scenario template to start",
   "rebac.overview.emptyHint": "Templates seed schema + sample tuples so you can try the Tester in 30 seconds",
   "rebac.overview.applyTemplateLabel": "Apply template: {{name}}",
+  "rebac.overview.recentWrites": "Recent writes",
+  "rebac.overview.viewAll": "View all",
+  "rebac.overview.noRecentWrites": "No recent writes",
+  "rebac.overview.typeDistribution": "Type distribution",
+  "rebac.overview.noTypeData": "No type data yet",
 
   // Scenario templates
   "rebac.templates.applied": "Template applied, initializing",
