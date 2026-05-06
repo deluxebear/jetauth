@@ -116,6 +116,11 @@ func GetReBACStats(owner, appName string) (*ReBACStats, error) {
 	if len(models) > 0 {
 		lastUpdated = models[0].CreatedTime // ListBizAuthorizationModels returns newest first
 	}
+	// cfg may legitimately be nil for an app whose ReBAC config hasn't been
+	// seeded yet. A transient DB error is also swallowed here on purpose:
+	// the four SELECTs above already failed-fast on outage, so reaching this
+	// line with an error is a "config row read flaked" race that should
+	// degrade to empty ActiveModelId, not blank the whole Overview screen.
 	cfg, _ := GetBizAppConfig(BuildStoreId(owner, appName))
 	var activeModelId string
 	if cfg != nil {
