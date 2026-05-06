@@ -31,6 +31,7 @@ type BizAuthorizationModel struct {
 	SchemaDSL   string `xorm:"mediumtext" json:"schemaDsl"`
 	SchemaJSON  string `xorm:"mediumtext" json:"schemaJson"`
 	SchemaHash  string `xorm:"varchar(64) index" json:"schemaHash"`
+	Description string `xorm:"varchar(500)" json:"description"`
 	CreatedTime string `xorm:"varchar(100)" json:"createdTime"`
 	CreatedBy   string `xorm:"varchar(200)" json:"createdBy"`
 }

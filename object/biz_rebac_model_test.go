@@ -32,3 +32,26 @@ func TestComputeSchemaHash_DiffersOnByteChange(t *testing.T) {
 		t.Fatalf("hash collided on trailing space: %s", h1)
 	}
 }
+
+func TestBizAuthorizationModel_DescriptionRoundTrip(t *testing.T) {
+	if ormer == nil {
+		t.Skip("ormer not initialised (test needs DB)")
+	}
+	m := &BizAuthorizationModel{
+		Owner:       "admin",
+		AppName:     "drive_prod",
+		SchemaDSL:   "model\n  schema 1.1\n\ntype user\n",
+		Description: "增加 commenter 关系",
+	}
+	if _, err := AddBizAuthorizationModel(m); err != nil {
+		t.Fatalf("AddBizAuthorizationModel: %v", err)
+	}
+	got, err := GetBizAuthorizationModel(m.Id)
+	if err != nil || got == nil {
+		t.Fatalf("GetBizAuthorizationModel: got=%v err=%v", got, err)
+	}
+	if got.Description != "增加 commenter 关系" {
+		t.Fatalf("Description not persisted: got %q", got.Description)
+	}
+	_, _ = DeleteBizAuthorizationModelsForApp("admin", "drive_prod")
+}
