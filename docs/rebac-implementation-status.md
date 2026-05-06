@@ -330,6 +330,46 @@ go test -v $(go list ./...) -tags skipCi   # CI 等价(跳过 DB 集成测试)
 
 ---
 
+## 7.4 Admin UI Iteration 1 (`feature/rebac-ui-iter1`, 2026-05-07)
+
+**Done — 5 mockup screens redesigned + matching backend hooks:**
+
+| Mockup | Touchpoints | Tasks |
+|---|---|---|
+| ① Overview | `BizReBACOverview` 重排为 4 个 hero stat tile + Recent Writes + Type Distribution；单次 `/api/biz-rebac-stats` 聚合调用 | A6, B2, D1, D2, D3 |
+| ② Authorization model versions | 新组件 `BizSchemaVersionList`；URL routing `?tab=schema&modelId=<id>`；导出 DSL / 新建版本 / 回退 | E1, E3, A3, B1 |
+| ③ Model detail | `BizSchemaEditor` 顶部加版本头 + 校验/回退/发布新版三个动作；Description 列贯通 | A1, A2, B2, E2 |
+| ④ Tuples | `BizTupleManager` facet chips + `TupleChip` 着色 + 服务端分页 + Written 列 | A4, B3, F1 |
+| ⑤ Check tester | `BizReBACTester` 三栏布局 + ⌘+Enter + 耗时；新组件 `BizDecisionPathGraph` 以 SVG DAG 渲染 expand 树 | G1, G2 |
+
+Plus: model-type pill in `AppAuthorizationPage` header (C1), per-app Check QPS ring buffer (A5), 26 i18n keys × en/zh, env-gated Playwright smoke `web/e2e/rebac-admin-flow.spec.ts` (H2).
+
+**Endpoints introduced this iteration:**
+
+- `POST /api/biz-activate-authorization-model` — repoint app to a historical model id (rollback)
+- `GET  /api/biz-rebac-stats` — admin Overview snapshot (tuple count, today delta, last-1h Check QPS, model count, active id, type distribution, recent writes)
+- `GET  /api/biz-read-tuples` — now paginated (`offset`, `limit`, default+cap `1000`); object filter ending with `:` is treated as type-prefix LIKE; response shape changed to `{tuples, total, offset, limit}` envelope (B3 updated all internal callers)
+
+**Schema delta:**
+
+- `BizAuthorizationModel.Description` (`varchar(500)`) — human-readable change summary surfaced in the version list
+- No new tables, no migrations needed (Xorm auto-sync picks up the column)
+
+**Out of scope (deferred to iter-2):**
+
+- Mockup ⑥ "断言 (Assertions)" — needs `biz_rebac_assertion` table + 4 endpoints + UI; the iter-1 Overview reserves a greyed "Assertion pass-rate" hero tile as the placeholder.
+- Mockup ⑦ "审计 (Audit)" — needs `biz_rebac_tuple_audit` table + write hooks + 90-day retention + UI.
+- Per-app environment switcher ("prod"/"staging") — explicit product decision; the header shows only model-type for now.
+
+**Verification at branch tip:**
+
+- `go build ./... && go vet ./...` clean.
+- `go test ./controllers` PASS. `go test ./object` has 1 pre-existing `TestGetUsers` panic in `syncer_user_test.go` (no DB locally) — unrelated to this branch.
+- `cd web && npx tsc --noEmit && npx vitest run` → 248/250 passing. The 2 failures in `SignupPage.test.tsx` are pre-existing on `main`.
+- `cd web && npm run check:i18n` → ✓ 3430 keys, en/zh parity.
+
+---
+
 ## 8. 一句话总结
 
 **CP-1 ~ CP-8 已全部闭环**:OpenFGA v1.1 兼容的 Schema / Check / List / Expand 引擎、三态 cycle 传播、CEL Conditions、Contextual Tuples、L2+L3 两层缓存与跨实例 pub/sub 失效、每 `(store,user)` 令牌桶限流、6 个 Prometheus 指标族、按 `ModelType` 自动分派的 `BizEnforce`、OQ-2 指引错误体、`useAccessibleResources` 分页 hook、端到端冒烟与 SLA 压测脚手架;**`feature/rebac-cp3` → `main` 的代码侧 mergeback 准入条件已满足**,发布前只需把 `docs/rebac-sla-baseline.md` 里参考硬件的 p50/p99 实测数据补齐即可。
