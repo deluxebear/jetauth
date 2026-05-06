@@ -43,7 +43,7 @@ type document
 `
 
 	// First save — should advance.
-	result, err := SaveAuthorizationModel(owner, appName, dsl, "test-user")
+	result, err := SaveAuthorizationModel(owner, appName, dsl, "test-user", "")
 	if err != nil {
 		t.Fatalf("first save failed: %v", err)
 	}
@@ -84,7 +84,7 @@ type document
 	}
 
 	// Second save with identical DSL — unchanged, same id, no new row.
-	result2, err := SaveAuthorizationModel(owner, appName, dsl, "test-user")
+	result2, err := SaveAuthorizationModel(owner, appName, dsl, "test-user", "")
 	if err != nil {
 		t.Fatalf("resave failed: %v", err)
 	}
@@ -134,7 +134,7 @@ type document
     define editor: [user]
 `
 
-	v1Result, err := SaveAuthorizationModel(owner, appName, dslV1, "test-user")
+	v1Result, err := SaveAuthorizationModel(owner, appName, dslV1, "test-user", "")
 	if err != nil {
 		t.Fatalf("v1 save failed: %v", err)
 	}
@@ -167,7 +167,7 @@ type document
     define viewer: [user]
 `
 
-	v2Result, err := SaveAuthorizationModel(owner, appName, dslV2, "test-user")
+	v2Result, err := SaveAuthorizationModel(owner, appName, dslV2, "test-user", "")
 	if err != nil {
 		t.Fatalf("v2 save returned unexpected error: %v", err)
 	}
@@ -203,6 +203,34 @@ type document
 	}
 	if len(models) != 1 {
 		t.Fatalf("want exactly 1 model (v1) after rejected v2, got %d", len(models))
+	}
+}
+
+// TestSaveAuthorizationModel_PersistsDescription verifies that the optional
+// description passed to SaveAuthorizationModel is stored in the row and
+// readable back via GetBizAuthorizationModel.
+func TestSaveAuthorizationModel_PersistsDescription(t *testing.T) {
+	if ormer == nil {
+		t.Skip("ormer not initialized; skipping DB-bound test")
+	}
+	owner := "rebac-it-" + util.GenerateUUID()[:8]
+	appName := "app_desc_test"
+	seedRebacAppConfigForTest(t, owner, appName)
+
+	dsl := "model\n  schema 1.1\n\ntype user\n"
+	res, err := SaveAuthorizationModel(owner, appName, dsl, "test-user", "增加 commenter 关系")
+	if err != nil {
+		t.Fatalf("SaveAuthorizationModel: %v", err)
+	}
+	if res.Outcome != SaveOutcomeAdvanced {
+		t.Fatalf("outcome = %q, want advanced", res.Outcome)
+	}
+	got, err := GetBizAuthorizationModel(res.AuthorizationModelId)
+	if err != nil || got == nil {
+		t.Fatalf("GetBizAuthorizationModel: got=%v err=%v", got, err)
+	}
+	if got.Description != "增加 commenter 关系" {
+		t.Fatalf("Description: got %q, want %q", got.Description, "增加 commenter 关系")
 	}
 }
 

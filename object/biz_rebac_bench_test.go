@@ -130,7 +130,7 @@ func seedBenchFixture(tb testing.TB) *benchFixture {
 		_, _ = DeleteBizAppConfig(config)
 	})
 
-	if _, err := SaveAuthorizationModel(owner, appName, benchSchema, "bench"); err != nil {
+	if _, err := SaveAuthorizationModel(owner, appName, benchSchema, "bench", ""); err != nil {
 		tb.Fatalf("save schema: %v", err)
 	}
 

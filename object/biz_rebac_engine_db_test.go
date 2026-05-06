@@ -28,7 +28,7 @@ func TestResolveAuthorizationModel_ByExplicitId(t *testing.T) {
 	appName := "app_resolve_explicit"
 	seedRebacAppConfigForTest(t, owner, appName)
 
-	res, err := SaveAuthorizationModel(owner, appName, minimalDSL, "test-user")
+	res, err := SaveAuthorizationModel(owner, appName, minimalDSL, "test-user", "")
 	if err != nil || res.Outcome != SaveOutcomeAdvanced {
 		t.Fatalf("save: err=%v outcome=%v", err, res)
 	}
@@ -55,7 +55,7 @@ func TestResolveAuthorizationModel_FallbackToCurrent(t *testing.T) {
 	appName := "app_resolve_current"
 	seedRebacAppConfigForTest(t, owner, appName)
 
-	if _, err := SaveAuthorizationModel(owner, appName, minimalDSL, "test-user"); err != nil {
+	if _, err := SaveAuthorizationModel(owner, appName, minimalDSL, "test-user", ""); err != nil {
 		t.Fatalf("save: %v", err)
 	}
 
@@ -110,7 +110,7 @@ func seedThisApp(t *testing.T) (storeId, modelId string) {
 	owner := "rebac-it-" + util.GenerateUUID()[:8]
 	appName := "app_check_this"
 	seedRebacAppConfigForTest(t, owner, appName)
-	res, err := SaveAuthorizationModel(owner, appName, minimalDSL, "test-user")
+	res, err := SaveAuthorizationModel(owner, appName, minimalDSL, "test-user", "")
 	if err != nil || res.Outcome != SaveOutcomeAdvanced {
 		t.Fatalf("save minimalDSL: err=%v outcome=%v", err, res)
 	}
@@ -187,7 +187,7 @@ type document
   relations
     define viewer: [user, user:*]
 `
-	saveRes, err := SaveAuthorizationModel(owner, appName, dsl, "test-user")
+	saveRes, err := SaveAuthorizationModel(owner, appName, dsl, "test-user", "")
 	if err != nil || saveRes.Outcome != SaveOutcomeAdvanced {
 		t.Fatalf("save: err=%v outcome=%v", err, saveRes)
 	}
@@ -317,7 +317,7 @@ func seedConditionalApp(t *testing.T) (storeId, modelId string) {
 	owner := "rebac-it-" + util.GenerateUUID()[:8]
 	appName := "app_conditional"
 	seedRebacAppConfigForTest(t, owner, appName)
-	res, err := SaveAuthorizationModel(owner, appName, conditionalDSL, "test-user")
+	res, err := SaveAuthorizationModel(owner, appName, conditionalDSL, "test-user", "")
 	if err != nil || res.Outcome != SaveOutcomeAdvanced {
 		t.Fatalf("save: err=%v outcome=%v", err, res)
 	}
@@ -429,7 +429,7 @@ func seedComputedUsersetApp(t *testing.T) (storeId, modelId string) {
 	owner := "rebac-it-" + util.GenerateUUID()[:8]
 	appName := "app_computed_userset"
 	seedRebacAppConfigForTest(t, owner, appName)
-	res, err := SaveAuthorizationModel(owner, appName, computedUsersetDSL, "test-user")
+	res, err := SaveAuthorizationModel(owner, appName, computedUsersetDSL, "test-user", "")
 	if err != nil || res.Outcome != SaveOutcomeAdvanced {
 		t.Fatalf("save: err=%v outcome=%v", err, res)
 	}
@@ -504,7 +504,7 @@ func seedTupleToUsersetApp(t *testing.T) (storeId, modelId string) {
 	owner := "rebac-it-" + util.GenerateUUID()[:8]
 	appName := "app_ttu"
 	seedRebacAppConfigForTest(t, owner, appName)
-	res, err := SaveAuthorizationModel(owner, appName, tupleToUsersetDSL, "test-user")
+	res, err := SaveAuthorizationModel(owner, appName, tupleToUsersetDSL, "test-user", "")
 	if err != nil || res.Outcome != SaveOutcomeAdvanced {
 		t.Fatalf("save: err=%v outcome=%v", err, res)
 	}
@@ -602,7 +602,7 @@ func seedUnionApp(t *testing.T) (storeId, modelId string) {
 	owner := "rebac-it-" + util.GenerateUUID()[:8]
 	appName := "app_union"
 	seedRebacAppConfigForTest(t, owner, appName)
-	res, err := SaveAuthorizationModel(owner, appName, unionDSL, "test-user")
+	res, err := SaveAuthorizationModel(owner, appName, unionDSL, "test-user", "")
 	if err != nil || res.Outcome != SaveOutcomeAdvanced {
 		t.Fatalf("save: err=%v outcome=%v", err, res)
 	}
@@ -702,7 +702,7 @@ func seedIntersectionApp(t *testing.T) (storeId, modelId string) {
 	owner := "rebac-it-" + util.GenerateUUID()[:8]
 	appName := "app_intersect"
 	seedRebacAppConfigForTest(t, owner, appName)
-	res, err := SaveAuthorizationModel(owner, appName, intersectionDSL, "test-user")
+	res, err := SaveAuthorizationModel(owner, appName, intersectionDSL, "test-user", "")
 	if err != nil || res.Outcome != SaveOutcomeAdvanced {
 		t.Fatalf("save: err=%v outcome=%v", err, res)
 	}
@@ -780,7 +780,7 @@ func seedDifferenceApp(t *testing.T) (storeId, modelId string) {
 	owner := "rebac-it-" + util.GenerateUUID()[:8]
 	appName := "app_diff"
 	seedRebacAppConfigForTest(t, owner, appName)
-	res, err := SaveAuthorizationModel(owner, appName, differenceDSL, "test-user")
+	res, err := SaveAuthorizationModel(owner, appName, differenceDSL, "test-user", "")
 	if err != nil || res.Outcome != SaveOutcomeAdvanced {
 		t.Fatalf("save: err=%v outcome=%v", err, res)
 	}
@@ -870,7 +870,7 @@ func TestResolveAuthorizationModel_CrossStore(t *testing.T) {
 	ownerA := "rebac-it-" + util.GenerateUUID()[:8]
 	appA := "app_cross_a"
 	seedRebacAppConfigForTest(t, ownerA, appA)
-	resA, err := SaveAuthorizationModel(ownerA, appA, minimalDSL, "test-user")
+	resA, err := SaveAuthorizationModel(ownerA, appA, minimalDSL, "test-user", "")
 	if err != nil || resA.Outcome != SaveOutcomeAdvanced {
 		t.Fatalf("A save: err=%v outcome=%v", err, resA)
 	}

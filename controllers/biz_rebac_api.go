@@ -32,7 +32,8 @@ func rebacRateLimited(c *ApiController, endpoint string) {
 // BizWriteAuthorizationModel. Keeping it close to the handler keeps the
 // Swagger annotations self-contained.
 type writeAuthorizationModelRequest struct {
-	SchemaDSL string `json:"schemaDsl"`
+	SchemaDSL   string `json:"schemaDsl"`
+	Description string `json:"description,omitempty"`
 }
 
 // BizWriteAuthorizationModel
@@ -94,7 +95,7 @@ func (c *ApiController) BizWriteAuthorizationModel() {
 		c.ResponseError("unauthenticated: session has no username")
 		return
 	}
-	result, err := object.SaveAuthorizationModel(owner, appName, body.SchemaDSL, createdBy)
+	result, err := object.SaveAuthorizationModel(owner, appName, body.SchemaDSL, createdBy, body.Description)
 	if err != nil {
 		c.ResponseError(err.Error())
 		return

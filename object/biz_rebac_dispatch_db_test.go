@@ -45,7 +45,7 @@ func TestBizEnforceDispatch_ReBACApp(t *testing.T) {
 	appName := "app_dispatch_rebac"
 	seedRebacAppConfigForTest(t, owner, appName)
 
-	res, err := SaveAuthorizationModel(owner, appName, editorDSL, "test-user")
+	res, err := SaveAuthorizationModel(owner, appName, editorDSL, "test-user", "")
 	if err != nil || res.Outcome != SaveOutcomeAdvanced {
 		t.Fatalf("save editorDSL: err=%v outcome=%v", err, res)
 	}
@@ -101,7 +101,7 @@ func TestBizEnforceDispatch_ReBACApp_Deny(t *testing.T) {
 	appName := "app_dispatch_rebac_deny"
 	seedRebacAppConfigForTest(t, owner, appName)
 
-	res, err := SaveAuthorizationModel(owner, appName, editorDSL, "test-user")
+	res, err := SaveAuthorizationModel(owner, appName, editorDSL, "test-user", "")
 	if err != nil || res.Outcome != SaveOutcomeAdvanced {
 		t.Fatalf("save editorDSL: err=%v outcome=%v", err, res)
 	}
@@ -132,7 +132,7 @@ func TestBizEnforceDispatch_Ex_ReBACApp_Deny(t *testing.T) {
 	appName := "app_dispatch_ex_rebac_deny"
 	seedRebacAppConfigForTest(t, owner, appName)
 
-	res, err := SaveAuthorizationModel(owner, appName, editorDSL, "test-user")
+	res, err := SaveAuthorizationModel(owner, appName, editorDSL, "test-user", "")
 	if err != nil || res.Outcome != SaveOutcomeAdvanced {
 		t.Fatalf("save editorDSL: err=%v outcome=%v", err, res)
 	}
@@ -166,7 +166,7 @@ func TestBizEnforceDispatch_Ex_ReBACApp(t *testing.T) {
 	appName := "app_dispatch_ex_rebac"
 	seedRebacAppConfigForTest(t, owner, appName)
 
-	res, err := SaveAuthorizationModel(owner, appName, editorDSL, "test-user")
+	res, err := SaveAuthorizationModel(owner, appName, editorDSL, "test-user", "")
 	if err != nil || res.Outcome != SaveOutcomeAdvanced {
 		t.Fatalf("save editorDSL: err=%v outcome=%v", err, res)
 	}

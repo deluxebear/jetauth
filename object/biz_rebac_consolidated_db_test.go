@@ -178,7 +178,7 @@ func TestConsolidatedSuite(t *testing.T) {
 			for stageIdx, stage := range tc.Stages {
 				stageIdx, stage := stageIdx, stage
 
-				res, err := SaveAuthorizationModel(owner, appName, stage.Model, "consolidated")
+				res, err := SaveAuthorizationModel(owner, appName, stage.Model, "consolidated", "")
 				if err != nil {
 					t.Fatalf("[stage %d] save: %v", stageIdx, err)
 				}

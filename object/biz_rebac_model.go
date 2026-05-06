@@ -260,7 +260,7 @@ func ValidateAuthorizationModel(owner, appName, dsl string) (*SaveAuthorizationM
 // PR2 note: compare-and-swap on the previous CurrentAuthorizationModelId
 // will be added then; for PR1 the conflict scan already blocks the
 // destructive-change race that matters most.
-func SaveAuthorizationModel(owner, appName, dsl, createdBy string) (*SaveAuthorizationModelResult, error) {
+func SaveAuthorizationModel(owner, appName, dsl, createdBy, description string) (*SaveAuthorizationModelResult, error) {
 	done, parsed, err := evaluateAuthorizationModel(owner, appName, dsl)
 	if err != nil {
 		return nil, err
@@ -277,6 +277,7 @@ func SaveAuthorizationModel(owner, appName, dsl, createdBy string) (*SaveAuthori
 		SchemaDSL:   dsl,
 		SchemaJSON:  parsed.JSON,
 		SchemaHash:  hash,
+		Description: description,
 		CreatedTime: util.GetCurrentTime(),
 		CreatedBy:   createdBy,
 	}

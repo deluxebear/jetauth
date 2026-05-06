@@ -248,7 +248,7 @@ type document
   relations
     define viewer: [user, user:*]
 `
-	res, err := SaveAuthorizationModel(owner, appName, dsl, "test-user")
+	res, err := SaveAuthorizationModel(owner, appName, dsl, "test-user", "")
 	if err != nil || res.Outcome != SaveOutcomeAdvanced {
 		t.Fatalf("save: err=%v outcome=%v", err, res)
 	}
@@ -316,7 +316,7 @@ func TestListObjects_TTURecursion(t *testing.T) {
 	owner := "rebac-list-ttu-" + util.GenerateUUID()[:8]
 	appName := "app_ttu"
 	seedRebacAppConfigForTest(t, owner, appName)
-	res, err := SaveAuthorizationModel(owner, appName, tupleToUsersetDSL, "test-user")
+	res, err := SaveAuthorizationModel(owner, appName, tupleToUsersetDSL, "test-user", "")
 	if err != nil || res.Outcome != SaveOutcomeAdvanced {
 		t.Fatalf("save: %+v err=%v", res, err)
 	}
