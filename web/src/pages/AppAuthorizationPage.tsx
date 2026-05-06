@@ -263,9 +263,23 @@ export default function AppAuthorizationPage() {
               </div>
             )}
             <div>
-              <Link to={`/applications/admin/${config.appName}`} className="text-lg font-bold tracking-tight hover:text-accent transition-colors">
-                {config.displayName || config.appName}
-              </Link>
+              <div className="flex items-center gap-2">
+                <Link to={`/applications/admin/${config.appName}`} className="text-lg font-bold tracking-tight hover:text-accent transition-colors">
+                  {config.displayName || config.appName}
+                </Link>
+                {config.modelType && (
+                  <span
+                    className={`px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wide ${
+                      config.modelType === "rebac"
+                        ? "bg-accent/15 text-accent"
+                        : "bg-surface-3 text-text-secondary"
+                    }`}
+                    title={t("authz.header.modelType" as any)}
+                  >
+                    {config.modelType}
+                  </span>
+                )}
+              </div>
               <p className="text-[11px] text-text-muted font-mono">{config.owner} / {config.appName}</p>
             </div>
           </div>
