@@ -18,7 +18,7 @@ import { useModal } from "../components/Modal";
 import * as BizBackend from "../backend/BizBackend";
 import type { BizAppConfig, BizRole, BizPermission, PoliciesExport, BizAuthorizationModel } from "../backend/BizBackend";
 import { pickAppIcon } from "../utils/appIcon";
-import { downloadFile } from "../util/download";
+import { downloadFile } from "../utils/download";
 
 // Casbin-lane tabs are unchanged. ReBAC-lane tabs are rendered only when
 // the app's modelType is "rebac" (spec §8.2). Since "overview" and
