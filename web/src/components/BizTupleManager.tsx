@@ -66,9 +66,9 @@ export default function BizTupleManager({ appId }: Props) {
   const refresh = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await BizBackend.readBizTuples(appId, filter);
-      if (res.status === "ok" && Array.isArray(res.data)) {
-        setTuples(res.data);
+      const res = await BizBackend.readBizTuples(appId, filter, { offset: 0, limit: 100 });
+      if (res.status === "ok" && res.data) {
+        setTuples(res.data.tuples);
       } else {
         modal.toast(res.msg || t("rebac.common.error"), "error");
       }

@@ -185,7 +185,7 @@ export default function BizSchemaEditor({ appId }: Props) {
     const token = ++reqIdRef.current;
     setDryRun({ kind: "validating" });
     debounceRef.current = window.setTimeout(() => {
-      BizBackend.saveBizAuthorizationModel(appId, text, true)
+      BizBackend.saveBizAuthorizationModel(appId, text, { dryRun: true })
         .then((res) => {
           if (token !== reqIdRef.current) return;
           if (res.status !== "ok" || !res.data) {
@@ -249,7 +249,7 @@ export default function BizSchemaEditor({ appId }: Props) {
     if (!canSave) return;
     setSaving(true);
     try {
-      const res = await BizBackend.saveBizAuthorizationModel(appId, dsl, false);
+      const res = await BizBackend.saveBizAuthorizationModel(appId, dsl);
       if (res.status !== "ok" || !res.data) {
         modal.toast(res.msg || t("rebac.common.error"), "error");
         return;
@@ -304,7 +304,7 @@ export default function BizSchemaEditor({ appId }: Props) {
           return;
         }
       }
-      const res = await BizBackend.saveBizAuthorizationModel(appId, dsl, false);
+      const res = await BizBackend.saveBizAuthorizationModel(appId, dsl);
       if (res.status !== "ok" || !res.data) {
         // Deletes already succeeded — don't leave the modal showing phantom
         // "affected" tuples, and surface a specific message so the admin knows

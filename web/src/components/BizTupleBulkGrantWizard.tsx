@@ -83,13 +83,13 @@ export default function BizTupleBulkGrantWizard({
         const prefix = objValue.trim();
         // readBizTuples takes a filter; for prefix we read all then
         // filter client-side. Admin-scale stores are small enough.
-        const res = await BizBackend.readBizTuples(appId, {});
-        if (res.status !== "ok" || !Array.isArray(res.data)) {
+        const res = await BizBackend.readBizTuples(appId, {}, { offset: 0, limit: 1000 });
+        if (res.status !== "ok" || !res.data) {
           modal.toast(res.msg || t("rebac.common.error"), "error");
           return;
         }
         const objSet = new Set<string>();
-        for (const tuple of res.data) {
+        for (const tuple of res.data.tuples) {
           if (tuple.object.startsWith(prefix)) objSet.add(tuple.object);
         }
         writes = Array.from(objSet).map((o) => ({

@@ -724,6 +724,7 @@ export interface BizAuthorizationModel {
   schemaDsl: string;
   schemaJson: string;
   schemaHash: string;
+  description?: string;        // NEW — human-readable change summary, optional
   createdTime: string;
   createdBy: string;
 }
@@ -889,20 +890,21 @@ export interface BizExpandResult {
 }
 
 // 1. biz-write-authorization-model
-// When dryRun is true, backend runs parse + conflict-scan and returns the
-// same outcome envelope without inserting a row — used by the DSL editor
-// for inline validation.
+// When opts.dryRun is true, backend runs parse + conflict-scan and returns
+// the same outcome envelope without inserting a row — used by the DSL
+// editor for inline validation. opts.description (optional) is stored on
+// the new model row as a human-readable change summary.
 export function saveBizAuthorizationModel(
   appId: string,
   schemaDsl: string,
-  dryRun = false,
+  opts: { dryRun?: boolean; description?: string } = {},
 ) {
   const q = new URLSearchParams({ appId });
-  if (dryRun) q.set("dryRun", "true");
+  if (opts.dryRun) q.set("dryRun", "true");
   return request<SaveAuthorizationModelResult>(
     "POST",
     `/api/biz-write-authorization-model?${q.toString()}`,
-    { schemaDsl },
+    { schemaDsl, description: opts.description },
   );
 }
 
@@ -922,6 +924,17 @@ export function listBizAuthorizationModels(appId: string) {
   );
 }
 
+// 3a. biz-activate-authorization-model — admin "回退到此版本".
+// Repoints the app's CurrentAuthorizationModelId at a historical model row.
+// The historical row itself is not modified.
+export function activateBizAuthorizationModel(appId: string, modelId: string) {
+  const params = new URLSearchParams({ appId, id: modelId });
+  return request<{ activeModelId: string }>(
+    "POST",
+    `/api/biz-activate-authorization-model?${params.toString()}`,
+  );
+}
+
 // 4. biz-check
 export function bizCheck(req: BizCheckRequest) {
   return request<BizCheckResponse>("POST", "/api/biz-check", req);
@@ -938,15 +951,25 @@ export function writeBizTuples(req: BizWriteTuplesRequest) {
 }
 
 // 7. biz-read-tuples
+export interface BizReadTuplesPage {
+  tuples: BizTuple[];
+  total: number;
+  offset: number;
+  limit: number;
+}
+
 export function readBizTuples(
   appId: string,
   filter: { object?: string; relation?: string; user?: string } = {},
+  page: { offset?: number; limit?: number } = {},
 ) {
   const params = new URLSearchParams({ appId });
   if (filter.object) params.set("object", filter.object);
   if (filter.relation) params.set("relation", filter.relation);
   if (filter.user) params.set("user", filter.user);
-  return request<BizTuple[]>("GET", `/api/biz-read-tuples?${params.toString()}`);
+  if (page.offset != null) params.set("offset", String(page.offset));
+  if (page.limit != null) params.set("limit", String(page.limit));
+  return request<BizReadTuplesPage>("GET", `/api/biz-read-tuples?${params.toString()}`);
 }
 
 // 8. biz-list-objects
@@ -1002,6 +1025,39 @@ export function countBizTuples(appId: string) {
   return request<BizCountTuplesResponse>(
     "GET",
     `/api/biz-count-tuples?appId=${encodeURIComponent(appId)}`,
+  );
+}
+
+// biz-rebac-stats — admin Overview snapshot, single round-trip.
+export interface BizReBACTypeDistribution {
+  type: string;
+  count: number;
+}
+
+export interface BizReBACRecentWrite {
+  object: string;
+  relation: string;
+  user: string;
+  /** "write" | "delete" — only "write" is emitted in iter-1; "delete" arrives with the iter-2 audit log. */
+  op: "write";
+  at: string;
+}
+
+export interface BizReBACStats {
+  tupleCount: number;
+  todayDelta: number;
+  checkQpsLastHour: number;
+  modelCount: number;
+  activeModelId?: string;
+  lastUpdated?: string;
+  typeDistribution: BizReBACTypeDistribution[];
+  recentWrites: BizReBACRecentWrite[];
+}
+
+export function getBizReBACStats(appId: string) {
+  return request<BizReBACStats>(
+    "GET",
+    `/api/biz-rebac-stats?appId=${encodeURIComponent(appId)}`,
   );
 }
 
