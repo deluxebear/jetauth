@@ -27,6 +27,7 @@ package object
 import (
 	"context"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -198,3 +199,104 @@ func (c *InstrumentedBizReBACCache) flushAll() {
 type flushAller interface {
 	flushAll()
 }
+
+// checkQpsRing maintains a 60-bucket-per-store circular counter of
+// /api/biz-check invocations, sampled at 1-minute granularity. Reading
+// last-hour totals backs the admin Overview "CHECK QPS" tile — Prometheus
+// is the source of truth for billing/SLA, this ring is a cheap admin-UI
+// affordance with no persistence (resets on process restart).
+//
+// Each store gets its own [60]int64. The slot index is (now/minute) % 60,
+// and a per-store "last seen minute" lets us evict stale slots on first
+// touch in a new minute (otherwise wrap-around would re-read a 60-min-old
+// count as if it were current).
+type checkQpsRing struct {
+	mu     sync.Mutex
+	now    func() time.Time
+	stores map[string]*qpsRingState
+}
+
+type qpsRingState struct {
+	buckets    [60]int64
+	lastMinute int64 // unix minute of the most recent Inc; -1 sentinel means "never"
+}
+
+func newCheckQpsRing(now func() time.Time) *checkQpsRing {
+	return &checkQpsRing{now: now, stores: map[string]*qpsRingState{}}
+}
+
+// Inc records one Check invocation for storeId in the current minute's
+// bucket, lazily evicting any buckets that have aged out since the last
+// Inc on this store.
+func (r *checkQpsRing) Inc(storeId string) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	state, ok := r.stores[storeId]
+	if !ok {
+		state = &qpsRingState{lastMinute: -1}
+		r.stores[storeId] = state
+	}
+	curMin := r.now().Unix() / 60
+	r.evictStaleLocked(state, curMin)
+	state.buckets[curMin%60]++
+	state.lastMinute = curMin
+}
+
+// LastHour returns the sum of all 60 buckets for storeId, after evicting
+// stale slots. Returns 0 for an unknown store. Caller divides by 3600 to
+// get average QPS over the trailing hour.
+func (r *checkQpsRing) LastHour(storeId string) int64 {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	state, ok := r.stores[storeId]
+	if !ok {
+		return 0
+	}
+	curMin := r.now().Unix() / 60
+	r.evictStaleLocked(state, curMin)
+	var sum int64
+	for _, v := range state.buckets {
+		sum += v
+	}
+	return sum
+}
+
+// evictStaleLocked zeroes any buckets whose timestamp is older than the
+// 60-minute window. Called under r.mu. Cheap when no time has passed
+// (early return); O(60) when the gap is ≥60 minutes (zero everything).
+func (r *checkQpsRing) evictStaleLocked(state *qpsRingState, curMin int64) {
+	if state.lastMinute < 0 {
+		return
+	}
+	gap := curMin - state.lastMinute
+	if gap <= 0 {
+		return
+	}
+	if gap > 60 {
+		state.buckets = [60]int64{}
+		return
+	}
+	// Zero the (gap-1) slots between lastMinute+1 and curMin-1 inclusive.
+	// These are "skipped" minutes that now hold stale data from a previous
+	// cycle. We deliberately stop before curMin because curMin%60 may
+	// alias lastMinute%60 (when gap==60) — in that case lastMinute's data
+	// is still within the 60-minute window and must not be evicted.
+	for i := int64(1); i < gap; i++ {
+		state.buckets[(state.lastMinute+i)%60] = 0
+	}
+}
+
+// checkQpsCounter is the package-level singleton wired into ReBACCheck.
+// time.Now is fine because this is a side-effect counter, not a tested
+// pure function — tests construct their own ring with an injectable clock.
+var checkQpsCounter = newCheckQpsRing(time.Now)
+
+// RecordBizReBACCheckQps is the exported wrapper kept symmetrical with
+// RecordBizReBACRateLimitRejected: callers in the same package use the
+// unexported instance directly; an exported wrapper exists for code that
+// might compose this from elsewhere.
+func RecordBizReBACCheckQps(storeId string) { checkQpsCounter.Inc(storeId) }
+
+// GetBizReBACCheckLastHour returns the trailing-hour Check count for the
+// given store. Used by the admin /biz-rebac-stats endpoint.
+func GetBizReBACCheckLastHour(storeId string) int64 { return checkQpsCounter.LastHour(storeId) }

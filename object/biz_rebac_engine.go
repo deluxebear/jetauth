@@ -935,6 +935,9 @@ func ReBACCheck(req *CheckRequest) (res *CheckResult, err error) {
 			outcome = "denied"
 		}
 		observeReBACCheck(outcome, time.Since(start))
+		if req != nil && req.StoreId != "" {
+			checkQpsCounter.Inc(req.StoreId)
+		}
 	}()
 
 	if req == nil {
