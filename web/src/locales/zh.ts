@@ -3564,6 +3564,18 @@ const zh: Record<string, string> = {
   "rebac.schema.plan.saveAnyway": "仍然保存",
   "rebac.schema.plan.savePartialFailure": "冲突 tuple 已删除,但保存模型失败,请重试",
 
+  // Version list (BizSchemaVersionList)
+  "rebac.schema.title": "授权模型",
+  "rebac.schema.subtitle": "每次发布生成不可变版本 · 当前版本会被所有 Check 调用使用",
+  "rebac.schema.exportDsl": "导出 DSL",
+  "rebac.schema.newVersion": "新建版本",
+  "rebac.schema.versionHistory": "版本历史",
+  "rebac.schema.activeOnlyHint": "仅当前激活的版本可被 Check 调用",
+  "rebac.schema.activeBadge": "已激活",
+  "rebac.schema.noVersions": "暂无版本",
+  "rebac.schema.noDescription": "(未填写说明)",
+  "rebac.schema.rollbackTo": "回退到",
+
   // Type Graph
   "rebac.schema.graph.title": "Type 关系图谱",
   "rebac.schema.graph.noTypes": "尚未定义任何类型",

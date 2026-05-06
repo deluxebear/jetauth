@@ -3574,6 +3574,18 @@ const en = {
   "rebac.schema.plan.saveAnyway": "Save anyway",
   "rebac.schema.plan.savePartialFailure": "Conflict tuples deleted, but saving model failed. Please retry.",
 
+  // Version list (BizSchemaVersionList)
+  "rebac.schema.title": "Authorization model",
+  "rebac.schema.subtitle": "Each publish creates an immutable version. The active version is used by every Check call.",
+  "rebac.schema.exportDsl": "Export DSL",
+  "rebac.schema.newVersion": "New version",
+  "rebac.schema.versionHistory": "Version history",
+  "rebac.schema.activeOnlyHint": "Only the active version is callable by Check",
+  "rebac.schema.activeBadge": "Active",
+  "rebac.schema.noVersions": "No versions yet",
+  "rebac.schema.noDescription": "(no description)",
+  "rebac.schema.rollbackTo": "Rollback to",
+
   // Type Graph
   "rebac.schema.graph.title": "Type Graph",
   "rebac.schema.graph.noTypes": "No types defined yet",
