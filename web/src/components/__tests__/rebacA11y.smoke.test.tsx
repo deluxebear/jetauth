@@ -23,7 +23,7 @@ describe("ReBAC a11y smoke", () => {
 
   it("Tester run button has an accessible name and visible focus ring class", () => {
     render(<BizReBACTester appId="o/a" />);
-    const runBtn = screen.getByRole("button", { name: /check|测试|验证/i });
+    const runBtn = screen.getByRole("button", { name: /check|测试|验证|run/i });
     expect(runBtn.className).toMatch(/focus-visible:ring-2/);
   });
 });

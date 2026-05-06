@@ -9,6 +9,7 @@ import type {
   BizExpandNode,
   BizTupleKey,
 } from "../backend/BizBackend";
+import BizDecisionPathGraph from "./BizDecisionPathGraph";
 
 // BizReBACTester — Task 8. Admin-facing playground for the /biz-check
 // and /biz-expand endpoints. Matches spec §8.2 "Tester page":
@@ -114,6 +115,7 @@ export default function BizReBACTester({ appId, initialRequest }: Props) {
     contextJson: "",
   });
   const [running, setRunning] = useState(false);
+  const [elapsedMs, setElapsedMs] = useState<number | null>(null);
   const [result, setResult] = useState<BizCheckResponse | null>(null);
   const [expand, setExpand] = useState<BizExpandNode | null>(null);
   const [history, setHistory] = useState<HistoryEntry[]>(() =>
@@ -200,10 +202,13 @@ export default function BizReBACTester({ appId, initialRequest }: Props) {
       context,
     };
 
+    const t0 = performance.now();
     setRunning(true);
     setExpand(null);
+    setElapsedMs(null);
     try {
       const res = await BizBackend.bizCheck(req);
+      setElapsedMs(performance.now() - t0);
       if (res.status !== "ok" || !res.data) {
         modal.toast(res.msg || t("rebac.common.error"), "error");
         setResult(null);
@@ -274,6 +279,23 @@ export default function BizReBACTester({ appId, initialRequest }: Props) {
     initialRequest?.relation,
     initialRequest?.user,
   ]);
+
+  // ⌘+Enter / Ctrl+Enter shortcut — fires runCheck from any input field.
+  // Intentionally skips textareas so multi-line edits aren't accidentally
+  // submitted mid-typing.
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+        const target = e.target as HTMLElement;
+        const isTextarea = target?.tagName === "TEXTAREA";
+        if (isTextarea) return;
+        e.preventDefault();
+        void runCheckRef.current();
+      }
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
 
   const clearHistory = () => {
     setHistory([]);
@@ -443,51 +465,133 @@ export default function BizReBACTester({ appId, initialRequest }: Props) {
   }, [appId, cases, modal, t]);
 
   return (
-    <div className="flex flex-col gap-3">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
-        <LabeledInput
-          label={t("rebac.tuples.columns.user")}
-          value={form.user}
-          onChange={(v) => setForm((f) => ({ ...f, user: v }))}
-          placeholder="user:alice"
-          mono
-        />
-        <LabeledInput
-          label={t("rebac.tuples.columns.object")}
-          value={form.object}
-          onChange={(v) => setForm((f) => ({ ...f, object: v }))}
-          placeholder="document:d1"
-          mono
-        />
-        <LabeledInput
-          label={t("rebac.tuples.columns.relation")}
-          value={form.relation}
-          onChange={(v) => setForm((f) => ({ ...f, relation: v }))}
-          placeholder="viewer"
-          mono
-        />
+    <div className="flex flex-col gap-4">
+      {/* Title block */}
+      <div>
+        <h2 className="text-[20px] font-bold text-text-primary mb-1">
+          {t("rebac.tester.title" as any)}
+        </h2>
+        <p className="text-[13px] text-text-muted">
+          {t("rebac.tester.subtitle" as any)}
+        </p>
       </div>
 
-      <details className="rounded-lg border border-border bg-surface-1">
-        <summary className="px-3 py-2 text-[12px] text-text-muted cursor-pointer select-none">
-          {t("rebac.tester.contextualTuples")} + {t("rebac.tester.context")}
-        </summary>
-        <div className="p-3 flex flex-col gap-2">
-          <LabeledTextarea
-            label={t("rebac.tester.contextualTuples")}
-            value={form.contextualTuplesJson}
-            onChange={(v) => setForm((f) => ({ ...f, contextualTuplesJson: v }))}
-            placeholder='[{"object":"document:d1","relation":"viewer","user":"user:alice"}]'
-          />
-          <LabeledTextarea
-            label={t("rebac.tester.context")}
-            value={form.contextJson}
-            onChange={(v) => setForm((f) => ({ ...f, contextJson: v }))}
-            placeholder='{"region":"us-east-1"}'
-          />
-        </div>
-      </details>
+      {/* 3-column grid: collapses to single column below lg */}
+      <div className="grid grid-cols-1 lg:grid-cols-[320px_1fr_360px] gap-4 items-start">
 
+        {/* LEFT COLUMN: form + run button + elapsed footer */}
+        <div className="flex flex-col gap-3">
+          <div className="grid grid-cols-1 gap-2">
+            <LabeledInput
+              label={t("rebac.tuples.columns.user")}
+              value={form.user}
+              onChange={(v) => setForm((f) => ({ ...f, user: v }))}
+              placeholder="user:alice"
+              mono
+            />
+            <LabeledInput
+              label={t("rebac.tuples.columns.object")}
+              value={form.object}
+              onChange={(v) => setForm((f) => ({ ...f, object: v }))}
+              placeholder="document:d1"
+              mono
+            />
+            <LabeledInput
+              label={t("rebac.tuples.columns.relation")}
+              value={form.relation}
+              onChange={(v) => setForm((f) => ({ ...f, relation: v }))}
+              placeholder="viewer"
+              mono
+            />
+          </div>
+
+          <details className="rounded-lg border border-border bg-surface-1">
+            <summary className="px-3 py-2 text-[12px] text-text-muted cursor-pointer select-none">
+              {t("rebac.tester.contextualTuples")} + {t("rebac.tester.context")}
+            </summary>
+            <div className="p-3 flex flex-col gap-2">
+              <LabeledTextarea
+                label={t("rebac.tester.contextualTuples")}
+                value={form.contextualTuplesJson}
+                onChange={(v) => setForm((f) => ({ ...f, contextualTuplesJson: v }))}
+                placeholder='[{"object":"document:d1","relation":"viewer","user":"user:alice"}]'
+              />
+              <LabeledTextarea
+                label={t("rebac.tester.context")}
+                value={form.contextJson}
+                onChange={(v) => setForm((f) => ({ ...f, contextJson: v }))}
+                placeholder='{"region":"us-east-1"}'
+              />
+            </div>
+          </details>
+
+          <button
+            type="button"
+            className="inline-flex items-center justify-center gap-1.5 w-full px-4 py-2 rounded-lg text-[13px] font-medium bg-accent text-white hover:bg-accent-hover disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+            onClick={() => void runCheck()}
+            disabled={!formValid || running}
+          >
+            <Play className="w-3.5 h-3.5" />
+            {t("rebac.tester.run" as any)}
+          </button>
+
+          {/* Elapsed footer */}
+          {elapsedMs !== null && (
+            <p className="text-[11px] text-text-muted text-right">
+              {(t("rebac.tester.elapsed" as any) as string).replace("{ms}", elapsedMs.toFixed(1))}
+            </p>
+          )}
+        </div>
+
+        {/* CENTER COLUMN: result banner + expand explanation tree */}
+        <div className="flex flex-col gap-3">
+          {result ? (
+            <div
+              role="status"
+              aria-live="polite"
+              className="rounded-lg border border-border bg-surface-1 p-4 flex flex-col gap-2"
+            >
+              <div className="flex items-center gap-2">
+                {result.allowed ? (
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-success/10 text-success text-[13px] font-medium">
+                    <CheckCircle2 className="w-4 h-4" />
+                    {t("rebac.tester.allowed")}
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-danger/10 text-danger text-[13px] font-medium">
+                    <XCircle className="w-4 h-4" />
+                    {t("rebac.tester.denied")}
+                  </span>
+                )}
+                {result.resolution && (
+                  <span className="text-[11px] text-text-muted font-mono">
+                    {result.resolution}
+                  </span>
+                )}
+              </div>
+              {expand && (
+                <div className="mt-2">
+                  <p className="text-[12px] text-text-muted mb-1">
+                    {t("rebac.tester.expand")}
+                  </p>
+                  <ExpandTree node={expand} />
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="rounded-lg border border-border/40 bg-surface-1/50 p-6 flex items-center justify-center min-h-[120px]">
+              <p className="text-[13px] text-text-muted">
+                {running ? "…" : t("rebac.tester.check")}
+              </p>
+            </div>
+          )}
+        </div>
+
+        {/* RIGHT COLUMN: decision-path graph */}
+        <BizDecisionPathGraph root={expand ?? undefined} highlightUser={form.user} />
+      </div>
+
+      {/* History + Cases — below the 3-column area */}
       <div className="flex items-center justify-between">
         <button
           type="button"
@@ -496,15 +600,6 @@ export default function BizReBACTester({ appId, initialRequest }: Props) {
         >
           <History className="w-3.5 h-3.5" />
           {t("rebac.tester.recent")} ({history.length})
-        </button>
-        <button
-          type="button"
-          className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-[13px] font-medium bg-accent text-white hover:bg-accent-hover disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
-          onClick={() => void runCheck()}
-          disabled={!formValid || running}
-        >
-          <Play className="w-3.5 h-3.5" />
-          {t("rebac.tester.check")}
         </button>
       </div>
 
@@ -547,41 +642,6 @@ export default function BizReBACTester({ appId, initialRequest }: Props) {
             )}
           </div>
           {view === "history" ? renderHistoryList() : renderCasesList()}
-        </div>
-      )}
-
-      {result && (
-        <div
-          role="status"
-          aria-live="polite"
-          className="rounded-lg border border-border bg-surface-1 p-4 flex flex-col gap-2"
-        >
-          <div className="flex items-center gap-2">
-            {result.allowed ? (
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-success/10 text-success text-[13px] font-medium">
-                <CheckCircle2 className="w-4 h-4" />
-                {t("rebac.tester.allowed")}
-              </span>
-            ) : (
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-danger/10 text-danger text-[13px] font-medium">
-                <XCircle className="w-4 h-4" />
-                {t("rebac.tester.denied")}
-              </span>
-            )}
-            {result.resolution && (
-              <span className="text-[11px] text-text-muted font-mono">
-                {result.resolution}
-              </span>
-            )}
-          </div>
-          {expand && (
-            <div className="mt-2">
-              <p className="text-[12px] text-text-muted mb-1">
-                {t("rebac.tester.expand")}
-              </p>
-              <ExpandTree node={expand} />
-            </div>
-          )}
         </div>
       )}
     </div>

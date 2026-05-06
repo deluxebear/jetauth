@@ -3669,6 +3669,10 @@ const zh: Record<string, string> = {
   "rebac.tuples.columns.written": "写入时间",
 
   // Tester
+  "rebac.tester.title": "Check 测试",
+  "rebac.tester.subtitle": "无副作用地查询某个 user 是否拥有对 object 的某个 relation · 返回完整解释树",
+  "rebac.tester.run": "执行 (⌘+Enter)",
+  "rebac.tester.elapsed": "耗时 {ms} ms",
   "rebac.tester.check": "执行 Check",
   "rebac.tester.allowed": "允许",
   "rebac.tester.denied": "拒绝",

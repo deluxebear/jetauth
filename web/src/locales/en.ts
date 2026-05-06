@@ -3679,6 +3679,10 @@ const en = {
   "rebac.tuples.columns.written": "Written",
 
   // Tester
+  "rebac.tester.title": "Check tester",
+  "rebac.tester.subtitle": "Side-effect-free query of whether a user has a given relation on an object — returns the full explanation tree",
+  "rebac.tester.run": "Execute (⌘+Enter)",
+  "rebac.tester.elapsed": "Elapsed: {ms} ms",
   "rebac.tester.check": "Run Check",
   "rebac.tester.allowed": "Allowed",
   "rebac.tester.denied": "Denied",
