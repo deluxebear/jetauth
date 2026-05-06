@@ -645,7 +645,7 @@ type bizReadTuplesResponse struct {
 // @Param   relation   query    string  false  "Filter: relation"
 // @Param   user       query    string  false  "Filter: user"
 // @Param   offset     query    int     false  "Pagination offset (default 0)"
-// @Param   limit      query    int     false  "Pagination limit; 0 reads up to 1000 (admin UI cap)"
+// @Param   limit      query    int     false  "Pagination limit (1-1000); omit or 0 defaults to 1000"
 // @Success 200 {object} controllers.bizReadTuplesResponse "Paginated tuples with total count"
 // @Router /biz-read-tuples [get]
 func (c *ApiController) BizReadTuples() {
@@ -663,9 +663,13 @@ func (c *ApiController) BizReadTuples() {
 		c.ResponseError("limit must be >= 0")
 		return
 	}
-	if limit > 1000 {
-		// Hard cap mirrors the existing batch limit on /biz-batch-check.
-		// Admin UIs default to 14-50; an arbitrary 1M is almost always a bug.
+	// HTTP callers must always paginate. limit=0 (omitted) defaults to the
+	// 1000-row cap (mirrors /biz-batch-check). The unbounded ReadBizTuples
+	// mode (limit<=0 returns every match) is reserved for engine-internal
+	// callers in object/biz_rebac_engine.go and biz_rebac_expand.go — the
+	// admin HTTP surface must never expose it, since a hostile (or naive)
+	// client could otherwise scan a 10M-tuple store in one request.
+	if limit == 0 || limit > 1000 {
 		limit = 1000
 	}
 	owner, appName, err := util.GetOwnerAndNameFromIdWithError(appId)
