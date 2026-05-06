@@ -3675,6 +3675,8 @@ const en = {
   "rebac.tuples.emptyTitle": "No tuples yet",
   "rebac.tuples.emptyHint": "Add your first tuple, or bulk import from CSV/JSON",
   "rebac.tuples.addFirst": "Add your first",
+  "rebac.tuples.searchPlaceholder": "Search user / relation / object",
+  "rebac.tuples.columns.written": "Written",
 
   // Tester
   "rebac.tester.check": "Run Check",

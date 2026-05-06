@@ -7,6 +7,7 @@ import * as BizBackend from "../backend/BizBackend";
 import type { BizTuple, BizWriteTuplesRequest } from "../backend/BizBackend";
 import BizTupleBulkGrantWizard from "./BizTupleBulkGrantWizard";
 import { parseSchemaJson, type SchemaAST } from "./bizSchemaAst";
+import TupleChip from "./TupleChip";
 
 // BizTupleManager — Task 7. List + filter + add + bulk import + bulk
 // delete of (object, relation, user) tuples for one ReBAC app. The
@@ -32,17 +33,46 @@ interface BulkRow {
   error?: string;
 }
 
+type FacetKey = "user" | "relation" | "object" | "object_type";
+const FACETS: FacetKey[] = ["user", "relation", "object", "object_type"];
+
+const PAGE_SIZE = 50;
+
+// ── Relative time helper ─────────────────────────────────────────────
+
+function formatRelative(iso?: string): string {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return "—";
+  const diffMs = Date.now() - d.getTime();
+  const diffSec = Math.floor(diffMs / 1000);
+  if (diffSec < 60) return "刚刚";
+  const diffMin = Math.floor(diffSec / 60);
+  if (diffMin < 60) return `${diffMin} 分钟前`;
+  const diffHr = Math.floor(diffMin / 60);
+  if (diffHr < 24) return `${diffHr} 小时前`;
+  return "昨天";
+}
+
 export default function BizTupleManager({ appId }: Props) {
   const { t } = useTranslation();
   const modal = useModal();
 
   const [tuples, setTuples] = useState<BizTuple[]>([]);
+  const [total, setTotal] = useState<number>(0);
+  const [page, setPage] = useState({ offset: 0, limit: PAGE_SIZE });
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState({ object: "", relation: "", user: "" });
+  const [search, setSearch] = useState("");
+  const [facet, setFacet] = useState<FacetKey>("user");
   const [addOpen, setAddOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
   const [wizardOpen, setWizardOpen] = useState(false);
   const [schema, setSchema] = useState<SchemaAST | null>(null);
+
+  // Reset to page 0 whenever search text or facet changes.
+  useEffect(() => {
+    setPage((p) => ({ ...p, offset: 0 }));
+  }, [search, facet]);
 
   useEffect(() => {
     let cancelled = false;
@@ -66,16 +96,29 @@ export default function BizTupleManager({ appId }: Props) {
   const refresh = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await BizBackend.readBizTuples(appId, filter, { offset: 0, limit: 100 });
+      const apiFilter: { object?: string; relation?: string; user?: string } = {};
+      if (search) {
+        if (facet === "object_type") {
+          apiFilter.object = search.endsWith(":") ? search : search + ":";
+        } else if (facet === "user") {
+          apiFilter.user = search;
+        } else if (facet === "relation") {
+          apiFilter.relation = search;
+        } else {
+          apiFilter.object = search;
+        }
+      }
+      const res = await BizBackend.readBizTuples(appId, apiFilter, page);
       if (res.status === "ok" && res.data) {
         setTuples(res.data.tuples);
+        setTotal(res.data.total);
       } else {
         modal.toast(res.msg || t("rebac.common.error"), "error");
       }
     } finally {
       setLoading(false);
     }
-  }, [appId, filter, modal, t]);
+  }, [appId, search, facet, page, modal, t]);
 
   useEffect(() => {
     void refresh();
@@ -116,28 +159,36 @@ export default function BizTupleManager({ appId }: Props) {
         key: "object",
         title: t("rebac.tuples.columns.object"),
         sortable: true,
-        mono: true,
         sortFn: (a, b) => a.object.localeCompare(b.object),
+        render: (_, r) => <TupleChip kind="object" value={r.object} />,
       },
       {
         key: "relation",
         title: t("rebac.tuples.columns.relation"),
         sortable: true,
-        mono: true,
         sortFn: (a, b) => a.relation.localeCompare(b.relation),
+        render: (_, r) => <TupleChip kind="relation" value={r.relation} />,
       },
       {
         key: "user",
         title: t("rebac.tuples.columns.user"),
         sortable: true,
-        mono: true,
         sortFn: (a, b) => a.user.localeCompare(b.user),
+        render: (_, r) => <TupleChip kind="user" value={r.user} />,
+      },
+      {
+        key: "createdTime",
+        title: t("rebac.tuples.columns.written" as never),
+        sortable: true,
+        sortFn: (a, b) => (a.createdTime || "").localeCompare(b.createdTime || ""),
+        render: (_, r) => (
+          <span className="text-[12px] text-text-muted">{formatRelative(r.createdTime)}</span>
+        ),
       },
       {
         key: "conditionName",
         title: t("rebac.tuples.columns.condition"),
         sortable: true,
-        mono: true,
         hideable: true,
         render: (_, r) => r.conditionName || "—",
         sortFn: (a, b) =>
@@ -173,36 +224,39 @@ export default function BizTupleManager({ appId }: Props) {
     [],
   );
 
-  const hasFilters = Boolean(filter.object || filter.relation || filter.user);
+  const hasFilters = search.length > 0;
 
   return (
     <div className="flex flex-col gap-3">
       <div className="flex items-center justify-between flex-wrap gap-2">
-        <div className="flex items-center gap-2 flex-wrap">
+        {/* Search input + facet chips */}
+        <div className="flex items-center gap-2 flex-wrap flex-1 min-w-0">
           <input
-            className="px-2 py-1 rounded border border-border bg-surface-0 text-[13px]"
-            placeholder={t("rebac.tuples.filter.object")}
-            value={filter.object}
-            onChange={(e) =>
-              setFilter((f) => ({ ...f, object: e.target.value }))
-            }
+            className="flex-1 min-w-[260px] px-3 py-1.5 rounded-md border border-border bg-surface-2 text-[13px]"
+            placeholder={t("rebac.tuples.searchPlaceholder" as never)}
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
           />
-          <input
-            className="px-2 py-1 rounded border border-border bg-surface-0 text-[13px]"
-            placeholder={t("rebac.tuples.filter.relation")}
-            value={filter.relation}
-            onChange={(e) =>
-              setFilter((f) => ({ ...f, relation: e.target.value }))
-            }
-          />
-          <input
-            className="px-2 py-1 rounded border border-border bg-surface-0 text-[13px]"
-            placeholder={t("rebac.tuples.filter.user")}
-            value={filter.user}
-            onChange={(e) =>
-              setFilter((f) => ({ ...f, user: e.target.value }))
-            }
-          />
+          <div className="flex items-center gap-1">
+            {FACETS.map((k) => {
+              const active = facet === k;
+              return (
+                <button
+                  key={k}
+                  type="button"
+                  onClick={() => setFacet(k)}
+                  className={`px-3 py-1.5 rounded-full text-[12px] font-mono border transition-colors ${
+                    active
+                      ? "bg-accent/15 text-accent border-accent/40"
+                      : "bg-surface-2 text-text-muted border-border hover:bg-surface-3"
+                  }`}
+                >
+                  {active ? "● " : ""}
+                  {k}
+                </button>
+              );
+            })}
+          </div>
         </div>
         <div className="flex items-center gap-2">
           <button
@@ -279,6 +333,36 @@ export default function BizTupleManager({ appId }: Props) {
             </button>
           )}
         />
+      )}
+
+      {/* Server-side pagination footer */}
+      {total > page.limit && (
+        <div className="flex items-center justify-between px-1 pt-2 text-[12px] text-text-muted">
+          <span>
+            {page.offset + 1}–{Math.min(page.offset + tuples.length, total)} / {total.toLocaleString()}
+          </span>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setPage((p) => ({ ...p, offset: Math.max(0, p.offset - p.limit) }))}
+              disabled={page.offset === 0}
+              className="px-2 py-0.5 rounded border border-border disabled:opacity-50"
+            >
+              ‹
+            </button>
+            <span>
+              {Math.floor(page.offset / page.limit) + 1} / {Math.max(1, Math.ceil(total / page.limit))}
+            </span>
+            <button
+              type="button"
+              onClick={() => setPage((p) => ({ ...p, offset: p.offset + p.limit }))}
+              disabled={page.offset + tuples.length >= total}
+              className="px-2 py-0.5 rounded border border-border disabled:opacity-50"
+            >
+              ›
+            </button>
+          </div>
+        </div>
       )}
 
       {addOpen && (

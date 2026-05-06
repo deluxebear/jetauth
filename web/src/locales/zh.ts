@@ -3665,6 +3665,8 @@ const zh: Record<string, string> = {
   "rebac.tuples.emptyTitle": "还没有关系元组",
   "rebac.tuples.emptyHint": "新建第一条 tuple,或从 CSV/JSON 批量导入",
   "rebac.tuples.addFirst": "新建第一条",
+  "rebac.tuples.searchPlaceholder": "搜索 user / rel / object",
+  "rebac.tuples.columns.written": "写入时间",
 
   // Tester
   "rebac.tester.check": "执行 Check",
