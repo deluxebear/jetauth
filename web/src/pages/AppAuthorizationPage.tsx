@@ -339,7 +339,7 @@ export default function AppAuthorizationPage() {
             Task 4-9 commits fill in the real editors, manager, tester,
             and integration panels. */}
         {isReBAC && activeTab === "overview" && (
-          <RebacOverviewTab appId={appId} t={t} />
+          <RebacOverviewTab appId={appId} t={t} onJumpTab={(tab) => setActiveTab(tab)} />
         )}
         {isReBAC && activeTab === "schema" && (
           <RebacSchemaTab appId={appId} t={t} />
@@ -2231,8 +2231,16 @@ const allowed = await bizEnforce(userId, "/orders", "DELETE");
 // The dispatch logic lives in the page body; these functions exist so
 // the tab names line up with their Casbin siblings in a single switch.
 
-function RebacOverviewTab({ appId, t: _t }: { appId: string; t: (k: any) => string }) {
-  return <BizReBACOverview appId={appId} />;
+function RebacOverviewTab({
+  appId,
+  t: _t,
+  onJumpTab,
+}: {
+  appId: string;
+  t: (k: any) => string;
+  onJumpTab: (tab: "schema" | "tuples" | "tester") => void;
+}) {
+  return <BizReBACOverview appId={appId} onJumpTab={onJumpTab} />;
 }
 
 function RebacSchemaTab({ appId, t: _t }: { appId: string; t: (k: any) => string }) {

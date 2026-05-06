@@ -3502,6 +3502,17 @@ const en = {
   "rebac.overview.noRecentWrites": "No recent writes",
   "rebac.overview.typeDistribution": "Type distribution",
   "rebac.overview.noTypeData": "No type data yet",
+  "rebac.overview.title": "Overview",
+  "rebac.overview.relationsLabel": "relations",
+  "rebac.overview.modelVersionsLabel": "model versions",
+  "rebac.overview.activeModel": "Active model",
+  "rebac.overview.relationTotal": "Total relations",
+  "rebac.overview.todayPrefix": "Today",
+  "rebac.overview.checkQps": "Check QPS",
+  "rebac.overview.checkQpsHint": "Last 1h average",
+  "rebac.overview.assertionPass": "Assertion pass-rate",
+  "rebac.overview.iter2Soon": "Available in iteration 2",
+  "rebac.overview.published": "published",
 
   // Scenario templates
   "rebac.templates.applied": "Template applied, initializing",

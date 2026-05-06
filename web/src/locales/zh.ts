@@ -3492,6 +3492,17 @@ const zh: Record<string, string> = {
   "rebac.overview.noRecentWrites": "暂无写入记录",
   "rebac.overview.typeDistribution": "类型分布",
   "rebac.overview.noTypeData": "暂无类型数据",
+  "rebac.overview.title": "概览",
+  "rebac.overview.relationsLabel": "个关系",
+  "rebac.overview.modelVersionsLabel": "个模型版本",
+  "rebac.overview.activeModel": "活跃模型",
+  "rebac.overview.relationTotal": "关系总数",
+  "rebac.overview.todayPrefix": "今日",
+  "rebac.overview.checkQps": "CHECK QPS",
+  "rebac.overview.checkQpsHint": "近 1 小时平均",
+  "rebac.overview.assertionPass": "断言通过率",
+  "rebac.overview.iter2Soon": "第二期上线",
+  "rebac.overview.published": "发布",
 
   // Scenario templates
   "rebac.templates.applied": "模板已应用,正在初始化",

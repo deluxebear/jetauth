@@ -1,81 +1,72 @@
 import { useEffect, useState } from "react";
-import { Hash, Users, FileText, Calendar, Building2, Share2, Wand2 } from "lucide-react";
+import {
+  Hash, Users, FileText, Calendar, Building2, Share2, Wand2,
+  Database, Zap, ListOrdered, ShieldCheck,
+} from "lucide-react";
 import { useTranslation } from "../i18n";
 import * as BizBackend from "../backend/BizBackend";
+import type { BizReBACStats } from "../backend/BizBackend";
 import { parseSchemaJson } from "./bizSchemaAst";
 import { REBAC_TEMPLATES, type ReBACTemplate } from "./bizRebacTemplates";
 import { useModal } from "./Modal";
+import BizRecentWritesCard from "./BizRecentWritesCard";
+import BizTypeDistributionCard from "./BizTypeDistributionCard";
+
+// Suppress unused import warnings for icons kept for future tiles
+void Hash; void Users; void FileText; void Calendar; void Building2; void Share2;
 
 const ICONS = { FileText, Building2, Share2 } as const;
 
-// BizReBACOverview — Task 11. A read-only dashboard for a ReBAC app
-// showing type/relation/tuple counts and the current authorization
-// model id. Aggregates three endpoints in parallel on mount:
-//   - getBizAuthorizationModel (current schema → counts)
-//   - readBizTuples (no filter → total count)
-//   - listBizAuthorizationModels (history → count + latest created)
+// BizReBACOverview — Task D3. Mockup ① layout:
+//   4 hero stat tiles + recent-writes card + type-distribution card.
+// Falls back to the empty-state onboarding (template picker) when the
+// app has no active schema yet.
 
 interface Props {
   appId: string;
+  /** Optional callback when the user clicks "View all" in the recent
+      writes card. The Overview's host page maps this to a tab change. */
+  onJumpTab?: (tab: "schema" | "tuples" | "tester") => void;
 }
 
-interface Stats {
-  typeCount: number;
-  relationCount: number;
-  tupleCount: number;
-  modelCount: number;
-  currentModelId?: string;
-  lastUpdated?: string;
-  hasSchema: boolean;
-}
-
-export default function BizReBACOverview({ appId }: Props) {
+export default function BizReBACOverview({ appId, onJumpTab }: Props) {
   const { t } = useTranslation();
-  const [stats, setStats] = useState<Stats | null>(null);
+  const [stats, setStats] = useState<BizReBACStats | null>(null);
+  const [hasSchema, setHasSchema] = useState<boolean>(false);
+  const [schemaTypeCount, setSchemaTypeCount] = useState(0);
+  const [schemaRelationCount, setSchemaRelationCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [reloadKey, setReloadKey] = useState(0);
   const [applying, setApplying] = useState(false);
   const modal = useModal();
 
+  // Suppress unused warnings — kept for potential future stat tiles
+  void schemaTypeCount; void schemaRelationCount;
+
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
     Promise.all([
+      BizBackend.getBizReBACStats(appId),
       BizBackend.getBizAuthorizationModel(appId),
-      // countBizTuples is a scalar SELECT COUNT(*) — safe to call on
-      // large stores (post-review R3: prior version pulled every row
-      // just to measure length, a multi-MB payload for 10k+ stores).
-      BizBackend.countBizTuples(appId),
-      BizBackend.listBizAuthorizationModels(appId),
     ])
-      .then(([modelRes, countRes, listRes]) => {
+      .then(([statsRes, modelRes]) => {
         if (cancelled) return;
-        const hasSchema =
-          modelRes.status === "ok" && !!modelRes.data?.schemaJson;
-        let typeCount = 0;
-        let relationCount = 0;
-        if (hasSchema && modelRes.data?.schemaJson) {
-          const ast = parseSchemaJson(modelRes.data.schemaJson);
-          typeCount = ast.types.length;
-          for (const td of ast.types) relationCount += td.relations.length;
+        const haveSchema = modelRes.status === "ok" && !!modelRes.data?.schemaJson;
+        setHasSchema(haveSchema);
+        if (haveSchema && modelRes.data?.schemaJson) {
+          try {
+            const ast = parseSchemaJson(modelRes.data.schemaJson);
+            setSchemaTypeCount(ast.types.length);
+            let relCount = 0;
+            for (const td of ast.types) relCount += td.relations.length;
+            setSchemaRelationCount(relCount);
+          } catch {
+            setSchemaTypeCount(0);
+            setSchemaRelationCount(0);
+          }
         }
-        const tupleCount =
-          countRes.status === "ok" && countRes.data
-            ? countRes.data.count
-            : 0;
-        const models =
-          listRes.status === "ok" && Array.isArray(listRes.data)
-            ? listRes.data
-            : [];
-        setStats({
-          typeCount,
-          relationCount,
-          tupleCount,
-          modelCount: models.length,
-          currentModelId: modelRes.status === "ok" ? modelRes.data?.id : undefined,
-          lastUpdated: models[0]?.createdTime,
-          hasSchema,
-        });
+        setStats(statsRes.status === "ok" ? statsRes.data ?? null : null);
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -127,15 +118,15 @@ export default function BizReBACOverview({ appId }: Props) {
     );
   }
 
-  if (!stats) {
-    return (
-      <div className="rounded-lg border border-border bg-surface-1 p-6 text-center text-[13px] text-text-muted">
-        {t("rebac.common.error")}
-      </div>
-    );
+  if (!loading && !hasSchema && stats === null) {
+    // getBizReBACStats returned an error — might still have no schema
+    // or the server is down; surface the generic error only if we
+    // couldn't determine schema status either.
+    // But if hasSchema is definitively false (model fetch was ok, no schemaJson),
+    // fall through to the empty-state template picker below.
   }
 
-  if (!stats.hasSchema) {
+  if (!hasSchema) {
     return (
       <div className="rounded-xl border border-dashed border-border bg-surface-1 p-8">
         <div className="text-center mb-6">
@@ -174,65 +165,114 @@ export default function BizReBACOverview({ appId }: Props) {
     );
   }
 
+  if (!stats) {
+    return (
+      <div className="rounded-lg border border-border bg-surface-1 p-6 text-center text-[13px] text-text-muted">
+        {t("rebac.common.error")}
+      </div>
+    );
+  }
+
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex flex-col gap-4">
+      <div>
+        <h2 className="text-[20px] font-bold text-text-primary mb-1">
+          {t("rebac.overview.title" as any)}
+        </h2>
+        <p className="text-[13px] text-text-muted">
+          {appId} · {fmt(stats.tupleCount)} {t("rebac.overview.relationsLabel" as any)} · {stats.modelCount} {t("rebac.overview.modelVersionsLabel" as any)}
+        </p>
+      </div>
+
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <StatCard
-          icon={<Hash className="w-4 h-4" />}
-          label={t("rebac.overview.types")}
-          value={stats.typeCount}
+        <HeroStatCard
+          icon={<ListOrdered className="w-4 h-4" />}
+          label={t("rebac.overview.activeModel" as any)}
+          value={`v${stats.modelCount}`}
+          hint={fmtRelative(stats.lastUpdated) + " " + t("rebac.overview.published" as any)}
         />
-        <StatCard
-          icon={<FileText className="w-4 h-4" />}
-          label={t("rebac.overview.relations")}
-          value={stats.relationCount}
+        <HeroStatCard
+          icon={<Database className="w-4 h-4" />}
+          label={t("rebac.overview.relationTotal" as any)}
+          value={fmt(stats.tupleCount)}
+          hint={`${t("rebac.overview.todayPrefix" as any)} +${stats.todayDelta}`}
         />
-        <StatCard
-          icon={<Users className="w-4 h-4" />}
-          label={t("rebac.overview.tuples")}
-          value={stats.tupleCount}
+        <HeroStatCard
+          icon={<Zap className="w-4 h-4" />}
+          label={t("rebac.overview.checkQps" as any)}
+          value={fmtCompact(stats.checkQpsLastHour / 3600)}
+          hint={t("rebac.overview.checkQpsHint" as any)}
         />
-        <StatCard
-          icon={<Calendar className="w-4 h-4" />}
-          label={t("rebac.overview.currentModel")}
-          value={String(stats.modelCount)}
-          hint={stats.currentModelId?.slice(0, 8)}
+        <HeroStatCard
+          icon={<ShieldCheck className="w-4 h-4" />}
+          label={t("rebac.overview.assertionPass" as any)}
+          value="—"
+          hint={t("rebac.overview.iter2Soon" as any)}
+          muted
         />
       </div>
-      {stats.lastUpdated && (
-        <div className="rounded-lg border border-border bg-surface-1 p-3 text-[12px] text-text-muted">
-          <span className="font-semibold text-text-primary">
-            {t("rebac.overview.lastUpdated")}:
-          </span>{" "}
-          {new Date(stats.lastUpdated).toLocaleString()}
-        </div>
-      )}
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+        <BizRecentWritesCard
+          writes={stats.recentWrites}
+          onViewAll={onJumpTab ? () => onJumpTab("tuples") : undefined}
+        />
+        <BizTypeDistributionCard rows={stats.typeDistribution} />
+      </div>
     </div>
   );
 }
 
-function StatCard({
+// ── Private helpers ───────────────────────────────────────────────────────
+
+function fmt(n: number): string {
+  return n.toLocaleString();
+}
+
+function fmtCompact(n: number): string {
+  if (n >= 1_000) return (n / 1_000).toFixed(1).replace(/\.0$/, "") + "K";
+  return n.toFixed(1).replace(/\.0$/, "");
+}
+
+function fmtRelative(iso?: string): string {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  const diffMs = Date.now() - d.getTime();
+  const diffMin = Math.round(diffMs / 60_000);
+  if (diffMin < 1) return "just now";
+  if (diffMin < 60) return `${diffMin} min ago`;
+  const diffHr = Math.round(diffMin / 60);
+  if (diffHr < 24) return `${diffHr} h ago`;
+  const diffDay = Math.round(diffHr / 24);
+  if (diffDay < 30) return `${diffDay} d ago`;
+  return d.toLocaleDateString();
+}
+
+function HeroStatCard({
   icon,
   label,
   value,
   hint,
+  muted,
 }: {
   icon: React.ReactNode;
   label: string;
   value: string | number;
   hint?: string;
+  muted?: boolean;
 }) {
   return (
-    <div className="rounded-lg border border-border bg-surface-1 p-3 flex flex-col gap-1">
+    <div className={`rounded-xl border border-border bg-surface-1 p-4 flex flex-col gap-1 ${muted ? "opacity-60" : ""}`}>
       <div className="flex items-center gap-2 text-text-muted text-[11px] font-semibold uppercase tracking-wide">
         {icon}
         {label}
       </div>
-      <div className="text-[24px] font-bold text-text-primary tabular-nums">{value}</div>
+      <div className="text-[28px] font-bold text-text-primary tabular-nums leading-none mt-1">
+        {value}
+      </div>
       {hint && (
-        <div className="text-[11px] text-text-muted font-mono truncate">
-          {hint}
-        </div>
+        <div className="text-[11px] text-text-muted truncate mt-1">{hint}</div>
       )}
     </div>
   );

@@ -40,6 +40,21 @@ function setupEmptyState() {
     msg: "",
     data: undefined as unknown as BizAuthorizationModel,
   } satisfies ApiResponse<BizAuthorizationModel>);
+  // getBizReBACStats is now called in parallel with getBizAuthorizationModel;
+  // return a zero-data response so the populated branch never fires.
+  vi.mocked(BizBackend.getBizReBACStats).mockResolvedValue({
+    status: "ok",
+    msg: "",
+    data: {
+      tupleCount: 0,
+      todayDelta: 0,
+      checkQpsLastHour: 0,
+      modelCount: 0,
+      typeDistribution: [],
+      recentWrites: [],
+    },
+  } as any);
+  // Legacy mocks kept as harmless extras (no longer called by the component)
   vi.mocked(BizBackend.countBizTuples).mockResolvedValue({
     status: "ok",
     msg: "",
