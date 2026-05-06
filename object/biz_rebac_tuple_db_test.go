@@ -11,10 +11,121 @@
 package object
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/deluxebear/jetauth/util"
 )
+
+func TestReadBizTuples_PaginationOffsetLimit(t *testing.T) {
+	if ormer == nil {
+		t.Skip("ormer not initialised (test needs DB)")
+	}
+	owner := "rebac-page-" + util.GenerateUUID()[:8]
+	appName := "app_pagination"
+	seedRebacAppConfigForTest(t, owner, appName)
+	storeId := BuildStoreId(owner, appName)
+
+	// Save a model so writes are admissible.
+	if _, err := SaveAuthorizationModel(owner, appName,
+		"model\n  schema 1.1\n\ntype user\n\ntype document\n  relations\n    define viewer: [user]\n",
+		"test-user", ""); err != nil {
+		t.Fatal(err)
+	}
+
+	// Seed 25 tuples on document:dN viewer user:alice
+	writes := make([]*BizTuple, 0, 25)
+	for i := 0; i < 25; i++ {
+		writes = append(writes, &BizTuple{
+			Owner:    owner,
+			AppName:  appName,
+			StoreId:  storeId,
+			Object:   fmt.Sprintf("document:d%02d", i),
+			Relation: "viewer",
+			User:     "user:alice",
+		})
+	}
+	if _, err := AddBizTuples(writes); err != nil {
+		t.Fatal(err)
+	}
+
+	page1, total, err := ReadBizTuples(owner, appName, "", "", "", 0, 10)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if total != 25 {
+		t.Fatalf("total=%d, want 25", total)
+	}
+	if len(page1) != 10 {
+		t.Fatalf("page1 len=%d, want 10", len(page1))
+	}
+
+	page3, total, err := ReadBizTuples(owner, appName, "", "", "", 20, 10)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if total != 25 {
+		t.Fatalf("total page3=%d, want 25", total)
+	}
+	if len(page3) != 5 {
+		t.Fatalf("page3 len=%d, want 5", len(page3))
+	}
+
+	// limit=0 returns everything matching (engine semantics).
+	all, total, err := ReadBizTuples(owner, appName, "", "", "", 0, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if total != 25 || len(all) != 25 {
+		t.Fatalf("unbounded: total=%d len=%d, want 25/25", total, len(all))
+	}
+}
+
+func TestReadBizTuples_ObjectTypePrefix(t *testing.T) {
+	if ormer == nil {
+		t.Skip("ormer not initialised (test needs DB)")
+	}
+	owner := "rebac-prefix-" + util.GenerateUUID()[:8]
+	appName := "app_prefix"
+	seedRebacAppConfigForTest(t, owner, appName)
+	storeId := BuildStoreId(owner, appName)
+
+	if _, err := SaveAuthorizationModel(owner, appName,
+		"model\n  schema 1.1\n\ntype user\n\ntype document\n  relations\n    define viewer: [user]\n\ntype folder\n  relations\n    define viewer: [user]\n",
+		"test-user", ""); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := AddBizTuples([]*BizTuple{
+		{Owner: owner, AppName: appName, StoreId: storeId, Object: "document:d1", Relation: "viewer", User: "user:alice"},
+		{Owner: owner, AppName: appName, StoreId: storeId, Object: "document:d2", Relation: "viewer", User: "user:alice"},
+		{Owner: owner, AppName: appName, StoreId: storeId, Object: "folder:f1", Relation: "viewer", User: "user:alice"},
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	// Prefix match — "document:" should hit two rows, not the folder.
+	docs, total, err := ReadBizTuples(owner, appName, "document:", "", "", 0, 100)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if total != 2 || len(docs) != 2 {
+		t.Fatalf("document: prefix → total=%d len=%d, want 2/2", total, len(docs))
+	}
+	for _, td := range docs {
+		if td.Object[:9] != "document:" {
+			t.Fatalf("returned non-document object: %q", td.Object)
+		}
+	}
+
+	// Exact match still works.
+	one, total, err := ReadBizTuples(owner, appName, "document:d1", "", "", 0, 100)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if total != 1 || len(one) != 1 || one[0].Object != "document:d1" {
+		t.Fatalf("exact match: total=%d len=%d obj=%q", total, len(one), one[0].Object)
+	}
+}
 
 // TestAddBizTuples_DuplicateRejected verifies that the composite unique index
 // uq_tuple on (store_id, object, relation, user) rejects phantom duplicates, so

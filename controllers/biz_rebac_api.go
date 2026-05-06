@@ -13,6 +13,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/deluxebear/jetauth/object"
@@ -622,47 +623,67 @@ func (c *ApiController) BizWriteTuples() {
 	c.ResponseOk(bizWriteTuplesResponse{Written: written, Deleted: deleted})
 }
 
-// bizReadTuplesRequest is the GET body for /api/biz-read-tuples.
-// Empty filter fields match everything. No cursor yet — CP-6 adds
-// pagination when production load motivates it.
-type bizReadTuplesRequest struct {
-	AppId    string `json:"appId"`
-	Object   string `json:"object,omitempty"`
-	Relation string `json:"relation,omitempty"`
-	User     string `json:"user,omitempty"`
+// bizReadTuplesResponse envelopes the paginated result. `total` is the
+// unbounded match count (independent of offset/limit) so the UI can show
+// "1-14 / 482,910" without a second round-trip.
+type bizReadTuplesResponse struct {
+	Tuples []*object.BizTuple `json:"tuples"`
+	Total  int64              `json:"total"`
+	Offset int                `json:"offset"`
+	Limit  int                `json:"limit"`
 }
 
 // BizReadTuples
 // @Summary BizReadTuples
 // @Tags Business Permission API
-// @Description Read tuples filtered by object / relation / user.
-// Empty filter fields match everything.
+// @Description Read tuples filtered by object / relation / user with pagination.
+// Empty filter fields match everything. When the object filter ends with ":"
+// (e.g. "document:") it is treated as a type-prefix match for the admin
+// object_type facet — otherwise it is matched exactly.
 // @Param   appId      query    string  false  "The app id (owner/appName)"
-// @Param   object     query    string  false  "Filter: object (e.g. document:d1)"
+// @Param   object     query    string  false  "Filter: exact object (e.g. document:d1) or type prefix (e.g. document:)"
 // @Param   relation   query    string  false  "Filter: relation"
 // @Param   user       query    string  false  "Filter: user"
-// @Success 200 {array} object.BizTuple "Matching tuples"
+// @Param   offset     query    int     false  "Pagination offset (default 0)"
+// @Param   limit      query    int     false  "Pagination limit; 0 reads up to 1000 (admin UI cap)"
+// @Success 200 {object} controllers.bizReadTuplesResponse "Paginated tuples with total count"
 // @Router /biz-read-tuples [get]
 func (c *ApiController) BizReadTuples() {
 	appId := c.Ctx.Input.Query("appId")
 	objectFilter := c.Ctx.Input.Query("object")
 	relationFilter := c.Ctx.Input.Query("relation")
 	userFilter := c.Ctx.Input.Query("user")
+	offset, _ := strconv.Atoi(c.Ctx.Input.Query("offset"))
+	limit, _ := strconv.Atoi(c.Ctx.Input.Query("limit"))
 	if appId == "" {
 		c.ResponseError("appId is required")
 		return
+	}
+	if limit < 0 {
+		c.ResponseError("limit must be >= 0")
+		return
+	}
+	if limit > 1000 {
+		// Hard cap mirrors the existing batch limit on /biz-batch-check.
+		// Admin UIs default to 14-50; an arbitrary 1M is almost always a bug.
+		limit = 1000
 	}
 	owner, appName, err := util.GetOwnerAndNameFromIdWithError(appId)
 	if err != nil {
 		c.ResponseError(err.Error())
 		return
 	}
-	tuples, err := object.ReadBizTuples(owner, appName, objectFilter, relationFilter, userFilter)
+	tuples, total, err := object.ReadBizTuples(owner, appName, objectFilter, relationFilter, userFilter, offset, limit)
 	if err != nil {
 		c.ResponseError(err.Error())
 		return
 	}
-	c.ResponseOk(tuples)
+	c.ResponseOk(bizReadTuplesResponse{
+		Tuples: tuples,
+		Total:  total,
+		Offset: offset,
+		Limit:  limit,
+	})
 }
 
 // bizCountTuplesResponse mirrors the one scalar the count endpoint returns.

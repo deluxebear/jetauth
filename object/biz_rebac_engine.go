@@ -735,7 +735,7 @@ func (ctx *checkContext) tuplesetTuples(object, relation string) ([]tupleRef, er
 		return out, nil
 	}
 
-	rows, err := ReadBizTuples(owner, appName, object, relation, "")
+	rows, _, err := ReadBizTuples(owner, appName, object, relation, "", 0, 0)
 	if err != nil {
 		return nil, fmt.Errorf("rebac: read tupleset %s#%s: %w", object, relation, err)
 	}

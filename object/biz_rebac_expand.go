@@ -185,7 +185,7 @@ func collectDirectUsers(owner, appName, object, relation string) ([]string, erro
 	if ormer == nil {
 		return nil, nil
 	}
-	rows, err := ReadBizTuples(owner, appName, object, relation, "")
+	rows, _, err := ReadBizTuples(owner, appName, object, relation, "", 0, 0)
 	if err != nil {
 		if errors.Is(err, errSchemaMissing) {
 			return nil, nil

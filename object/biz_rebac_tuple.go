@@ -199,26 +199,63 @@ func DeleteBizTuple(owner, appName, object, relation, user string) (int64, error
 	return affected, nil
 }
 
-// ReadBizTuples returns tuples matching the given filter. Empty strings are
-// treated as wildcards. storeId is always applied as a filter so the query
-// never crosses application boundaries.
-func ReadBizTuples(owner, appName, object, relation, user string) ([]*BizTuple, error) {
+// ReadBizTuples returns tuples matching the given filter, plus the total
+// matching count (before offset/limit). Empty filter strings are wildcards.
+// When the object filter ends with ":" (e.g. "document:") it is treated as
+// a type-prefix match, used by the admin facet "object_type" — otherwise
+// it is matched exactly. Pass limit<=0 to read every matching row (used
+// by the Check engine internally); admin UI callers should always supply
+// a positive limit.
+func ReadBizTuples(owner, appName, object, relation, user string, offset, limit int) (tuples []*BizTuple, total int64, err error) {
 	storeId := BuildStoreId(owner, appName)
-	session := ormer.Engine.Where("store_id = ?", storeId)
+	base := ormer.Engine.Where("store_id = ?", storeId)
 	if object != "" {
-		session = session.And("object = ?", object)
+		if strings.HasSuffix(object, ":") {
+			base = base.And("object LIKE ?", object+"%")
+		} else {
+			base = base.And("object = ?", object)
+		}
 	}
 	if relation != "" {
-		session = session.And("relation = ?", relation)
+		base = base.And("relation = ?", relation)
 	}
 	if user != "" {
-		session = session.And("user = ?", user)
+		base = base.And("user = ?", user)
 	}
-	tuples := []*BizTuple{}
-	if err := session.Find(&tuples); err != nil {
-		return nil, err
+
+	// Count first — Xorm's Count consumes the session, so we use a fresh
+	// chain by re-applying the same filter. This keeps the count consistent
+	// with the rows we return even when limit truncates the page.
+	countSession := ormer.Engine.Where("store_id = ?", storeId)
+	if object != "" {
+		if strings.HasSuffix(object, ":") {
+			countSession = countSession.And("object LIKE ?", object+"%")
+		} else {
+			countSession = countSession.And("object = ?", object)
+		}
 	}
-	return tuples, nil
+	if relation != "" {
+		countSession = countSession.And("relation = ?", relation)
+	}
+	if user != "" {
+		countSession = countSession.And("user = ?", user)
+	}
+	total, err = countSession.Count(new(BizTuple))
+	if err != nil {
+		return nil, 0, err
+	}
+
+	if offset < 0 {
+		offset = 0
+	}
+	if limit > 0 {
+		base = base.Limit(limit, offset)
+	}
+	tuples = []*BizTuple{}
+	if err := base.Find(&tuples); err != nil {
+		return nil, 0, err
+	}
+	return tuples, total, nil
 }
 
 // CountBizTuples returns the total number of tuples in (owner, appName)'s
