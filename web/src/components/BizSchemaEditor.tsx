@@ -80,9 +80,19 @@ type LeadSource = "user-dsl" | "visual";
 
 interface Props {
   appId: string;
+  /** When set, load this historical authorization-model id instead of the
+   *  current active pointer. Read-only mode for past versions: the editor
+   *  still allows DSL edits (the "Publish new" action saves them as a new
+   *  version), but the "Rollback" action targets this specific id. */
+  modelId?: string;
+  /** Called after a successful Publish-new or Rollback so the host page
+   *  can refresh its version list + navigate to the new active version. */
+  onPublishNew?: (newModelId: string) => void;
+  /** Called when the user clicks the back affordance in the detail header. */
+  onBack?: () => void;
 }
 
-export default function BizSchemaEditor({ appId }: Props) {
+export default function BizSchemaEditor({ appId, modelId, onPublishNew, onBack }: Props) {
   const { t } = useTranslation();
   const modal = useModal();
 
@@ -98,6 +108,16 @@ export default function BizSchemaEditor({ appId }: Props) {
   const [pendingConflicts, setPendingConflicts] = useState<BizSchemaConflict[]>([]);
   const leadSourceRef = useRef<LeadSource>("user-dsl");
 
+  const [meta, setMeta] = useState<{
+    id: string;
+    description: string;
+    createdTime: string;
+    createdBy: string;
+  } | null>(null);
+  const [activeModelId, setActiveModelId] = useState<string>("");
+  const [totalVersions, setTotalVersions] = useState<number>(0);
+  const [versionIndexFromNewest, setVersionIndexFromNewest] = useState<number>(0); // 0 = newest
+
   const reqIdRef = useRef(0);
   const debounceRef = useRef<number | null>(null);
   // Ref-mirror of ast so the dry-run effect can read it without
@@ -110,26 +130,52 @@ export default function BizSchemaEditor({ appId }: Props) {
   }, [ast]);
 
   // Initial load: populate canonical DSL + parsed AST in one go.
+  // Also fetches the app config (for active model id) and model list (for version count/index).
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
-    BizBackend.getBizAuthorizationModel(appId)
-      .then((res) => {
+    Promise.all([
+      BizBackend.getBizAuthorizationModel(appId, modelId),
+      BizBackend.getBizAppConfig(appId),
+      BizBackend.listBizAuthorizationModels(appId),
+    ])
+      .then(([modelRes, cfgRes, listRes]) => {
         if (cancelled) return;
-        if (res.status === "ok" && res.data?.schemaDsl) {
-          setDsl(res.data.schemaDsl);
-          setSavedDsl(res.data.schemaDsl);
-          if (res.data.schemaJson) {
-            const parsed = parseSchemaJson(res.data.schemaJson);
+        if (modelRes.status === "ok" && modelRes.data?.schemaDsl) {
+          const m = modelRes.data;
+          setDsl(m.schemaDsl);
+          setSavedDsl(m.schemaDsl);
+          if (m.schemaJson) {
+            const parsed = parseSchemaJson(m.schemaJson);
             dispatch({ type: "LOAD", ast: parsed });
             if (parsed.types.length > 0) setSelectedTypeId(parsed.types[0].id);
           }
+          setMeta({
+            id: m.id,
+            description: m.description ?? "",
+            createdTime: m.createdTime,
+            createdBy: m.createdBy,
+          });
           leadSourceRef.current = "user-dsl";
         } else {
           setDsl(DSL_TEMPLATE);
           setSavedDsl("");
           dispatch({ type: "LOAD", ast: emptyAST() });
+          setMeta(null);
           leadSourceRef.current = "user-dsl";
+        }
+        if (cfgRes.status === "ok" && cfgRes.data) {
+          setActiveModelId((cfgRes.data as { currentAuthorizationModelId?: string }).currentAuthorizationModelId ?? "");
+        }
+        if (listRes.status === "ok" && Array.isArray(listRes.data)) {
+          setTotalVersions(listRes.data.length);
+          // listBizAuthorizationModels returns newest-first. Find this
+          // model's position; 0 = newest.
+          const targetId = modelRes.status === "ok" ? modelRes.data?.id : undefined;
+          if (targetId) {
+            const idx = listRes.data.findIndex((m) => m.id === targetId);
+            setVersionIndexFromNewest(idx >= 0 ? idx : 0);
+          }
         }
       })
       .finally(() => {
@@ -138,7 +184,7 @@ export default function BizSchemaEditor({ appId }: Props) {
     return () => {
       cancelled = true;
     };
-  }, [appId]);
+  }, [appId, modelId]);
 
   // Visual → DSL: if the last editor was the Visual tab, serialise AST
   // and push it into `dsl`. Guarded against loops: we only write when
@@ -370,6 +416,75 @@ export default function BizSchemaEditor({ appId }: Props) {
     setDsl(savedDsl || DSL_TEMPLATE);
   };
 
+  const handleValidate = useCallback(async () => {
+    setDryRun({ kind: "validating" });
+    const res = await BizBackend.saveBizAuthorizationModel(appId, dsl, { dryRun: true });
+    if (res.status !== "ok" || !res.data) {
+      modal.toast(res.msg || t("rebac.common.error"), "error");
+      setDryRun({ kind: "error", message: res.msg || "" });
+      return;
+    }
+    const r = res.data as SaveAuthorizationModelResult;
+    if (r.outcome === "advanced") {
+      setDryRun({ kind: "valid" });
+      modal.toast(t("rebac.schema.validatePassed" as any), "success");
+    } else if (r.outcome === "unchanged") {
+      setDryRun({ kind: "unchanged" });
+      modal.toast(t("rebac.schema.validateUnchanged" as any), "info");
+    } else {
+      setDryRun({ kind: "conflict", conflicts: r.conflicts ?? [] });
+      modal.toast(t("rebac.schema.validateConflict" as any), "error");
+    }
+  }, [appId, dsl, modal, t]);
+
+  const handleRollback = useCallback(() => {
+    if (!meta) return;
+    // Use showConfirm (callback-based) since modal.confirm doesn't exist.
+    modal.showConfirm(
+      t("rebac.schema.rollbackConfirmBody" as any),
+      async () => {
+        const res = await BizBackend.activateBizAuthorizationModel(appId, meta.id);
+        if (res.status !== "ok") {
+          modal.toast(res.msg || t("rebac.common.error"), "error");
+          return;
+        }
+        modal.toast(t("rebac.schema.rollbackDone" as any), "success");
+        onPublishNew?.(meta.id);
+      },
+      t("rebac.schema.rollbackConfirmTitle" as any),
+    );
+  }, [appId, meta, modal, t, onPublishNew]);
+
+  const handlePublishNew = useCallback(async () => {
+    // modal.prompt doesn't exist in this codebase; fall back to window.prompt.
+    const description = window.prompt(t("rebac.schema.publishPromptTitle" as any), "");
+    if (description === null) return; // user cancelled
+
+    setSaving(true);
+    try {
+      const res = await BizBackend.saveBizAuthorizationModel(appId, dsl, {
+        description: description ?? "",
+      });
+      if (res.status !== "ok" || !res.data) {
+        modal.toast(res.msg || t("rebac.common.error"), "error");
+        return;
+      }
+      const r = res.data as SaveAuthorizationModelResult;
+      if (r.outcome === "advanced") {
+        modal.toast(t("rebac.schema.publishDone" as any), "success");
+        onPublishNew?.(r.authorizationModelId ?? "");
+      } else if (r.outcome === "unchanged") {
+        modal.toast(t("rebac.schema.outcomeUnchanged"), "info");
+      } else {
+        // Conflict — surface the existing conflict plan modal.
+        setPendingConflicts(r.conflicts ?? []);
+        setPlanOpen(true);
+      }
+    } finally {
+      setSaving(false);
+    }
+  }, [appId, dsl, modal, onPublishNew, t]);
+
   if (loading) {
     return (
       <div className="rounded-lg border border-border bg-surface-1 p-6 text-center text-[13px] text-text-muted">
@@ -390,6 +505,64 @@ export default function BizSchemaEditor({ appId }: Props) {
 
   return (
     <div className="flex flex-col gap-3">
+      {meta && (
+        <div className="flex items-start justify-between gap-3 flex-wrap">
+          <div>
+            {onBack && (
+              <button
+                type="button"
+                onClick={onBack}
+                className="text-[12px] text-text-muted hover:text-accent mb-2 flex items-center gap-1"
+              >
+                ← {t("rebac.schema.back" as any)}
+              </button>
+            )}
+            <div className="flex items-center gap-2 flex-wrap">
+              <h2 className="text-[18px] font-bold text-text-primary">
+                v{Math.max(1, totalVersions - versionIndexFromNewest)}
+                {meta.description ? ` · ${meta.description}` : ""}
+              </h2>
+              {meta.id === activeModelId && (
+                <span className="px-2 py-0.5 text-[11px] rounded-full bg-accent/15 text-accent">
+                  {t("rebac.schema.activeBadge" as any)}
+                </span>
+              )}
+            </div>
+            <p className="text-[12px] text-text-muted mt-1 font-mono">
+              {meta.id.slice(0, 5)}…{meta.id.slice(-5)}
+              {meta.createdTime && ` · ${meta.createdTime}`}
+              {meta.createdBy && ` · ${t("rebac.schema.publishedBy" as any)} ${meta.createdBy}`}
+            </p>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={() => void handleValidate()}
+              className="px-3 py-1.5 rounded-md border border-border text-[13px] flex items-center gap-2 hover:bg-surface-2"
+            >
+              {t("rebac.schema.validate" as any)}
+            </button>
+            {meta.id !== activeModelId && (
+              <button
+                type="button"
+                onClick={() => handleRollback()}
+                className="px-3 py-1.5 rounded-md border border-border text-[13px] hover:bg-surface-2"
+              >
+                {t("rebac.schema.rollback" as any)}
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => void handlePublishNew()}
+              disabled={saving}
+              className="px-3 py-1.5 rounded-md bg-accent text-white text-[13px] flex items-center gap-2 hover:bg-accent/90 disabled:opacity-50"
+            >
+              + {t("rebac.schema.publishNew" as any)}
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="flex items-end justify-between flex-wrap gap-2 border-b border-border">
         <div className="flex items-end gap-3 flex-wrap">
           <div
