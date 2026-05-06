@@ -188,6 +188,37 @@ func (c *ApiController) BizListAuthorizationModels() {
 	c.ResponseOk(models)
 }
 
+// BizGetReBACStats
+// @Summary BizGetReBACStats
+// @Tags Business Permission API
+// @Description Aggregate snapshot of admin Overview metrics for one ReBAC
+// app — tuple count, today's tuple delta, last-hour Check QPS, model
+// version count, active model id, last 8 tuple writes, and per-type
+// distribution. Single round-trip; cheap (≤4 indexed SELECTs + one
+// in-memory ring read). The CheckQpsLastHour counter is in-process and
+// resets on restart — Prometheus is the source of truth for billing.
+// @Param   appId   query    string  true  "The app id (owner/appName)"
+// @Success 200 {object} object.ReBACStats "Overview snapshot"
+// @Router /biz-rebac-stats [get]
+func (c *ApiController) BizGetReBACStats() {
+	appId := c.Ctx.Input.Query("appId")
+	if appId == "" {
+		c.ResponseError("appId is required")
+		return
+	}
+	owner, appName, err := util.GetOwnerAndNameFromIdWithError(appId)
+	if err != nil {
+		c.ResponseError(err.Error())
+		return
+	}
+	stats, err := object.GetReBACStats(owner, appName)
+	if err != nil {
+		c.ResponseError(err.Error())
+		return
+	}
+	c.ResponseOk(stats)
+}
+
 // BizActivateAuthorizationModel
 // @Summary BizActivateAuthorizationModel
 // @Tags Business Permission API
