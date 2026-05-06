@@ -211,7 +211,7 @@ type document
 // readable back via GetBizAuthorizationModel.
 func TestSaveAuthorizationModel_PersistsDescription(t *testing.T) {
 	if ormer == nil {
-		t.Skip("ormer not initialized; skipping DB-bound test")
+		t.Skip("ormer not initialised (test needs DB)")
 	}
 	owner := "rebac-it-" + util.GenerateUUID()[:8]
 	appName := "app_desc_test"

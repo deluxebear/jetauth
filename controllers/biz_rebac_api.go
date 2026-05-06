@@ -44,9 +44,11 @@ type writeAuthorizationModelRequest struct {
 // schema drops types or relations still referenced by existing tuples,
 // returns outcome=conflict with the list of offending tuples; no new row
 // is inserted. Otherwise inserts a new append-only row and advances the
-// app's CurrentAuthorizationModelId. Pass ?dryRun=true to run the same
-// parse + conflict-scan pipeline without inserting — used by the admin
-// UI DSL editor for inline validation.
+// app's CurrentAuthorizationModelId. The optional `description` field on
+// the body is stored verbatim on the new model row as a human-readable
+// change summary surfaced by the admin version-history UI. Pass
+// ?dryRun=true to run the same parse + conflict-scan pipeline without
+// inserting — used by the admin UI DSL editor for inline validation.
 // @Param   appId    query    string  true   "The app id (owner/appName)"
 // @Param   dryRun   query    bool    false  "When true, validate only; no DB insert or pointer advance"
 // @Param   body     body     controllers.writeAuthorizationModelRequest  true  "Schema DSL payload"
