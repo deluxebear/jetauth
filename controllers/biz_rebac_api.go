@@ -11,6 +11,7 @@ package controllers
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"time"
 
@@ -184,6 +185,41 @@ func (c *ApiController) BizListAuthorizationModels() {
 		return
 	}
 	c.ResponseOk(models)
+}
+
+// BizActivateAuthorizationModel
+// @Summary BizActivateAuthorizationModel
+// @Tags Business Permission API
+// @Description Repoint the app's current authorization model at a historical,
+// immutable model row. Use this for rollback. The historical row itself is
+// not modified. Cross-tenant lookups (the model id belongs to a different
+// app) return "not found" rather than 403, so the response cannot be used
+// to probe foreign stores.
+// @Param   appId   query    string  true  "The app id (owner/appName)"
+// @Param   id      query    string  true  "Authorization model id to activate"
+// @Success 200 {object} controllers.Response "ok"
+// @Router /biz-activate-authorization-model [post]
+func (c *ApiController) BizActivateAuthorizationModel() {
+	appId := c.Ctx.Input.Query("appId")
+	id := c.Ctx.Input.Query("id")
+	if appId == "" || id == "" {
+		c.ResponseError("appId and id are required")
+		return
+	}
+	owner, appName, err := util.GetOwnerAndNameFromIdWithError(appId)
+	if err != nil {
+		c.ResponseError(err.Error())
+		return
+	}
+	if err := object.ActivateBizAuthorizationModel(owner, appName, id); err != nil {
+		if errors.Is(err, object.ErrAuthorizationModelNotFound) {
+			c.ResponseError("authorization model not found: " + id)
+			return
+		}
+		c.ResponseError(err.Error())
+		return
+	}
+	c.ResponseOk(map[string]string{"activeModelId": id})
 }
 
 // bizCheckTupleKey mirrors object.TupleKey for API serialisation. Kept

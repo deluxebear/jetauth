@@ -11,10 +11,17 @@ package object
 import (
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"fmt"
 
 	"github.com/deluxebear/jetauth/util"
 )
+
+// ErrAuthorizationModelNotFound is returned by ActivateBizAuthorizationModel when
+// the model id is unknown or belongs to a different tenant. Cross-tenant
+// invisibility is intentional (spec §7.2): callers must not be able to
+// distinguish "model exists but you can't see it" from "no such model".
+var ErrAuthorizationModelNotFound = errors.New("authorization model not found")
 
 // BizAuthorizationModel stores a single immutable snapshot of an OpenFGA-compatible
 // authorization schema (DSL + JSON representation) for a given application.
@@ -247,6 +254,29 @@ func ValidateAuthorizationModel(owner, appName, dsl string) (*SaveAuthorizationM
 		Outcome:    SaveOutcomeAdvanced,
 		SchemaJSON: parsed.JSON,
 	}, nil
+}
+
+// ActivateBizAuthorizationModel repoints the app's CurrentAuthorizationModelId
+// at a historical, immutable model row. The historical row itself is not
+// modified. Returns ErrAuthorizationModelNotFound when modelId is empty,
+// missing, or owned by a different (owner, appName) — these are collapsed
+// into one outcome so the response cannot be used to probe foreign stores
+// (spec §7.2 cross-tenant invisibility).
+func ActivateBizAuthorizationModel(owner, appName, modelId string) error {
+	if modelId == "" {
+		return ErrAuthorizationModelNotFound
+	}
+	m, err := GetBizAuthorizationModel(modelId)
+	if err != nil {
+		return err
+	}
+	if m == nil || m.Owner != owner || m.AppName != appName {
+		return ErrAuthorizationModelNotFound
+	}
+	if _, err := SetBizAppConfigAuthorizationModelId(owner, appName, modelId); err != nil {
+		return fmt.Errorf("advance current model pointer: %w", err)
+	}
+	return nil
 }
 
 // SaveAuthorizationModel parses the DSL, scans for tuple conflicts, and
