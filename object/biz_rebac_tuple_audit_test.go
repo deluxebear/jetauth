@@ -10,6 +10,7 @@ package object
 
 import (
 	"testing"
+	"time"
 
 	"github.com/deluxebear/jetauth/util"
 )
@@ -34,6 +35,39 @@ func TestBizReBACTupleAudit_RoundTrip(t *testing.T) {
 		t.Fatal(err)
 	}
 	if len(list) != 1 || list[0].Op != "write" {
+		t.Fatalf("got %+v", list)
+	}
+}
+
+func TestWriteBizTuples_EmitsAudit(t *testing.T) {
+	if ormer == nil {
+		t.Skip("ormer not initialised (test needs DB)")
+	}
+	owner := "rebac-it-" + util.GenerateUUID()[:8]
+	appName := "audit_x"
+	seedRebacAppConfigForTest(t, owner, appName)
+	if _, err := SaveAuthorizationModel(owner, appName,
+		"model\n  schema 1.1\n\ntype user\n\ntype document\n  relations\n    define viewer: [user]\n",
+		"test", ""); err != nil {
+		t.Fatal(err)
+	}
+	storeId := BuildStoreId(owner, appName)
+
+	// Write one tuple — must produce one "write" audit row.
+	if _, _, err := WriteBizTuples([]*BizTuple{{
+		StoreId: storeId, Owner: owner, AppName: appName,
+		Object: "document:d1", Relation: "viewer", User: "user:alice",
+	}}, nil, "admin"); err != nil {
+		t.Fatal(err)
+	}
+
+	// SafeGoroutine is async — give it a moment.
+	time.Sleep(150 * time.Millisecond)
+	list, err := ListTupleAuditForApp(owner, appName, AuditFilterAll, 0, 50)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(list) != 1 || list[0].Op != "write" || list[0].ActorUser != "admin" {
 		t.Fatalf("got %+v", list)
 	}
 }

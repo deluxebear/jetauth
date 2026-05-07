@@ -654,7 +654,7 @@ func (c *ApiController) BizWriteTuples() {
 		})
 	}
 
-	written, deleted, err := object.WriteBizTuples(writes, deletes)
+	written, deleted, err := object.WriteBizTuples(writes, deletes, c.GetSessionUsername())
 	if err != nil {
 		c.ResponseError(err.Error())
 		return

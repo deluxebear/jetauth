@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/beego/beego/v2/core/logs"
 	"github.com/deluxebear/jetauth/util"
 )
 
@@ -285,7 +286,7 @@ func ListBizTuplesForApp(owner, appName string) ([]*BizTuple, error) {
 // rolls back the whole batch — partial commits are never visible.
 //
 // Empty writes + empty deletes is a no-op (returns 0, 0, nil).
-func WriteBizTuples(writes []*BizTuple, deletes []*BizTuple) (written int64, deleted int64, err error) {
+func WriteBizTuples(writes []*BizTuple, deletes []*BizTuple, actorUser string) (written int64, deleted int64, err error) {
 	if len(writes) == 0 && len(deletes) == 0 {
 		return 0, 0, nil
 	}
@@ -332,6 +333,34 @@ func WriteBizTuples(writes []*BizTuple, deletes []*BizTuple) (written int64, del
 
 	if err = session.Commit(); err != nil {
 		return 0, 0, fmt.Errorf("rebac write_tuples: commit: %w", err)
+	}
+
+	// Audit hook — emit one row per write or delete. Best-effort: a
+	// failure here doesn't roll back the tuple change, since audit is
+	// observability, not policy. Errors logged but not propagated. The
+	// insert runs in a background goroutine so the request latency is
+	// unaffected.
+	if len(writes) > 0 || len(deletes) > 0 {
+		auditRows := make([]*BizReBACTupleAudit, 0, len(writes)+len(deletes))
+		for _, w := range writes {
+			auditRows = append(auditRows, &BizReBACTupleAudit{
+				Owner: w.Owner, AppName: w.AppName, Op: "write",
+				Object: w.Object, Relation: w.Relation, User: w.User,
+				ActorUser: actorUser, AtTime: now,
+			})
+		}
+		for _, d := range deletes {
+			auditRows = append(auditRows, &BizReBACTupleAudit{
+				Owner: d.Owner, AppName: d.AppName, Op: "delete",
+				Object: d.Object, Relation: d.Relation, User: d.User,
+				ActorUser: actorUser, AtTime: now,
+			})
+		}
+		util.SafeGoroutine(func() {
+			if _, err := ormer.Engine.Insert(&auditRows); err != nil {
+				logs.Error("rebac audit insert: %v", err)
+			}
+		})
 	}
 
 	// Precise L2 invalidation after a successful commit. Every
