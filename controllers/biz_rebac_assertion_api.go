@@ -16,6 +16,13 @@ import (
 	"github.com/deluxebear/jetauth/util"
 )
 
+// maxAssertionFieldLen caps the size of object/relation/user/description
+// strings on the add-assertion endpoint to prevent storage amplification.
+// 1KB per text field is more than enough for any realistic ReBAC tuple
+// reference; the description field is for human notes and rarely exceeds
+// a few hundred chars.
+const maxAssertionFieldLen = 1024
+
 // BizListAssertions
 // @Summary BizListAssertions
 // @Tags Business Permission API
@@ -78,6 +85,12 @@ func (c *ApiController) BizAddAssertion() {
 		c.ResponseError("object, relation, user are all required")
 		return
 	}
+	if len(body.Object) > maxAssertionFieldLen ||
+		len(body.Relation) > maxAssertionFieldLen ||
+		len(body.User) > maxAssertionFieldLen ||
+		len(body.Description) > maxAssertionFieldLen {
+		c.ResponseError("assertion field too long (max 1024 chars per field)"); return
+	}
 	a := &object.BizReBACAssertion{
 		Owner: owner, AppName: appName,
 		Object: body.Object, Relation: body.Relation, User: body.User,
@@ -97,7 +110,7 @@ func (c *ApiController) BizAddAssertion() {
 // @Description Delete an assertion. Cross-tenant ids return "assertion not found".
 // @Param appId query string true "owner/appName"
 // @Param id query string true "assertion id"
-// @Success 200 {object} object.Response
+// @Success 200 {object} controllers.Response "ok with deleted id"
 // @Router /biz-delete-assertion [post]
 func (c *ApiController) BizDeleteAssertion() {
 	appId := c.Ctx.Input.Query("appId")
@@ -123,6 +136,9 @@ func (c *ApiController) BizDeleteAssertion() {
 }
 
 // BizRunAssertions
+// Note: POST despite being read-shaped — each run updates the LastActual
+// and LastRunTime columns on the assertion rows, so it is not idempotent
+// in the strict HTTP sense.
 // @Summary BizRunAssertions
 // @Tags Business Permission API
 // @Description Run all assertions for a ReBAC app and return per-assertion results.
