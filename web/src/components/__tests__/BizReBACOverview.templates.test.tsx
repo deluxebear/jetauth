@@ -65,6 +65,11 @@ function setupEmptyState() {
     msg: "",
     data: [],
   } satisfies ApiResponse<BizAuthorizationModel[]>);
+  vi.mocked(BizBackend.listBizAssertions).mockResolvedValue({
+    status: "ok",
+    msg: "",
+    data: [],
+  } as ApiResponse<unknown[]>);
 }
 
 describe("BizReBACOverview empty state", () => {
