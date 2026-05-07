@@ -262,6 +262,11 @@ func ValidateAuthorizationModel(owner, appName, dsl string) (*SaveAuthorizationM
 // missing, or owned by a different (owner, appName) — these are collapsed
 // into one outcome so the response cannot be used to probe foreign stores
 // (spec §7.2 cross-tenant invisibility).
+//
+// PR2 note: shares the same compare-and-swap gap as SaveAuthorizationModel
+// (concurrent activations can interleave; last write wins). Both call
+// sites should grow CAS together — see the matching note above
+// SaveAuthorizationModel.
 func ActivateBizAuthorizationModel(owner, appName, modelId string) error {
 	if modelId == "" {
 		return ErrAuthorizationModelNotFound
