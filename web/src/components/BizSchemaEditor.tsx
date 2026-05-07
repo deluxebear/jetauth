@@ -463,8 +463,12 @@ export default function BizSchemaEditor({ appId, modelId, mode = "view", onPubli
   }, [appId, meta, modal, t, onPublishNew]);
 
   const handlePublishNew = useCallback(async () => {
-    // modal.prompt doesn't exist in this codebase; fall back to window.prompt.
-    const description = window.prompt(t("rebac.schema.publishPromptTitle" as any), "");
+    const description = await modal.prompt({
+      title: t("rebac.schema.publishPromptTitle" as any),
+      placeholder: t("rebac.schema.publishPromptPlaceholder" as any),
+      maxLength: 500,
+      confirmLabel: t("rebac.schema.publishNew" as any),
+    });
     if (description === null) return; // user cancelled
 
     setSaving(true);

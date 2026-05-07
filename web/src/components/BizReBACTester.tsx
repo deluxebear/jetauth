@@ -341,9 +341,12 @@ export default function BizReBACTester({ appId, initialRequest }: Props) {
                     type="button"
                     aria-label={t("rebac.tester.saveAsCase")}
                     className="text-text-muted hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 rounded shrink-0"
-                    onClick={(ev) => {
+                    onClick={async (ev) => {
                       ev.stopPropagation();
-                      const name = window.prompt(t("rebac.tester.caseName"));
+                      const name = await modal.prompt({
+                        title: t("rebac.tester.caseName"),
+                        maxLength: 100,
+                      });
                       if (!name) return;
                       const newCase: CaseEntry = {
                         id:
