@@ -36,13 +36,14 @@ type ReBACTypeDistribution struct {
 	Count int64  `json:"count"`
 }
 
-// ReBACRecentWrite mirrors a tuple insertion. Op is always "write" for now;
-// "delete" requires a tuple-audit log (deferred to iteration 2).
+// ReBACRecentWrite is one row of the recent-activity ribbon on the
+// admin Overview. Sourced from the tuple-audit log so both writes and
+// deletes appear in the same chronological list.
 type ReBACRecentWrite struct {
 	Object   string `json:"object"`
 	Relation string `json:"relation"`
 	User     string `json:"user"`
-	Op       string `json:"op"`
+	Op       string `json:"op"` // "write" | "delete"
 	At       string `json:"at"`
 }
 
@@ -160,20 +161,19 @@ func GetReBACStats(owner, appName string) (*ReBACStats, error) {
 		typeDist = append(typeDist, ReBACTypeDistribution{Type: r.ObjectType, Count: r.N})
 	}
 
-	// Recent writes: last 8 tuples ORDER BY created_time DESC.
-	recent := []*BizTuple{}
-	if err := ormer.Engine.
-		Where("store_id = ?", storeId).
-		Desc("created_time").
-		Limit(8).
-		Find(&recent); err != nil {
+	// Recent writes: last 8 audit events (any op). Sourced from
+	// biz_rebac_tuple_audit so deletes surface alongside writes —
+	// before iter-2 we read created_time on biz_tuple, which only
+	// captured insertions.
+	auditEvents, err := ListTupleAuditForApp(owner, appName, AuditFilterAll, 0, 8)
+	if err != nil {
 		return nil, fmt.Errorf("recent writes: %w", err)
 	}
-	recentWrites := make([]ReBACRecentWrite, 0, len(recent))
-	for _, t := range recent {
+	recentWrites := make([]ReBACRecentWrite, 0, len(auditEvents))
+	for _, e := range auditEvents {
 		recentWrites = append(recentWrites, ReBACRecentWrite{
-			Object: t.Object, Relation: t.Relation, User: t.User,
-			Op: "write", At: t.CreatedTime,
+			Object: e.Object, Relation: e.Relation, User: e.User,
+			Op: e.Op, At: e.AtTime,
 		})
 	}
 

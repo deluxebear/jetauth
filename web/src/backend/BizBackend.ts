@@ -1038,8 +1038,8 @@ export interface BizReBACRecentWrite {
   object: string;
   relation: string;
   user: string;
-  /** "write" | "delete" — only "write" is emitted in iter-1; "delete" arrives with the iter-2 audit log. */
-  op: "write";
+  /** "write" or "delete" — both are surfaced now that the audit log is live. */
+  op: "write" | "delete";
   at: string;
 }
 
