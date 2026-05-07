@@ -17,11 +17,11 @@ export default function BizTypeDistributionCard({ rows }: Props) {
   return (
     <div className="rounded-xl border border-border bg-surface-1 p-4">
       <h3 className="text-[13px] font-semibold text-text-primary mb-3">
-        {t("rebac.overview.typeDistribution" as any)}
+        {t("rebac.overview.typeDistribution")}
       </h3>
       {rows.length === 0 ? (
         <p className="text-[12px] text-text-muted py-6 text-center">
-          {t("rebac.overview.noTypeData" as any)}
+          {t("rebac.overview.noTypeData")}
         </p>
       ) : (
         <ul className="flex flex-col gap-3">

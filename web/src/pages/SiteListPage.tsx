@@ -30,7 +30,7 @@ export default function SiteListPage() {
     if (res.status === "ok") {
       navigate(`/sites/${site.owner}/${site.name}`, { state: { mode: "add" } });
     } else {
-      modal.toast(res.msg || t("common.addFailed" as any), "error");
+      modal.toast(res.msg || t("common.addFailed"), "error");
     }
   };
 
@@ -41,35 +41,35 @@ export default function SiteListPage() {
       async () => {
         const res = await SiteBackend.deleteSite(record);
         if (res.status === "ok") list.refetch();
-        else modal.toast(res.msg || t("common.deleteFailed" as any), "error");
+        else modal.toast(res.msg || t("common.deleteFailed"), "error");
       }
     );
   };
 
   const columns: Column<Site>[] = [
     {
-      key: "owner", title: t("col.owner" as any), sortable: true, width: "90px",
+      key: "owner", title: t("col.owner"), sortable: true, width: "90px",
       render: (_, r) => <span className="text-[12px] text-text-secondary">{r.owner}</span>,
     },
     {
-      key: "tag", title: t("col.tag" as any), sortable: true, width: "140px",
+      key: "tag", title: t("col.tag"), sortable: true, width: "140px",
       render: (_, r) => r.tag ? (
         <Link to={`/nodes/${r.owner}/${r.tag}`} className="text-accent hover:underline text-[12px]" onClick={(e) => e.stopPropagation()}>{r.tag}</Link>
       ) : null,
     },
     {
-      key: "name", title: t("col.name" as any), sortable: true, fixed: "left" as const, width: "120px",
+      key: "name", title: t("col.name"), sortable: true, fixed: "left" as const, width: "120px",
       render: (_, r) => <Link to={`/sites/${r.owner}/${r.name}`} className="font-mono font-medium text-accent hover:underline" onClick={(e) => e.stopPropagation()}>{r.name}</Link>,
     },
-    { key: "displayName", title: t("col.displayName" as any), sortable: true },
+    { key: "displayName", title: t("col.displayName"), sortable: true },
     {
-      key: "domain", title: t("sites.field.domain" as any), sortable: true, width: "150px",
+      key: "domain", title: t("sites.field.domain"), sortable: true, width: "150px",
       render: (_, r) => r.publicIp ? (
         <a target="_blank" rel="noreferrer" href={`https://${r.domain}`} className="text-accent hover:underline text-[12px]">{r.domain}</a>
       ) : <span className="text-[12px]">{r.domain}</span>,
     },
     {
-      key: "otherDomains", title: t("sites.field.otherDomains" as any), width: "120px",
+      key: "otherDomains", title: t("sites.field.otherDomains"), width: "120px",
       render: (_, r) => (
         <div className="flex flex-wrap gap-1">
           {(r.otherDomains || []).map((d) => (
@@ -79,7 +79,7 @@ export default function SiteListPage() {
       ),
     },
     {
-      key: "rules", title: t("sites.field.rules" as any), width: "120px",
+      key: "rules", title: t("sites.field.rules"), width: "120px",
       render: (_, r) => (
         <div className="flex flex-wrap gap-1">
           {(r.rules || []).map((rule) => (
@@ -89,7 +89,7 @@ export default function SiteListPage() {
       ),
     },
     {
-      key: "host", title: t("sites.field.host" as any), sortable: true, width: "80px",
+      key: "host", title: t("sites.field.host"), sortable: true, width: "80px",
       render: (_, r) => {
         const hostStr = r.host ? `${r.host}:${r.port}` : String(r.port);
         return r.status === "Active"
@@ -98,7 +98,7 @@ export default function SiteListPage() {
       },
     },
     {
-      key: "hosts", title: t("sites.field.hosts" as any), width: "200px",
+      key: "hosts", title: t("sites.field.hosts"), width: "200px",
       render: (_, r) => (
         <div className="flex flex-wrap gap-1">
           {(r.hosts || []).map((h, i) => (
@@ -108,13 +108,13 @@ export default function SiteListPage() {
       ),
     },
     {
-      key: "sslCert", title: t("sites.field.sslCert" as any), sortable: true, width: "130px",
+      key: "sslCert", title: t("sites.field.sslCert"), sortable: true, width: "130px",
       render: (_, r) => r.sslCert ? (
         <Link to={`/certs/admin/${r.sslCert}`} className="text-accent hover:underline text-[12px]" onClick={(e) => e.stopPropagation()}>{r.sslCert}</Link>
       ) : null,
     },
     {
-      key: "__actions", fixed: "right" as const, title: t("common.action" as any), width: "120px",
+      key: "__actions", fixed: "right" as const, title: t("common.action"), width: "120px",
       render: (_, r) => (
         <div className="flex items-center gap-1">
           <Link to={`/sites/${r.owner}/${r.name}`} className="rounded p-1.5 text-text-muted hover:text-warning hover:bg-warning/10 transition-colors" title={t("common.edit")} onClick={(e) => e.stopPropagation()}><Pencil size={14} /></Link>
@@ -128,13 +128,13 @@ export default function SiteListPage() {
     <div className="space-y-5">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold tracking-tight">{t("sites.title" as any)}</h1>
-          <p className="text-[13px] text-text-muted mt-0.5">{t("sites.subtitle" as any)}</p>
+          <h1 className="text-xl font-bold tracking-tight">{t("sites.title")}</h1>
+          <p className="text-[13px] text-text-muted mt-0.5">{t("sites.subtitle")}</p>
         </div>
         <div className="flex items-center gap-2">
           <motion.button whileHover={{ rotate: 180 }} transition={{ duration: 0.3 }} onClick={list.refetch} className="rounded-lg border border-border p-2 text-text-muted hover:bg-surface-2 transition-colors" title={t("common.refresh")}><RefreshCw size={15} /></motion.button>
           <ColumnsMenu columns={columns} hidden={prefs.hidden} onToggle={prefs.toggleHidden} onResetWidths={prefs.resetWidths} />
-          <button onClick={handleAdd} className="flex items-center gap-1.5 rounded-lg bg-accent px-3 py-2 text-[13px] font-semibold text-white hover:bg-accent-hover transition-colors"><Plus size={15} /> {t("sites.add" as any)}</button>
+          <button onClick={handleAdd} className="flex items-center gap-1.5 rounded-lg bg-accent px-3 py-2 text-[13px] font-semibold text-white hover:bg-accent-hover transition-colors"><Plus size={15} /> {t("sites.add")}</button>
         </div>
       </div>
       <DataTable

@@ -152,7 +152,7 @@ export default function CountryCodeSelect({ selected, onChange }: {
               <input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder={t("common.searchCountry" as any)}
+                placeholder={t("common.searchCountry")}
                 autoFocus
                 className="w-full rounded border border-border bg-surface-2 pl-8 pr-2 py-1.5 text-[12px] text-text-primary outline-none focus:border-accent placeholder:text-text-muted"
               />
@@ -184,7 +184,7 @@ export default function CountryCodeSelect({ selected, onChange }: {
             })}
             {filtered.length === 0 && (
               <div className="px-3 py-4 text-[12px] text-text-muted text-center">
-                {t("common.noResults" as any)}
+                {t("common.noResults")}
               </div>
             )}
           </div>

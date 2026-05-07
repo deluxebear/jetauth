@@ -58,7 +58,7 @@ export default function PricingEditPage() {
     try {
       const res = await PricingBackend.updatePricing(owner!, name!, pricing);
       if (res.status === "ok") {
-        modal.toast(t("common.saveSuccess" as any));
+        modal.toast(t("common.saveSuccess"));
         setSaved(true);
         setOriginalJson(JSON.stringify(pricing));
         setIsAddMode(false);
@@ -67,7 +67,7 @@ export default function PricingEditPage() {
           navigate(`/pricings/${pricing.owner}/${pricing.name}`, { replace: true });
         }
       } else {
-        modal.toast(friendlyError(res.msg, t) || t("common.saveFailed" as any), "error");
+        modal.toast(friendlyError(res.msg, t) || t("common.saveFailed"), "error");
       }
     } catch (e) {
       console.error(e);
@@ -80,14 +80,14 @@ export default function PricingEditPage() {
     try {
       const res = await PricingBackend.updatePricing(owner!, name!, pricing);
       if (res.status === "ok") {
-        modal.toast(t("common.saveSuccess" as any));
+        modal.toast(t("common.saveSuccess"));
         invalidateList();
         navigate("/pricings");
       } else {
-        modal.toast(friendlyError(res.msg, t) || t("common.saveFailed" as any), "error");
+        modal.toast(friendlyError(res.msg, t) || t("common.saveFailed"), "error");
       }
     } catch (e: any) {
-      modal.toast(e?.message || t("common.saveFailed" as any), "error");
+      modal.toast(e?.message || t("common.saveFailed"), "error");
     } finally {
       setSaving(false);
     }
@@ -109,7 +109,7 @@ export default function PricingEditPage() {
           invalidateList();
           navigate("/pricings");
         } else {
-          modal.toast(res.msg || t("common.deleteFailed" as any), "error");
+          modal.toast(res.msg || t("common.deleteFailed"), "error");
         }
       } catch (e) {
         console.error(e);
@@ -120,7 +120,7 @@ export default function PricingEditPage() {
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-6 ">
       <StickyEditHeader
-        title={`${isAddMode ? t("common.add") : t("common.edit")} ${t("pricings.title" as any)}`}
+        title={`${isAddMode ? t("common.add") : t("common.edit")} ${t("pricings.title")}`}
         subtitle={`${owner}/${name}`}
         onBack={handleBack}
       >
@@ -130,14 +130,14 @@ export default function PricingEditPage() {
                     <SaveButton onClick={handleSave} saving={saving} saved={saved} label={t("common.save")} />
           <button onClick={handleSaveAndExit} disabled={saving} className="flex items-center gap-1.5 rounded-lg bg-accent px-4 py-2 text-[13px] font-semibold text-white hover:bg-accent-hover disabled:opacity-50 transition-colors">
             {saving ? <div className="h-3.5 w-3.5 rounded-full border-2 border-white/30 border-t-white animate-spin" /> : <LogOut size={14} />}
-            {t("common.saveAndExit" as any)}
+            {t("common.saveAndExit")}
           </button>
       </StickyEditHeader>
 
       {showBanner && <UnsavedBanner isAddMode={isAddMode} />}
 
       {/* Basic Info */}
-      <FormSection title={t("pricings.section.basic" as any)}>
+      <FormSection title={t("pricings.section.basic")}>
         <FormField label={t("field.owner")}>
           <input value={pricing.owner} disabled className={inputClass} />
         </FormField>
@@ -147,23 +147,23 @@ export default function PricingEditPage() {
         <FormField label={t("field.displayName")}>
           <input value={pricing.displayName} onChange={(e) => set("displayName", e.target.value)} className={inputClass} />
         </FormField>
-        <FormField label={t("pricings.field.descriptionField" as any)}>
+        <FormField label={t("pricings.field.descriptionField")}>
           <input value={pricing.description} onChange={(e) => set("description", e.target.value)} className={inputClass} />
         </FormField>
       </FormSection>
 
       {/* Configuration */}
-      <FormSection title={t("pricings.section.config" as any)}>
-        <FormField label={t("pricings.field.application" as any)}>
+      <FormSection title={t("pricings.section.config")}>
+        <FormField label={t("pricings.field.application")}>
           <input value={pricing.application} onChange={(e) => set("application", e.target.value)} className={inputClass} />
         </FormField>
-        <FormField label={t("pricings.field.plans" as any)} span="full">
-          <input value={(pricing.plans || []).join(", ")} onChange={(e) => set("plans", e.target.value.split(",").map((s) => s.trim()).filter(Boolean))} className={inputClass} placeholder={t("pricings.field.plansPlaceholder" as any)} />
+        <FormField label={t("pricings.field.plans")} span="full">
+          <input value={(pricing.plans || []).join(", ")} onChange={(e) => set("plans", e.target.value.split(",").map((s) => s.trim()).filter(Boolean))} className={inputClass} placeholder={t("pricings.field.plansPlaceholder")} />
         </FormField>
-        <FormField label={t("pricings.field.trialDuration" as any)}>
+        <FormField label={t("pricings.field.trialDuration")}>
           <input type="number" min={0} value={pricing.trialDuration} onChange={(e) => set("trialDuration", Number(e.target.value))} className={monoInputClass} />
         </FormField>
-        <FormField label={t("col.isEnabled" as any)}>
+        <FormField label={t("col.isEnabled")}>
           <Switch checked={pricing.isEnabled} onChange={(v) => set("isEnabled", v)} />
         </FormField>
       </FormSection>

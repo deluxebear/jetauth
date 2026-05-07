@@ -47,10 +47,10 @@ export default function ResourceListPage() {
       if (res.status === "ok") {
         list.refetch();
       } else {
-        modal.toast(res.msg || t("resources.uploadFailed" as any), "error");
+        modal.toast(res.msg || t("resources.uploadFailed"), "error");
       }
     } catch {
-      modal.toast(t("resources.uploadFailed" as any), "error");
+      modal.toast(t("resources.uploadFailed"), "error");
     } finally {
       setUploading(false);
     }
@@ -63,48 +63,48 @@ export default function ResourceListPage() {
       async () => {
         const res = await ResourceBackend.deleteResource(record, record.provider);
         if (res.status === "ok") list.refetch();
-        else modal.toast(res.msg || t("common.deleteFailed" as any), "error");
+        else modal.toast(res.msg || t("common.deleteFailed"), "error");
       }
     );
   };
 
   const columns: Column<Resource>[] = [
     {
-      key: "provider", title: t("col.provider" as any), sortable: true, filterable: true, width: "120px",
+      key: "provider", title: t("col.provider"), sortable: true, filterable: true, width: "120px",
       render: (_, r) => r.provider
         ? <Link to={`/providers/${r.owner}/${r.provider}`} className="text-accent hover:underline text-[12px]" onClick={(e) => e.stopPropagation()}>{r.provider}</Link>
         : <span className="text-text-muted text-[12px]">—</span>,
     },
     {
-      key: "owner", title: t("col.organization" as any), sortable: true, filterable: true, width: "120px",
+      key: "owner", title: t("col.organization"), sortable: true, filterable: true, width: "120px",
       render: (_, r) => <Link to={`/organizations/admin/${r.owner}`} className="text-accent hover:underline text-[12px]" onClick={(e) => e.stopPropagation()}>{r.owner}</Link>,
     },
     {
-      key: "user", title: t("col.user" as any), sortable: true, filterable: true, width: "80px",
+      key: "user", title: t("col.user"), sortable: true, filterable: true, width: "80px",
       render: (_, r) => r.user
         ? <Link to={`/users/${r.owner}/${r.user}`} className="text-accent hover:underline text-[12px]" onClick={(e) => e.stopPropagation()}>{r.user}</Link>
         : <span className="text-text-muted text-[12px]">—</span>,
     },
     {
-      key: "name", title: t("col.name" as any), sortable: true, filterable: true, width: "150px",
+      key: "name", title: t("col.name"), sortable: true, filterable: true, width: "150px",
       render: (_, r) => <span className="font-mono text-[11px] text-text-secondary truncate block max-w-[140px]" title={r.name}>{r.name}</span>,
     },
     {
-      key: "createdTime", title: t("col.created" as any), sortable: true, width: "140px",
+      key: "createdTime", title: t("col.created"), sortable: true, width: "140px",
       render: (_, r) => <span className="text-[12px] text-text-muted font-mono">{r.createdTime ? new Date(r.createdTime).toLocaleString() : "—"}</span>,
     },
-    { key: "tag", title: t("resources.col.tag" as any), sortable: true, filterable: true, width: "80px" },
-    { key: "fileType", title: t("col.type" as any), sortable: true, width: "80px" },
+    { key: "tag", title: t("resources.col.tag"), sortable: true, filterable: true, width: "80px" },
+    { key: "fileType", title: t("col.type"), sortable: true, width: "80px" },
     {
-      key: "fileFormat", title: t("resources.col.format" as any), sortable: true, width: "80px",
+      key: "fileFormat", title: t("resources.col.format"), sortable: true, width: "80px",
       render: (_, r) => <span className="font-mono text-[11px] text-text-muted">{r.fileFormat || "—"}</span>,
     },
     {
-      key: "fileSize", title: t("resources.col.fileSize" as any), sortable: true, width: "90px",
+      key: "fileSize", title: t("resources.col.fileSize"), sortable: true, width: "90px",
       render: (_, r) => <span className="font-mono text-[11px] text-text-muted">{formatFileSize(r.fileSize)}</span>,
     },
     {
-      key: "preview", title: t("resources.col.preview" as any), width: "80px",
+      key: "preview", title: t("resources.col.preview"), width: "80px",
       render: (_, r) => {
         if (r.fileType === "image") return <img src={r.url} alt="" className="h-8 w-8 rounded border border-border object-cover bg-surface-2" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />;
         if (r.fileType === "video") return <Film size={16} className="text-text-muted" />;
@@ -112,15 +112,15 @@ export default function ResourceListPage() {
       },
     },
     {
-      key: "url", title: t("resources.col.url" as any), width: "90px",
+      key: "url", title: t("resources.col.url"), width: "90px",
       render: (_, r) => (
         <button onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(r.url); }} className="flex items-center gap-1 rounded px-2 py-1 text-[11px] font-medium text-accent hover:bg-accent/10 transition-colors">
-          <Copy size={12} /> {t("resources.copyLink" as any)}
+          <Copy size={12} /> {t("resources.copyLink")}
         </button>
       ),
     },
     {
-      key: "__actions", fixed: "right" as const, title: t("common.action" as any), width: "70px",
+      key: "__actions", fixed: "right" as const, title: t("common.action"), width: "70px",
       render: (_, r) => (
         <button onClick={(e) => handleDelete(r, e)} className="rounded p-1.5 text-text-muted hover:text-danger hover:bg-danger/10 transition-colors" title={t("common.delete")}>
           <Trash2 size={14} />
@@ -133,8 +133,8 @@ export default function ResourceListPage() {
     <div className="space-y-5">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold tracking-tight">{t("resources.title" as any)}</h1>
-          <p className="text-[13px] text-text-muted mt-0.5">{t("resources.subtitle" as any)}</p>
+          <h1 className="text-xl font-bold tracking-tight">{t("resources.title")}</h1>
+          <p className="text-[13px] text-text-muted mt-0.5">{t("resources.subtitle")}</p>
         </div>
         <div className="flex items-center gap-2">
           <motion.button whileHover={{ rotate: 180 }} transition={{ duration: 0.3 }} onClick={list.refetch} className="rounded-lg border border-border p-2 text-text-muted hover:bg-surface-2 transition-colors" title={t("common.refresh")}><RefreshCw size={15} /></motion.button>
@@ -142,7 +142,7 @@ export default function ResourceListPage() {
           <input ref={fileInputRef} type="file" className="hidden" onChange={(e) => { const file = e.target.files?.[0]; if (file) handleUpload(file); e.target.value = ""; }} />
           <button onClick={() => fileInputRef.current?.click()} disabled={uploading} className="flex items-center gap-1.5 rounded-lg bg-accent px-3 py-2 text-[13px] font-semibold text-white hover:bg-accent-hover disabled:opacity-50 transition-colors">
             {uploading ? <div className="h-3.5 w-3.5 rounded-full border-2 border-white/30 border-t-white animate-spin" /> : <Upload size={15} />}
-            {t("resources.upload" as any)}
+            {t("resources.upload")}
           </button>
         </div>
       </div>

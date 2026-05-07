@@ -190,42 +190,42 @@ export default function BizReBACOverview({ appId, onJumpTab }: Props) {
     <div className="flex flex-col gap-4">
       <div>
         <h2 className="text-[20px] font-bold text-text-primary mb-1">
-          {t("rebac.overview.title" as any)}
+          {t("rebac.overview.title")}
         </h2>
         <p className="text-[13px] text-text-muted">
-          {appId} · {fmt(stats.tupleCount)} {t("rebac.overview.relationsLabel" as any)} · {stats.modelCount} {t("rebac.overview.modelVersionsLabel" as any)}
+          {appId} · {fmt(stats.tupleCount)} {t("rebac.overview.relationsLabel")} · {stats.modelCount} {t("rebac.overview.modelVersionsLabel")}
         </p>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <HeroStatCard
           icon={<ListOrdered className="w-4 h-4" />}
-          label={t("rebac.overview.activeModel" as any)}
+          label={t("rebac.overview.activeModel")}
           value={`v${stats.modelCount}`}
-          hint={fmtRelative(stats.lastUpdated) + " " + t("rebac.overview.published" as any)}
+          hint={fmtRelative(stats.lastUpdated) + " " + t("rebac.overview.published")}
         />
         <HeroStatCard
           icon={<Database className="w-4 h-4" />}
-          label={t("rebac.overview.relationTotal" as any)}
+          label={t("rebac.overview.relationTotal")}
           value={fmt(stats.tupleCount)}
-          hint={`${t("rebac.overview.todayPrefix" as any)} +${stats.todayDelta}`}
+          hint={`${t("rebac.overview.todayPrefix")} +${stats.todayDelta}`}
         />
         <HeroStatCard
           icon={<Zap className="w-4 h-4" />}
-          label={t("rebac.overview.checkQps" as any)}
+          label={t("rebac.overview.checkQps")}
           value={fmtCompact(stats.checkQpsLastHour / 3600)}
-          hint={t("rebac.overview.checkQpsHint" as any)}
+          hint={t("rebac.overview.checkQpsHint")}
         />
         <HeroStatCard
           icon={<ShieldCheck className="w-4 h-4" />}
-          label={t("rebac.overview.assertionPass" as any)}
+          label={t("rebac.overview.assertionPass")}
           value={assertionStats && assertionStats.total > 0
             ? `${assertionStats.passed}/${assertionStats.total}`
             : "—"}
           hint={
             assertionStats && assertionStats.total > 0
-              ? `${assertionStats.total - assertionStats.passed} ${t("rebac.overview.assertionsFailed" as any)}`
-              : t("rebac.overview.assertionsEmpty" as any)
+              ? `${assertionStats.total - assertionStats.passed} ${t("rebac.overview.assertionsFailed")}`
+              : t("rebac.overview.assertionsEmpty")
           }
           muted={!assertionStats || assertionStats.total === 0}
           onClick={onJumpTab ? () => onJumpTab("assertions" as any) : undefined}

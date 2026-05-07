@@ -184,7 +184,7 @@ export default function SiteEditPage() {
     try {
       const res = await SiteBackend.updateSite(owner!, name!, site);
       if (res.status === "ok") {
-        modal.toast(t("common.saveSuccess" as any));
+        modal.toast(t("common.saveSuccess"));
         setSaved(true);
         setOriginalJson(JSON.stringify(site));
         setIsAddMode(false);
@@ -193,7 +193,7 @@ export default function SiteEditPage() {
           navigate(`/sites/${site.owner}/${site.name}`, { replace: true });
         }
       } else {
-        modal.toast(friendlyError(res.msg, t) || t("common.saveFailed" as any), "error");
+        modal.toast(friendlyError(res.msg, t) || t("common.saveFailed"), "error");
       }
     } catch (e) {
       console.error(e);
@@ -207,14 +207,14 @@ export default function SiteEditPage() {
     try {
       const res = await SiteBackend.updateSite(owner!, name!, site);
       if (res.status === "ok") {
-        modal.toast(t("common.saveSuccess" as any));
+        modal.toast(t("common.saveSuccess"));
         invalidateList();
         navigate("/sites");
       } else {
-        modal.toast(friendlyError(res.msg, t) || t("common.saveFailed" as any), "error");
+        modal.toast(friendlyError(res.msg, t) || t("common.saveFailed"), "error");
       }
     } catch (e: any) {
-      modal.toast(e?.message || t("common.saveFailed" as any), "error");
+      modal.toast(e?.message || t("common.saveFailed"), "error");
     } finally {
       setSaving(false);
     }
@@ -236,7 +236,7 @@ export default function SiteEditPage() {
           invalidateList();
           navigate("/sites");
         } else {
-          modal.toast(res.msg || t("common.deleteFailed" as any), "error");
+          modal.toast(res.msg || t("common.deleteFailed"), "error");
         }
       } catch (e) {
         console.error(e);
@@ -255,8 +255,8 @@ export default function SiteEditPage() {
   };
 
   const STATUS_OPTIONS = [
-    { value: "Active", label: t("sites.status.active" as any) },
-    { value: "Inactive", label: t("sites.status.inactive" as any) },
+    { value: "Active", label: t("sites.status.active") },
+    { value: "Inactive", label: t("sites.status.inactive") },
   ];
 
   const tlsOn = site.sslMode !== "HTTP";
@@ -269,15 +269,15 @@ export default function SiteEditPage() {
         ? `:${site.port}`
         : "";
   const upstreamSubtitle = hostsList.length > 1
-    ? t("sites.flow.upstreamMulti" as any).replace("{count}", String(hostsList.length))
+    ? t("sites.flow.upstreamMulti").replace("{count}", String(hostsList.length))
     : upstreamLabel
-      ? t("sites.flow.upstream" as any)
-      : t("sites.flow.upstreamEmpty" as any);
+      ? t("sites.flow.upstream")
+      : t("sites.flow.upstreamEmpty");
 
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
       <StickyEditHeader
-        title={`${isAddMode ? t("common.add") : t("common.edit")} ${t("sites.title" as any)}`}
+        title={`${isAddMode ? t("common.add") : t("common.edit")} ${t("sites.title")}`}
         subtitle={`${owner}/${name}`}
         onBack={handleBack}
       >
@@ -287,7 +287,7 @@ export default function SiteEditPage() {
         <SaveButton onClick={handleSave} saving={saving} saved={saved} label={t("common.save")} />
         <button onClick={handleSaveAndExit} disabled={saving} className="flex items-center gap-1.5 rounded-lg bg-accent px-4 py-2 text-[13px] font-semibold text-white hover:bg-accent-hover disabled:opacity-50 transition-colors">
           {saving ? <div className="h-3.5 w-3.5 rounded-full border-2 border-white/30 border-t-white animate-spin" /> : <LogOut size={14} />}
-          {t("common.saveAndExit" as any)}
+          {t("common.saveAndExit")}
         </button>
       </StickyEditHeader>
 
@@ -302,8 +302,8 @@ export default function SiteEditPage() {
               <UsersIcon size={16} />
             </div>
             <div className="leading-tight hidden sm:block">
-              <div className="text-[12px] font-semibold text-text-primary">{t("sites.flow.user" as any)}</div>
-              <div className="text-[11px] text-text-muted">{t("sites.flow.userDesc" as any)}</div>
+              <div className="text-[12px] font-semibold text-text-primary">{t("sites.flow.user")}</div>
+              <div className="text-[11px] text-text-muted">{t("sites.flow.userDesc")}</div>
             </div>
           </div>
 
@@ -316,7 +316,7 @@ export default function SiteEditPage() {
             </div>
             <div className="min-w-0 flex-1">
               <div className="text-[12px] font-mono font-semibold text-text-primary truncate">
-                {site.domain || <span className="text-text-muted font-sans italic">{t("sites.flow.entryEmpty" as any)}</span>}
+                {site.domain || <span className="text-text-muted font-sans italic">{t("sites.flow.entryEmpty")}</span>}
               </div>
               <div className="flex flex-wrap items-center gap-1 mt-0.5">
                 {tlsOn ? (
@@ -325,22 +325,22 @@ export default function SiteEditPage() {
                   </span>
                 ) : (
                   <span className="inline-flex items-center gap-0.5 rounded px-1.5 py-0.5 text-[10px] font-medium bg-warning/10 text-warning">
-                    <ShieldAlert size={9} /> {t("sites.flow.tlsInsecure" as any)}
+                    <ShieldAlert size={9} /> {t("sites.flow.tlsInsecure")}
                   </span>
                 )}
                 {tlsOn && !site.sslCert && (
                   <span className="inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-medium bg-info/10 text-info">
-                    {t("sites.flow.autoCert" as any)}
+                    {t("sites.flow.autoCert")}
                   </span>
                 )}
                 {site.casdoorApplication && (
                   <span className="inline-flex items-center gap-0.5 rounded px-1.5 py-0.5 text-[10px] font-medium bg-accent/10 text-accent">
-                    <KeyRound size={9} /> {t("sites.flow.ssoBadge" as any)}: {site.casdoorApplication}
+                    <KeyRound size={9} /> {t("sites.flow.ssoBadge")}: {site.casdoorApplication}
                   </span>
                 )}
                 {site.status === "Inactive" && (
                   <span className="inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-medium bg-danger/10 text-danger">
-                    {t("sites.flow.inactive" as any)}
+                    {t("sites.flow.inactive")}
                   </span>
                 )}
               </div>
@@ -356,7 +356,7 @@ export default function SiteEditPage() {
             </div>
             <div className="leading-tight min-w-0">
               <div className="text-[12px] font-mono font-semibold text-text-primary truncate">
-                {upstreamLabel || <span className="text-text-muted font-sans italic">{t("sites.flow.upstreamEmpty" as any)}</span>}
+                {upstreamLabel || <span className="text-text-muted font-sans italic">{t("sites.flow.upstreamEmpty")}</span>}
               </div>
               <div className="text-[11px] text-text-muted truncate">{upstreamSubtitle}</div>
             </div>
@@ -366,93 +366,93 @@ export default function SiteEditPage() {
 
       {/* ── 1. Identity ─────────────────────────────────────────── */}
       <FormSection
-        title={t("sites.section.identity" as any)}
-        description={t("sites.section.identityDesc" as any)}
+        title={t("sites.section.identity")}
+        description={t("sites.section.identityDesc")}
         icon={<UserCircle2 size={16} />}
       >
-        <FormField label={t("field.owner")} tooltip={t("sites.tooltip.owner" as any)}>
+        <FormField label={t("field.owner")} tooltip={t("sites.tooltip.owner")}>
           {isAdmin ? (
             <SingleSearchSelect
               value={site.owner}
               options={orgOptions}
               onChange={(v) => handleOwnerChange(v)}
-              placeholder={t("common.search" as any)}
+              placeholder={t("common.search")}
             />
           ) : (
             <input value={site.owner} disabled className={inputClass} />
           )}
         </FormField>
-        <FormField label={t("field.name")} required tooltip={t("sites.tooltip.name" as any)} help={t("sites.helper.name" as any)}>
+        <FormField label={t("field.name")} required tooltip={t("sites.tooltip.name")} help={t("sites.helper.name")}>
           <input value={site.name} onChange={(e) => set("name", e.target.value)} className={monoInputClass} />
         </FormField>
-        <FormField label={t("field.displayName")} tooltip={t("sites.tooltip.displayName" as any)}>
+        <FormField label={t("field.displayName")} tooltip={t("sites.tooltip.displayName")}>
           <input value={site.displayName} onChange={(e) => set("displayName", e.target.value)} className={inputClass} />
         </FormField>
-        <FormField label={t("col.tag" as any)} tooltip={t("sites.tooltip.tag" as any)}>
+        <FormField label={t("col.tag")} tooltip={t("sites.tooltip.tag")}>
           <input value={site.tag ?? ""} onChange={(e) => set("tag", e.target.value)} className={inputClass} />
         </FormField>
       </FormSection>
 
       {/* ── 2. Traffic Entry (domain + SSL) ─────────────────────── */}
       <FormSection
-        title={t("sites.section.traffic" as any)}
-        description={t("sites.section.trafficDesc" as any)}
+        title={t("sites.section.traffic")}
+        description={t("sites.section.trafficDesc")}
         icon={<Route size={16} />}
       >
-        <FormField label={t("sites.field.domain" as any)} tooltip={t("sites.tooltip.domain" as any)} help={t("sites.helper.domain" as any)}>
+        <FormField label={t("sites.field.domain")} tooltip={t("sites.tooltip.domain")} help={t("sites.helper.domain")}>
           <input value={site.domain} onChange={(e) => set("domain", e.target.value)} className={monoInputClass} placeholder="app.jetauth.com" />
         </FormField>
-        <FormField label={t("sites.field.needRedirect" as any)} tooltip={t("sites.tooltip.needRedirect" as any)}>
+        <FormField label={t("sites.field.needRedirect")} tooltip={t("sites.tooltip.needRedirect")}>
           <Switch checked={site.needRedirect} onChange={(checked) => set("needRedirect", checked)} />
         </FormField>
-        <FormField label={t("sites.field.otherDomains" as any)} span="full" tooltip={t("sites.tooltip.otherDomains" as any)}>
+        <FormField label={t("sites.field.otherDomains")} span="full" tooltip={t("sites.tooltip.otherDomains")}>
           <TagListInput
             values={site.otherDomains || []}
             onChange={(v) => set("otherDomains", v)}
-            placeholder={t("sites.placeholder.otherDomains" as any)}
+            placeholder={t("sites.placeholder.otherDomains")}
           />
         </FormField>
-        <FormField label={t("sites.field.sslMode" as any)} tooltip={t("sites.tooltip.sslMode" as any)}>
+        <FormField label={t("sites.field.sslMode")} tooltip={t("sites.tooltip.sslMode")}>
           <SimpleSelect value={site.sslMode} options={SSL_MODE_OPTIONS} onChange={(v) => set("sslMode", v)} />
         </FormField>
-        <FormField label={t("sites.field.sslCert" as any)} tooltip={t("sites.tooltip.sslCert" as any)} help={!site.sslCert ? t("sites.helper.sslCert" as any) : undefined}>
+        <FormField label={t("sites.field.sslCert")} tooltip={t("sites.tooltip.sslCert")} help={!site.sslCert ? t("sites.helper.sslCert") : undefined}>
           <SingleSearchSelect
             value={site.sslCert ?? ""}
             options={certOptions}
             onChange={(v) => set("sslCert", v)}
-            placeholder={t("common.search" as any)}
+            placeholder={t("common.search")}
           />
         </FormField>
       </FormSection>
 
       {/* ── 3. Upstream ─────────────────────────────────────────── */}
       <FormSection
-        title={t("sites.section.upstream" as any)}
-        description={t("sites.section.upstreamDesc" as any)}
+        title={t("sites.section.upstream")}
+        description={t("sites.section.upstreamDesc")}
         icon={<Boxes size={16} />}
       >
-        <FormField label={t("sites.field.host" as any)} tooltip={t("sites.tooltip.host" as any)} help={t("sites.helper.host" as any)}>
+        <FormField label={t("sites.field.host")} tooltip={t("sites.tooltip.host")} help={t("sites.helper.host")}>
           <input value={site.host} onChange={(e) => set("host", e.target.value)} className={monoInputClass} placeholder="127.0.0.1" />
         </FormField>
-        <FormField label={t("sites.field.port" as any)} tooltip={t("sites.tooltip.port" as any)}>
+        <FormField label={t("sites.field.port")} tooltip={t("sites.tooltip.port")}>
           <input type="number" min={0} max={65535} value={site.port} onChange={(e) => set("port", Number(e.target.value))} className={`${monoInputClass} w-32`} />
         </FormField>
-        <FormField label={t("sites.field.hosts" as any)} span="full" tooltip={t("sites.tooltip.hosts" as any)} help={t("sites.helper.hosts" as any)}>
+        <FormField label={t("sites.field.hosts")} span="full" tooltip={t("sites.tooltip.hosts")} help={t("sites.helper.hosts")}>
           <TagListInput
             values={site.hosts || []}
             onChange={(v) => set("hosts", v)}
-            placeholder={t("sites.placeholder.hosts" as any)}
+            placeholder={t("sites.placeholder.hosts")}
           />
         </FormField>
       </FormSection>
 
       {/* ── 4. Access Control (SSO + WAF Rules) ─────────────────── */}
       <FormSection
-        title={t("sites.section.access" as any)}
-        description={t("sites.section.accessDesc" as any)}
+        title={t("sites.section.access")}
+        description={t("sites.section.accessDesc")}
         icon={<ShieldCheck size={16} />}
       >
-        <FormField label={t("sites.field.casdoorApp" as any)} span="full" tooltip={t("sites.tooltip.casdoorApp" as any)} help={!site.casdoorApplication ? t("sites.helper.casdoorApp" as any) : undefined}>
+        <FormField label={t("sites.field.casdoorApp")} span="full" tooltip={t("sites.tooltip.casdoorApp")} help={!site.casdoorApplication ? t("sites.helper.casdoorApp") : undefined}>
           <SingleSearchSelect
             value={site.casdoorApplication ?? ""}
             options={appOptions}
@@ -465,40 +465,40 @@ export default function SiteEditPage() {
               }
               set("casdoorApplication", v);
             }}
-            placeholder={t("common.search" as any)}
+            placeholder={t("common.search")}
           />
         </FormField>
 
         {/* URL-level authorization sub-panel — only available once an
             application is bound, since the enforcer needs an identity source. */}
         {site.casdoorApplication && (
-          <FormField label={t("sites.field.enableBizAuthz" as any)} span="full" tooltip={t("sites.tooltip.enableBizAuthz" as any)} help={t("sites.helper.enableBizAuthz" as any)}>
+          <FormField label={t("sites.field.enableBizAuthz")} span="full" tooltip={t("sites.tooltip.enableBizAuthz")} help={t("sites.helper.enableBizAuthz")}>
             <Switch checked={!!site.enableBizAuthz} onChange={(checked) => set("enableBizAuthz", checked)} />
           </FormField>
         )}
         {site.casdoorApplication && site.enableBizAuthz && (
           <>
-            <FormField label={t("sites.field.bizAuthzFailMode" as any)} tooltip={t("sites.tooltip.bizAuthzFailMode" as any)}>
+            <FormField label={t("sites.field.bizAuthzFailMode")} tooltip={t("sites.tooltip.bizAuthzFailMode")}>
               <SimpleSelect
                 value={site.bizAuthzFailMode || "closed"}
                 options={[
-                  { value: "closed", label: t("sites.failMode.closed" as any) },
-                  { value: "open", label: t("sites.failMode.open" as any) },
+                  { value: "closed", label: t("sites.failMode.closed") },
+                  { value: "open", label: t("sites.failMode.open") },
                 ]}
                 onChange={(v) => set("bizAuthzFailMode", v)}
               />
             </FormField>
-            <FormField label={t("sites.field.bizAuthzBypass" as any)} span="full" tooltip={t("sites.tooltip.bizAuthzBypass" as any)} help={t("sites.helper.bizAuthzBypass" as any)}>
+            <FormField label={t("sites.field.bizAuthzBypass")} span="full" tooltip={t("sites.tooltip.bizAuthzBypass")} help={t("sites.helper.bizAuthzBypass")}>
               <TagListInput
                 values={site.bizAuthzBypass || []}
                 onChange={(v) => set("bizAuthzBypass", v)}
-                placeholder={t("sites.placeholder.bizAuthzBypass" as any)}
+                placeholder={t("sites.placeholder.bizAuthzBypass")}
               />
             </FormField>
           </>
         )}
 
-        <FormField label={t("sites.field.rules" as any)} span="full" tooltip={t("sites.tooltip.rules" as any)}>
+        <FormField label={t("sites.field.rules")} span="full" tooltip={t("sites.tooltip.rules")}>
           {ruleOptions.length > 0 ? (
             <div className="space-y-1.5">
               {(site.rules || []).length > 0 && (
@@ -524,52 +524,52 @@ export default function SiteEditPage() {
               </div>
             </div>
           ) : (
-            <p className="text-[12px] text-text-muted">{t("sites.helper.rulesEmpty" as any)}</p>
+            <p className="text-[12px] text-text-muted">{t("sites.helper.rulesEmpty")}</p>
           )}
         </FormField>
       </FormSection>
 
       {/* ── 5. Health Monitoring ────────────────────────────────── */}
       <FormSection
-        title={t("sites.section.health" as any)}
-        description={t("sites.section.healthDesc" as any)}
+        title={t("sites.section.health")}
+        description={t("sites.section.healthDesc")}
         icon={<Activity size={16} />}
       >
-        <FormField label={t("sites.field.enableAlert" as any)} span="full" tooltip={t("sites.tooltip.enableAlert" as any)}>
+        <FormField label={t("sites.field.enableAlert")} span="full" tooltip={t("sites.tooltip.enableAlert")}>
           <Switch checked={site.enableAlert} onChange={(checked) => set("enableAlert", checked)} />
         </FormField>
         {site.enableAlert && (
           <>
-            <FormField label={t("sites.field.alertInterval" as any)} tooltip={t("sites.tooltip.alertInterval" as any)} help={t("sites.helper.alertInterval" as any)}>
+            <FormField label={t("sites.field.alertInterval")} tooltip={t("sites.tooltip.alertInterval")} help={t("sites.helper.alertInterval")}>
               <div className="flex items-center gap-2">
                 <input type="number" min={1} value={site.alertInterval} onChange={(e) => set("alertInterval", Number(e.target.value))} className={`${monoInputClass} w-32`} />
-                <span className="text-[12px] text-text-muted">{t("sites.field.seconds" as any)}</span>
+                <span className="text-[12px] text-text-muted">{t("sites.field.seconds")}</span>
               </div>
             </FormField>
-            <FormField label={t("sites.field.alertTryTimes" as any)} tooltip={t("sites.tooltip.alertTryTimes" as any)} help={t("sites.helper.alertTryTimes" as any)}>
+            <FormField label={t("sites.field.alertTryTimes")} tooltip={t("sites.tooltip.alertTryTimes")} help={t("sites.helper.alertTryTimes")}>
               <input type="number" min={1} value={site.alertTryTimes} onChange={(e) => set("alertTryTimes", Number(e.target.value))} className={`${monoInputClass} w-32`} />
             </FormField>
-            <FormField label={t("sites.field.alertProviders" as any)} span="full" tooltip={t("sites.tooltip.alertProviders" as any)}>
+            <FormField label={t("sites.field.alertProviders")} span="full" tooltip={t("sites.tooltip.alertProviders")}>
               {notifyProviderOptions.length > 0 ? (
                 <MultiSearchSelect
                   selected={site.alertProviders || []}
                   options={notifyProviderOptions}
                   onChange={(v) => set("alertProviders", v)}
-                  placeholder={t("sites.placeholder.alertProvidersSelect" as any)}
+                  placeholder={t("sites.placeholder.alertProvidersSelect")}
                 />
               ) : (
                 <div className="flex items-center justify-between gap-3 rounded-lg border border-warning/30 bg-warning/5 px-3 py-2.5">
                   <div className="flex items-start gap-2 min-w-0">
                     <BellOff size={14} className="shrink-0 mt-0.5 text-warning" />
                     <p className="text-[12px] text-text-secondary leading-snug">
-                      {t("sites.alertProviders.empty" as any)}
+                      {t("sites.alertProviders.empty")}
                     </p>
                   </div>
                   <Link
                     to="/providers"
                     className="shrink-0 inline-flex items-center gap-1 rounded-md border border-accent/30 bg-accent/5 px-2.5 py-1 text-[12px] font-medium text-accent hover:bg-accent/10 transition-colors"
                   >
-                    {t("sites.alertProviders.create" as any)} <ExternalLink size={11} />
+                    {t("sites.alertProviders.create")} <ExternalLink size={11} />
                   </Link>
                 </div>
               )}
@@ -580,14 +580,14 @@ export default function SiteEditPage() {
 
       {/* ── 6. Runtime (status + public IP) ─────────────────────── */}
       <FormSection
-        title={t("sites.section.runtime" as any)}
-        description={t("sites.section.runtimeDesc" as any)}
+        title={t("sites.section.runtime")}
+        description={t("sites.section.runtimeDesc")}
         icon={<Radio size={16} />}
       >
-        <FormField label={t("sites.field.status" as any)} tooltip={t("sites.tooltip.status" as any)}>
+        <FormField label={t("sites.field.status")} tooltip={t("sites.tooltip.status")}>
           <SimpleSelect value={site.status ?? "Active"} options={STATUS_OPTIONS} onChange={(v) => set("status", v)} />
         </FormField>
-        <FormField label={t("sites.field.publicIp" as any)} tooltip={t("sites.tooltip.publicIp" as any)}>
+        <FormField label={t("sites.field.publicIp")} tooltip={t("sites.tooltip.publicIp")}>
           <input value={site.publicIp ?? ""} disabled className={monoInputClass} placeholder="—" />
         </FormField>
       </FormSection>
@@ -601,8 +601,8 @@ export default function SiteEditPage() {
         >
           <Wrench size={16} className="text-text-muted shrink-0" />
           <div className="min-w-0 flex-1">
-            <div className="text-[13px] font-semibold text-text-primary">{t("sites.section.advanced" as any)}</div>
-            <div className="text-[11px] text-text-muted mt-0.5">{t("sites.section.advancedDesc" as any)}</div>
+            <div className="text-[13px] font-semibold text-text-primary">{t("sites.section.advanced")}</div>
+            <div className="text-[11px] text-text-muted mt-0.5">{t("sites.section.advancedDesc")}</div>
           </div>
           <motion.span animate={{ rotate: showAdvanced ? 180 : 0 }} transition={{ duration: 0.2 }} className="shrink-0 text-text-muted">
             <ChevronDown size={16} />
@@ -620,17 +620,17 @@ export default function SiteEditPage() {
               <div className="p-5">
                 <div className="mb-4 flex items-start gap-2 rounded-lg border border-warning/30 bg-warning/5 px-3 py-2 text-[12px] text-warning">
                   <ShieldAlert size={14} className="shrink-0 mt-0.5" />
-                  <span>{t("sites.advanced.warn" as any)}</span>
+                  <span>{t("sites.advanced.warn")}</span>
                 </div>
                 <div className="grid grid-cols-2 gap-x-6 gap-y-4">
-                  <FormField label={t("sites.field.disableVerbose" as any)} tooltip={t("sites.tooltip.disableVerbose" as any)}>
+                  <FormField label={t("sites.field.disableVerbose")} tooltip={t("sites.tooltip.disableVerbose")}>
                     <Switch checked={site.disableVerbose} onChange={(checked) => set("disableVerbose", checked)} />
                   </FormField>
-                  <FormField label={t("sites.field.challenges" as any)} span="full" tooltip={t("sites.tooltip.challenges" as any)} help={t("sites.helper.challenges" as any)}>
+                  <FormField label={t("sites.field.challenges")} span="full" tooltip={t("sites.tooltip.challenges")} help={t("sites.helper.challenges")}>
                     <TagListInput
                       values={site.challenges || []}
                       onChange={(v) => set("challenges", v)}
-                      placeholder={t("sites.placeholder.challenges" as any)}
+                      placeholder={t("sites.placeholder.challenges")}
                     />
                   </FormField>
                 </div>

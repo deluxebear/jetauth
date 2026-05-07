@@ -67,13 +67,13 @@ export default function RoleUserDrawer({ role, onClose, onUpdate }: Props) {
 
   const handleRemoveUser = async (userId: string) => {
     if (!role) return;
-    modal.showConfirm(t("authz.drawer.removeConfirm" as any), async () => {
+    modal.showConfirm(t("authz.drawer.removeConfirm"), async () => {
       const updated = { ...role, users: role.users.filter((u) => u !== userId) };
       const res = await RoleBackend.updateRole(role.owner, role.name, updated as Role);
       if (res.status === "ok") {
         onUpdate();
       } else {
-        modal.toast(res.msg || t("common.saveFailed" as any), "error");
+        modal.toast(res.msg || t("common.saveFailed"), "error");
       }
     });
   };
@@ -89,7 +89,7 @@ export default function RoleUserDrawer({ role, onClose, onUpdate }: Props) {
       onUpdate();
       setShowAddModal(false);
     } else {
-      modal.toast(res.msg || t("common.saveFailed" as any), "error");
+      modal.toast(res.msg || t("common.saveFailed"), "error");
     }
   };
 
@@ -135,7 +135,7 @@ export default function RoleUserDrawer({ role, onClose, onUpdate }: Props) {
             {/* Header */}
             <div className="flex items-center justify-between px-5 py-4 border-b border-border shrink-0">
               <h3 className="text-[15px] font-semibold text-text-primary">
-                {role.name} {t("authz.drawer.usersOf" as any)} ({role.users?.length ?? 0})
+                {role.name} {t("authz.drawer.usersOf")} ({role.users?.length ?? 0})
               </h3>
               <button onClick={onClose} className="rounded-md p-1 border border-border hover:border-border-hover text-text-muted hover:text-text-primary transition-colors">
                 <X size={14} />
@@ -149,13 +149,13 @@ export default function RoleUserDrawer({ role, onClose, onUpdate }: Props) {
                 <input
                   value={search}
                   onChange={(e) => { setSearch(e.target.value); setPage(0); }}
-                  placeholder={t("authz.drawer.searchUsers" as any)}
+                  placeholder={t("authz.drawer.searchUsers")}
                   className="w-full rounded-lg border border-border bg-surface-2 pl-9 pr-3 py-2 text-[12px] text-text-primary outline-none focus:border-accent placeholder:text-text-muted"
                 />
               </div>
               <button onClick={() => { setShowAddModal(true); setSelectedToAdd(new Set()); setAddSearch(""); }}
                 className="flex items-center gap-1 rounded-lg bg-accent px-3 py-2 text-[12px] font-semibold text-white hover:bg-accent-hover transition-colors shrink-0">
-                <Plus size={12} /> {t("authz.drawer.addUser" as any)}
+                <Plus size={12} /> {t("authz.drawer.addUser")}
               </button>
             </div>
 
@@ -174,7 +174,7 @@ export default function RoleUserDrawer({ role, onClose, onUpdate }: Props) {
                     onClick={() => handleRemoveUser(u.id)}
                     className="text-[11px] text-danger font-semibold opacity-0 group-hover:opacity-100 transition-opacity px-2 py-1 rounded hover:bg-danger/10"
                   >
-                    {t("authz.drawer.remove" as any)}
+                    {t("authz.drawer.remove")}
                   </button>
                 </div>
               ))}
@@ -186,7 +186,7 @@ export default function RoleUserDrawer({ role, onClose, onUpdate }: Props) {
             {/* Footer / Pagination */}
             <div className="flex items-center justify-between px-5 py-3 border-t border-border shrink-0 text-[11px] text-text-muted">
               <span>
-                {t("authz.drawer.showing" as any)} {page * PAGE_SIZE + 1}-{Math.min((page + 1) * PAGE_SIZE, users.length)} {t("authz.drawer.of" as any)} {users.length}
+                {t("authz.drawer.showing")} {page * PAGE_SIZE + 1}-{Math.min((page + 1) * PAGE_SIZE, users.length)} {t("authz.drawer.of")} {users.length}
               </span>
               <div className="flex gap-1">
                 <button
@@ -194,14 +194,14 @@ export default function RoleUserDrawer({ role, onClose, onUpdate }: Props) {
                   disabled={page === 0}
                   className="rounded border border-border px-2 py-1 text-[11px] hover:bg-surface-2 disabled:opacity-40 transition-colors"
                 >
-                  {t("authz.drawer.prev" as any)}
+                  {t("authz.drawer.prev")}
                 </button>
                 <button
                   onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
                   disabled={page >= totalPages - 1}
                   className="rounded border border-border px-2 py-1 text-[11px] hover:bg-surface-2 disabled:opacity-40 transition-colors"
                 >
-                  {t("authz.drawer.next" as any)}
+                  {t("authz.drawer.next")}
                 </button>
               </div>
             </div>
@@ -227,8 +227,8 @@ export default function RoleUserDrawer({ role, onClose, onUpdate }: Props) {
               className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[480px] max-w-[90vw] bg-surface-1 border border-border rounded-xl shadow-2xl z-[61] flex flex-col max-h-[70vh]"
             >
               <div className="px-5 py-4 border-b border-border shrink-0">
-                <h3 className="text-[15px] font-semibold text-text-primary">{t("authz.drawer.addUsers" as any)}</h3>
-                <p className="text-[12px] text-text-muted mt-0.5">{t("authz.drawer.selectUsers" as any)}</p>
+                <h3 className="text-[15px] font-semibold text-text-primary">{t("authz.drawer.addUsers")}</h3>
+                <p className="text-[12px] text-text-muted mt-0.5">{t("authz.drawer.selectUsers")}</p>
               </div>
               <div className="px-5 py-3 border-b border-border-subtle shrink-0">
                 <div className="relative">
@@ -236,7 +236,7 @@ export default function RoleUserDrawer({ role, onClose, onUpdate }: Props) {
                   <input
                     value={addSearch}
                     onChange={(e) => setAddSearch(e.target.value)}
-                    placeholder={t("authz.drawer.searchUsers" as any)}
+                    placeholder={t("authz.drawer.searchUsers")}
                     className="w-full rounded-lg border border-border bg-surface-2 pl-9 pr-3 py-2 text-[12px] text-text-primary outline-none focus:border-accent placeholder:text-text-muted"
                     autoFocus
                   />

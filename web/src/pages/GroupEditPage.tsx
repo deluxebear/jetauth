@@ -83,7 +83,7 @@ export default function GroupEditPage() {
         setGroup(groupRes.data);
         setOriginalJson(JSON.stringify(groupRes.data));
       } else {
-        modal.showError((groupRes as any).msg || t("groups.error.loadFailed" as any));
+        modal.showError((groupRes as any).msg || t("groups.error.loadFailed"));
         navigate("/groups");
         return;
       }
@@ -114,7 +114,7 @@ export default function GroupEditPage() {
         setGroupUsers(users);
         setUserTotal(total);
       }
-    } catch (e: any) { modal.toast(e?.message || t("common.saveFailed" as any), "error"); }
+    } catch (e: any) { modal.toast(e?.message || t("common.saveFailed"), "error"); }
     finally { setUserLoading(false); }
   }, [owner, name, userPage, isNew]);
 
@@ -138,7 +138,7 @@ export default function GroupEditPage() {
       ? await GroupBackend.addGroup(payload)
       : await GroupBackend.updateGroup(owner!, name!, payload);
     if (res.status !== "ok") {
-      modal.toast(friendlyError(res.msg, t) || t("common.saveFailed" as any), "error");
+      modal.toast(friendlyError(res.msg, t) || t("common.saveFailed"), "error");
       return false;
     }
     return true;
@@ -149,7 +149,7 @@ export default function GroupEditPage() {
     try {
       const ok = await saveGroup();
       if (!ok) return;
-      modal.toast(t("common.saveSuccess" as any));
+      modal.toast(t("common.saveSuccess"));
       setSaved(true);
       setOriginalJson(JSON.stringify(group));
       setIsAddMode(false);
@@ -160,7 +160,7 @@ export default function GroupEditPage() {
         navigate(`/groups/${group.owner}/${group.name}`, { replace: true });
       }
     } catch (e: any) {
-      modal.toast(e.message || t("common.saveFailed" as any), "error");
+      modal.toast(e.message || t("common.saveFailed"), "error");
     } finally {
       setSaving(false);
     }
@@ -173,7 +173,7 @@ export default function GroupEditPage() {
     try {
       const ok = await saveGroup();
       if (!ok) return;
-      modal.toast(t("groups.savedAndReady" as any));
+      modal.toast(t("groups.savedAndReady"));
       invalidateList();
       const nextDraft = GroupBackend.newGroup(owner!);
       setGroup(nextDraft);
@@ -181,7 +181,7 @@ export default function GroupEditPage() {
       setIsAddMode(true);
       if (!isNew) navigate(`/groups/${owner}/new`, { replace: true, state: { mode: "add" } });
     } catch (e: any) {
-      modal.toast(e?.message || t("common.saveFailed" as any), "error");
+      modal.toast(e?.message || t("common.saveFailed"), "error");
     } finally {
       setSaving(false);
     }
@@ -192,11 +192,11 @@ export default function GroupEditPage() {
     try {
       const ok = await saveGroup();
       if (!ok) return;
-      modal.toast(t("common.saveSuccess" as any));
+      modal.toast(t("common.saveSuccess"));
       invalidateList();
       navigate("/groups");
     } catch (e: any) {
-      modal.toast(e?.message || t("common.saveFailed" as any), "error");
+      modal.toast(e?.message || t("common.saveFailed"), "error");
     } finally {
       setSaving(false);
     }
@@ -217,11 +217,11 @@ export default function GroupEditPage() {
 
   const handleDelete = async () => {
     if (group.haveChildren) {
-      modal.showError(t("groups.error.hasSubGroups" as any));
+      modal.showError(t("groups.error.hasSubGroups"));
       return;
     }
     if ((group.users ?? []).length > 0) {
-      modal.showError(t("groups.error.hasUsers" as any));
+      modal.showError(t("groups.error.hasUsers"));
       return;
     }
     modal.showConfirm(`${t("common.confirmDelete")} [${group.displayName || group.name}]`, async () => {
@@ -234,7 +234,7 @@ export default function GroupEditPage() {
         modal.showError(res.msg || "Failed to delete");
       }
     } catch (e: any) {
-      modal.toast(e?.message || t("common.saveFailed" as any), "error");
+      modal.toast(e?.message || t("common.saveFailed"), "error");
     }
     });
   };
@@ -243,7 +243,7 @@ export default function GroupEditPage() {
   const userColumns: Column<User>[] = [
     {
       key: "name",
-      title: t("col.name" as any),
+      title: t("col.name"),
       width: "120px",
       render: (_, r) => (
         <Link to={`/users/${r.owner}/${r.name}`} className="font-mono font-medium text-accent hover:underline" onClick={(e) => e.stopPropagation()}>
@@ -251,18 +251,18 @@ export default function GroupEditPage() {
         </Link>
       ),
     },
-    { key: "displayName", title: t("col.displayName" as any) },
-    { key: "email", title: t("col.email" as any), render: (_, r) => <span className="text-[12px] text-text-secondary">{r.email || "—"}</span> },
-    { key: "phone", title: t("col.phone" as any), render: (_, r) => <span className="text-[12px] text-text-secondary">{r.phone || "—"}</span> },
+    { key: "displayName", title: t("col.displayName") },
+    { key: "email", title: t("col.email"), render: (_, r) => <span className="text-[12px] text-text-secondary">{r.email || "—"}</span> },
+    { key: "phone", title: t("col.phone"), render: (_, r) => <span className="text-[12px] text-text-secondary">{r.phone || "—"}</span> },
     {
       key: "isAdmin",
-      title: t("col.isAdmin" as any),
+      title: t("col.isAdmin"),
       width: "80px",
       render: (_, r) => <StatusBadge status={r.isAdmin ? "active" : "inactive"} label={r.isAdmin ? "ON" : "OFF"} />,
     },
     {
       key: "__actions",
-      title: t("common.action" as any),
+      title: t("common.action"),
       width: "80px",
       render: (_, r) => (
         <div className="flex items-center gap-1">
@@ -284,7 +284,7 @@ export default function GroupEditPage() {
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-5 ">
       <StickyEditHeader
-        title={`${isAddMode ? t("common.add") : t("common.edit")} ${t("groups.title" as any)}`}
+        title={`${isAddMode ? t("common.add") : t("common.edit")} ${t("groups.title")}`}
         subtitle={`${owner}/${name}`}
         onBack={handleBack}
       >
@@ -308,7 +308,7 @@ export default function GroupEditPage() {
                 disabled={saving}
                 className="flex items-center gap-1.5 rounded-lg border border-border bg-surface-1 px-4 py-2 text-[13px] font-medium text-text-secondary hover:bg-surface-2 disabled:opacity-50 transition-colors"
               >
-                <LogOut size={14} /> {t("common.saveAndExit" as any)}
+                <LogOut size={14} /> {t("common.saveAndExit")}
               </button>
               <button
                 onClick={handleSaveAndNew}
@@ -316,7 +316,7 @@ export default function GroupEditPage() {
                 className="flex items-center gap-1.5 rounded-lg bg-accent px-4 py-2 text-[13px] font-semibold text-white hover:bg-accent-hover disabled:opacity-50 transition-colors"
               >
                 {saving ? <div className="h-3.5 w-3.5 rounded-full border-2 border-white/30 border-t-white animate-spin" /> : <Check size={14} />}
-                {t("groups.saveAndNew" as any)}
+                {t("groups.saveAndNew")}
               </button>
             </>
           ) : (
@@ -324,7 +324,7 @@ export default function GroupEditPage() {
               <SaveButton onClick={handleSave} saving={saving} saved={saved} label={t("common.save")} />
               <button onClick={handleSaveAndExit} disabled={saving} className="flex items-center gap-1.5 rounded-lg bg-accent px-4 py-2 text-[13px] font-semibold text-white hover:bg-accent-hover disabled:opacity-50 transition-colors">
                 {saving ? <div className="h-3.5 w-3.5 rounded-full border-2 border-white/30 border-t-white animate-spin" /> : <LogOut size={14} />}
-                {t("common.saveAndExit" as any)}
+                {t("common.saveAndExit")}
               </button>
             </>
           )}
@@ -333,7 +333,7 @@ export default function GroupEditPage() {
       {showBanner && <UnsavedBanner isAddMode={isAddMode} draftMode />}
 
       {/* Basic Info */}
-      <FormSection title={t("orgs.section.basic" as any)}>
+      <FormSection title={t("orgs.section.basic")}>
         <FormField label={t("field.owner")}>
           <SimpleSelect value={group.owner} options={organizations.map((o) => ({ value: o.name, label: o.displayName || o.name }))} onChange={(v) => set("owner", v)} disabled={!isGlobalAdmin} />
         </FormField>
@@ -345,11 +345,11 @@ export default function GroupEditPage() {
         </FormField>
         <FormField label={t("field.type")}>
           <SimpleSelect value={group.type ?? "Virtual"} options={[
-            { value: "Virtual", label: t("groups.type.virtual" as any) },
-            { value: "Physical", label: t("groups.type.physical" as any) },
+            { value: "Virtual", label: t("groups.type.virtual") },
+            { value: "Physical", label: t("groups.type.physical") },
           ]} onChange={(v) => set("type", v)} />
         </FormField>
-        <FormField label={t("groups.field.parentGroup" as any)}>
+        <FormField label={t("groups.field.parentGroup")}>
           <SimpleSelect value={group.parentId ?? ""} options={parentOptions} onChange={(v) => set("parentId", v)} />
         </FormField>
         <FormField label={t("field.isEnabled")}>
@@ -359,7 +359,7 @@ export default function GroupEditPage() {
 
       {/* Users in this group */}
       <div className="space-y-2">
-        <h3 className="text-[14px] font-semibold text-text-primary">{t("groups.field.users" as any)} ({userTotal || (group.users ?? []).length})</h3>
+        <h3 className="text-[14px] font-semibold text-text-primary">{t("groups.field.users")} ({userTotal || (group.users ?? []).length})</h3>
         {groupUsers.length > 0 || userLoading ? (
           <DataTable
             columns={userColumns}
@@ -379,7 +379,7 @@ export default function GroupEditPage() {
               <table className="w-full text-left" style={{ minWidth: "max-content" }}>
                 <thead>
                   <tr className="border-b border-border bg-surface-2">
-                    <th className="px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wider text-text-muted">{t("col.name" as any)}</th>
+                    <th className="px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wider text-text-muted">{t("col.name")}</th>
                   </tr>
                 </thead>
                 <tbody>

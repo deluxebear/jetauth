@@ -33,12 +33,12 @@ function ProductCard({ product, t }: { product: Product; t: (key: string) => str
           {/* State badge */}
           {isOutOfStock && (
             <div className="absolute top-2 right-2 rounded-full bg-danger/90 px-2 py-0.5 text-[10px] font-semibold text-white">
-              {t("store.outOfStock" as any)}
+              {t("store.outOfStock")}
             </div>
           )}
           {product.isRecharge && (
             <div className="absolute top-2 left-2 rounded-full bg-accent/90 px-2 py-0.5 text-[10px] font-semibold text-white">
-              {t("store.recharge" as any)}
+              {t("store.recharge")}
             </div>
           )}
         </div>
@@ -105,7 +105,7 @@ function ProductCard({ product, t }: { product: Product; t: (key: string) => str
             </div>
             <div className="text-right">
               <span className="text-[11px] text-text-muted">
-                {(t("store.soldCount" as any) as string).replace(
+                {(t("store.soldCount") as string).replace(
                   "{count}",
                   String(product.sold || 0)
                 )}
@@ -191,10 +191,10 @@ export default function ProductStorePage() {
         <div>
           <h1 className="text-xl font-bold tracking-tight flex items-center gap-2">
             <ShoppingBag size={20} className="text-accent" />
-            {t("store.title" as any)}
+            {t("store.title")}
           </h1>
           <p className="text-[13px] text-text-muted mt-0.5">
-            {t("store.subtitle" as any)}
+            {t("store.subtitle")}
           </p>
         </div>
         <motion.button
@@ -219,7 +219,7 @@ export default function ProductStorePage() {
           <input
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder={t("store.search" as any)}
+            placeholder={t("store.search")}
             className="w-full rounded-lg border border-border bg-surface-1 pl-9 pr-8 py-2 text-[13px] placeholder:text-text-muted/50 focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent/30 transition-colors"
           />
           {searchQuery && (
@@ -243,7 +243,7 @@ export default function ProductStorePage() {
                   : "bg-surface-2 text-text-secondary hover:bg-surface-3"
               }`}
             >
-              {t("store.allCategories" as any)}
+              {t("store.allCategories")}
             </button>
             {tags.map((tag) => (
               <button
@@ -275,10 +275,10 @@ export default function ProductStorePage() {
             <Package size={36} className="text-text-muted/40" />
           </div>
           <h3 className="text-[15px] font-semibold text-text-secondary">
-            {t("store.noProducts" as any)}
+            {t("store.noProducts")}
           </h3>
           <p className="text-[13px] text-text-muted mt-1">
-            {t("store.noProductsDesc" as any)}
+            {t("store.noProductsDesc")}
           </p>
         </div>
       ) : (

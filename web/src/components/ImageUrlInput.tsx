@@ -58,10 +58,10 @@ export default function ImageUrlInput({
       if (res.status === "ok" && res.data) {
         onChange(res.data);
       } else {
-        modal.toast(res.msg || t("common.saveFailed" as any), "error");
+        modal.toast(res.msg || t("common.saveFailed"), "error");
       }
     } catch (err: any) {
-      modal.toast(err?.message || t("common.saveFailed" as any), "error");
+      modal.toast(err?.message || t("common.saveFailed"), "error");
     } finally {
       setUploading(false);
     }
@@ -107,10 +107,10 @@ export default function ImageUrlInput({
       if (res.status === "ok" && res.data) {
         onChange(res.data);
       } else {
-        modal.toast(res.msg || t("common.saveFailed" as any), "error");
+        modal.toast(res.msg || t("common.saveFailed"), "error");
       }
     } catch (err: any) {
-      modal.toast(err?.message || t("common.saveFailed" as any), "error");
+      modal.toast(err?.message || t("common.saveFailed"), "error");
     } finally {
       setUploading(false);
       setCropSrc(null);
@@ -139,10 +139,10 @@ export default function ImageUrlInput({
           onClick={() => fileRef.current?.click()}
           disabled={disabled || uploading}
           className="shrink-0 flex items-center gap-1.5 rounded-lg border border-border bg-surface-2 px-3 py-2 text-[12px] font-medium text-text-secondary hover:bg-surface-3 hover:text-text-primary transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-          title={t("common.upload" as any)}
+          title={t("common.upload")}
         >
           <Upload size={14} className={uploading ? "animate-pulse" : ""} />
-          {uploading ? t("common.uploading" as any) : t("common.upload" as any)}
+          {uploading ? t("common.uploading") : t("common.upload")}
         </button>
         <input
           ref={fileRef}
@@ -172,7 +172,7 @@ export default function ImageUrlInput({
           <div className="bg-surface-1 rounded-xl border border-border shadow-2xl w-[560px] max-w-[90vw] overflow-hidden">
             <div className="flex items-center justify-between px-5 py-3 border-b border-border">
               <h3 className="text-[14px] font-semibold text-text-primary">
-                {t("common.cropImage" as any)}
+                {t("common.cropImage")}
               </h3>
               {outputWidth && outputHeight ? (
                 <span className="text-[11px] text-text-muted font-mono">{outputWidth} x {outputHeight}px</span>
@@ -199,7 +199,7 @@ export default function ImageUrlInput({
                 className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[12px] font-medium text-text-secondary hover:bg-surface-2 transition-colors"
               >
                 <RotateCw size={14} />
-                {t("common.rotate" as any)}
+                {t("common.rotate")}
               </button>
               <div className="flex gap-2">
                 <button
@@ -214,7 +214,7 @@ export default function ImageUrlInput({
                   className="flex items-center gap-1.5 rounded-lg px-4 py-1.5 text-[12px] font-semibold bg-accent text-white hover:bg-accent-hover transition-colors disabled:opacity-50"
                 >
                   <Check size={14} />
-                  {uploading ? t("common.uploading" as any) : t("common.confirm" as any)}
+                  {uploading ? t("common.uploading") : t("common.confirm")}
                 </button>
               </div>
             </div>

@@ -32,7 +32,7 @@ export default function WebhookListPage() {
     if (res.status === "ok") {
       navigate(entityEditPath("webhooks", webhook), { state: { mode: "add" } });
     } else {
-      modal.toast(res.msg || t("common.addFailed" as any), "error");
+      modal.toast(res.msg || t("common.addFailed"), "error");
     }
   };
 
@@ -43,36 +43,36 @@ export default function WebhookListPage() {
       async () => {
         const res = await WebhookBackend.deleteWebhook(record);
         if (res.status === "ok") list.refetch();
-        else modal.toast(res.msg || t("common.deleteFailed" as any), "error");
+        else modal.toast(res.msg || t("common.deleteFailed"), "error");
       }
     );
   };
 
   const columns: Column<Webhook>[] = [
     {
-      key: "name", title: t("col.name" as any), sortable: true, filterable: true, fixed: "left" as const, width: "150px",
+      key: "name", title: t("col.name"), sortable: true, filterable: true, fixed: "left" as const, width: "150px",
       render: (_, r) => <Link to={entityEditPath("webhooks", r)} className="font-mono font-medium text-accent hover:underline" onClick={(e) => e.stopPropagation()}>{r.name}</Link>,
     },
     {
-      key: "organization", title: t("col.organization" as any), sortable: true, filterable: true, width: "110px",
+      key: "organization", title: t("col.organization"), sortable: true, filterable: true, width: "110px",
       render: (_, r) => <Link to={`/organizations/admin/${r.organization}`} className="text-accent hover:underline" onClick={(e) => e.stopPropagation()}>{r.organization}</Link>,
     },
     {
-      key: "createdTime", title: t("col.created" as any), sortable: true, width: "150px",
+      key: "createdTime", title: t("col.created"), sortable: true, width: "150px",
       render: (_, r) => <span className="text-[12px] text-text-muted font-mono">{r.createdTime ? new Date(r.createdTime).toLocaleString() : "\u2014"}</span>,
     },
     {
-      key: "url", title: t("webhooks.field.url" as any), sortable: true, filterable: true, width: "200px",
+      key: "url", title: t("webhooks.field.url"), sortable: true, filterable: true, width: "200px",
       render: (_, r) => <a href={r.url} target="_blank" rel="noreferrer" className="text-accent hover:underline truncate block max-w-[180px]" title={r.url}>{r.url}</a>,
     },
     {
-      key: "method", title: t("webhooks.field.method" as any), sortable: true, filterable: true, width: "100px",
+      key: "method", title: t("webhooks.field.method"), sortable: true, filterable: true, width: "100px",
     },
     {
-      key: "contentType", title: t("webhooks.field.contentType" as any), sortable: true, width: "140px",
+      key: "contentType", title: t("webhooks.field.contentType"), sortable: true, width: "140px",
     },
     {
-      key: "events", title: t("webhooks.field.events" as any), sortable: true, filterable: true,
+      key: "events", title: t("webhooks.field.events"), sortable: true, filterable: true,
       render: (_, r) => (
         <div className="flex flex-wrap gap-1">
           {(r.events ?? []).map((ev) => (
@@ -82,19 +82,19 @@ export default function WebhookListPage() {
       ),
     },
     {
-      key: "isUserExtended", title: t("webhooks.field.isUserExtended" as any), sortable: true, width: "140px",
-      render: (_, r) => <StatusBadge status={r.isUserExtended ? "active" : "inactive"} label={r.isUserExtended ? t("common.enabled" as any) : t("common.disabled" as any)} />,
+      key: "isUserExtended", title: t("webhooks.field.isUserExtended"), sortable: true, width: "140px",
+      render: (_, r) => <StatusBadge status={r.isUserExtended ? "active" : "inactive"} label={r.isUserExtended ? t("common.enabled") : t("common.disabled")} />,
     },
     {
-      key: "singleOrgOnly", title: t("webhooks.field.singleOrgOnly" as any), sortable: true, width: "140px",
-      render: (_, r) => <StatusBadge status={r.singleOrgOnly ? "active" : "inactive"} label={r.singleOrgOnly ? t("common.enabled" as any) : t("common.disabled" as any)} />,
+      key: "singleOrgOnly", title: t("webhooks.field.singleOrgOnly"), sortable: true, width: "140px",
+      render: (_, r) => <StatusBadge status={r.singleOrgOnly ? "active" : "inactive"} label={r.singleOrgOnly ? t("common.enabled") : t("common.disabled")} />,
     },
     {
-      key: "isEnabled", title: t("col.isEnabled" as any), sortable: true, width: "120px",
-      render: (_, r) => <StatusBadge status={r.isEnabled ? "active" : "inactive"} label={r.isEnabled ? t("common.enabled" as any) : t("common.disabled" as any)} />,
+      key: "isEnabled", title: t("col.isEnabled"), sortable: true, width: "120px",
+      render: (_, r) => <StatusBadge status={r.isEnabled ? "active" : "inactive"} label={r.isEnabled ? t("common.enabled") : t("common.disabled")} />,
     },
     {
-      key: "__actions", fixed: "right" as const, title: t("common.action" as any), width: "110px",
+      key: "__actions", fixed: "right" as const, title: t("common.action"), width: "110px",
       render: (_, r) => (
         <div className="flex items-center gap-1">
           <Link to={entityEditPath("webhooks", r)} className="rounded p-1.5 text-text-muted hover:text-warning hover:bg-warning/10 transition-colors" title={t("common.edit")} onClick={(e) => e.stopPropagation()}><Pencil size={14} /></Link>
@@ -108,13 +108,13 @@ export default function WebhookListPage() {
     <div className="space-y-5">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold tracking-tight">{t("webhooks.title" as any)}</h1>
-          <p className="text-[13px] text-text-muted mt-0.5">{t("webhooks.subtitle" as any)}</p>
+          <h1 className="text-xl font-bold tracking-tight">{t("webhooks.title")}</h1>
+          <p className="text-[13px] text-text-muted mt-0.5">{t("webhooks.subtitle")}</p>
         </div>
         <div className="flex items-center gap-2">
           <motion.button whileHover={{ rotate: 180 }} transition={{ duration: 0.3 }} onClick={list.refetch} className="rounded-lg border border-border p-2 text-text-muted hover:bg-surface-2 transition-colors" title={t("common.refresh")}><RefreshCw size={15} /></motion.button>
           <ColumnsMenu columns={columns} hidden={prefs.hidden} onToggle={prefs.toggleHidden} onResetWidths={prefs.resetWidths} />
-          <button onClick={handleAdd} className="flex items-center gap-1.5 rounded-lg bg-accent px-3 py-2 text-[13px] font-semibold text-white hover:bg-accent-hover transition-colors"><Plus size={15} /> {t("webhooks.add" as any)}</button>
+          <button onClick={handleAdd} className="flex items-center gap-1.5 rounded-lg bg-accent px-3 py-2 text-[13px] font-semibold text-white hover:bg-accent-hover transition-colors"><Plus size={15} /> {t("webhooks.add")}</button>
         </div>
       </div>
       <DataTable

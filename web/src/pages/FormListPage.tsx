@@ -31,7 +31,7 @@ export default function FormListPage() {
     if (res.status === "ok") {
       navigate(entityEditPath("forms", form), { state: { mode: "add" } });
     } else {
-      modal.toast(res.msg || t("common.addFailed" as any), "error");
+      modal.toast(res.msg || t("common.addFailed"), "error");
     }
   };
 
@@ -42,27 +42,27 @@ export default function FormListPage() {
       async () => {
         const res = await FormBackend.deleteForm(record);
         if (res.status === "ok") list.refetch();
-        else modal.toast(res.msg || t("common.deleteFailed" as any), "error");
+        else modal.toast(res.msg || t("common.deleteFailed"), "error");
       }
     );
   };
 
   const columns: Column<Form>[] = [
     {
-      key: "name", title: t("col.name" as any), sortable: true, fixed: "left" as const, width: "160px",
+      key: "name", title: t("col.name"), sortable: true, fixed: "left" as const, width: "160px",
       render: (_, r) => <Link to={entityEditPath("forms", r)} className="font-mono font-medium text-accent hover:underline" onClick={(e) => e.stopPropagation()}>{r.name}</Link>,
     },
     {
-      key: "displayName", title: t("col.displayName" as any), sortable: true, width: "200px",
+      key: "displayName", title: t("col.displayName"), sortable: true, width: "200px",
     },
     {
-      key: "type", title: t("col.type" as any), sortable: true, width: "120px",
+      key: "type", title: t("col.type"), sortable: true, width: "120px",
     },
     {
-      key: "formItems", title: t("forms.field.formItems" as any), filterable: true,
+      key: "formItems", title: t("forms.field.formItems"), filterable: true,
       render: (_, r) => {
         const items = r.formItems ?? [];
-        if (items.length === 0) return <span className="text-text-muted">({t("common.empty" as any)})</span>;
+        if (items.length === 0) return <span className="text-text-muted">({t("common.empty")})</span>;
         const visible = items.filter(item => item.visible !== false);
         return (
           <div className="flex flex-wrap gap-1">
@@ -75,7 +75,7 @@ export default function FormListPage() {
       },
     },
     {
-      key: "__actions", fixed: "right" as const, title: t("common.action" as any), width: "110px",
+      key: "__actions", fixed: "right" as const, title: t("common.action"), width: "110px",
       render: (_, r) => (
         <div className="flex items-center gap-1">
           <Link to={entityEditPath("forms", r)} className="rounded p-1.5 text-text-muted hover:text-warning hover:bg-warning/10 transition-colors" title={t("common.edit")} onClick={(e) => e.stopPropagation()}><Pencil size={14} /></Link>
@@ -89,13 +89,13 @@ export default function FormListPage() {
     <div className="space-y-5">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold tracking-tight">{t("forms.title" as any)}</h1>
-          <p className="text-[13px] text-text-muted mt-0.5">{t("forms.subtitle" as any)}</p>
+          <h1 className="text-xl font-bold tracking-tight">{t("forms.title")}</h1>
+          <p className="text-[13px] text-text-muted mt-0.5">{t("forms.subtitle")}</p>
         </div>
         <div className="flex items-center gap-2">
           <motion.button whileHover={{ rotate: 180 }} transition={{ duration: 0.3 }} onClick={list.refetch} className="rounded-lg border border-border p-2 text-text-muted hover:bg-surface-2 transition-colors" title={t("common.refresh")}><RefreshCw size={15} /></motion.button>
           <ColumnsMenu columns={columns} hidden={prefs.hidden} onToggle={prefs.toggleHidden} onResetWidths={prefs.resetWidths} />
-          <button onClick={handleAdd} className="flex items-center gap-1.5 rounded-lg bg-accent px-3 py-2 text-[13px] font-semibold text-white hover:bg-accent-hover transition-colors"><Plus size={15} /> {t("forms.add" as any)}</button>
+          <button onClick={handleAdd} className="flex items-center gap-1.5 rounded-lg bg-accent px-3 py-2 text-[13px] font-semibold text-white hover:bg-accent-hover transition-colors"><Plus size={15} /> {t("forms.add")}</button>
         </div>
       </div>
       <DataTable

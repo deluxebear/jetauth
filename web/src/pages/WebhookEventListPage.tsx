@@ -53,10 +53,10 @@ export default function WebhookEventListPage() {
         setSortOrder(sOrder);
         setPage(p);
       } else {
-        modal.toast(res.msg || t("common.loadFailed" as any), "error");
+        modal.toast(res.msg || t("common.loadFailed"), "error");
       }
     } catch {
-      modal.toast(t("common.connectFailed" as any), "error");
+      modal.toast(t("common.connectFailed"), "error");
     } finally {
       setLoading(false);
     }
@@ -70,13 +70,13 @@ export default function WebhookEventListPage() {
     try {
       const res = await WebhookEventBackend.replayWebhookEvent(eventId);
       if (res.status === "ok") {
-        modal.toast(t("webhookEvents.field.replaySuccess" as any));
+        modal.toast(t("webhookEvents.field.replaySuccess"));
         fetchData();
       } else {
-        modal.toast(res.msg || t("webhookEvents.field.replayFailed" as any), "error");
+        modal.toast(res.msg || t("webhookEvents.field.replayFailed"), "error");
       }
     } catch {
-      modal.toast(t("common.connectFailed" as any), "error");
+      modal.toast(t("common.connectFailed"), "error");
     } finally {
       setReplayingId("");
     }
@@ -89,7 +89,7 @@ export default function WebhookEventListPage() {
 
   const columns: Column<WebhookEvent>[] = [
     {
-      key: "webhookName", title: t("webhookEvents.field.webhookName" as any), width: "220px",
+      key: "webhookName", title: t("webhookEvents.field.webhookName"), width: "220px",
       render: (_, r) => {
         if (!r.webhookName) return <span className="text-text-muted">{"\u2014"}</span>;
         const parts = r.webhookName.split("/");
@@ -98,28 +98,28 @@ export default function WebhookEventListPage() {
       },
     },
     {
-      key: "organization", title: t("col.organization" as any), width: "160px",
+      key: "organization", title: t("col.organization"), width: "160px",
       render: (_, r) => r.organization ? <Link to={`/organizations/admin/${r.organization}`} className="text-accent hover:underline" onClick={(e) => e.stopPropagation()}>{r.organization}</Link> : <span className="text-text-muted">{"\u2014"}</span>,
     },
     {
-      key: "status", title: t("webhookEvents.field.status" as any), width: "140px",
+      key: "status", title: t("webhookEvents.field.status"), width: "140px",
       render: (_, r) => <StatusTag status={r.status} />,
     },
     {
-      key: "attemptCount", title: t("webhookEvents.field.attemptCount" as any), sortable: true, width: "140px",
+      key: "attemptCount", title: t("webhookEvents.field.attemptCount"), sortable: true, width: "140px",
     },
     {
-      key: "nextRetryTime", title: t("webhookEvents.field.nextRetryTime" as any), sortable: true, width: "180px",
+      key: "nextRetryTime", title: t("webhookEvents.field.nextRetryTime"), sortable: true, width: "180px",
       render: (_, r) => <span className="text-[12px] text-text-muted font-mono">{r.nextRetryTime ? new Date(r.nextRetryTime).toLocaleString() : "\u2014"}</span>,
     },
     {
-      key: "__actions", fixed: "right" as const, title: t("common.action" as any), width: "140px",
+      key: "__actions", fixed: "right" as const, title: t("common.action"), width: "140px",
       render: (_, r) => {
         const eventId = `${r.owner}/${r.name}`;
         return (
           <div className="flex items-center gap-1">
-            <button onClick={(e) => { e.stopPropagation(); setDetailRecord(r); }} className="rounded p-1.5 text-text-muted hover:text-accent hover:bg-accent/10 transition-colors" title={t("common.view" as any)}><Eye size={14} /></button>
-            <button onClick={(e) => { e.stopPropagation(); handleReplay(r); }} disabled={replayingId === eventId} className="rounded p-1.5 text-text-muted hover:text-warning hover:bg-warning/10 transition-colors disabled:opacity-50" title={t("webhookEvents.field.replay" as any)}><RotateCcw size={14} /></button>
+            <button onClick={(e) => { e.stopPropagation(); setDetailRecord(r); }} className="rounded p-1.5 text-text-muted hover:text-accent hover:bg-accent/10 transition-colors" title={t("common.view")}><Eye size={14} /></button>
+            <button onClick={(e) => { e.stopPropagation(); handleReplay(r); }} disabled={replayingId === eventId} className="rounded p-1.5 text-text-muted hover:text-warning hover:bg-warning/10 transition-colors disabled:opacity-50" title={t("webhookEvents.field.replay")}><RotateCcw size={14} /></button>
           </div>
         );
       },
@@ -130,8 +130,8 @@ export default function WebhookEventListPage() {
     <div className="space-y-5">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold tracking-tight">{t("webhookEvents.title" as any)}</h1>
-          <p className="text-[13px] text-text-muted mt-0.5">{t("webhookEvents.subtitle" as any)}</p>
+          <h1 className="text-xl font-bold tracking-tight">{t("webhookEvents.title")}</h1>
+          <p className="text-[13px] text-text-muted mt-0.5">{t("webhookEvents.subtitle")}</p>
         </div>
         <div className="flex items-center gap-2">
           <motion.button whileHover={{ rotate: 180 }} transition={{ duration: 0.3 }} onClick={() => fetchData(page)} className="rounded-lg border border-border p-2 text-text-muted hover:bg-surface-2 transition-colors" title={t("common.refresh")}><RefreshCw size={15} /></motion.button>
@@ -161,38 +161,38 @@ export default function WebhookEventListPage() {
           <div className="absolute inset-0 bg-black/40" onClick={() => setDetailRecord(null)} />
           <div className="relative w-full max-w-2xl bg-surface shadow-xl overflow-y-auto">
             <div className="sticky top-0 bg-surface border-b border-border px-6 py-4 flex items-center justify-between">
-              <h2 className="text-lg font-bold">{t("webhookEvents.field.detail" as any)}</h2>
+              <h2 className="text-lg font-bold">{t("webhookEvents.field.detail")}</h2>
               <button onClick={() => setDetailRecord(null)} className="rounded p-1.5 text-text-muted hover:bg-surface-2 transition-colors">&times;</button>
             </div>
             <div className="p-6 space-y-4">
               <div className="grid grid-cols-2 gap-4 text-[13px]">
                 <div>
-                  <span className="text-text-muted">{t("webhookEvents.field.webhookName" as any)}</span>
+                  <span className="text-text-muted">{t("webhookEvents.field.webhookName")}</span>
                   <p className="font-medium mt-1">{detailRecord.webhookName || "\u2014"}</p>
                 </div>
                 <div>
-                  <span className="text-text-muted">{t("col.organization" as any)}</span>
+                  <span className="text-text-muted">{t("col.organization")}</span>
                   <p className="font-medium mt-1">{detailRecord.organization || "\u2014"}</p>
                 </div>
                 <div>
-                  <span className="text-text-muted">{t("webhookEvents.field.status" as any)}</span>
+                  <span className="text-text-muted">{t("webhookEvents.field.status")}</span>
                   <div className="mt-1"><StatusTag status={detailRecord.status} /></div>
                 </div>
                 <div>
-                  <span className="text-text-muted">{t("webhookEvents.field.attemptCount" as any)}</span>
+                  <span className="text-text-muted">{t("webhookEvents.field.attemptCount")}</span>
                   <p className="font-medium mt-1">{detailRecord.attemptCount ?? 0}</p>
                 </div>
                 <div className="col-span-2">
-                  <span className="text-text-muted">{t("webhookEvents.field.nextRetryTime" as any)}</span>
+                  <span className="text-text-muted">{t("webhookEvents.field.nextRetryTime")}</span>
                   <p className="font-medium mt-1">{detailRecord.nextRetryTime ? new Date(detailRecord.nextRetryTime).toLocaleString() : "\u2014"}</p>
                 </div>
               </div>
               <div>
-                <span className="text-[13px] text-text-muted">{t("webhookEvents.field.payload" as any)}</span>
+                <span className="text-[13px] text-text-muted">{t("webhookEvents.field.payload")}</span>
                 <pre className="mt-1 rounded-lg bg-surface-2 p-4 text-[11px] font-mono overflow-x-auto max-h-[300px]">{formatJson(detailRecord.payload)}</pre>
               </div>
               <div>
-                <span className="text-[13px] text-text-muted">{t("webhookEvents.field.lastError" as any)}</span>
+                <span className="text-[13px] text-text-muted">{t("webhookEvents.field.lastError")}</span>
                 <pre className="mt-1 rounded-lg bg-surface-2 p-4 text-[11px] font-mono overflow-x-auto max-h-[200px]">{detailRecord.lastError || "\u2014"}</pre>
               </div>
             </div>

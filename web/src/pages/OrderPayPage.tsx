@@ -67,7 +67,7 @@ export default function OrderPayPage() {
 
   const handlePay = async () => {
     if (!selectedProvider) {
-      modal.toast(t("orderPay.selectProvider" as any), "error");
+      modal.toast(t("orderPay.selectProvider"), "error");
       return;
     }
     setPaying(true);
@@ -89,23 +89,23 @@ export default function OrderPayPage() {
           navigate(`/payments/${payment.owner}/${payment.name}/result`);
         }
       } else {
-        modal.toast(res.msg || t("orderPay.payFailed" as any), "error");
+        modal.toast(res.msg || t("orderPay.payFailed"), "error");
       }
     } catch {
-      modal.toast(t("orderPay.payFailed" as any), "error");
+      modal.toast(t("orderPay.payFailed"), "error");
     } finally {
       setPaying(false);
     }
   };
 
   const handleCancel = () => {
-    modal.showConfirm(t("orderPay.confirmCancel" as any), async () => {
+    modal.showConfirm(t("orderPay.confirmCancel"), async () => {
       const res = await OrderBackend.cancelOrder(owner!, name!);
       if (res.status === "ok") {
-        modal.toast(t("orderPay.cancelSuccess" as any), "success");
+        modal.toast(t("orderPay.cancelSuccess"), "success");
         navigate("/orders");
       } else {
-        modal.toast(res.msg || t("orderPay.cancelFailed" as any), "error");
+        modal.toast(res.msg || t("orderPay.cancelFailed"), "error");
       }
     });
   };
@@ -114,13 +114,13 @@ export default function OrderPayPage() {
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="max-w-2xl mx-auto space-y-6">
       {/* Back */}
       <button onClick={() => navigate("/orders")} className="flex items-center gap-1.5 text-[13px] text-text-muted hover:text-text-primary transition-colors">
-        <ArrowLeft size={16} /> {t("orderPay.backToOrders" as any)}
+        <ArrowLeft size={16} /> {t("orderPay.backToOrders")}
       </button>
 
       {/* Order Info */}
       <div className="rounded-xl border border-border bg-surface-1 p-5 space-y-4">
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-bold">{t("orderPay.orderInfo" as any)}</h2>
+          <h2 className="text-lg font-bold">{t("orderPay.orderInfo")}</h2>
           <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[12px] font-medium ${stateStyle.cls}`}>
             <StateIcon size={13} />
             {order.state}
@@ -129,11 +129,11 @@ export default function OrderPayPage() {
 
         <div className="grid grid-cols-2 gap-3 text-[13px]">
           <div>
-            <span className="text-text-muted">{t("orderPay.orderId" as any)}</span>
+            <span className="text-text-muted">{t("orderPay.orderId")}</span>
             <p className="font-mono text-text-primary">{order.name}</p>
           </div>
           <div>
-            <span className="text-text-muted">{t("orderPay.createdTime" as any)}</span>
+            <span className="text-text-muted">{t("orderPay.createdTime")}</span>
             <p className="font-mono text-text-primary">{order.createdTime ? new Date(order.createdTime).toLocaleString() : "—"}</p>
           </div>
         </div>
@@ -156,7 +156,7 @@ export default function OrderPayPage() {
 
         {/* Total */}
         <div className="border-t border-border-subtle pt-3 flex items-center justify-between">
-          <span className="text-[14px] font-medium">{t("orderPay.total" as any)}</span>
+          <span className="text-[14px] font-medium">{t("orderPay.total")}</span>
           <span className="text-2xl font-bold text-danger font-mono">
             {formatPrice(order.price, order.currency)}
           </span>
@@ -168,12 +168,12 @@ export default function OrderPayPage() {
         <div className="rounded-xl border border-border bg-surface-1 p-5 space-y-4">
           <h2 className="text-lg font-bold flex items-center gap-2">
             <CreditCard size={18} className="text-accent" />
-            {t("orderPay.paymentMethod" as any)}
+            {t("orderPay.paymentMethod")}
           </h2>
 
           {providers.length === 0 ? (
             <p className="text-[13px] text-text-muted py-4 text-center">
-              {t("orderPay.noProviders" as any)}
+              {t("orderPay.noProviders")}
             </p>
           ) : (
             <div className="grid grid-cols-2 gap-2">
@@ -217,13 +217,13 @@ export default function OrderPayPage() {
               ) : (
                 <CreditCard size={16} />
               )}
-              {t("orderPay.confirmPay" as any)} {formatPrice(order.price, order.currency)}
+              {t("orderPay.confirmPay")} {formatPrice(order.price, order.currency)}
             </button>
             <button
               onClick={handleCancel}
               className="rounded-lg border border-border px-4 py-3 text-[13px] font-medium text-text-muted hover:text-danger hover:border-danger/30 transition-colors"
             >
-              {t("orderPay.cancel" as any)}
+              {t("orderPay.cancel")}
             </button>
           </div>
         </div>
@@ -234,14 +234,14 @@ export default function OrderPayPage() {
         <div className="rounded-xl border border-border bg-surface-1 p-5 text-center space-y-3">
           <StateIcon size={32} className={`mx-auto ${stateStyle.cls.split(" ")[0]}`} />
           <p className="text-[14px] text-text-secondary">
-            {order.state === "Paid" ? t("orderPay.alreadyPaid" as any) : t("orderPay.cannotPay" as any)}
+            {order.state === "Paid" ? t("orderPay.alreadyPaid") : t("orderPay.cannotPay")}
           </p>
           {order.payment && (
             <Link
               to={`/payments/${owner}/${order.payment}/result`}
               className="inline-flex items-center gap-1.5 text-[13px] text-accent hover:underline"
             >
-              {t("orderPay.viewPayment" as any)}
+              {t("orderPay.viewPayment")}
             </Link>
           )}
         </div>

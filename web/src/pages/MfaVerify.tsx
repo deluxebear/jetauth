@@ -107,8 +107,8 @@ export default function MfaVerify({ mfaProps, loginForm, themeData, orgBranding,
           )}
         </div>
 
-        <h2 className="text-xl font-bold text-center text-text-primary mb-1">{t("mfa.verify.title" as any)}</h2>
-        <p className="text-[13px] text-center text-text-muted mb-6">{t("mfa.verify.subtitle" as any)}</p>
+        <h2 className="text-xl font-bold text-center text-text-primary mb-1">{t("mfa.verify.title")}</h2>
+        <p className="text-[13px] text-center text-text-muted mb-6">{t("mfa.verify.subtitle")}</p>
 
         {error && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="login-card mb-4 border border-danger/30 bg-danger/10 px-4 py-2.5 text-[13px] text-danger">
@@ -120,7 +120,7 @@ export default function MfaVerify({ mfaProps, loginForm, themeData, orgBranding,
           <div className="space-y-4">
             {mfaProps.length > 1 && (
               <div>
-                <label className="block text-[12px] font-medium text-text-secondary mb-1.5">{t("mfa.verify.method" as any)}</label>
+                <label className="block text-[12px] font-medium text-text-secondary mb-1.5">{t("mfa.verify.method")}</label>
                 <select
                   value={selectedType}
                   onChange={(e) => { setSelectedType(e.target.value); setPasscode(""); }}
@@ -134,7 +134,7 @@ export default function MfaVerify({ mfaProps, loginForm, themeData, orgBranding,
             )}
 
             <div>
-              <label className="block text-[12px] font-medium text-text-secondary mb-1.5">{t("mfa.verify.enterCode" as any)}</label>
+              <label className="block text-[12px] font-medium text-text-secondary mb-1.5">{t("mfa.verify.enterCode")}</label>
               <input
                 type="text"
                 value={passcode}
@@ -156,7 +156,7 @@ export default function MfaVerify({ mfaProps, loginForm, themeData, orgBranding,
                 className="h-4 w-4 rounded border-border text-accent focus:ring-accent/30 cursor-pointer"
               />
               <label htmlFor="mfa-remember" className="text-[13px] text-text-secondary cursor-pointer">
-                {t("mfa.verify.remember" as any)} ({rememberHours} {t("mfa.verify.rememberHours" as any)})
+                {t("mfa.verify.remember")} ({rememberHours} {t("mfa.verify.rememberHours")})
               </label>
             </div>
 
@@ -165,19 +165,19 @@ export default function MfaVerify({ mfaProps, loginForm, themeData, orgBranding,
               disabled={loading || passcode.length !== 6}
               className="login-btn w-full flex items-center justify-center gap-2 bg-accent py-2.5 text-[14px] font-semibold text-white hover:bg-accent-hover disabled:opacity-50 disabled:cursor-not-allowed transition-all"
             >
-              {loading ? <div className="h-4 w-4 rounded-full border-2 border-white/30 border-t-white animate-spin" /> : <>{t("mfa.verify.submit" as any)} <ArrowRight size={16} /></>}
+              {loading ? <div className="h-4 w-4 rounded-full border-2 border-white/30 border-t-white animate-spin" /> : <>{t("mfa.verify.submit")} <ArrowRight size={16} /></>}
             </button>
 
             <div className="text-center">
               <button onClick={() => setUseRecovery(true)} className="text-[12px] text-accent hover:underline">
-                {t("mfa.verify.useRecovery" as any)}
+                {t("mfa.verify.useRecovery")}
               </button>
             </div>
           </div>
         ) : (
           <div className="space-y-4">
             <div>
-              <label className="block text-[12px] font-medium text-text-secondary mb-1.5">{t("mfa.verify.recoveryPlaceholder" as any)}</label>
+              <label className="block text-[12px] font-medium text-text-secondary mb-1.5">{t("mfa.verify.recoveryPlaceholder")}</label>
               <input
                 type="text"
                 value={recoveryCode}
@@ -194,12 +194,12 @@ export default function MfaVerify({ mfaProps, loginForm, themeData, orgBranding,
               disabled={loading || !recoveryCode}
               className="login-btn w-full flex items-center justify-center gap-2 bg-accent py-2.5 text-[14px] font-semibold text-white hover:bg-accent-hover disabled:opacity-50 disabled:cursor-not-allowed transition-all"
             >
-              {loading ? <div className="h-4 w-4 rounded-full border-2 border-white/30 border-t-white animate-spin" /> : <>{t("mfa.verify.submit" as any)} <ArrowRight size={16} /></>}
+              {loading ? <div className="h-4 w-4 rounded-full border-2 border-white/30 border-t-white animate-spin" /> : <>{t("mfa.verify.submit")} <ArrowRight size={16} /></>}
             </button>
 
             <div className="text-center">
               <button onClick={() => setUseRecovery(false)} className="text-[12px] text-accent hover:underline">
-                {t("mfa.verify.useCode" as any)}
+                {t("mfa.verify.useCode")}
               </button>
             </div>
           </div>

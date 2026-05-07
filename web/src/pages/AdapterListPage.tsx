@@ -31,7 +31,7 @@ export default function AdapterListPage() {
     if (res.status === "ok") {
       navigate(`/adapters/${adapter.owner}/${adapter.name}`, { state: { mode: "add" } });
     } else {
-      modal.toast(res.msg || t("common.addFailed" as any), "error");
+      modal.toast(res.msg || t("common.addFailed"), "error");
     }
   };
 
@@ -42,43 +42,43 @@ export default function AdapterListPage() {
       async () => {
         const res = await AdapterBackend.deleteAdapter(record);
         if (res.status === "ok") list.refetch();
-        else modal.toast(res.msg || t("common.deleteFailed" as any), "error");
+        else modal.toast(res.msg || t("common.deleteFailed"), "error");
       }
     );
   };
 
   const columns: Column<Adapter>[] = [
     {
-      key: "name", title: t("col.name" as any), sortable: true, filterable: true, fixed: "left" as const, width: "150px",
+      key: "name", title: t("col.name"), sortable: true, filterable: true, fixed: "left" as const, width: "150px",
       render: (_, r) => <Link to={`/adapters/${r.owner}/${r.name}`} className="font-mono font-medium text-accent hover:underline" onClick={(e) => e.stopPropagation()}>{r.name}</Link>,
     },
     {
-      key: "owner", title: t("col.organization" as any), sortable: true, filterable: true, width: "120px",
-      render: (_, r) => <span className="text-[12px] text-text-secondary">{r.owner === "admin" ? t("common.adminShared" as any) : r.owner}</span>,
+      key: "owner", title: t("col.organization"), sortable: true, filterable: true, width: "120px",
+      render: (_, r) => <span className="text-[12px] text-text-secondary">{r.owner === "admin" ? t("common.adminShared") : r.owner}</span>,
     },
     {
-      key: "createdTime", title: t("col.created" as any), sortable: true, width: "160px",
+      key: "createdTime", title: t("col.created"), sortable: true, width: "160px",
       render: (_, r) => <span className="text-[12px] text-text-muted font-mono">{r.createdTime ? new Date(r.createdTime).toLocaleString() : "\u2014"}</span>,
     },
-    { key: "table", title: t("adapters.field.table" as any), sortable: true, width: "120px" },
+    { key: "table", title: t("adapters.field.table"), sortable: true, width: "120px" },
     {
-      key: "useSameDb", title: t("adapters.field.useSameDb" as any), sortable: true, width: "120px",
-      render: (_, r) => <StatusBadge status={r.useSameDb ? "active" : "inactive"} label={r.useSameDb ? t("common.enabled" as any) : t("common.disabled" as any)} />,
+      key: "useSameDb", title: t("adapters.field.useSameDb"), sortable: true, width: "120px",
+      render: (_, r) => <StatusBadge status={r.useSameDb ? "active" : "inactive"} label={r.useSameDb ? t("common.enabled") : t("common.disabled")} />,
     },
-    { key: "type", title: t("col.type" as any), sortable: true, width: "100px" },
-    { key: "databaseType", title: t("adapters.field.databaseType" as any), sortable: true, width: "120px" },
+    { key: "type", title: t("col.type"), sortable: true, width: "100px" },
+    { key: "databaseType", title: t("adapters.field.databaseType"), sortable: true, width: "120px" },
     {
-      key: "host", title: t("adapters.field.host" as any), sortable: true, filterable: true, width: "120px",
+      key: "host", title: t("adapters.field.host"), sortable: true, filterable: true, width: "120px",
     },
     {
-      key: "port", title: t("adapters.field.port" as any), sortable: true, filterable: true, width: "100px",
+      key: "port", title: t("adapters.field.port"), sortable: true, filterable: true, width: "100px",
       render: (_, r) => <span className="text-[12px] text-text-muted font-mono">{r.port === 0 ? "" : r.port}</span>,
     },
-    { key: "user", title: t("adapters.field.user" as any), sortable: true, filterable: true, width: "120px" },
-    { key: "password", title: t("adapters.field.password" as any), sortable: true, filterable: true, width: "120px" },
-    { key: "database", title: t("adapters.field.database" as any), sortable: true, width: "120px" },
+    { key: "user", title: t("adapters.field.user"), sortable: true, filterable: true, width: "120px" },
+    { key: "password", title: t("adapters.field.password"), sortable: true, filterable: true, width: "120px" },
+    { key: "database", title: t("adapters.field.database"), sortable: true, width: "120px" },
     {
-      key: "__actions", fixed: "right" as const, title: t("common.action" as any), width: "110px",
+      key: "__actions", fixed: "right" as const, title: t("common.action"), width: "110px",
       render: (_, r) => (
         <div className="flex items-center gap-1">
           <Link to={`/adapters/${r.owner}/${r.name}`} className="rounded p-1.5 text-text-muted hover:text-warning hover:bg-warning/10 transition-colors" title={t("common.edit")} onClick={(e) => e.stopPropagation()}><Pencil size={14} /></Link>
@@ -92,13 +92,13 @@ export default function AdapterListPage() {
     <div className="space-y-5">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold tracking-tight">{t("adapters.title" as any)}</h1>
-          <p className="text-[13px] text-text-muted mt-0.5">{t("adapters.subtitle" as any)}</p>
+          <h1 className="text-xl font-bold tracking-tight">{t("adapters.title")}</h1>
+          <p className="text-[13px] text-text-muted mt-0.5">{t("adapters.subtitle")}</p>
         </div>
         <div className="flex items-center gap-2">
           <motion.button whileHover={{ rotate: 180 }} transition={{ duration: 0.3 }} onClick={list.refetch} className="rounded-lg border border-border p-2 text-text-muted hover:bg-surface-2 transition-colors" title={t("common.refresh")}><RefreshCw size={15} /></motion.button>
           <ColumnsMenu columns={columns} hidden={prefs.hidden} onToggle={prefs.toggleHidden} onResetWidths={prefs.resetWidths} />
-          <button onClick={handleAdd} className="flex items-center gap-1.5 rounded-lg bg-accent px-3 py-2 text-[13px] font-semibold text-white hover:bg-accent-hover transition-colors"><Plus size={15} /> {t("adapters.add" as any)}</button>
+          <button onClick={handleAdd} className="flex items-center gap-1.5 rounded-lg bg-accent px-3 py-2 text-[13px] font-semibold text-white hover:bg-accent-hover transition-colors"><Plus size={15} /> {t("adapters.add")}</button>
         </div>
       </div>
       <DataTable

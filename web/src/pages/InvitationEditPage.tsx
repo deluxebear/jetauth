@@ -132,7 +132,7 @@ function SearchableSelect({
             </button>
           ))}
           {filtered.length === 0 && (
-            <div className="px-3 py-2 text-[13px] text-text-muted">{t("common.noResults" as any)}</div>
+            <div className="px-3 py-2 text-[13px] text-text-muted">{t("common.noResults")}</div>
           )}
         </div>
       )}
@@ -257,7 +257,7 @@ export default function InvitationEditPage() {
           setCoreCode(res.data.code || "");
         }
       } else {
-        modal.showError((res as any).msg || t("invitations.loadFailed" as any));
+        modal.showError((res as any).msg || t("invitations.loadFailed"));
         navigate("/invitations");
       }
     } catch (e) {
@@ -291,7 +291,7 @@ export default function InvitationEditPage() {
       ? await InvBackend.addInvitation(inv)
       : await InvBackend.updateInvitation(owner!, name!, inv);
     if (res.status !== "ok") {
-      modal.toast(friendlyError(res.msg, t) || t("common.saveFailed" as any), "error");
+      modal.toast(friendlyError(res.msg, t) || t("common.saveFailed"), "error");
       return false;
     }
     return true;
@@ -302,7 +302,7 @@ export default function InvitationEditPage() {
     try {
       const ok = await saveInvitation();
       if (!ok) return;
-      modal.toast(t("common.saveSuccess" as any));
+      modal.toast(t("common.saveSuccess"));
       setSaved(true);
       setOriginalJson(JSON.stringify(inv));
       setIsAddMode(false);
@@ -311,7 +311,7 @@ export default function InvitationEditPage() {
         navigate(`/invitations/${inv.owner}/${inv.name}`, { replace: true });
       }
     } catch (e: any) {
-      modal.toast(e.message || t("common.saveFailed" as any), "error");
+      modal.toast(e.message || t("common.saveFailed"), "error");
     } finally {
       setSaving(false);
     }
@@ -323,7 +323,7 @@ export default function InvitationEditPage() {
     try {
       const ok = await saveInvitation();
       if (!ok) return;
-      modal.toast(t("invitations.savedAndReady" as any));
+      modal.toast(t("invitations.savedAndReady"));
       invalidateList();
       const nextDraft = InvBackend.newInvitation(owner!);
       setInv(nextDraft);
@@ -336,7 +336,7 @@ export default function InvitationEditPage() {
       setIsAddMode(true);
       if (!isNew) navigate(`/invitations/${owner}/new`, { replace: true, state: { mode: "add" } });
     } catch (e: any) {
-      modal.toast(e?.message || t("common.saveFailed" as any), "error");
+      modal.toast(e?.message || t("common.saveFailed"), "error");
     } finally {
       setSaving(false);
     }
@@ -347,11 +347,11 @@ export default function InvitationEditPage() {
     try {
       const ok = await saveInvitation();
       if (!ok) return;
-      modal.toast(t("common.saveSuccess" as any));
+      modal.toast(t("common.saveSuccess"));
       invalidateList();
       navigate("/invitations");
     } catch (e: any) {
-      modal.toast(e?.message || t("common.saveFailed" as any), "error");
+      modal.toast(e?.message || t("common.saveFailed"), "error");
     } finally {
       setSaving(false);
     }
@@ -380,7 +380,7 @@ export default function InvitationEditPage() {
             invalidateList();
             navigate("/invitations");
           } else {
-            modal.showError(res.msg || t("common.deleteFailed" as any));
+            modal.showError(res.msg || t("common.deleteFailed"));
           }
         } catch (e) {
           console.error(e);
@@ -394,7 +394,7 @@ export default function InvitationEditPage() {
     const defaultApp = app || "app-built-in";
     const url = `${window.location.origin}/signup/${defaultApp}?invitationCode=${inv.defaultCode || inv.code}`;
     navigator.clipboard.writeText(url);
-    modal.toast(t("common.copySuccess" as any));
+    modal.toast(t("common.copySuccess"));
   };
 
   const handleSendEmail = async () => {
@@ -403,32 +403,32 @@ export default function InvitationEditPage() {
       .map((e) => e.trim())
       .filter((e) => e.length > 0);
     if (emails.length === 0) {
-      modal.showError(t("invitations.enterEmail" as any));
+      modal.showError(t("invitations.enterEmail"));
       return;
     }
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     const invalidEmails = emails.filter((e) => !emailRegex.test(e));
     if (invalidEmails.length > 0) {
-      modal.showError(t("invitations.invalidEmail" as any, { emails: invalidEmails.join(", ") }));
+      modal.showError(t("invitations.invalidEmail", { emails: invalidEmails.join(", ") }));
       return;
     }
     const remaining = inv.quota - inv.usedCount;
     if (emails.length > remaining) {
-      modal.showError(t("invitations.emailExceedQuota" as any, { count: emails.length, remaining }));
+      modal.showError(t("invitations.emailExceedQuota", { count: emails.length, remaining }));
       return;
     }
-    modal.showConfirm(t("invitations.sendConfirm" as any, { count: emails.length }), async () => {
+    modal.showConfirm(t("invitations.sendConfirm", { count: emails.length }), async () => {
       setSending(true);
       try {
         const res = await InvBackend.sendInvitation(inv, emails);
         if (res.status === "ok") {
-          modal.toast(t("common.sendSuccess" as any));
+          modal.toast(t("common.sendSuccess"));
           setSendEmails("");
         } else {
-          modal.toast(res.msg || t("common.sendFailed" as any), "error");
+          modal.toast(res.msg || t("common.sendFailed"), "error");
         }
       } catch (e: any) {
-        modal.toast(e.message || t("common.sendFailed" as any), "error");
+        modal.toast(e.message || t("common.sendFailed"), "error");
       } finally {
         setSending(false);
       }
@@ -472,7 +472,7 @@ export default function InvitationEditPage() {
 
   // --- Dropdown options ----------------------------------------------------
   const appOptions: { value: string; label: string }[] = [
-    { value: "All", label: t("common.all" as any) },
+    { value: "All", label: t("common.all") },
     ...apps.map((a) => ({
       value: a.name,
       label: a.displayName ? `${a.displayName} (${a.name})` : a.name,
@@ -480,7 +480,7 @@ export default function InvitationEditPage() {
   ];
 
   const groupOptions: { value: string; label: string }[] = [
-    { value: "", label: `-- ${t("common.none" as any)} --` },
+    { value: "", label: `-- ${t("common.none")} --` },
     ...groups.map((g) => ({
       value: g.name,
       label: g.displayName ? `${g.displayName} (${g.name})` : g.name,
@@ -494,7 +494,7 @@ export default function InvitationEditPage() {
       className="space-y-5 "
     >
       <StickyEditHeader
-        title={`${isAddMode ? t("common.add") : t("common.edit")} ${t("invitations.title" as any)}`}
+        title={`${isAddMode ? t("common.add") : t("common.edit")} ${t("invitations.title")}`}
         subtitle={`${owner}/${name}`}
         onBack={handleBack}
       >
@@ -520,7 +520,7 @@ export default function InvitationEditPage() {
                 disabled={saving}
                 className="flex items-center gap-1.5 rounded-lg border border-border bg-surface-1 px-4 py-2 text-[13px] font-medium text-text-secondary hover:bg-surface-2 disabled:opacity-50 transition-colors"
               >
-                <LogOut size={14} /> {t("common.saveAndExit" as any)}
+                <LogOut size={14} /> {t("common.saveAndExit")}
               </button>
               <button
                 onClick={handleSaveAndNew}
@@ -528,7 +528,7 @@ export default function InvitationEditPage() {
                 className="flex items-center gap-1.5 rounded-lg bg-accent px-4 py-2 text-[13px] font-semibold text-white hover:bg-accent-hover disabled:opacity-50 transition-colors"
               >
                 {saving ? <div className="h-3.5 w-3.5 rounded-full border-2 border-white/30 border-t-white animate-spin" /> : <Check size={14} />}
-                {t("invitations.saveAndNew" as any)}
+                {t("invitations.saveAndNew")}
               </button>
             </>
           ) : (
@@ -544,7 +544,7 @@ export default function InvitationEditPage() {
                 ) : (
                   <LogOut size={14} />
                 )}
-                {t("common.saveAndExit" as any)}
+                {t("common.saveAndExit")}
               </button>
             </>
           )}
@@ -553,7 +553,7 @@ export default function InvitationEditPage() {
       {showBanner && <UnsavedBanner isAddMode={isAddMode} draftMode />}
 
       {/* Basic Info */}
-      <FormSection title={t("invitations.section.basic" as any)}>
+      <FormSection title={t("invitations.section.basic")}>
         {/* Organization - searchable dropdown */}
         <FormField label={t("field.owner")}>
           <div className="relative" ref={orgDropdownRef}>
@@ -596,7 +596,7 @@ export default function InvitationEditPage() {
                   </button>
                 ))}
                 {filteredOrgs.length === 0 && (
-                  <div className="px-3 py-2 text-[13px] text-text-muted">{t("common.noResults" as any)}</div>
+                  <div className="px-3 py-2 text-[13px] text-text-muted">{t("common.noResults")}</div>
                 )}
               </div>
             )}
@@ -620,7 +620,7 @@ export default function InvitationEditPage() {
         </FormField>
 
         {/* Invitation Code */}
-        <FormField label={t("invitations.field.code" as any)} span="full">
+        <FormField label={t("invitations.field.code")} span="full">
           <div className="space-y-3">
             {/* Main code input — always editable */}
             <input
@@ -635,7 +635,7 @@ export default function InvitationEditPage() {
                   set("defaultCode", cleaned);
                 }
               }}
-              placeholder={t("help.onlyAlphanumeric" as any)}
+              placeholder={t("help.onlyAlphanumeric")}
               className={monoInputClass}
             />
 
@@ -650,8 +650,8 @@ export default function InvitationEditPage() {
             <div className="flex items-center gap-3 py-1">
               <Switch checked={obfuscate} onChange={handleObfuscateToggle} />
               <div>
-                <span className="text-[13px] font-medium text-text-primary">{t("invitations.obfuscate" as any)}</span>
-                <p className="text-[11px] text-text-muted mt-0.5">{t("invitations.obfuscateHelp" as any)}</p>
+                <span className="text-[13px] font-medium text-text-primary">{t("invitations.obfuscate")}</span>
+                <p className="text-[11px] text-text-muted mt-0.5">{t("invitations.obfuscateHelp")}</p>
               </div>
             </div>
 
@@ -660,24 +660,24 @@ export default function InvitationEditPage() {
               <div className="rounded-lg border border-border-subtle bg-surface-2/30 p-4 space-y-3">
                 <div className="grid grid-cols-3 gap-3">
                   <div>
-                    <label className="block text-[11px] font-medium text-text-muted mb-1">{t("invitations.obfuscate.prefix" as any)}</label>
+                    <label className="block text-[11px] font-medium text-text-muted mb-1">{t("invitations.obfuscate.prefix")}</label>
                     <input type="number" min={0} max={20} value={prefixLen}
                       onChange={(e) => { const v = Math.max(0, Number(e.target.value)); setPrefixLen(v); rebuildObfuscation(coreCode, v, suffixLen, charSet); }}
                       className={`${monoInputClass} w-full`} />
                   </div>
                   <div>
-                    <label className="block text-[11px] font-medium text-text-muted mb-1">{t("invitations.obfuscate.suffix" as any)}</label>
+                    <label className="block text-[11px] font-medium text-text-muted mb-1">{t("invitations.obfuscate.suffix")}</label>
                     <input type="number" min={0} max={20} value={suffixLen}
                       onChange={(e) => { const v = Math.max(0, Number(e.target.value)); setSuffixLen(v); rebuildObfuscation(coreCode, prefixLen, v, charSet); }}
                       className={`${monoInputClass} w-full`} />
                   </div>
                   <div>
-                    <label className="block text-[11px] font-medium text-text-muted mb-1">{t("invitations.obfuscate.charType" as any)}</label>
+                    <label className="block text-[11px] font-medium text-text-muted mb-1">{t("invitations.obfuscate.charType")}</label>
                     <SimpleSelect value={charSet}
                       options={[
-                        { value: "alphanumeric", label: t("invitations.charType.alphanumeric" as any) },
-                        { value: "numbers", label: t("invitations.charType.numbers" as any) },
-                        { value: "letters", label: t("invitations.charType.letters" as any) },
+                        { value: "alphanumeric", label: t("invitations.charType.alphanumeric") },
+                        { value: "numbers", label: t("invitations.charType.numbers") },
+                        { value: "letters", label: t("invitations.charType.letters") },
                       ]}
                       onChange={(v) => { setCharSet(v as CharSet); rebuildObfuscation(coreCode, prefixLen, suffixLen, v as CharSet); }}
                       className="w-full" />
@@ -695,13 +695,13 @@ export default function InvitationEditPage() {
         </FormField>
 
         {/* Default Code (auto-generated) */}
-        <FormField label={t("invitations.field.defaultCode" as any)} span="full">
+        <FormField label={t("invitations.field.defaultCode")} span="full">
           <div className="flex gap-2">
             <input value={inv.defaultCode || ""} readOnly className={`${monoInputClass} flex-1 bg-surface-3 cursor-default`} />
             {obfuscate && (
               <button onClick={handleRegenerateDefault}
                 className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-[13px] text-text-muted hover:bg-surface-2 transition-colors"
-                title={t("invitations.regenerate" as any)}>
+                title={t("invitations.regenerate")}>
                 <RefreshCw size={14} />
               </button>
             )}
@@ -714,8 +714,8 @@ export default function InvitationEditPage() {
           would fail against a non-persisted record. Admins see this block
           after the first save. */}
       {!isAddMode && (
-      <FormSection title={t("invitations.section.link" as any)}>
-        <FormField label={t("invitations.field.signupUrl" as any)} span="full">
+      <FormSection title={t("invitations.section.link")}>
+        <FormField label={t("invitations.field.signupUrl")} span="full">
           <div className="flex gap-2">
             <input
               value={`${window.location.origin}/signup/${inv.application === "All" ? "app-built-in" : inv.application}?invitationCode=${inv.defaultCode || inv.code}`}
@@ -727,14 +727,14 @@ export default function InvitationEditPage() {
               className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-[13px] font-medium text-text-secondary hover:bg-surface-2 transition-colors"
             >
               <Copy size={14} />
-              {t("common.copy" as any)}
+              {t("common.copy")}
             </button>
           </div>
         </FormField>
         <FormField
-          label={t("invitations.field.sendEmails" as any)}
+          label={t("invitations.field.sendEmails")}
           span="full"
-          help={t("invitations.field.sendEmails.help" as any)}
+          help={t("invitations.field.sendEmails.help")}
         >
           <div className="flex gap-2 items-start">
             <textarea
@@ -754,7 +754,7 @@ export default function InvitationEditPage() {
               ) : (
                 <Send size={14} />
               )}
-              {t("common.send" as any)}
+              {t("common.send")}
             </button>
           </div>
         </FormField>
@@ -762,8 +762,8 @@ export default function InvitationEditPage() {
       )}
 
       {/* Limits & Application */}
-      <FormSection title={t("invitations.section.limits" as any)}>
-        <FormField label={t("invitations.field.quota" as any)}>
+      <FormSection title={t("invitations.section.limits")}>
+        <FormField label={t("invitations.field.quota")}>
           <input
             type="number"
             value={inv.quota ?? 1}
@@ -772,7 +772,7 @@ export default function InvitationEditPage() {
             className={monoInputClass}
           />
         </FormField>
-        <FormField label={t("invitations.field.usedCount" as any)}>
+        <FormField label={t("invitations.field.usedCount")}>
           <input
             type="number"
             value={inv.usedCount ?? 0}
@@ -784,27 +784,27 @@ export default function InvitationEditPage() {
             className={monoInputClass}
           />
         </FormField>
-        <FormField label={t("invitations.field.application" as any)}>
+        <FormField label={t("invitations.field.application")}>
           <SearchableSelect
             value={inv.application ?? "All"}
             onChange={(v) => set("application", v)}
             options={appOptions}
-            placeholder={t("common.all" as any)}
+            placeholder={t("common.all")}
           />
         </FormField>
-        <FormField label={t("invitations.field.signupGroup" as any)}>
+        <FormField label={t("invitations.field.signupGroup")}>
           <SearchableSelect
             value={inv.signupGroup ?? ""}
             onChange={(v) => set("signupGroup", v)}
             options={groupOptions}
-            placeholder={t("invitations.selectGroup" as any)}
+            placeholder={t("invitations.selectGroup")}
           />
         </FormField>
       </FormSection>
 
       {/* Pre-fill Fields */}
-      <FormSection title={t("invitations.section.prefill" as any)}>
-        <FormField label={t("invitations.field.username" as any)}>
+      <FormSection title={t("invitations.section.prefill")}>
+        <FormField label={t("invitations.field.username")}>
           <input
             value={inv.username ?? ""}
             onChange={(e) => set("username", e.target.value)}
@@ -829,13 +829,13 @@ export default function InvitationEditPage() {
       </FormSection>
 
       {/* State */}
-      <FormSection title={t("invitations.section.state" as any)}>
+      <FormSection title={t("invitations.section.state")}>
         <FormField label={t("field.state")}>
           <SimpleSelect
             value={inv.state ?? "Active"}
             options={[
-              { value: "Active", label: t("invitations.state.active" as any) },
-              { value: "Suspended", label: t("invitations.state.suspended" as any) },
+              { value: "Active", label: t("invitations.state.active") },
+              { value: "Suspended", label: t("invitations.state.suspended") },
             ]}
             onChange={(v) => set("state", v)}
           />

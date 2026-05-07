@@ -118,7 +118,7 @@ export default function RecordListPage() {
     },
     {
       key: "name",
-      title: t("records.field.name" as any),
+      title: t("records.field.name"),
       sortable: true,
       filterable: true,
       width: "200px",
@@ -133,7 +133,7 @@ export default function RecordListPage() {
     },
     {
       key: "clientIp",
-      title: t("records.field.clientIp" as any),
+      title: t("records.field.clientIp"),
       sortable: true,
       filterable: true,
       width: "120px",
@@ -154,7 +154,7 @@ export default function RecordListPage() {
     },
     {
       key: "createdTime",
-      title: t("records.field.timestamp" as any),
+      title: t("records.field.timestamp"),
       sortable: true,
       width: "150px",
       render: (_, r) => (
@@ -165,7 +165,7 @@ export default function RecordListPage() {
     },
     {
       key: "organization",
-      title: t("col.organization" as any),
+      title: t("col.organization"),
       sortable: true,
       filterable: true,
       width: "110px",
@@ -184,7 +184,7 @@ export default function RecordListPage() {
     },
     {
       key: "user",
-      title: t("col.user" as any),
+      title: t("col.user"),
       sortable: true,
       filterable: true,
       width: "100px",
@@ -203,7 +203,7 @@ export default function RecordListPage() {
     },
     {
       key: "method",
-      title: t("records.field.method" as any),
+      title: t("records.field.method"),
       sortable: true,
       filterable: true,
       width: "100px",
@@ -211,7 +211,7 @@ export default function RecordListPage() {
     },
     {
       key: "requestUri",
-      title: t("records.field.requestUri" as any),
+      title: t("records.field.requestUri"),
       sortable: true,
       filterable: true,
       width: "200px",
@@ -226,7 +226,7 @@ export default function RecordListPage() {
     },
     {
       key: "language",
-      title: t("records.field.language" as any),
+      title: t("records.field.language"),
       sortable: true,
       filterable: true,
       width: "90px",
@@ -234,7 +234,7 @@ export default function RecordListPage() {
     },
     {
       key: "statusCode",
-      title: t("records.field.statusCode" as any),
+      title: t("records.field.statusCode"),
       sortable: true,
       filterable: true,
       width: "100px",
@@ -242,7 +242,7 @@ export default function RecordListPage() {
     },
     {
       key: "response",
-      title: t("records.field.response" as any),
+      title: t("records.field.response"),
       sortable: true,
       filterable: true,
       width: "220px",
@@ -257,7 +257,7 @@ export default function RecordListPage() {
     },
     {
       key: "object",
-      title: t("records.field.object" as any),
+      title: t("records.field.object"),
       sortable: true,
       filterable: true,
       width: "200px",
@@ -272,7 +272,7 @@ export default function RecordListPage() {
     },
     {
       key: "action",
-      title: t("records.field.action" as any),
+      title: t("records.field.action"),
       sortable: true,
       filterable: true,
       width: "200px",
@@ -281,7 +281,7 @@ export default function RecordListPage() {
     },
     {
       key: "isTriggered",
-      title: t("records.field.isTriggered" as any),
+      title: t("records.field.isTriggered"),
       sortable: true,
       width: "80px",
       fixed: "right" as const,
@@ -302,8 +302,8 @@ export default function RecordListPage() {
             }`}
           >
             {r.isTriggered
-              ? t("common.on" as any)
-              : t("common.off" as any)}
+              ? t("common.on")
+              : t("common.off")}
           </span>
         );
       },
@@ -311,7 +311,7 @@ export default function RecordListPage() {
     {
       key: "__actions",
       fixed: "right" as const,
-      title: t("common.action" as any),
+      title: t("common.action"),
       width: "80px",
       render: (_, r) => (
         <button
@@ -321,7 +321,7 @@ export default function RecordListPage() {
           }}
           className="text-accent hover:text-accent-hover text-[12px] font-medium transition-colors"
         >
-          {t("common.detail" as any)}
+          {t("common.detail")}
         </button>
       ),
     },
@@ -332,10 +332,10 @@ export default function RecordListPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-bold tracking-tight">
-            {t("records.title" as any)}
+            {t("records.title")}
           </h1>
           <p className="text-[13px] text-text-muted mt-0.5">
-            {t("records.subtitle" as any)}
+            {t("records.subtitle")}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -387,7 +387,7 @@ export default function RecordListPage() {
           >
             <div className="sticky top-0 z-10 flex items-center justify-between bg-surface-0 border-b border-border px-6 py-4">
               <h2 className="text-lg font-bold">
-                {t("common.detail" as any)}
+                {t("common.detail")}
               </h2>
               <button
                 onClick={() => setDetailRecord(null)}
@@ -400,17 +400,17 @@ export default function RecordListPage() {
               {(
                 [
                   ["ID", "id"],
-                  [t("records.field.name" as any), "name"],
-                  [t("records.field.clientIp" as any), "clientIp"],
-                  [t("records.field.timestamp" as any), "createdTime"],
-                  [t("col.organization" as any), "organization"],
-                  [t("col.user" as any), "user"],
-                  [t("records.field.method" as any), "method"],
-                  [t("records.field.requestUri" as any), "requestUri"],
-                  [t("records.field.language" as any), "language"],
-                  [t("records.field.statusCode" as any), "statusCode"],
-                  [t("records.field.action" as any), "action"],
-                  [t("records.field.isTriggered" as any), "isTriggered"],
+                  [t("records.field.name"), "name"],
+                  [t("records.field.clientIp"), "clientIp"],
+                  [t("records.field.timestamp"), "createdTime"],
+                  [t("col.organization"), "organization"],
+                  [t("col.user"), "user"],
+                  [t("records.field.method"), "method"],
+                  [t("records.field.requestUri"), "requestUri"],
+                  [t("records.field.language"), "language"],
+                  [t("records.field.statusCode"), "statusCode"],
+                  [t("records.field.action"), "action"],
+                  [t("records.field.isTriggered"), "isTriggered"],
                 ] as [string, string][]
               ).map(([label, key]) => (
                 <div
@@ -470,8 +470,8 @@ export default function RecordListPage() {
                           }`}
                         >
                           {detailRecord.isTriggered
-                            ? t("common.on" as any)
-                            : t("common.off" as any)}
+                            ? t("common.on")
+                            : t("common.off")}
                         </span>
                       ) : (
                         "—"
@@ -488,18 +488,18 @@ export default function RecordListPage() {
               {/* Response — with copy button */}
               <CopyableJsonBlock
                 content={detailRecord.response}
-                label={t("records.field.response" as any)}
+                label={t("records.field.response")}
                 onCopied={() =>
-                  modal.toast(t("records.copied" as any), "success")
+                  modal.toast(t("records.copied"), "success")
                 }
               />
 
               {/* Object — with copy button */}
               <CopyableJsonBlock
                 content={detailRecord.object}
-                label={t("records.field.object" as any)}
+                label={t("records.field.object")}
                 onCopied={() =>
-                  modal.toast(t("records.copied" as any), "success")
+                  modal.toast(t("records.copied"), "success")
                 }
               />
             </div>

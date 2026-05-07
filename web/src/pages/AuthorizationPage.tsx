@@ -22,18 +22,18 @@ interface BizAppCardData {
 // Relative time in Chinese-friendly short form. No dep on day.js for a
 // page-local helper — the math is trivial and keeps the bundle small.
 function formatRelativeTime(iso: string, t: (k: any) => string): string {
-  if (!iso) return t("common.unknown" as any) || "—";
+  if (!iso) return t("common.unknown") || "—";
   const ts = new Date(iso).getTime();
   if (Number.isNaN(ts)) return iso;
   const diff = Date.now() - ts;
   const sec = Math.floor(diff / 1000);
-  if (sec < 60) return t("common.justNow" as any) || "just now";
+  if (sec < 60) return t("common.justNow") || "just now";
   const min = Math.floor(sec / 60);
-  if (min < 60) return `${min} ${t("common.minAgo" as any) || "min ago"}`;
+  if (min < 60) return `${min} ${t("common.minAgo") || "min ago"}`;
   const hr = Math.floor(min / 60);
-  if (hr < 24) return `${hr} ${t("common.hrAgo" as any) || "hr ago"}`;
+  if (hr < 24) return `${hr} ${t("common.hrAgo") || "hr ago"}`;
   const day = Math.floor(hr / 24);
-  if (day < 30) return `${day} ${t("common.dayAgo" as any) || "d ago"}`;
+  if (day < 30) return `${day} ${t("common.dayAgo") || "d ago"}`;
   return new Date(iso).toLocaleDateString();
 }
 
@@ -123,8 +123,8 @@ export default function AuthorizationPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold tracking-tight">{t("authz.title" as any)}</h1>
-          <p className="text-[13px] text-text-muted mt-0.5">{t("authz.subtitle" as any)}</p>
+          <h1 className="text-xl font-bold tracking-tight">{t("authz.title")}</h1>
+          <p className="text-[13px] text-text-muted mt-0.5">{t("authz.subtitle")}</p>
         </div>
         <div className="flex items-center gap-2">
           <motion.button
@@ -160,7 +160,7 @@ export default function AuthorizationPage() {
             <Plus size={20} className="text-text-muted group-hover:text-accent transition-colors" />
           </div>
           <span className="text-[13px] text-text-muted group-hover:text-accent font-medium transition-colors">
-            {t("authz.createApp" as any)}
+            {t("authz.createApp")}
           </span>
         </button>
       </div>
@@ -174,10 +174,10 @@ export default function AuthorizationPage() {
             <Shield size={22} className="text-accent" />
           </div>
           <h3 className="text-[14px] font-semibold text-text-primary">
-            {t("authz.empty.title" as any) || "No business apps yet"}
+            {t("authz.empty.title") || "No business apps yet"}
           </h3>
           <p className="mt-1 text-[12px] text-text-muted">
-            {t("authz.empty.hint" as any) || "Connect an application to start configuring roles, permissions, and policies."}
+            {t("authz.empty.hint") || "Connect an application to start configuring roles, permissions, and policies."}
           </p>
         </div>
       )}
@@ -225,7 +225,7 @@ function AppCard({ data, index, onRefresh }: {
       const res = await BizBackend.bizSyncPolicies(appId);
       if (res.status === "ok" && res.data) {
         modal.toast(
-          `${t("authz.overview.syncSuccess" as any) || "Synced"} — ${res.data.policyCount} / ${res.data.roleCount}`,
+          `${t("authz.overview.syncSuccess") || "Synced"} — ${res.data.policyCount} / ${res.data.roleCount}`,
           "success",
         );
         onRefresh();
@@ -275,7 +275,7 @@ function AppCard({ data, index, onRefresh }: {
         <div className="flex items-center gap-1.5 flex-shrink-0">
           <div className={`w-1.5 h-1.5 rounded-full ${data.config.isEnabled ? "bg-success shadow-[0_0_6px] shadow-success/50" : "bg-text-muted"}`} />
           <span className={`text-[10px] font-semibold ${data.config.isEnabled ? "text-success" : "text-text-muted"}`}>
-            {data.config.isEnabled ? t("authz.configured" as any) : t("authz.notConfigured" as any)}
+            {data.config.isEnabled ? t("authz.configured") : t("authz.notConfigured")}
           </span>
         </div>
       </div>
@@ -288,11 +288,11 @@ function AppCard({ data, index, onRefresh }: {
       <div className="flex flex-wrap items-center gap-1.5 pt-3 border-t border-border-subtle">
         <span className="inline-flex items-center gap-1.5 rounded-full bg-surface-2 px-2.5 py-0.5 text-[11px] font-medium text-text-secondary">
           <span className="font-mono font-semibold text-text-primary">{data.roleCount}</span>
-          <span className="text-text-muted">{t("authz.metrics.roles" as any)}</span>
+          <span className="text-text-muted">{t("authz.metrics.roles")}</span>
         </span>
         <span className="inline-flex items-center gap-1.5 rounded-full bg-surface-2 px-2.5 py-0.5 text-[11px] font-medium text-text-secondary">
           <span className="font-mono font-semibold text-text-primary">{data.permissionCount}</span>
-          <span className="text-text-muted">{t("authz.metrics.permissions" as any)}</span>
+          <span className="text-text-muted">{t("authz.metrics.permissions")}</span>
         </span>
         <span className="ml-auto inline-flex items-center gap-1 text-[11px] text-text-muted">
           <span className="w-1 h-1 rounded-full bg-text-muted/60" />
@@ -309,8 +309,8 @@ function AppCard({ data, index, onRefresh }: {
           type="button"
           onClick={handleSync}
           disabled={syncing}
-          title={t("authz.overview.syncPolicies" as any) || "Sync policies"}
-          aria-label={t("authz.overview.syncPolicies" as any) || "Sync policies"}
+          title={t("authz.overview.syncPolicies") || "Sync policies"}
+          aria-label={t("authz.overview.syncPolicies") || "Sync policies"}
           className="rounded-lg border border-border bg-surface-1 p-1.5 text-text-muted hover:bg-accent/10 hover:text-accent hover:border-accent/40 disabled:opacity-50 transition-colors"
         >
           {syncing ? (
@@ -322,8 +322,8 @@ function AppCard({ data, index, onRefresh }: {
         <button
           type="button"
           onClick={handleTest}
-          title={t("authz.tab.test" as any) || "Test"}
-          aria-label={t("authz.tab.test" as any) || "Test"}
+          title={t("authz.tab.test") || "Test"}
+          aria-label={t("authz.tab.test") || "Test"}
           className="rounded-lg border border-border bg-surface-1 p-1.5 text-text-muted hover:bg-accent/10 hover:text-accent hover:border-accent/40 transition-colors"
         >
           <FlaskConical size={14} />
@@ -331,8 +331,8 @@ function AppCard({ data, index, onRefresh }: {
         <button
           type="button"
           onClick={handleIntegration}
-          title={t("authz.tab.integration" as any) || "Integration"}
-          aria-label={t("authz.tab.integration" as any) || "Integration"}
+          title={t("authz.tab.integration") || "Integration"}
+          aria-label={t("authz.tab.integration") || "Integration"}
           className="rounded-lg border border-border bg-surface-1 p-1.5 text-text-muted hover:bg-accent/10 hover:text-accent hover:border-accent/40 transition-colors"
         >
           <Code size={14} />
@@ -435,16 +435,16 @@ function QuickCreateWizard({ open, onClose, onCreated, existingAppNames }: {
 
       const res = await BizBackend.addBizAppConfig(config);
       if (res.status !== "ok") {
-        modal.toast(res.msg || t("common.addFailed" as any), "error");
+        modal.toast(res.msg || t("common.addFailed"), "error");
         setCreating(false);
         return;
       }
 
-      modal.toast(t("authz.wizard.bizSuccess" as any));
+      modal.toast(t("authz.wizard.bizSuccess"));
       onCreated();
       navigate(`/authorization/${orgName}/${selectedApp.name}`);
     } catch (e: any) {
-      modal.toast(e.message || t("common.saveFailed" as any), "error");
+      modal.toast(e.message || t("common.saveFailed"), "error");
       setCreating(false);
     }
   };
@@ -472,12 +472,12 @@ function QuickCreateWizard({ open, onClose, onCreated, existingAppNames }: {
 
   const stepLabels =
     modelType === "rebac"
-      ? [t("authz.wizard.selectApp" as any), t("rebac.wizard.modelType.title")]
+      ? [t("authz.wizard.selectApp"), t("rebac.wizard.modelType.title")]
       : [
-          t("authz.wizard.selectApp" as any),
+          t("authz.wizard.selectApp"),
           t("rebac.wizard.modelType.title"),
-          t("authz.wizard.modelText" as any),
-          t("authz.wizard.policyTableName" as any),
+          t("authz.wizard.modelText"),
+          t("authz.wizard.policyTableName"),
         ];
 
   return (
@@ -500,8 +500,8 @@ function QuickCreateWizard({ open, onClose, onCreated, existingAppNames }: {
             {/* Header */}
             <div className="flex items-center justify-between px-6 py-4 border-b border-border">
               <div>
-                <h2 className="text-[16px] font-bold text-text-primary">{t("authz.wizard.bizTitle" as any)}</h2>
-                <p className="text-[12px] text-text-muted mt-0.5">{t("authz.wizard.bizSubtitle" as any)}</p>
+                <h2 className="text-[16px] font-bold text-text-primary">{t("authz.wizard.bizTitle")}</h2>
+                <p className="text-[12px] text-text-muted mt-0.5">{t("authz.wizard.bizSubtitle")}</p>
               </div>
               {!creating && (
                 <button onClick={onClose} className="rounded-md p-1.5 text-text-muted hover:text-text-primary hover:bg-surface-2 transition-colors">
@@ -535,7 +535,7 @@ function QuickCreateWizard({ open, onClose, onCreated, existingAppNames }: {
                 /* ═══ Step 0: Select Application ═══ */
                 <div className="space-y-3">
                   <label className="block text-[12px] font-semibold text-text-primary mb-1.5">
-                    {t("authz.wizard.selectApp" as any)} <span className="text-danger">*</span>
+                    {t("authz.wizard.selectApp")} <span className="text-danger">*</span>
                   </label>
                   {loadingApps ? (
                     <div className="flex items-center justify-center py-8">
@@ -543,7 +543,7 @@ function QuickCreateWizard({ open, onClose, onCreated, existingAppNames }: {
                     </div>
                   ) : apps.length === 0 ? (
                     <div className="text-center py-8 text-[13px] text-text-muted">
-                      {t("common.noData" as any) || "No applications found"}
+                      {t("common.noData") || "No applications found"}
                     </div>
                   ) : (
                     <div className="space-y-1.5 max-h-[280px] overflow-y-auto">
@@ -677,7 +677,7 @@ function QuickCreateWizard({ open, onClose, onCreated, existingAppNames }: {
                           </span>
                           {preset.recommended && (
                             <span className="inline-block rounded-full px-2 py-0.5 text-[9px] font-bold bg-success/10 text-success">
-                              {t("authz.preset.recommended" as any)}
+                              {t("authz.preset.recommended")}
                             </span>
                           )}
                           {selectedPreset === preset.id && (
@@ -688,7 +688,7 @@ function QuickCreateWizard({ open, onClose, onCreated, existingAppNames }: {
                         </div>
                         <p className="text-[12px] text-text-secondary leading-relaxed">{t(preset.descKey as any)}</p>
                         <p className="text-[11px] text-text-muted mt-1">
-                          {t("authz.preset.scenario" as any)}{t(preset.scenarioKey as any)}
+                          {t("authz.preset.scenario")}{t(preset.scenarioKey as any)}
                         </p>
                       </button>
                     ))}
@@ -714,7 +714,7 @@ function QuickCreateWizard({ open, onClose, onCreated, existingAppNames }: {
                 <div className="space-y-4">
                   <div>
                     <label className="block text-[12px] font-semibold text-text-primary mb-1.5">
-                      {t("authz.wizard.policyTableName" as any)}
+                      {t("authz.wizard.policyTableName")}
                     </label>
                     <input
                       value={policyTable}
@@ -722,27 +722,27 @@ function QuickCreateWizard({ open, onClose, onCreated, existingAppNames }: {
                       className="w-full rounded-lg border border-border bg-surface-2 px-3 py-2.5 text-[13px] font-mono text-text-primary outline-none focus:border-accent placeholder:text-text-muted"
                     />
                     <p className="text-[11px] text-text-muted mt-1">
-                      {t("authz.wizard.policyTableHint" as any)}
+                      {t("authz.wizard.policyTableHint")}
                     </p>
                   </div>
 
                   {/* Summary */}
                   <div className="rounded-lg bg-surface-2 border border-border-subtle p-3">
-                    <div className="text-[11px] font-semibold text-text-muted uppercase tracking-wider mb-2">{t("authz.wizard.willCreate" as any)}</div>
+                    <div className="text-[11px] font-semibold text-text-muted uppercase tracking-wider mb-2">{t("authz.wizard.willCreate")}</div>
                     <div className="space-y-1.5 text-[12px] text-text-secondary">
                       <div className="flex items-center gap-2">
                         <div className="w-1.5 h-1.5 rounded-full bg-accent" />
-                        <span>{t("general.application" as any) || "Application"}:</span>
+                        <span>{t("general.application") || "Application"}:</span>
                         <span className="font-mono font-medium text-text-primary">{selectedApp?.displayName || selectedApp?.name || "..."}</span>
                       </div>
                       <div className="flex items-center gap-2">
                         <div className="w-1.5 h-1.5 rounded-full bg-cyan-400" />
-                        <span>{t("authz.wizard.modelText" as any) || "Model"}:</span>
+                        <span>{t("authz.wizard.modelText") || "Model"}:</span>
                         <span className="font-mono font-medium text-text-primary text-[11px]">RBAC ({modelText.split("\n").length} lines)</span>
                       </div>
                       <div className="flex items-center gap-2">
                         <div className="w-1.5 h-1.5 rounded-full bg-green-400" />
-                        <span>{t("authz.wizard.policyTableName" as any) || "Policy Table"}:</span>
+                        <span>{t("authz.wizard.policyTableName") || "Policy Table"}:</span>
                         <span className="font-mono font-medium text-text-primary">{policyTable || "..."}</span>
                       </div>
                     </div>
@@ -760,7 +760,7 @@ function QuickCreateWizard({ open, onClose, onCreated, existingAppNames }: {
                     className="flex items-center gap-1 rounded-lg border border-border px-3 py-2 text-[12px] font-medium text-text-secondary hover:bg-surface-2 transition-colors"
                   >
                     <ChevronLeft size={14} />
-                    {t("common.back" as any)}
+                    {t("common.back")}
                   </button>
                 )}
               </div>
@@ -778,20 +778,20 @@ function QuickCreateWizard({ open, onClose, onCreated, existingAppNames }: {
                   >
                     {step < lastStep ? (
                       <>
-                        {t("common.next" as any)}
+                        {t("common.next")}
                         <ChevronRight size={14} />
                       </>
                     ) : creating ? (
                       <Loader2 size={14} className="animate-spin" />
                     ) : (
-                      t("authz.wizard.bizCreate" as any)
+                      t("authz.wizard.bizCreate")
                     )}
                   </button>
                 )}
                 {creating && (
                   <div className="flex items-center gap-2 text-[12px] text-text-muted">
                     <Loader2 size={14} className="animate-spin text-accent" />
-                    {t("common.saving" as any)}
+                    {t("common.saving")}
                   </div>
                 )}
               </div>

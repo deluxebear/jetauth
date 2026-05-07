@@ -88,23 +88,23 @@ export default function RuleEditPage() {
     { value: "WAF", label: "WAF" },
     { value: "IP", label: "IP" },
     { value: "User-Agent", label: "User-Agent" },
-    { value: "IP Rate Limiting", label: t("rules.type.ipRateLimit" as any) },
-    { value: "Compound", label: t("rules.type.compound" as any) },
+    { value: "IP Rate Limiting", label: t("rules.type.ipRateLimit") },
+    { value: "Compound", label: t("rules.type.compound") },
   ];
   const ACTION_OPTIONS = [
-    { value: "Allow", label: t("rules.action.allow" as any) },
-    { value: "Block", label: t("rules.action.block" as any) },
+    { value: "Allow", label: t("rules.action.allow") },
+    { value: "Block", label: t("rules.action.block") },
   ];
   const IP_OPERATOR_OPTIONS = [
-    { value: "is in", label: t("rules.op.isIn" as any) },
-    { value: "is not in", label: t("rules.op.isNotIn" as any) },
+    { value: "is in", label: t("rules.op.isIn") },
+    { value: "is not in", label: t("rules.op.isNotIn") },
   ];
   const UA_OPERATOR_OPTIONS = [
-    { value: "equals", label: t("rules.op.equals" as any) },
-    { value: "does not equal", label: t("rules.op.doesNotEqual" as any) },
-    { value: "contains", label: t("rules.op.contains" as any) },
-    { value: "does not contain", label: t("rules.op.doesNotContain" as any) },
-    { value: "match", label: t("rules.op.match" as any) },
+    { value: "equals", label: t("rules.op.equals") },
+    { value: "does not equal", label: t("rules.op.doesNotEqual") },
+    { value: "contains", label: t("rules.op.contains") },
+    { value: "does not contain", label: t("rules.op.doesNotContain") },
+    { value: "match", label: t("rules.op.match") },
   ];
 
   // Admin org dropdown
@@ -205,7 +205,7 @@ export default function RuleEditPage() {
     try {
       const res = await RuleBackend.updateRule(owner!, name!, rule);
       if (res.status === "ok") {
-        modal.toast(t("common.saveSuccess" as any));
+        modal.toast(t("common.saveSuccess"));
         setSaved(true);
         setOriginalJson(JSON.stringify(rule));
         setIsAddMode(false);
@@ -214,7 +214,7 @@ export default function RuleEditPage() {
           navigate(`/rules/${rule.owner}/${rule.name}`, { replace: true });
         }
       } else {
-        modal.toast(friendlyError(res.msg, t) || t("common.saveFailed" as any), "error");
+        modal.toast(friendlyError(res.msg, t) || t("common.saveFailed"), "error");
       }
     } catch (e) {
       console.error(e);
@@ -228,14 +228,14 @@ export default function RuleEditPage() {
     try {
       const res = await RuleBackend.updateRule(owner!, name!, rule);
       if (res.status === "ok") {
-        modal.toast(t("common.saveSuccess" as any));
+        modal.toast(t("common.saveSuccess"));
         invalidateList();
         navigate("/rules");
       } else {
-        modal.toast(friendlyError(res.msg, t) || t("common.saveFailed" as any), "error");
+        modal.toast(friendlyError(res.msg, t) || t("common.saveFailed"), "error");
       }
     } catch (e: any) {
-      modal.toast(e?.message || t("common.saveFailed" as any), "error");
+      modal.toast(e?.message || t("common.saveFailed"), "error");
     } finally {
       setSaving(false);
     }
@@ -257,7 +257,7 @@ export default function RuleEditPage() {
           invalidateList();
           navigate("/rules");
         } else {
-          modal.toast(res.msg || t("common.deleteFailed" as any), "error");
+          modal.toast(res.msg || t("common.deleteFailed"), "error");
         }
       } catch (e) {
         console.error(e);
@@ -273,11 +273,11 @@ export default function RuleEditPage() {
     <div className="flex items-center gap-2">
       {rule.type !== "IP Rate Limiting" && (
         <button onClick={() => addExpr()} className="flex items-center gap-1 rounded-lg bg-accent px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-accent-hover transition-colors">
-          <Plus size={12} /> {t("common.add" as any)}
+          <Plus size={12} /> {t("common.add")}
         </button>
       )}
       <button onClick={restoreDefaults} className="flex items-center gap-1 rounded-lg border border-border px-2.5 py-1 text-[11px] font-medium text-text-secondary hover:bg-surface-2 transition-colors">
-        <RotateCcw size={12} /> {t("rules.restoreDefaults" as any)}
+        <RotateCcw size={12} /> {t("rules.restoreDefaults")}
       </button>
     </div>
   );
@@ -293,9 +293,9 @@ export default function RuleEditPage() {
             <table className="w-full text-[13px]">
               <thead>
                 <tr className="border-b border-border bg-surface-1">
-                  <th className="px-3 py-2 text-left font-medium text-text-secondary w-[180px]">{t("col.name" as any)}</th>
-                  <th className="px-3 py-2 text-left font-medium text-text-secondary">{t("rules.field.expression" as any)}</th>
-                  <th className="px-3 py-2 text-center font-medium text-text-secondary w-[90px]">{t("common.action" as any)}</th>
+                  <th className="px-3 py-2 text-left font-medium text-text-secondary w-[180px]">{t("col.name")}</th>
+                  <th className="px-3 py-2 text-left font-medium text-text-secondary">{t("rules.field.expression")}</th>
+                  <th className="px-3 py-2 text-center font-medium text-text-secondary w-[90px]">{t("common.action")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -318,10 +318,10 @@ export default function RuleEditPage() {
             <table className="w-full text-[13px]">
               <thead>
                 <tr className="border-b border-border bg-surface-1">
-                  <th className="px-3 py-2 text-left font-medium text-text-secondary w-[180px]">{t("col.name" as any)}</th>
-                  <th className="px-3 py-2 text-left font-medium text-text-secondary w-[160px]">{t("rules.field.operator" as any)}</th>
-                  <th className="px-3 py-2 text-left font-medium text-text-secondary">{t("rules.field.ipList" as any)}</th>
-                  <th className="px-3 py-2 text-center font-medium text-text-secondary w-[90px]">{t("common.action" as any)}</th>
+                  <th className="px-3 py-2 text-left font-medium text-text-secondary w-[180px]">{t("col.name")}</th>
+                  <th className="px-3 py-2 text-left font-medium text-text-secondary w-[160px]">{t("rules.field.operator")}</th>
+                  <th className="px-3 py-2 text-left font-medium text-text-secondary">{t("rules.field.ipList")}</th>
+                  <th className="px-3 py-2 text-center font-medium text-text-secondary w-[90px]">{t("common.action")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -347,10 +347,10 @@ export default function RuleEditPage() {
             <table className="w-full text-[13px]">
               <thead>
                 <tr className="border-b border-border bg-surface-1">
-                  <th className="px-3 py-2 text-left font-medium text-text-secondary w-[180px]">{t("col.name" as any)}</th>
-                  <th className="px-3 py-2 text-left font-medium text-text-secondary w-[180px]">{t("rules.field.operator" as any)}</th>
-                  <th className="px-3 py-2 text-left font-medium text-text-secondary">{t("rules.field.value" as any)}</th>
-                  <th className="px-3 py-2 text-center font-medium text-text-secondary w-[90px]">{t("common.action" as any)}</th>
+                  <th className="px-3 py-2 text-left font-medium text-text-secondary w-[180px]">{t("col.name")}</th>
+                  <th className="px-3 py-2 text-left font-medium text-text-secondary w-[180px]">{t("rules.field.operator")}</th>
+                  <th className="px-3 py-2 text-left font-medium text-text-secondary">{t("rules.field.value")}</th>
+                  <th className="px-3 py-2 text-center font-medium text-text-secondary w-[90px]">{t("common.action")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -377,19 +377,19 @@ export default function RuleEditPage() {
               <p className="text-[13px] text-text-muted">{t("common.noData")}</p>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <FormField label={t("col.name" as any)}>
+                <FormField label={t("col.name")}>
                   <input value={exprs[0]?.name ?? ""} onChange={(e) => updateExpr(0, "name", e.target.value)} className={monoInputClass} />
                 </FormField>
-                <FormField label={t("rules.field.rate" as any)} tooltip={t("rules.tooltip.rate" as any)}>
+                <FormField label={t("rules.field.rate")} tooltip={t("rules.tooltip.rate")}>
                   <div className="flex items-center gap-2">
                     <input type="number" min={1} value={Number(exprs[0]?.operator) || 0} onChange={(e) => updateExpr(0, "operator", e.target.value)} className={`${monoInputClass} w-24`} />
-                    <span className="text-[11px] text-text-muted whitespace-nowrap">{t("rules.field.rateUnit" as any)}</span>
+                    <span className="text-[11px] text-text-muted whitespace-nowrap">{t("rules.field.rateUnit")}</span>
                   </div>
                 </FormField>
-                <FormField label={t("rules.field.blockDuration" as any)} tooltip={t("rules.tooltip.blockDuration" as any)}>
+                <FormField label={t("rules.field.blockDuration")} tooltip={t("rules.tooltip.blockDuration")}>
                   <div className="flex items-center gap-2">
                     <input type="number" min={1} value={Number(exprs[0]?.value) || 0} onChange={(e) => updateExpr(0, "value", e.target.value)} className={`${monoInputClass} w-24`} />
-                    <span className="text-[11px] text-text-muted">{t("sites.field.seconds" as any)}</span>
+                    <span className="text-[11px] text-text-muted">{t("sites.field.seconds")}</span>
                   </div>
                 </FormField>
               </div>
@@ -403,9 +403,9 @@ export default function RuleEditPage() {
             <table className="w-full text-[13px]">
               <thead>
                 <tr className="border-b border-border bg-surface-1">
-                  <th className="px-3 py-2 text-left font-medium text-text-secondary w-[160px]">{t("rules.field.logic" as any)}</th>
-                  <th className="px-3 py-2 text-left font-medium text-text-secondary">{t("rules.field.rule" as any)}</th>
-                  <th className="px-3 py-2 text-center font-medium text-text-secondary w-[90px]">{t("common.action" as any)}</th>
+                  <th className="px-3 py-2 text-left font-medium text-text-secondary w-[160px]">{t("rules.field.logic")}</th>
+                  <th className="px-3 py-2 text-left font-medium text-text-secondary">{t("rules.field.rule")}</th>
+                  <th className="px-3 py-2 text-center font-medium text-text-secondary w-[90px]">{t("common.action")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -427,7 +427,7 @@ export default function RuleEditPage() {
                         value={expr.value}
                         options={availableRules}
                         onChange={(v) => updateExpr(i, "value", v)}
-                        placeholder={t("rules.placeholder.selectRule" as any)}
+                        placeholder={t("rules.placeholder.selectRule")}
                       />
                     </td>
                     <td className="px-3 py-1.5"><RowActions index={i} total={exprs.length} onMove={moveExpr} onDelete={removeExpr} /></td>
@@ -440,14 +440,14 @@ export default function RuleEditPage() {
         );
 
       default:
-        return <p className="col-span-full text-[13px] text-text-muted">{t("rules.selectType" as any)}</p>;
+        return <p className="col-span-full text-[13px] text-text-muted">{t("rules.selectType")}</p>;
     }
   };
 
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
       <StickyEditHeader
-        title={`${isAddMode ? t("common.add") : t("common.edit")} ${t("rules.title" as any)}`}
+        title={`${isAddMode ? t("common.add") : t("common.edit")} ${t("rules.title")}`}
         subtitle={`${owner}/${name}`}
         onBack={handleBack}
       >
@@ -457,17 +457,17 @@ export default function RuleEditPage() {
         <SaveButton onClick={handleSave} saving={saving} saved={saved} label={t("common.save")} />
         <button onClick={handleSaveAndExit} disabled={saving} className="flex items-center gap-1.5 rounded-lg bg-accent px-4 py-2 text-[13px] font-semibold text-white hover:bg-accent-hover disabled:opacity-50 transition-colors">
           {saving ? <div className="h-3.5 w-3.5 rounded-full border-2 border-white/30 border-t-white animate-spin" /> : <LogOut size={14} />}
-          {t("common.saveAndExit" as any)}
+          {t("common.saveAndExit")}
         </button>
       </StickyEditHeader>
 
       {showBanner && <UnsavedBanner isAddMode={isAddMode} />}
 
       {/* Basic Info */}
-      <FormSection title={t("rules.section.basic" as any)}>
+      <FormSection title={t("rules.section.basic")}>
         <FormField label={t("field.owner")}>
           {isAdmin ? (
-            <SingleSearchSelect value={rule.owner} options={orgOptions} onChange={(v) => set("owner", v)} placeholder={t("common.search" as any)} />
+            <SingleSearchSelect value={rule.owner} options={orgOptions} onChange={(v) => set("owner", v)} placeholder={t("common.search")} />
           ) : (
             <input value={rule.owner} disabled className={inputClass} />
           )}
@@ -478,30 +478,30 @@ export default function RuleEditPage() {
       </FormSection>
 
       {/* Type & Action */}
-      <FormSection title={t("rules.section.config" as any)}>
-        <FormField label={t("rules.field.type" as any)}>
+      <FormSection title={t("rules.section.config")}>
+        <FormField label={t("rules.field.type")}>
           <SimpleSelect value={rule.type} options={TYPE_OPTIONS} onChange={(v) => set("type", v)} />
         </FormField>
         {showAction && (
-          <FormField label={t("common.action" as any)}>
+          <FormField label={t("common.action")}>
             <SimpleSelect value={rule.action} options={ACTION_OPTIONS} onChange={(v) => set("action", v)} />
           </FormField>
         )}
         {showStatusCode && (
-          <FormField label={t("rules.field.statusCode" as any)}>
+          <FormField label={t("rules.field.statusCode")}>
             <input type="number" min={100} max={599} value={rule.statusCode} onChange={(e) => set("statusCode", Number(e.target.value))} className={`${monoInputClass} w-32`} />
           </FormField>
         )}
-        <FormField label={t("rules.field.reason" as any)} span="full">
+        <FormField label={t("rules.field.reason")} span="full">
           <input value={rule.reason} onChange={(e) => set("reason", e.target.value)} className={inputClass} />
         </FormField>
-        <FormField label={t("rules.field.verboseMode" as any)}>
+        <FormField label={t("rules.field.verboseMode")}>
           <Switch checked={rule.isVerbose} onChange={(checked) => set("isVerbose", checked)} />
         </FormField>
       </FormSection>
 
       {/* Expressions — type-specific */}
-      <FormSection title={t("rules.field.expressions" as any)} action={rule.type ? exprHeaderButtons : undefined}>
+      <FormSection title={t("rules.field.expressions")} action={rule.type ? exprHeaderButtons : undefined}>
         {renderExpressions()}
       </FormSection>
     </motion.div>

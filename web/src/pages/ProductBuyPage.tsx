@@ -61,7 +61,7 @@ export default function ProductBuyPage() {
 
   const handleBuyNow = async () => {
     if (product.isRecharge && rechargeAmount <= 0) {
-      modal.toast(t("buy.invalidAmount" as any), "error");
+      modal.toast(t("buy.invalidAmount"), "error");
       return;
     }
     setBuying(true);
@@ -71,10 +71,10 @@ export default function ProductBuyPage() {
         const order = res.data;
         navigate(`/orders/${order.owner}/${order.name}/pay`);
       } else {
-        modal.toast(res.msg || t("buy.orderFailed" as any), "error");
+        modal.toast(res.msg || t("buy.orderFailed"), "error");
       }
     } catch {
-      modal.toast(t("buy.orderFailed" as any), "error");
+      modal.toast(t("buy.orderFailed"), "error");
     } finally {
       setBuying(false);
     }
@@ -83,7 +83,7 @@ export default function ProductBuyPage() {
   const handleAddToCart = async () => {
     if (!account) return;
     if (product.isRecharge) {
-      modal.toast(t("buy.rechargeNoCart" as any), "error");
+      modal.toast(t("buy.rechargeNoCart"), "error");
       return;
     }
     setAddingToCart(true);
@@ -97,7 +97,7 @@ export default function ProductBuyPage() {
       if (cart.length > 0) {
         const cartCurrency = cart[0].currency || product.currency;
         if (cartCurrency !== product.currency) {
-          modal.toast(t("buy.currencyMismatch" as any), "error");
+          modal.toast(t("buy.currencyMismatch"), "error");
           setAddingToCart(false);
           return;
         }
@@ -120,12 +120,12 @@ export default function ProductBuyPage() {
 
       const updateRes = await UserBackend.updateUser(account.owner, account.name, { ...fullUser, cart } as any);
       if (updateRes.status === "ok") {
-        modal.toast(t("buy.addedToCart" as any), "success");
+        modal.toast(t("buy.addedToCart"), "success");
       } else {
-        modal.toast(updateRes.msg || t("buy.cartFailed" as any), "error");
+        modal.toast(updateRes.msg || t("buy.cartFailed"), "error");
       }
     } catch {
-      modal.toast(t("buy.cartFailed" as any), "error");
+      modal.toast(t("buy.cartFailed"), "error");
     } finally {
       setAddingToCart(false);
     }
@@ -138,7 +138,7 @@ export default function ProductBuyPage() {
         onClick={() => navigate(-1)}
         className="flex items-center gap-1.5 text-[13px] text-text-muted hover:text-text-primary transition-colors"
       >
-        <ArrowLeft size={16} /> {t("buy.backToStore" as any)}
+        <ArrowLeft size={16} /> {t("buy.backToStore")}
       </button>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -184,7 +184,7 @@ export default function ProductBuyPage() {
             {product.isRecharge ? (
               <div className="space-y-3">
                 <label className="text-[13px] font-medium text-text-secondary">
-                  {t("buy.selectAmount" as any)}
+                  {t("buy.selectAmount")}
                 </label>
                 {(product.rechargeOptions || []).length > 0 && (
                   <div className="flex flex-wrap gap-2">
@@ -210,7 +210,7 @@ export default function ProductBuyPage() {
                       type="number"
                       value={customAmount}
                       onChange={(e) => { setCustomAmount(e.target.value); setSelectedRechargeAmount(null); }}
-                      placeholder={t("buy.customAmount" as any)}
+                      placeholder={t("buy.customAmount")}
                       className="flex-1 rounded-lg border border-border bg-surface-1 px-3 py-2 text-[13px] font-mono focus:border-accent focus:ring-1 focus:ring-accent/30 outline-none transition-colors"
                       min="0"
                       step="any"
@@ -224,7 +224,7 @@ export default function ProductBuyPage() {
                   {formatPrice(product.price, product.currency)}
                 </span>
                 <span className="text-[12px] text-text-muted">
-                  {t("buy.soldCount" as any).replace("{count}", String(product.sold || 0))}
+                  {t("buy.soldCount").replace("{count}", String(product.sold || 0))}
                 </span>
               </div>
             )}
@@ -234,7 +234,7 @@ export default function ProductBuyPage() {
           {!product.isRecharge && (
             <div className="flex items-center gap-3">
               <label className="text-[13px] font-medium text-text-secondary">
-                {t("buy.quantity" as any)}
+                {t("buy.quantity")}
               </label>
               <div className="flex items-center border border-border rounded-lg overflow-hidden">
                 <button
@@ -259,7 +259,7 @@ export default function ProductBuyPage() {
               </div>
               {quantity > 1 && (
                 <span className="text-[12px] text-text-muted">
-                  {t("buy.subtotal" as any)}: {formatPrice(totalPrice, product.currency)}
+                  {t("buy.subtotal")}: {formatPrice(totalPrice, product.currency)}
                 </span>
               )}
             </div>
@@ -269,8 +269,8 @@ export default function ProductBuyPage() {
           {!product.isRecharge && (
             <div className="text-[12px] text-text-muted">
               {product.quantity > 0
-                ? `${t("buy.inStock" as any)}: ${product.quantity}`
-                : t("buy.outOfStock" as any)}
+                ? `${t("buy.inStock")}: ${product.quantity}`
+                : t("buy.outOfStock")}
             </div>
           )}
 
@@ -286,7 +286,7 @@ export default function ProductBuyPage() {
               ) : (
                 <Zap size={16} />
               )}
-              {t("buy.buyNow" as any)}
+              {t("buy.buyNow")}
             </button>
             {!product.isRecharge && (
               <button
@@ -299,7 +299,7 @@ export default function ProductBuyPage() {
                 ) : (
                   <ShoppingCart size={16} />
                 )}
-                {t("buy.addToCart" as any)}
+                {t("buy.addToCart")}
               </button>
             )}
           </div>

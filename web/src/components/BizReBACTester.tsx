@@ -524,10 +524,10 @@ export default function BizReBACTester({ appId, initialRequest }: Props) {
       {/* Title block */}
       <div>
         <h2 className="text-[20px] font-bold text-text-primary mb-1">
-          {t("rebac.tester.title" as any)}
+          {t("rebac.tester.title")}
         </h2>
         <p className="text-[13px] text-text-muted">
-          {t("rebac.tester.subtitle" as any)}
+          {t("rebac.tester.subtitle")}
         </p>
       </div>
 
@@ -567,8 +567,8 @@ export default function BizReBACTester({ appId, initialRequest }: Props) {
             <LabeledInput
               label={
                 operation === "list-objects"
-                  ? t("rebac.tester.objectType" as any)
-                  : t("rebac.tester.object" as any)
+                  ? t("rebac.tester.objectType")
+                  : t("rebac.tester.object")
               }
               value={form.object}
               onChange={(v) => setForm((f) => ({ ...f, object: v }))}
@@ -584,7 +584,7 @@ export default function BizReBACTester({ appId, initialRequest }: Props) {
             />
             {operation === "list-users" && (
               <LabeledInput
-                label={t("rebac.tester.userFilter" as any)}
+                label={t("rebac.tester.userFilter")}
                 value={form.userFilter ?? ""}
                 onChange={(v) => setForm((f) => ({ ...f, userFilter: v }))}
                 placeholder="user (optional)"
@@ -620,13 +620,13 @@ export default function BizReBACTester({ appId, initialRequest }: Props) {
             disabled={!formValid || running}
           >
             <Play className="w-3.5 h-3.5" />
-            {t("rebac.tester.run" as any)}
+            {t("rebac.tester.run")}
           </button>
 
           {/* Elapsed footer */}
           {elapsedMs !== null && (
             <p className="text-[11px] text-text-muted text-right">
-              {(t("rebac.tester.elapsed" as any) as string).replace("{ms}", elapsedMs.toFixed(1))}
+              {(t("rebac.tester.elapsed") as string).replace("{ms}", elapsedMs.toFixed(1))}
             </p>
           )}
         </div>
@@ -693,7 +693,7 @@ export default function BizReBACTester({ appId, initialRequest }: Props) {
         ) : (
           <div className="rounded-xl border border-border bg-surface-1 p-4">
             <p className="text-[12px] text-text-muted text-center py-8">
-              {t("rebac.tester.graphCheckOnly" as any)}
+              {t("rebac.tester.graphCheckOnly")}
             </p>
           </div>
         )}
@@ -768,10 +768,10 @@ function ListObjectsResultPanel({
   return (
     <div className="rounded-xl border border-border bg-surface-1 p-4">
       <h3 className="text-[13px] font-semibold mb-2">
-        {result.objects.length} {t("rebac.tester.matchingObjects" as any)}
+        {result.objects.length} {t("rebac.tester.matchingObjects")}
       </h3>
       {result.objects.length === 0 ? (
-        <p className="text-[12px] text-text-muted">{t("rebac.tester.noResults" as any)}</p>
+        <p className="text-[12px] text-text-muted">{t("rebac.tester.noResults")}</p>
       ) : (
         <ul className="flex flex-col gap-1.5">
           {result.objects.map((obj) => (
@@ -783,7 +783,7 @@ function ListObjectsResultPanel({
       )}
       {result.continuationToken && (
         <p className="text-[11px] text-text-muted mt-2">
-          {t("rebac.tester.moreResultsAvailable" as any)}
+          {t("rebac.tester.moreResultsAvailable")}
         </p>
       )}
     </div>
@@ -800,10 +800,10 @@ function ListUsersResultPanel({
   return (
     <div className="rounded-xl border border-border bg-surface-1 p-4">
       <h3 className="text-[13px] font-semibold mb-2">
-        {result.users.length} {t("rebac.tester.matchingUsers" as any)}
+        {result.users.length} {t("rebac.tester.matchingUsers")}
       </h3>
       {result.users.length === 0 ? (
-        <p className="text-[12px] text-text-muted">{t("rebac.tester.noResults" as any)}</p>
+        <p className="text-[12px] text-text-muted">{t("rebac.tester.noResults")}</p>
       ) : (
         <ul className="flex flex-col gap-1.5">
           {result.users.map((user) => (
@@ -815,7 +815,7 @@ function ListUsersResultPanel({
       )}
       {result.continuationToken && (
         <p className="text-[11px] text-text-muted mt-2">
-          {t("rebac.tester.moreResultsAvailable" as any)}
+          {t("rebac.tester.moreResultsAvailable")}
         </p>
       )}
     </div>

@@ -88,7 +88,7 @@ export default function SystemInfoPage() {
   const memPercent = sysInfo && sysInfo.memoryTotal > 0 ? (sysInfo.memoryUsed / sysInfo.memoryTotal) * 100 : 0;
   const diskPercent = sysInfo && sysInfo.diskTotal > 0 ? (sysInfo.diskUsed / sysInfo.diskTotal) * 100 : 0;
 
-  let versionText = versionInfo?.version || t("sysinfo.unknownVersion" as any);
+  let versionText = versionInfo?.version || t("sysinfo.unknownVersion");
   if (versionInfo && versionInfo.commitOffset > 0) {
     versionText += ` (ahead+${versionInfo.commitOffset})`;
   }
@@ -97,8 +97,8 @@ export default function SystemInfoPage() {
   return (
     <div className="space-y-6  mx-auto">
       <div>
-        <h1 className="text-xl font-bold tracking-tight">{t("sysinfo.title" as any)}</h1>
-        <p className="text-[13px] text-text-muted mt-0.5">{t("sysinfo.subtitle" as any)}</p>
+        <h1 className="text-xl font-bold tracking-tight">{t("sysinfo.title")}</h1>
+        <p className="text-[13px] text-text-muted mt-0.5">{t("sysinfo.subtitle")}</p>
       </div>
 
       {loading ? (
@@ -112,19 +112,19 @@ export default function SystemInfoPage() {
             <motion.div variants={fadeUp} initial="hidden" animate="show" className="rounded-xl border border-border bg-surface-1 p-5">
               <div className="flex items-center gap-2 mb-4">
                 <Cpu size={16} className="text-accent" />
-                <h2 className="text-sm font-semibold">{t("sysinfo.cpuUsage" as any)}</h2>
+                <h2 className="text-sm font-semibold">{t("sysinfo.cpuUsage")}</h2>
               </div>
               <div className="space-y-2.5">
                 {sysInfo?.cpuUsage?.length ? sysInfo.cpuUsage.map((usage, i) => (
                   <ProgressBar key={i} percent={Number(usage.toFixed(1))} label={`Core ${i}`} />
-                )) : <span className="text-[13px] text-text-muted">{t("sysinfo.noData" as any)}</span>}
+                )) : <span className="text-[13px] text-text-muted">{t("sysinfo.noData")}</span>}
               </div>
             </motion.div>
 
             <motion.div variants={fadeUp} initial="hidden" animate="show" className="rounded-xl border border-border bg-surface-1 p-5">
               <div className="flex items-center gap-2 mb-4">
                 <MemoryStick size={16} className="text-info" />
-                <h2 className="text-sm font-semibold">{t("sysinfo.memoryUsage" as any)}</h2>
+                <h2 className="text-sm font-semibold">{t("sysinfo.memoryUsage")}</h2>
               </div>
               <div className="flex flex-col items-center gap-3">
                 <CircleProgress percent={memPercent} />
@@ -140,7 +140,7 @@ export default function SystemInfoPage() {
             <motion.div variants={fadeUp} initial="hidden" animate="show" className="rounded-xl border border-border bg-surface-1 p-5">
               <div className="flex items-center gap-2 mb-4">
                 <HardDrive size={16} className="text-warning" />
-                <h2 className="text-sm font-semibold">{t("sysinfo.diskUsage" as any)}</h2>
+                <h2 className="text-sm font-semibold">{t("sysinfo.diskUsage")}</h2>
               </div>
               <div className="flex flex-col items-center gap-3">
                 <CircleProgress percent={diskPercent} />
@@ -153,19 +153,19 @@ export default function SystemInfoPage() {
             <motion.div variants={fadeUp} initial="hidden" animate="show" className="rounded-xl border border-border bg-surface-1 p-5">
               <div className="flex items-center gap-2 mb-4">
                 <Network size={16} className="text-success" />
-                <h2 className="text-sm font-semibold">{t("sysinfo.networkUsage" as any)}</h2>
+                <h2 className="text-sm font-semibold">{t("sysinfo.networkUsage")}</h2>
               </div>
               <div className="space-y-3 text-[13px]">
                 <div className="flex justify-between">
-                  <span className="text-text-muted">{t("sysinfo.sent" as any)}</span>
+                  <span className="text-text-muted">{t("sysinfo.sent")}</span>
                   <span className="font-mono text-text-secondary">{sysInfo ? formatBytes(sysInfo.networkSent) : "—"}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-text-muted">{t("sysinfo.received" as any)}</span>
+                  <span className="text-text-muted">{t("sysinfo.received")}</span>
                   <span className="font-mono text-text-secondary">{sysInfo ? formatBytes(sysInfo.networkRecv) : "—"}</span>
                 </div>
                 <div className="border-t border-border-subtle pt-3 flex justify-between">
-                  <span className="font-semibold text-text-primary">{t("sysinfo.totalThroughput" as any)}</span>
+                  <span className="font-semibold text-text-primary">{t("sysinfo.totalThroughput")}</span>
                   <span className="font-mono font-semibold text-text-primary">{sysInfo ? formatBytes(sysInfo.networkTotal) : "—"}</span>
                 </div>
               </div>
@@ -175,15 +175,15 @@ export default function SystemInfoPage() {
           {/* API Latency */}
           {promInfo?.apiLatency && promInfo.apiLatency.length > 0 && (
             <motion.div variants={fadeUp} initial="hidden" animate="show" className="rounded-xl border border-border bg-surface-1 p-5">
-              <h2 className="text-sm font-semibold mb-4">{t("sysinfo.apiLatency" as any)}</h2>
+              <h2 className="text-sm font-semibold mb-4">{t("sysinfo.apiLatency")}</h2>
               <div className="overflow-x-auto">
                 <table className="w-full text-[12px]">
                   <thead>
                     <tr className="border-b border-border text-left text-text-muted">
-                      <th className="py-2 pr-4">{t("sysinfo.endpoint" as any)}</th>
-                      <th className="py-2 pr-4">{t("records.field.method" as any)}</th>
-                      <th className="py-2 pr-4 text-right">{t("sysinfo.requestCount" as any)}</th>
-                      <th className="py-2 text-right">{t("sysinfo.avgLatency" as any)}</th>
+                      <th className="py-2 pr-4">{t("sysinfo.endpoint")}</th>
+                      <th className="py-2 pr-4">{t("records.field.method")}</th>
+                      <th className="py-2 pr-4 text-right">{t("sysinfo.requestCount")}</th>
+                      <th className="py-2 text-right">{t("sysinfo.avgLatency")}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -205,16 +205,16 @@ export default function SystemInfoPage() {
           {promInfo?.apiThroughput && promInfo.apiThroughput.length > 0 && (
             <motion.div variants={fadeUp} initial="hidden" animate="show" className="rounded-xl border border-border bg-surface-1 p-5">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-sm font-semibold">{t("sysinfo.apiThroughput" as any)}</h2>
-                <span className="text-[12px] font-mono text-text-muted">{t("sysinfo.totalThroughput" as any)}: {promInfo.totalThroughput?.toFixed(2)} req/s</span>
+                <h2 className="text-sm font-semibold">{t("sysinfo.apiThroughput")}</h2>
+                <span className="text-[12px] font-mono text-text-muted">{t("sysinfo.totalThroughput")}: {promInfo.totalThroughput?.toFixed(2)} req/s</span>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-[12px]">
                   <thead>
                     <tr className="border-b border-border text-left text-text-muted">
-                      <th className="py-2 pr-4">{t("sysinfo.endpoint" as any)}</th>
-                      <th className="py-2 pr-4">{t("records.field.method" as any)}</th>
-                      <th className="py-2 text-right">{t("sysinfo.throughput" as any)} (req/s)</th>
+                      <th className="py-2 pr-4">{t("sysinfo.endpoint")}</th>
+                      <th className="py-2 pr-4">{t("records.field.method")}</th>
+                      <th className="py-2 text-right">{t("sysinfo.throughput")} (req/s)</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -255,21 +255,21 @@ export default function SystemInfoPage() {
                         target="_blank"
                         rel="noreferrer"
                         className="inline-flex items-center text-[11px] font-mono px-2 py-0.5 rounded-md bg-accent/10 text-accent border border-accent/20 hover:bg-accent/20 transition-colors"
-                        title={t("sysinfo.version" as any)}
+                        title={t("sysinfo.version")}
                       >
                         {versionText}
                       </a>
                     ) : (
                       <span
                         className="inline-flex items-center text-[11px] font-mono px-2 py-0.5 rounded-md bg-surface-3 text-text-muted border border-border"
-                        title={t("sysinfo.version" as any)}
+                        title={t("sysinfo.version")}
                       >
                         {versionText}
                       </span>
                     )}
                   </div>
                   <p className="text-[13px] leading-relaxed text-text-secondary max-w-lg">
-                    {t("sysinfo.description" as any)}
+                    {t("sysinfo.description")}
                   </p>
                 </div>
               </div>

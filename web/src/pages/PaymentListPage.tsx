@@ -30,7 +30,7 @@ export default function PaymentListPage() {
     if (res.status === "ok") {
       navigate(`/payments/${payment.owner}/${payment.name}`, { state: { mode: "add" } });
     } else {
-      modal.toast(res.msg || t("common.addFailed" as any), "error");
+      modal.toast(res.msg || t("common.addFailed"), "error");
     }
   };
 
@@ -41,40 +41,40 @@ export default function PaymentListPage() {
       async () => {
         const res = await PaymentBackend.deletePayment(record);
         if (res.status === "ok") list.refetch();
-        else modal.toast(res.msg || t("common.deleteFailed" as any), "error");
+        else modal.toast(res.msg || t("common.deleteFailed"), "error");
       }
     );
   };
 
   const columns: Column<Payment>[] = [
     {
-      key: "name", title: t("col.name" as any), sortable: true, filterable: true, fixed: "left" as const, width: "180px",
+      key: "name", title: t("col.name"), sortable: true, filterable: true, fixed: "left" as const, width: "180px",
       render: (_, r) => <Link to={`/payments/${r.owner}/${encodeURIComponent(r.name)}`} className="font-mono font-medium text-accent hover:underline" onClick={(e) => e.stopPropagation()}>{r.name}</Link>,
     },
     {
-      key: "owner", title: t("col.organization" as any), sortable: true, filterable: true, width: "120px",
-      render: (_, r) => <span className="text-[12px] text-text-secondary">{r.owner === "admin" ? t("common.adminShared" as any) : r.owner}</span>,
+      key: "owner", title: t("col.organization"), sortable: true, filterable: true, width: "120px",
+      render: (_, r) => <span className="text-[12px] text-text-secondary">{r.owner === "admin" ? t("common.adminShared") : r.owner}</span>,
     },
     {
-      key: "provider", title: t("payments.field.provider" as any), sortable: true, filterable: true, width: "150px",
+      key: "provider", title: t("payments.field.provider"), sortable: true, filterable: true, width: "150px",
       render: (_, r) => r.provider ? <Link to={`/providers/${r.owner}/${r.provider}`} className="text-accent hover:underline text-[12px]" onClick={(e) => e.stopPropagation()}>{r.provider}</Link> : <span className="text-text-muted">{"\u2014"}</span>,
     },
     {
-      key: "user", title: t("payments.field.user" as any), sortable: true, filterable: true, width: "120px",
+      key: "user", title: t("payments.field.user"), sortable: true, filterable: true, width: "120px",
       render: (_, r) => r.user ? <Link to={`/users/${r.owner}/${r.user}`} className="text-accent hover:underline text-[12px]" onClick={(e) => e.stopPropagation()}>{r.user}</Link> : <span className="text-text-muted">{"\u2014"}</span>,
     },
     {
-      key: "createdTime", title: t("col.created" as any), sortable: true, width: "160px",
+      key: "createdTime", title: t("col.created"), sortable: true, width: "160px",
       render: (_, r) => <span className="text-[12px] text-text-muted font-mono">{r.createdTime ? new Date(r.createdTime).toLocaleString() : "\u2014"}</span>,
     },
-    { key: "type", title: t("payments.field.type" as any), sortable: true, filterable: true, width: "120px" },
+    { key: "type", title: t("payments.field.type"), sortable: true, filterable: true, width: "120px" },
     {
-      key: "price", title: t("payments.field.price" as any), sortable: true, filterable: true, width: "120px",
+      key: "price", title: t("payments.field.price"), sortable: true, filterable: true, width: "120px",
       render: (_, r) => <span className="text-[12px] font-mono">{r.currency} {r.price}</span>,
     },
-    { key: "state", title: t("col.state" as any), sortable: true, filterable: true, width: "120px" },
+    { key: "state", title: t("col.state"), sortable: true, filterable: true, width: "120px" },
     {
-      key: "__actions", fixed: "right" as const, title: t("common.action" as any), width: "110px",
+      key: "__actions", fixed: "right" as const, title: t("common.action"), width: "110px",
       render: (_, r) => (
         <div className="flex items-center gap-1">
           <Link to={`/payments/${r.owner}/${encodeURIComponent(r.name)}`} className="rounded p-1.5 text-text-muted hover:text-warning hover:bg-warning/10 transition-colors" title={t("common.edit")} onClick={(e) => e.stopPropagation()}><Pencil size={14} /></Link>
@@ -88,13 +88,13 @@ export default function PaymentListPage() {
     <div className="space-y-5">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold tracking-tight">{t("payments.title" as any)}</h1>
-          <p className="text-[13px] text-text-muted mt-0.5">{t("payments.subtitle" as any)}</p>
+          <h1 className="text-xl font-bold tracking-tight">{t("payments.title")}</h1>
+          <p className="text-[13px] text-text-muted mt-0.5">{t("payments.subtitle")}</p>
         </div>
         <div className="flex items-center gap-2">
           <motion.button whileHover={{ rotate: 180 }} transition={{ duration: 0.3 }} onClick={list.refetch} className="rounded-lg border border-border p-2 text-text-muted hover:bg-surface-2 transition-colors" title={t("common.refresh")}><RefreshCw size={15} /></motion.button>
           <ColumnsMenu columns={columns} hidden={prefs.hidden} onToggle={prefs.toggleHidden} onResetWidths={prefs.resetWidths} />
-          <button onClick={handleAdd} className="flex items-center gap-1.5 rounded-lg bg-accent px-3 py-2 text-[13px] font-semibold text-white hover:bg-accent-hover transition-colors"><Plus size={15} /> {t("payments.add" as any)}</button>
+          <button onClick={handleAdd} className="flex items-center gap-1.5 rounded-lg bg-accent px-3 py-2 text-[13px] font-semibold text-white hover:bg-accent-hover transition-colors"><Plus size={15} /> {t("payments.add")}</button>
         </div>
       </div>
       <DataTable

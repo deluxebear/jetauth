@@ -47,7 +47,7 @@ export default function OrganizationListPage() {
       refreshOrgOptions();
       navigate(`/organizations/${org.owner}/${org.name}`, { state: { mode: "add" } });
     } else {
-      modal.toast(res.msg || t("common.addFailed" as any), "error");
+      modal.toast(res.msg || t("common.addFailed"), "error");
     }
   };
 
@@ -62,7 +62,7 @@ export default function OrganizationListPage() {
       async () => {
         const res = await OrgBackend.deleteOrganization(record);
         if (res.status === "ok") { list.refetch(); refreshOrgOptions(); }
-        else modal.toast(res.msg || t("common.deleteFailed" as any), "error");
+        else modal.toast(res.msg || t("common.deleteFailed"), "error");
       }
     );
   };
@@ -70,7 +70,7 @@ export default function OrganizationListPage() {
   const columns: Column<Organization>[] = [
     {
       key: "name",
-      title: t("col.name" as any),
+      title: t("col.name"),
       fixed: "left" as const,
       sortable: true,
       filterable: true,
@@ -87,7 +87,7 @@ export default function OrganizationListPage() {
     },
     {
       key: "createdTime",
-      title: t("col.created" as any),
+      title: t("col.created"),
       sortable: true,
       width: "160px",
       render: (_, r) => (
@@ -98,13 +98,13 @@ export default function OrganizationListPage() {
     },
     {
       key: "displayName",
-      title: t("col.displayName" as any),
+      title: t("col.displayName"),
       sortable: true,
       filterable: true,
     },
     {
       key: "favicon",
-      title: t("col.favicon" as any),
+      title: t("col.favicon"),
       width: "60px",
       render: (_, r) =>
         r.favicon ? (
@@ -115,7 +115,7 @@ export default function OrganizationListPage() {
     },
     {
       key: "websiteUrl",
-      title: t("col.website" as any),
+      title: t("col.website"),
       render: (_, r) =>
         r.websiteUrl ? (
           <a
@@ -133,7 +133,7 @@ export default function OrganizationListPage() {
     },
     {
       key: "passwordType",
-      title: t("col.passwordType" as any),
+      title: t("col.passwordType"),
       width: "120px",
       sortable: true,
       filterable: true,
@@ -145,7 +145,7 @@ export default function OrganizationListPage() {
     },
     {
       key: "passwordSalt",
-      title: t("col.passwordSalt" as any),
+      title: t("col.passwordSalt"),
       width: "160px",
       sortable: true,
       filterable: true,
@@ -157,7 +157,7 @@ export default function OrganizationListPage() {
     },
     {
       key: "defaultAvatar",
-      title: t("col.defaultAvatar" as any),
+      title: t("col.defaultAvatar"),
       width: "80px",
       render: (_, r) =>
         r.defaultAvatar ? (
@@ -172,7 +172,7 @@ export default function OrganizationListPage() {
     },
     {
       key: "orgBalance",
-      title: t("col.orgBalance" as any),
+      title: t("col.orgBalance"),
       width: "100px",
       sortable: true,
       render: (_, r) => (
@@ -183,7 +183,7 @@ export default function OrganizationListPage() {
     },
     {
       key: "userBalance",
-      title: t("col.userBalance" as any),
+      title: t("col.userBalance"),
       width: "100px",
       sortable: true,
       render: (_, r) => (
@@ -194,7 +194,7 @@ export default function OrganizationListPage() {
     },
     {
       key: "balanceCredit",
-      title: t("col.balanceCredit" as any),
+      title: t("col.balanceCredit"),
       width: "100px",
       sortable: true,
       render: (_, r) => (
@@ -205,7 +205,7 @@ export default function OrganizationListPage() {
     },
     {
       key: "balanceCurrency",
-      title: t("col.balanceCurrency" as any),
+      title: t("col.balanceCurrency"),
       width: "120px",
       sortable: true,
       render: (_, r) => (
@@ -216,7 +216,7 @@ export default function OrganizationListPage() {
     },
     {
       key: "enableSoftDeletion",
-      title: t("col.softDeletion" as any),
+      title: t("col.softDeletion"),
       sortable: true,
       width: "120px",
       render: (_, r) => (
@@ -229,7 +229,7 @@ export default function OrganizationListPage() {
     {
       key: "__actions",
       fixed: "right" as const,
-      title: t("common.action" as any),
+      title: t("common.action"),
       width: "140px",
       render: (_, r) => (
         <div className="flex items-center gap-1">
@@ -276,8 +276,8 @@ export default function OrganizationListPage() {
     <div className="space-y-5">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold tracking-tight">{t("orgs.title" as any)}</h1>
-          <p className="text-[13px] text-text-muted mt-0.5">{t("orgs.subtitle" as any)}</p>
+          <h1 className="text-xl font-bold tracking-tight">{t("orgs.title")}</h1>
+          <p className="text-[13px] text-text-muted mt-0.5">{t("orgs.subtitle")}</p>
         </div>
         <div className="flex items-center gap-2">
           <motion.button
@@ -296,7 +296,7 @@ export default function OrganizationListPage() {
               className="flex items-center gap-1.5 rounded-lg bg-accent px-3 py-2 text-[13px] font-semibold text-white hover:bg-accent-hover transition-colors"
             >
               <Plus size={15} />
-              {t("orgs.add" as any)}
+              {t("orgs.add")}
             </button>
           )}
         </div>

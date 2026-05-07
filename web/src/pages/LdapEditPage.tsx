@@ -47,7 +47,7 @@ export default function LdapEditPage() {
         setLdap(ldapRes.data);
         setOriginalJson(JSON.stringify(ldapRes.data));
       } else {
-        modal.showError(ldapRes.msg || t("ldap.error.loadFailed" as any));
+        modal.showError(ldapRes.msg || t("ldap.error.loadFailed"));
         navigate(-1);
       }
       if (groupRes.status === "ok" && groupRes.data) {
@@ -89,14 +89,14 @@ export default function LdapEditPage() {
     try {
       const res = await LdapBackend.updateLdap(ldap);
       if (res.status === "ok") {
-        modal.toast(t("common.saveSuccess" as any));
+        modal.toast(t("common.saveSuccess"));
         setSaved(true);
         setOriginalJson(JSON.stringify(ldap));
       } else {
-        modal.toast(friendlyError(res.msg, t) || t("common.saveFailed" as any), "error");
+        modal.toast(friendlyError(res.msg, t) || t("common.saveFailed"), "error");
       }
     } catch (e: any) {
-      modal.toast(e.message || t("common.saveFailed" as any), "error");
+      modal.toast(e.message || t("common.saveFailed"), "error");
     } finally {
       setSaving(false);
     }
@@ -107,13 +107,13 @@ export default function LdapEditPage() {
     try {
       const res = await LdapBackend.updateLdap(ldap);
       if (res.status === "ok") {
-        modal.toast(t("common.saveSuccess" as any));
+        modal.toast(t("common.saveSuccess"));
         navigate(`/organizations/admin/${owner}`);
       } else {
-        modal.toast(friendlyError(res.msg, t) || t("common.saveFailed" as any), "error");
+        modal.toast(friendlyError(res.msg, t) || t("common.saveFailed"), "error");
       }
     } catch (e: any) {
-      modal.toast(e.message || t("common.saveFailed" as any), "error");
+      modal.toast(e.message || t("common.saveFailed"), "error");
     } finally {
       setSaving(false);
     }
@@ -139,12 +139,12 @@ export default function LdapEditPage() {
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-5 ">
       <StickyEditHeader
-        title={`${t("common.edit")} ${t("ldap.title" as any)}`}
+        title={`${t("common.edit")} ${t("ldap.title")}`}
         subtitle={`${owner}/${id}`}
         onBack={handleBack}
       >
           <button onClick={() => navigate(`/ldap/sync/${owner}/${id}`)} className="flex items-center gap-1.5 rounded-lg border border-accent px-3 py-2 text-[13px] font-medium text-accent hover:bg-accent/10 transition-colors">
-            <RefreshCw size={14} /> {t("ldap.syncLdap" as any)}
+            <RefreshCw size={14} /> {t("ldap.syncLdap")}
           </button>
                     <SaveButton onClick={handleSave} saving={saving} saved={saved} label={t("common.save")} />
           <button onClick={handleSaveAndExit} disabled={saving} className="flex items-center gap-1.5 rounded-lg bg-accent px-4 py-2 text-[13px] font-semibold text-white hover:bg-accent-hover disabled:opacity-50 transition-colors">
@@ -157,38 +157,38 @@ export default function LdapEditPage() {
 
       {/* Form */}
       <div className="space-y-5">
-        <FormSection title={t("ldap.section.connection" as any)}>
-          <FormField label={t("ldap.field.organization" as any)}>
+        <FormSection title={t("ldap.section.connection")}>
+          <FormField label={t("ldap.field.organization")}>
             <input value={ldap.owner} disabled className={`${inputClass} opacity-60`} />
           </FormField>
-          <FormField label={t("ldap.field.id" as any)}>
+          <FormField label={t("ldap.field.id")}>
             <input value={ldap.id} disabled className={`${monoInputClass} opacity-60`} />
           </FormField>
-          <FormField label={t("ldap.field.serverName" as any)} help={t("ldap.help.serverName" as any)}>
+          <FormField label={t("ldap.field.serverName")} help={t("ldap.help.serverName")}>
             <input value={ldap.serverName} onChange={(e) => set("serverName", e.target.value)} className={inputClass} />
           </FormField>
-          <FormField label={t("ldap.field.host" as any)} help={t("ldap.help.host" as any)}>
+          <FormField label={t("ldap.field.host")} help={t("ldap.help.host")}>
             <input value={ldap.host} onChange={(e) => set("host", e.target.value)} className={inputClass} />
           </FormField>
-          <FormField label={t("ldap.field.port" as any)} help={t("ldap.help.port" as any)}>
+          <FormField label={t("ldap.field.port")} help={t("ldap.help.port")}>
             <input type="number" value={ldap.port} onChange={(e) => set("port", Math.max(0, Math.min(65535, Number(e.target.value))))} min={0} max={65535} className={monoInputClass} />
           </FormField>
-          <FormField label={t("ldap.field.enableSsl" as any)} help={t("ldap.help.enableSsl" as any)}>
+          <FormField label={t("ldap.field.enableSsl")} help={t("ldap.help.enableSsl")}>
             <Switch checked={ldap.enableSsl} onChange={(v) => set("enableSsl", v)} />
           </FormField>
-          <FormField label={t("ldap.field.allowSelfSignedCert" as any)} help={t("ldap.help.allowSelfSignedCert" as any)}>
+          <FormField label={t("ldap.field.allowSelfSignedCert")} help={t("ldap.help.allowSelfSignedCert")}>
             <Switch checked={ldap.allowSelfSignedCert} onChange={(v) => set("allowSelfSignedCert", v)} />
           </FormField>
         </FormSection>
 
-        <FormSection title={t("ldap.section.search" as any)}>
-          <FormField label={t("ldap.field.baseDn" as any)} help={t("ldap.help.baseDn" as any)} span="full">
+        <FormSection title={t("ldap.section.search")}>
+          <FormField label={t("ldap.field.baseDn")} help={t("ldap.help.baseDn")} span="full">
             <input value={ldap.baseDn} onChange={(e) => set("baseDn", e.target.value)} className={monoInputClass} />
           </FormField>
-          <FormField label={t("ldap.field.filter" as any)} help={t("ldap.help.filter" as any)} span="full">
+          <FormField label={t("ldap.field.filter")} help={t("ldap.help.filter")} span="full">
             <input value={ldap.filter ?? ""} onChange={(e) => set("filter", e.target.value)} className={monoInputClass} placeholder="(&(objectClass=*))" />
           </FormField>
-          <FormField label={t("ldap.field.filterFields" as any)} help={t("ldap.help.filterFields" as any)} span="full">
+          <FormField label={t("ldap.field.filterFields")} help={t("ldap.help.filterFields")} span="full">
             <div className="flex flex-wrap gap-2">
               {FILTER_FIELDS.map((f) => {
                 const sel = (ldap.filterFields ?? []).includes(f);
@@ -203,30 +203,30 @@ export default function LdapEditPage() {
           </FormField>
         </FormSection>
 
-        <FormSection title={t("ldap.section.auth" as any)}>
-          <FormField label={t("ldap.field.adminUser" as any)} help={t("ldap.help.adminUser" as any)} span="full">
+        <FormSection title={t("ldap.section.auth")}>
+          <FormField label={t("ldap.field.adminUser")} help={t("ldap.help.adminUser")} span="full">
             <input value={ldap.username} onChange={(e) => set("username", e.target.value)} className={monoInputClass} />
           </FormField>
-          <FormField label={t("ldap.field.adminPassword" as any)} help={t("ldap.help.adminPassword" as any)}>
+          <FormField label={t("ldap.field.adminPassword")} help={t("ldap.help.adminPassword")}>
             <input type="password" value={ldap.password} onChange={(e) => set("password", e.target.value)} className={inputClass} />
           </FormField>
-          <FormField label={t("ldap.field.passwordType" as any)} help={t("ldap.help.passwordType" as any)}>
+          <FormField label={t("ldap.field.passwordType")} help={t("ldap.help.passwordType")}>
             <SimpleSelect value={ldap.passwordType ?? "Plain"} options={PASSWORD_TYPES.map((p) => ({ value: p, label: p }))} onChange={(v) => set("passwordType", v)} />
           </FormField>
         </FormSection>
 
-        <FormSection title={t("ldap.section.sync" as any)}>
-          <FormField label={t("ldap.field.defaultGroup" as any)} help={t("ldap.help.defaultGroup" as any)}>
+        <FormSection title={t("ldap.section.sync")}>
+          <FormField label={t("ldap.field.defaultGroup")} help={t("ldap.help.defaultGroup")}>
             <SimpleSelect value={ldap.defaultGroup ?? ""} options={[{ value: "", label: "—" }, ...groups.map((g: any) => ({ value: `${g.owner}/${g.name}`, label: g.displayName || g.name }))]} onChange={(v) => set("defaultGroup", v)} />
           </FormField>
-          <FormField label={t("ldap.field.autoSync" as any)} help={t("ldap.field.autoSync.help" as any)}>
+          <FormField label={t("ldap.field.autoSync")} help={t("ldap.field.autoSync.help")}>
             <input type="number" value={ldap.autoSync ?? 0} onChange={(e) => set("autoSync", Math.max(0, Number(e.target.value)))} min={0} className={monoInputClass} />
           </FormField>
         </FormSection>
 
         <div className="rounded-xl border border-border bg-surface-1 overflow-hidden">
           <div className="px-5 py-3 border-b border-border-subtle bg-surface-2/30 flex items-center justify-between">
-            <h3 className="text-[13px] font-semibold text-text-primary">{t("ldap.section.customAttrs" as any)}</h3>
+            <h3 className="text-[13px] font-semibold text-text-primary">{t("ldap.section.customAttrs")}</h3>
             <button onClick={addCustomAttr}
               className="flex items-center gap-1 rounded-lg bg-accent px-2.5 py-1 text-[12px] font-medium text-white hover:bg-accent-hover transition-colors">
               <Plus size={12} /> {t("common.add")}
@@ -239,9 +239,9 @@ export default function LdapEditPage() {
               <table className="w-full text-left">
                 <thead>
                   <tr className="border-b border-border bg-surface-2/30">
-                    <th className="px-4 py-2 text-[11px] font-semibold uppercase tracking-wider text-text-muted">{t("ldap.attr.ldapAttr" as any)}</th>
-                    <th className="px-4 py-2 text-[11px] font-semibold uppercase tracking-wider text-text-muted">{t("ldap.attr.userProp" as any)}</th>
-                    <th className="px-4 py-2 text-[11px] font-semibold uppercase tracking-wider text-text-muted w-16">{t("common.action" as any)}</th>
+                    <th className="px-4 py-2 text-[11px] font-semibold uppercase tracking-wider text-text-muted">{t("ldap.attr.ldapAttr")}</th>
+                    <th className="px-4 py-2 text-[11px] font-semibold uppercase tracking-wider text-text-muted">{t("ldap.attr.userProp")}</th>
+                    <th className="px-4 py-2 text-[11px] font-semibold uppercase tracking-wider text-text-muted w-16">{t("common.action")}</th>
                   </tr>
                 </thead>
                 <tbody>

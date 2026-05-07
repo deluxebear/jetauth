@@ -34,7 +34,7 @@ export default function RoleListPage() {
     if (res.status === "ok") {
       navigate(`/roles/${role.owner}/${role.name}`, { state: { mode: "add" } });
     } else {
-      modal.toast(res.msg || t("common.addFailed" as any), "error");
+      modal.toast(res.msg || t("common.addFailed"), "error");
     }
   };
 
@@ -45,47 +45,47 @@ export default function RoleListPage() {
       async () => {
         const res = await RoleBackend.deleteRole(record);
         if (res.status === "ok") list.refetch();
-        else modal.toast(res.msg || t("common.deleteFailed" as any), "error");
+        else modal.toast(res.msg || t("common.deleteFailed"), "error");
       }
     );
   };
 
   const columns: Column<Role>[] = [
     {
-      key: "name", title: t("col.name" as any), sortable: true, filterable: true, fixed: "left" as const, width: "150px",
+      key: "name", title: t("col.name"), sortable: true, filterable: true, fixed: "left" as const, width: "150px",
       render: (_, r) => <Link to={`/roles/${r.owner}/${encodeURIComponent(r.name)}`} className="font-mono font-medium text-accent hover:underline" onClick={(e) => e.stopPropagation()}>{r.name}</Link>,
     },
     {
-      key: "owner", title: t("col.organization" as any), sortable: true, filterable: true, width: "120px",
-      render: (_, r) => <span className="text-[12px] text-text-secondary">{r.owner === "admin" ? t("common.adminShared" as any) : r.owner}</span>,
+      key: "owner", title: t("col.organization"), sortable: true, filterable: true, width: "120px",
+      render: (_, r) => <span className="text-[12px] text-text-secondary">{r.owner === "admin" ? t("common.adminShared") : r.owner}</span>,
     },
     {
-      key: "createdTime", title: t("col.created" as any), sortable: true, width: "160px",
+      key: "createdTime", title: t("col.created"), sortable: true, width: "160px",
       render: (_, r) => <span className="text-[12px] text-text-muted font-mono">{r.createdTime ? new Date(r.createdTime).toLocaleString() : "\u2014"}</span>,
     },
-    { key: "displayName", title: t("col.displayName" as any), sortable: true, filterable: true, width: "200px" },
+    { key: "displayName", title: t("col.displayName"), sortable: true, filterable: true, width: "200px" },
     {
-      key: "users", title: t("roles.field.users" as any), sortable: true, filterable: true,
+      key: "users", title: t("roles.field.users"), sortable: true, filterable: true,
       render: (_, r) => <span className="text-[12px] text-text-muted">{r.users?.length ?? 0}</span>,
     },
     {
-      key: "groups", title: t("roles.field.groups" as any), sortable: true, filterable: true,
+      key: "groups", title: t("roles.field.groups"), sortable: true, filterable: true,
       render: (_, r) => <span className="text-[12px] text-text-muted">{r.groups?.length ?? 0}</span>,
     },
     {
-      key: "roles", title: t("roles.field.roles" as any), sortable: true, filterable: true,
+      key: "roles", title: t("roles.field.roles"), sortable: true, filterable: true,
       render: (_, r) => <span className="text-[12px] text-text-muted">{r.roles?.length ?? 0}</span>,
     },
     {
-      key: "domains", title: t("roles.field.domains" as any), sortable: true, filterable: true,
+      key: "domains", title: t("roles.field.domains"), sortable: true, filterable: true,
       render: (_, r) => <span className="text-[12px] text-text-muted">{r.domains?.length ?? 0}</span>,
     },
     {
-      key: "isEnabled", title: t("col.isEnabled" as any), sortable: true, width: "120px",
-      render: (_, r) => <StatusBadge status={r.isEnabled ? "active" : "inactive"} label={r.isEnabled ? t("common.enabled" as any) : t("common.disabled" as any)} />,
+      key: "isEnabled", title: t("col.isEnabled"), sortable: true, width: "120px",
+      render: (_, r) => <StatusBadge status={r.isEnabled ? "active" : "inactive"} label={r.isEnabled ? t("common.enabled") : t("common.disabled")} />,
     },
     {
-      key: "__actions", fixed: "right" as const, title: t("common.action" as any), width: "110px",
+      key: "__actions", fixed: "right" as const, title: t("common.action"), width: "110px",
       render: (_, r) => {
         const canOp = isAdmin || r.owner === account?.owner;
         return (
@@ -102,13 +102,13 @@ export default function RoleListPage() {
     <div className="space-y-5">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold tracking-tight">{t("roles.title" as any)}</h1>
-          <p className="text-[13px] text-text-muted mt-0.5">{t("roles.subtitle" as any)}</p>
+          <h1 className="text-xl font-bold tracking-tight">{t("roles.title")}</h1>
+          <p className="text-[13px] text-text-muted mt-0.5">{t("roles.subtitle")}</p>
         </div>
         <div className="flex items-center gap-2">
           <motion.button whileHover={{ rotate: 180 }} transition={{ duration: 0.3 }} onClick={list.refetch} className="rounded-lg border border-border p-2 text-text-muted hover:bg-surface-2 transition-colors" title={t("common.refresh")}><RefreshCw size={15} /></motion.button>
           <ColumnsMenu columns={columns} hidden={prefs.hidden} onToggle={prefs.toggleHidden} onResetWidths={prefs.resetWidths} />
-          <button onClick={handleAdd} className="flex items-center gap-1.5 rounded-lg bg-accent px-3 py-2 text-[13px] font-semibold text-white hover:bg-accent-hover transition-colors"><Plus size={15} /> {t("roles.add" as any)}</button>
+          <button onClick={handleAdd} className="flex items-center gap-1.5 rounded-lg bg-accent px-3 py-2 text-[13px] font-semibold text-white hover:bg-accent-hover transition-colors"><Plus size={15} /> {t("roles.add")}</button>
         </div>
       </div>
       <DataTable

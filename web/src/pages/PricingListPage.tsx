@@ -30,7 +30,7 @@ export default function PricingListPage() {
     if (res.status === "ok") {
       navigate(`/pricings/${pricing.owner}/${pricing.name}`, { state: { mode: "add" } });
     } else {
-      modal.toast(res.msg || t("common.addFailed" as any), "error");
+      modal.toast(res.msg || t("common.addFailed"), "error");
     }
   };
 
@@ -41,33 +41,33 @@ export default function PricingListPage() {
       async () => {
         const res = await PricingBackend.deletePricing(record);
         if (res.status === "ok") list.refetch();
-        else modal.toast(res.msg || t("common.deleteFailed" as any), "error");
+        else modal.toast(res.msg || t("common.deleteFailed"), "error");
       }
     );
   };
 
   const columns: Column<Pricing>[] = [
     {
-      key: "name", title: t("col.name" as any), sortable: true, filterable: true, fixed: "left" as const, width: "150px",
+      key: "name", title: t("col.name"), sortable: true, filterable: true, fixed: "left" as const, width: "150px",
       render: (_, r) => <Link to={`/pricings/${r.owner}/${encodeURIComponent(r.name)}`} className="font-mono font-medium text-accent hover:underline" onClick={(e) => e.stopPropagation()}>{r.name}</Link>,
     },
     {
-      key: "owner", title: t("col.organization" as any), sortable: true, filterable: true, width: "120px",
-      render: (_, r) => <span className="text-[12px] text-text-secondary">{r.owner === "admin" ? t("common.adminShared" as any) : r.owner}</span>,
+      key: "owner", title: t("col.organization"), sortable: true, filterable: true, width: "120px",
+      render: (_, r) => <span className="text-[12px] text-text-secondary">{r.owner === "admin" ? t("common.adminShared") : r.owner}</span>,
     },
     {
-      key: "createdTime", title: t("col.created" as any), sortable: true, width: "160px",
+      key: "createdTime", title: t("col.created"), sortable: true, width: "160px",
       render: (_, r) => <span className="text-[12px] text-text-muted font-mono">{r.createdTime ? new Date(r.createdTime).toLocaleString() : "\u2014"}</span>,
     },
-    { key: "displayName", title: t("col.displayName" as any), sortable: true, filterable: true, width: "200px" },
+    { key: "displayName", title: t("col.displayName"), sortable: true, filterable: true, width: "200px" },
     {
-      key: "application", title: t("pricings.field.application" as any), sortable: true, filterable: true, width: "170px",
+      key: "application", title: t("pricings.field.application"), sortable: true, filterable: true, width: "170px",
       render: (_, r) => r.application ? <Link to={`/applications/${r.organization}/${r.application}`} className="text-accent hover:underline text-[12px]" onClick={(e) => e.stopPropagation()}>{r.application}</Link> : <span className="text-text-muted">{"\u2014"}</span>,
     },
     {
-      key: "plans", title: t("pricings.field.plans" as any), sortable: true, filterable: true, width: "200px",
+      key: "plans", title: t("pricings.field.plans"), sortable: true, filterable: true, width: "200px",
       render: (_, r) => {
-        if (!r.plans || r.plans.length === 0) return <span className="text-text-muted">({t("common.empty" as any)})</span>;
+        if (!r.plans || r.plans.length === 0) return <span className="text-text-muted">({t("common.empty")})</span>;
         return (
           <div className="flex flex-wrap gap-1">
             {r.plans.map((plan) => (
@@ -78,19 +78,19 @@ export default function PricingListPage() {
       },
     },
     {
-      key: "trialDuration", title: t("pricings.field.trialDuration" as any), sortable: true, width: "120px",
-      render: (_, r) => <span className="text-[12px] text-text-muted">{r.trialDuration} {t("pricings.field.days" as any)}</span>,
+      key: "trialDuration", title: t("pricings.field.trialDuration"), sortable: true, width: "120px",
+      render: (_, r) => <span className="text-[12px] text-text-muted">{r.trialDuration} {t("pricings.field.days")}</span>,
     },
     {
-      key: "isEnabled", title: t("col.isEnabled" as any), sortable: true, width: "120px",
+      key: "isEnabled", title: t("col.isEnabled"), sortable: true, width: "120px",
       render: (_, r) => (
         <span className={`inline-block rounded-full px-2 py-0.5 text-[11px] font-medium ${r.isEnabled ? "bg-success/15 text-success" : "bg-surface-3 text-text-muted"}`}>
-          {r.isEnabled ? t("common.on" as any) : t("common.off" as any)}
+          {r.isEnabled ? t("common.on") : t("common.off")}
         </span>
       ),
     },
     {
-      key: "__actions", fixed: "right" as const, title: t("common.action" as any), width: "110px",
+      key: "__actions", fixed: "right" as const, title: t("common.action"), width: "110px",
       render: (_, r) => (
         <div className="flex items-center gap-1">
           <Link to={`/pricings/${r.owner}/${encodeURIComponent(r.name)}`} className="rounded p-1.5 text-text-muted hover:text-warning hover:bg-warning/10 transition-colors" title={t("common.edit")} onClick={(e) => e.stopPropagation()}><Pencil size={14} /></Link>
@@ -104,13 +104,13 @@ export default function PricingListPage() {
     <div className="space-y-5">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold tracking-tight">{t("pricings.title" as any)}</h1>
-          <p className="text-[13px] text-text-muted mt-0.5">{t("pricings.subtitle" as any)}</p>
+          <h1 className="text-xl font-bold tracking-tight">{t("pricings.title")}</h1>
+          <p className="text-[13px] text-text-muted mt-0.5">{t("pricings.subtitle")}</p>
         </div>
         <div className="flex items-center gap-2">
           <motion.button whileHover={{ rotate: 180 }} transition={{ duration: 0.3 }} onClick={list.refetch} className="rounded-lg border border-border p-2 text-text-muted hover:bg-surface-2 transition-colors" title={t("common.refresh")}><RefreshCw size={15} /></motion.button>
           <ColumnsMenu columns={columns} hidden={prefs.hidden} onToggle={prefs.toggleHidden} onResetWidths={prefs.resetWidths} />
-          <button onClick={handleAdd} className="flex items-center gap-1.5 rounded-lg bg-accent px-3 py-2 text-[13px] font-semibold text-white hover:bg-accent-hover transition-colors"><Plus size={15} /> {t("pricings.add" as any)}</button>
+          <button onClick={handleAdd} className="flex items-center gap-1.5 rounded-lg bg-accent px-3 py-2 text-[13px] font-semibold text-white hover:bg-accent-hover transition-colors"><Plus size={15} /> {t("pricings.add")}</button>
         </div>
       </div>
       <DataTable

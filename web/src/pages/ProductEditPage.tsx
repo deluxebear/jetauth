@@ -61,7 +61,7 @@ export default function ProductEditPage() {
     try {
       const res = await ProductBackend.updateProduct(owner!, name!, product);
       if (res.status === "ok") {
-        modal.toast(t("common.saveSuccess" as any));
+        modal.toast(t("common.saveSuccess"));
         setSaved(true);
         setOriginalJson(JSON.stringify(product));
         setIsAddMode(false);
@@ -70,7 +70,7 @@ export default function ProductEditPage() {
           navigate(`/products/${product.owner}/${product.name}`, { replace: true });
         }
       } else {
-        modal.toast(friendlyError(res.msg, t) || t("common.saveFailed" as any), "error");
+        modal.toast(friendlyError(res.msg, t) || t("common.saveFailed"), "error");
       }
     } catch (e) {
       console.error(e);
@@ -84,14 +84,14 @@ export default function ProductEditPage() {
     try {
       const res = await ProductBackend.updateProduct(owner!, name!, product);
       if (res.status === "ok") {
-        modal.toast(t("common.saveSuccess" as any));
+        modal.toast(t("common.saveSuccess"));
         invalidateList();
         navigate("/products");
       } else {
-        modal.toast(friendlyError(res.msg, t) || t("common.saveFailed" as any), "error");
+        modal.toast(friendlyError(res.msg, t) || t("common.saveFailed"), "error");
       }
     } catch (e: any) {
-      modal.toast(e?.message || t("common.saveFailed" as any), "error");
+      modal.toast(e?.message || t("common.saveFailed"), "error");
     } finally {
       setSaving(false);
     }
@@ -113,7 +113,7 @@ export default function ProductEditPage() {
           invalidateList();
           navigate("/products");
         } else {
-          modal.toast(res.msg || t("common.deleteFailed" as any), "error");
+          modal.toast(res.msg || t("common.deleteFailed"), "error");
         }
       } catch (e) {
         console.error(e);
@@ -136,14 +136,14 @@ export default function ProductEditPage() {
   };
 
   const stateOptions = [
-    { value: "Published", label: t("products.state.published" as any) },
-    { value: "Draft", label: t("products.state.draft" as any) },
+    { value: "Published", label: t("products.state.published") },
+    { value: "Draft", label: t("products.state.draft") },
   ];
 
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
       <StickyEditHeader
-        title={`${isAddMode ? t("common.add") : t("common.edit")} ${t("products.title" as any)}`}
+        title={`${isAddMode ? t("common.add") : t("common.edit")} ${t("products.title")}`}
         subtitle={`${owner}/${name}`}
         onBack={handleBack}
       >
@@ -153,14 +153,14 @@ export default function ProductEditPage() {
         <SaveButton onClick={handleSave} saving={saving} saved={saved} label={t("common.save")} />
         <button onClick={handleSaveAndExit} disabled={saving} className="flex items-center gap-1.5 rounded-lg bg-accent px-4 py-2 text-[13px] font-semibold text-white hover:bg-accent-hover disabled:opacity-50 transition-colors">
           {saving ? <div className="h-3.5 w-3.5 rounded-full border-2 border-white/30 border-t-white animate-spin" /> : <LogOut size={14} />}
-          {t("common.saveAndExit" as any)}
+          {t("common.saveAndExit")}
         </button>
       </StickyEditHeader>
 
       {showBanner && <UnsavedBanner isAddMode={isAddMode} />}
 
       {/* Basic Info */}
-      <FormSection title={t("products.section.basic" as any)}>
+      <FormSection title={t("products.section.basic")}>
         <FormField label={t("field.owner")}>
           <input value={product.owner} disabled className={inputClass} />
         </FormField>
@@ -170,24 +170,24 @@ export default function ProductEditPage() {
         <FormField label={t("field.displayName")}>
           <input value={product.displayName} onChange={(e) => set("displayName", e.target.value)} className={inputClass} />
         </FormField>
-        <FormField label={t("products.field.tag" as any)}>
+        <FormField label={t("products.field.tag")}>
           <input value={product.tag} onChange={(e) => set("tag", e.target.value)} className={inputClass} />
         </FormField>
-        <FormField label={t("products.field.description" as any)}>
+        <FormField label={t("products.field.description")}>
           <input value={product.description} onChange={(e) => set("description", e.target.value)} className={inputClass} />
         </FormField>
-        <FormField label={t("products.field.detail" as any)}>
+        <FormField label={t("products.field.detail")}>
           <input value={product.detail} onChange={(e) => set("detail", e.target.value)} className={inputClass} />
         </FormField>
       </FormSection>
 
       {/* Image */}
-      <FormSection title={t("products.section.image" as any)}>
-        <FormField label={t("products.field.imageUrl" as any)} span="full">
+      <FormSection title={t("products.section.image")}>
+        <FormField label={t("products.field.imageUrl")} span="full">
           <input value={product.image} onChange={(e) => set("image", e.target.value)} className={monoInputClass} />
         </FormField>
         {product.image && (
-          <FormField label={t("products.field.preview" as any)} span="full">
+          <FormField label={t("products.field.preview")} span="full">
             <a href={product.image} target="_blank" rel="noreferrer">
               <img src={product.image} alt={product.name} className="h-20 object-contain" />
             </a>
@@ -196,26 +196,26 @@ export default function ProductEditPage() {
       </FormSection>
 
       {/* Pricing */}
-      <FormSection title={t("products.section.pricing" as any)}>
-        <FormField label={t("products.field.currency" as any)}>
+      <FormSection title={t("products.section.pricing")}>
+        <FormField label={t("products.field.currency")}>
           <CurrencySelect
             value={product.currency || "USD"}
             onChange={(v) => set("currency", v)}
           />
         </FormField>
-        <FormField label={t("products.field.isRecharge" as any)}>
+        <FormField label={t("products.field.isRecharge")}>
           <Switch checked={product.isRecharge} onChange={(v) => set("isRecharge", v)} />
         </FormField>
 
         {product.isRecharge ? (
           <>
-            <FormField label={t("products.field.disableCustomRecharge" as any)}>
+            <FormField label={t("products.field.disableCustomRecharge")}>
               <Switch
                 checked={product.disableCustomRecharge}
                 onChange={(v) => set("disableCustomRecharge", v)}
               />
             </FormField>
-            <FormField label={t("products.field.rechargeOptions" as any)} span="full">
+            <FormField label={t("products.field.rechargeOptions")} span="full">
               <div className="space-y-2">
                 <div className="flex gap-2">
                   <input
@@ -229,7 +229,7 @@ export default function ProductEditPage() {
                       }
                     }}
                     className={monoInputClass}
-                    placeholder={t("products.field.rechargeOptionsPlaceholder" as any)}
+                    placeholder={t("products.field.rechargeOptionsPlaceholder")}
                     min="0"
                     step="any"
                   />
@@ -256,7 +256,7 @@ export default function ProductEditPage() {
             </FormField>
           </>
         ) : (
-          <FormField label={t("products.field.price" as any)}>
+          <FormField label={t("products.field.price")}>
             <input
               type="number"
               value={product.price}
@@ -268,32 +268,32 @@ export default function ProductEditPage() {
           </FormField>
         )}
 
-        <FormField label={t("products.field.quantity" as any)}>
+        <FormField label={t("products.field.quantity")}>
           <input type="number" value={product.quantity} onChange={(e) => set("quantity", Number(e.target.value))} className={monoInputClass} />
         </FormField>
-        <FormField label={t("products.field.sold" as any)}>
+        <FormField label={t("products.field.sold")}>
           <input type="number" value={product.sold} onChange={(e) => set("sold", Number(e.target.value))} className={monoInputClass} />
         </FormField>
       </FormSection>
 
       {/* Providers & URLs */}
-      <FormSection title={t("products.section.providers" as any)}>
-        <FormField label={t("products.field.providers" as any)} span="full">
+      <FormSection title={t("products.section.providers")}>
+        <FormField label={t("products.field.providers")} span="full">
           <input
             value={(product.providers || []).join(", ")}
             onChange={(e) => set("providers", e.target.value.split(",").map((s) => s.trim()).filter(Boolean))}
             className={inputClass}
-            placeholder={t("products.field.providersPlaceholder" as any)}
+            placeholder={t("products.field.providersPlaceholder")}
           />
         </FormField>
-        <FormField label={t("products.field.successUrl" as any)} span="full">
+        <FormField label={t("products.field.successUrl")} span="full">
           <input value={product.successUrl} onChange={(e) => set("successUrl", e.target.value)} className={monoInputClass} />
         </FormField>
       </FormSection>
 
       {/* State */}
-      <FormSection title={t("products.section.state" as any)}>
-        <FormField label={t("col.state" as any)}>
+      <FormSection title={t("products.section.state")}>
+        <FormField label={t("col.state")}>
           <SimpleSelect
             value={product.state}
             options={stateOptions}

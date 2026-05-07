@@ -88,10 +88,10 @@ export default function ServerStorePage() {
       if (res.status === "ok") {
         navigate(`/servers/${newServer.owner}/${newServer.name}`, { state: { mode: "add" } });
       } else {
-        modal.toast(res.msg || t("common.addFailed" as any), "error");
+        modal.toast(res.msg || t("common.addFailed"), "error");
       }
     } catch {
-      modal.toast(t("common.addFailed" as any), "error");
+      modal.toast(t("common.addFailed"), "error");
     } finally {
       setCreatingId("");
     }
@@ -108,12 +108,12 @@ export default function ServerStorePage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <button onClick={() => navigate("/servers")} className="rounded-lg p-1.5 text-text-muted hover:bg-surface-2 transition-colors" title={t("common.back" as any)}>
+          <button onClick={() => navigate("/servers")} className="rounded-lg p-1.5 text-text-muted hover:bg-surface-2 transition-colors" title={t("common.back")}>
             <ArrowLeft size={18} />
           </button>
           <div>
-            <h1 className="text-xl font-bold tracking-tight">{t("serverStore.title" as any)}</h1>
-            <p className="text-[13px] text-text-muted mt-0.5">{t("serverStore.subtitle" as any)}</p>
+            <h1 className="text-xl font-bold tracking-tight">{t("serverStore.title")}</h1>
+            <p className="text-[13px] text-text-muted mt-0.5">{t("serverStore.subtitle")}</p>
           </div>
         </div>
       </div>
@@ -125,7 +125,7 @@ export default function ServerStorePage() {
           <input
             value={nameFilter}
             onChange={(e) => setNameFilter(e.target.value)}
-            placeholder={t("serverStore.searchPlaceholder" as any)}
+            placeholder={t("serverStore.searchPlaceholder")}
             className="w-full rounded-lg border border-border bg-surface-2 pl-9 pr-3 py-2 text-[13px] focus:border-accent focus:ring-1 focus:ring-accent/30 outline-none transition-colors"
           />
         </div>
@@ -175,7 +175,7 @@ export default function ServerStorePage() {
                   ) : (
                     <Plus size={12} />
                   )}
-                  {t("common.add" as any)}
+                  {t("common.add")}
                 </button>
               </div>
 

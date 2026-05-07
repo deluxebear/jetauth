@@ -39,10 +39,10 @@ export default function BizSchemaVersionList({
       <div className="flex items-start justify-between gap-3">
         <div>
           <h2 className="text-[20px] font-bold text-text-primary mb-1">
-            {t("rebac.schema.title" as any)}
+            {t("rebac.schema.title")}
           </h2>
           <p className="text-[13px] text-text-muted">
-            {t("rebac.schema.subtitle" as any)}
+            {t("rebac.schema.subtitle")}
           </p>
         </div>
         <div className="flex items-center gap-2 shrink-0">
@@ -52,7 +52,7 @@ export default function BizSchemaVersionList({
             className="px-3 py-1.5 rounded-md border border-border hover:border-accent/40 text-[13px] flex items-center gap-2"
           >
             <ExternalLink className="w-4 h-4" />
-            {t("rebac.schema.exportDsl" as any)}
+            {t("rebac.schema.exportDsl")}
           </button>
           <button
             type="button"
@@ -60,7 +60,7 @@ export default function BizSchemaVersionList({
             className="px-3 py-1.5 rounded-md bg-accent text-white text-[13px] flex items-center gap-2 hover:bg-accent/90"
           >
             <Plus className="w-4 h-4" />
-            {t("rebac.schema.newVersion" as any)}
+            {t("rebac.schema.newVersion")}
           </button>
         </div>
       </div>
@@ -68,15 +68,15 @@ export default function BizSchemaVersionList({
       <div className="rounded-xl border border-border bg-surface-1">
         <div className="flex items-center justify-between px-4 py-2.5 border-b border-border">
           <span className="text-[12px] text-text-muted">
-            {t("rebac.schema.versionHistory" as any)} · {versions.length}
+            {t("rebac.schema.versionHistory")} · {versions.length}
           </span>
           <span className="text-[12px] text-text-muted">
-            {t("rebac.schema.activeOnlyHint" as any)}
+            {t("rebac.schema.activeOnlyHint")}
           </span>
         </div>
         {versions.length === 0 ? (
           <p className="text-[12px] text-text-muted py-8 text-center">
-            {t("rebac.schema.noVersions" as any)}
+            {t("rebac.schema.noVersions")}
           </p>
         ) : (
           <ul>
@@ -110,11 +110,11 @@ export default function BizSchemaVersionList({
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="text-[14px] font-semibold text-text-primary">
-                        {v.description || t("rebac.schema.noDescription" as any)}
+                        {v.description || t("rebac.schema.noDescription")}
                       </span>
                       {isActive && (
                         <span className="px-2 py-0.5 text-[11px] rounded-full bg-accent/15 text-accent">
-                          {t("rebac.schema.activeBadge" as any)}
+                          {t("rebac.schema.activeBadge")}
                         </span>
                       )}
                     </div>
@@ -132,7 +132,7 @@ export default function BizSchemaVersionList({
                           e.stopPropagation();
                           onRollback(v.id);
                         }}
-                        aria-label={t("rebac.schema.rollbackTo" as any) + " " + versionLabel}
+                        aria-label={t("rebac.schema.rollbackTo") + " " + versionLabel}
                         className="p-1.5 rounded hover:bg-surface-3"
                       >
                         <RotateCcw className="w-4 h-4" />

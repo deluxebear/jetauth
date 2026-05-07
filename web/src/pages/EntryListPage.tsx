@@ -28,40 +28,40 @@ export default function EntryListPage() {
       async () => {
         const res = await EntryBackend.deleteEntry(record);
         if (res.status === "ok") list.refetch();
-        else modal.toast(res.msg || t("common.deleteFailed" as any), "error");
+        else modal.toast(res.msg || t("common.deleteFailed"), "error");
       }
     );
   };
 
   const columns: Column<Entry>[] = [
     {
-      key: "owner", title: t("col.organization" as any), sortable: true, filterable: true, width: "130px",
+      key: "owner", title: t("col.organization"), sortable: true, filterable: true, width: "130px",
       render: (_, r) => <Link to={`/organizations/admin/${r.owner}`} className="text-accent hover:underline text-[12px]" onClick={(e) => e.stopPropagation()}>{r.owner}</Link>,
     },
     {
-      key: "name", title: t("col.name" as any), sortable: true, filterable: true, fixed: "left" as const, width: "160px",
+      key: "name", title: t("col.name"), sortable: true, filterable: true, fixed: "left" as const, width: "160px",
       render: (_, r) => <Link to={`/entries/${r.owner}/${r.name}`} className="font-mono font-medium text-accent hover:underline" onClick={(e) => e.stopPropagation()}>{r.name}</Link>,
     },
     {
-      key: "createdTime", title: t("col.created" as any), sortable: true, width: "180px",
+      key: "createdTime", title: t("col.created"), sortable: true, width: "180px",
       render: (_, r) => <span className="text-[12px] text-text-muted font-mono">{r.createdTime ? new Date(r.createdTime).toLocaleString() : "\u2014"}</span>,
     },
     {
-      key: "provider", title: t("col.provider" as any), sortable: true, filterable: true, width: "160px",
+      key: "provider", title: t("col.provider"), sortable: true, filterable: true, width: "160px",
       render: (_, r) => r.provider ? (
         <Link to={`/providers/${r.owner}/${r.provider}`} className="text-accent hover:underline text-[12px]" onClick={(e) => e.stopPropagation()}>{r.provider}</Link>
       ) : null,
     },
-    { key: "type", title: t("col.type" as any), sortable: true, filterable: true, width: "140px" },
+    { key: "type", title: t("col.type"), sortable: true, filterable: true, width: "140px" },
     {
-      key: "clientIp", title: t("entries.field.clientIp" as any), sortable: true, filterable: true, width: "140px",
+      key: "clientIp", title: t("entries.field.clientIp"), sortable: true, filterable: true, width: "140px",
       render: (_, r) => r.clientIp ? (
         <a target="_blank" rel="noreferrer" href={`https://db-ip.com/${r.clientIp}`} className="text-accent hover:underline text-[12px] font-mono">{r.clientIp}</a>
       ) : null,
     },
-    { key: "userAgent", title: t("entries.field.userAgent" as any), sortable: true, filterable: true },
+    { key: "userAgent", title: t("entries.field.userAgent"), sortable: true, filterable: true },
     {
-      key: "message", title: t("entries.field.message" as any), sortable: true, filterable: true,
+      key: "message", title: t("entries.field.message"), sortable: true, filterable: true,
       render: (_, r) => r.message ? (
         <span className="text-[12px] text-text-secondary" title={r.message}>
           {r.message.length > 60 ? r.message.substring(0, 60) + "..." : r.message}
@@ -69,7 +69,7 @@ export default function EntryListPage() {
       ) : null,
     },
     {
-      key: "__actions", fixed: "right" as const, title: t("common.action" as any), width: "120px",
+      key: "__actions", fixed: "right" as const, title: t("common.action"), width: "120px",
       render: (_, r) => (
         <div className="flex items-center gap-1">
           <Link to={`/entries/${r.owner}/${r.name}`} className="rounded p-1.5 text-text-muted hover:text-warning hover:bg-warning/10 transition-colors" title={t("common.edit")} onClick={(e) => e.stopPropagation()}><Pencil size={14} /></Link>
@@ -83,8 +83,8 @@ export default function EntryListPage() {
     <div className="space-y-5">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold tracking-tight">{t("entries.title" as any)}</h1>
-          <p className="text-[13px] text-text-muted mt-0.5">{t("entries.subtitle" as any)}</p>
+          <h1 className="text-xl font-bold tracking-tight">{t("entries.title")}</h1>
+          <p className="text-[13px] text-text-muted mt-0.5">{t("entries.subtitle")}</p>
         </div>
         <div className="flex items-center gap-2">
           <motion.button whileHover={{ rotate: 180 }} transition={{ duration: 0.3 }} onClick={list.refetch} className="rounded-lg border border-border p-2 text-text-muted hover:bg-surface-2 transition-colors" title={t("common.refresh")}><RefreshCw size={15} /></motion.button>

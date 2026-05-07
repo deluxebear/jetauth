@@ -98,11 +98,11 @@ export default function TemplateGalleryModal({ open, onClose, onApply, currentMa
             <div className="flex items-center gap-2">
               <Sparkles size={16} className="text-accent" />
               <h3 id="template-gallery-title" className="text-[16px] font-semibold text-text-primary">
-                {t("apps.template.title" as any)}
+                {t("apps.template.title")}
               </h3>
             </div>
             <p className="mt-1 text-[13px] text-text-muted">
-              {t("apps.template.subtitle" as any)}
+              {t("apps.template.subtitle")}
             </p>
           </div>
           <div className="flex items-center gap-1 shrink-0">
@@ -133,7 +133,7 @@ export default function TemplateGalleryModal({ open, onClose, onApply, currentMa
               type="button"
               onClick={onClose}
               className="rounded-lg p-1.5 text-text-muted hover:bg-surface-2 transition-colors"
-              aria-label={t("apps.template.cancel" as any)}
+              aria-label={t("apps.template.cancel")}
             >
               <X size={16} />
             </button>

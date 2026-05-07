@@ -91,18 +91,18 @@ export default function ScanServerModal({ open, onClose, onAddServer }: ScanServ
     const cleanPorts = ports.filter(Boolean);
 
     if (cleanCidrs.length === 0) {
-      modal.toast(t("scanServer.error.noCidr" as any), "error");
+      modal.toast(t("scanServer.error.noCidr"), "error");
       return;
     }
     if (cleanPorts.length === 0) {
-      modal.toast(t("scanServer.error.noPort" as any), "error");
+      modal.toast(t("scanServer.error.noPort"), "error");
       return;
     }
 
     // Validate ports
     for (const p of cleanPorts) {
       if (!/^\d+(-\d+)?$/.test(p)) {
-        modal.toast(`${t("scanServer.error.invalidPort" as any)}: ${p}`, "error");
+        modal.toast(`${t("scanServer.error.invalidPort")}: ${p}`, "error");
         return;
       }
     }
@@ -123,10 +123,10 @@ export default function ScanServerModal({ open, onClose, onAddServer }: ScanServ
           servers: res.data.servers || [],
         });
       } else {
-        modal.toast(res.msg || t("common.loadFailed" as any), "error");
+        modal.toast(res.msg || t("common.loadFailed"), "error");
       }
     } catch {
-      if (mountedRef.current) modal.toast(t("common.loadFailed" as any), "error");
+      if (mountedRef.current) modal.toast(t("common.loadFailed"), "error");
     } finally {
       if (mountedRef.current) setScanning(false);
     }
@@ -158,7 +158,7 @@ export default function ScanServerModal({ open, onClose, onAddServer }: ScanServ
         >
           {/* Header */}
           <div className="flex items-center justify-between px-6 py-4 border-b border-border">
-            <h2 className="text-[16px] font-bold">{t("scanServer.title" as any)}</h2>
+            <h2 className="text-[16px] font-bold">{t("scanServer.title")}</h2>
             <button onClick={onClose} disabled={scanning} className="rounded-lg p-1.5 text-text-muted hover:bg-surface-2 transition-colors disabled:opacity-50">
               <X size={18} />
             </button>
@@ -168,29 +168,29 @@ export default function ScanServerModal({ open, onClose, onAddServer }: ScanServ
           <div className="flex-1 overflow-y-auto px-6 py-4 space-y-5">
             {/* CIDR */}
             <div>
-              <label className="text-[13px] font-medium text-text-secondary mb-1.5 block">{t("scanServer.field.ipRange" as any)}</label>
-              <TagInput values={cidrs} onChange={setCidrs} presets={CIDR_PRESETS} placeholder={t("scanServer.placeholder.cidr" as any)} />
+              <label className="text-[13px] font-medium text-text-secondary mb-1.5 block">{t("scanServer.field.ipRange")}</label>
+              <TagInput values={cidrs} onChange={setCidrs} presets={CIDR_PRESETS} placeholder={t("scanServer.placeholder.cidr")} />
             </div>
 
             {/* Ports */}
             <div>
-              <label className="text-[13px] font-medium text-text-secondary mb-1.5 block">{t("scanServer.field.ports" as any)}</label>
-              <TagInput values={ports} onChange={setPorts} presets={PORT_PRESETS} placeholder={t("scanServer.placeholder.ports" as any)} />
+              <label className="text-[13px] font-medium text-text-secondary mb-1.5 block">{t("scanServer.field.ports")}</label>
+              <TagInput values={ports} onChange={setPorts} presets={PORT_PRESETS} placeholder={t("scanServer.placeholder.ports")} />
             </div>
 
             {/* Paths */}
             <div>
-              <label className="text-[13px] font-medium text-text-secondary mb-1.5 block">{t("scanServer.field.paths" as any)}</label>
-              <TagInput values={paths} onChange={setPaths} presets={PATH_PRESETS} placeholder={t("scanServer.placeholder.paths" as any)} />
+              <label className="text-[13px] font-medium text-text-secondary mb-1.5 block">{t("scanServer.field.paths")}</label>
+              <TagInput values={paths} onChange={setPaths} presets={PATH_PRESETS} placeholder={t("scanServer.placeholder.paths")} />
             </div>
 
             {/* Results */}
             {result && (
               <div className="space-y-2">
                 <div className="text-[12px] text-text-muted">
-                  {t("scanServer.result.scannedHosts" as any)}: {result.scannedHosts} &nbsp;|&nbsp;
-                  {t("scanServer.result.onlineHosts" as any)}: {result.onlineHosts.length} &nbsp;|&nbsp;
-                  {t("scanServer.result.foundServers" as any)}: {result.servers.length}
+                  {t("scanServer.result.scannedHosts")}: {result.scannedHosts} &nbsp;|&nbsp;
+                  {t("scanServer.result.onlineHosts")}: {result.onlineHosts.length} &nbsp;|&nbsp;
+                  {t("scanServer.result.foundServers")}: {result.servers.length}
                 </div>
                 {result.servers.length > 0 ? (
                   <div className="overflow-hidden rounded-lg border border-border max-h-[320px] overflow-y-auto">
@@ -201,7 +201,7 @@ export default function ScanServerModal({ open, onClose, onAddServer }: ScanServ
                           <th className="px-3 py-2 text-left font-medium text-text-secondary w-[90px]">Port</th>
                           <th className="px-3 py-2 text-left font-medium text-text-secondary w-[120px]">Path</th>
                           <th className="px-3 py-2 text-left font-medium text-text-secondary">URL</th>
-                          <th className="px-3 py-2 text-center font-medium text-text-secondary w-[80px]">{t("common.action" as any)}</th>
+                          <th className="px-3 py-2 text-center font-medium text-text-secondary w-[80px]">{t("common.action")}</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -219,7 +219,7 @@ export default function ScanServerModal({ open, onClose, onAddServer }: ScanServ
                                 disabled={addingUrl === s.url}
                                 className="inline-flex items-center gap-1 rounded-md bg-accent px-2 py-0.5 text-[11px] font-semibold text-white hover:bg-accent-hover disabled:opacity-50 transition-colors"
                               >
-                                <Plus size={11} /> {t("common.add" as any)}
+                                <Plus size={11} /> {t("common.add")}
                               </button>
                             </td>
                           </tr>
@@ -237,7 +237,7 @@ export default function ScanServerModal({ open, onClose, onAddServer }: ScanServ
           {/* Footer */}
           <div className="flex items-center justify-end gap-2 px-6 py-3 border-t border-border">
             <button onClick={onClose} disabled={scanning} className="rounded-lg border border-border px-4 py-2 text-[13px] font-medium text-text-secondary hover:bg-surface-2 transition-colors disabled:opacity-50">
-              {t("common.cancel" as any)}
+              {t("common.cancel")}
             </button>
             <button
               onClick={handleScan}
@@ -249,7 +249,7 @@ export default function ScanServerModal({ open, onClose, onAddServer }: ScanServ
               ) : (
                 <Search size={14} />
               )}
-              {t("scanServer.scan" as any)}
+              {t("scanServer.scan")}
             </button>
           </div>
         </motion.div>

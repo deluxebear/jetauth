@@ -71,7 +71,7 @@ export default function WebhookEditPage() {
     try {
       const res = await WebhookBackend.updateWebhook(owner!, name!, webhook);
       if (res.status === "ok") {
-        modal.toast(t("common.saveSuccess" as any));
+        modal.toast(t("common.saveSuccess"));
         setSaved(true);
         setOriginalJson(JSON.stringify(webhook));
         setIsAddMode(false);
@@ -80,7 +80,7 @@ export default function WebhookEditPage() {
           navigate(`/webhooks/${webhook.name}`, { replace: true });
         }
       } else {
-        modal.toast(friendlyError(res.msg, t) || t("common.saveFailed" as any), "error");
+        modal.toast(friendlyError(res.msg, t) || t("common.saveFailed"), "error");
       }
     } finally {
       setSaving(false);
@@ -91,14 +91,14 @@ export default function WebhookEditPage() {
     try {
       const res = await WebhookBackend.updateWebhook(owner!, name!, webhook);
       if (res.status === "ok") {
-        modal.toast(t("common.saveSuccess" as any));
+        modal.toast(t("common.saveSuccess"));
         invalidateList();
         navigate("/webhooks");
       } else {
-        modal.toast(friendlyError(res.msg, t) || t("common.saveFailed" as any), "error");
+        modal.toast(friendlyError(res.msg, t) || t("common.saveFailed"), "error");
       }
     } catch (e: any) {
-      modal.toast(e?.message || t("common.saveFailed" as any), "error");
+      modal.toast(e?.message || t("common.saveFailed"), "error");
     } finally {
       setSaving(false);
     }
@@ -116,7 +116,7 @@ export default function WebhookEditPage() {
     modal.showConfirm(t("common.confirmDelete"), async () => {
       const res = await WebhookBackend.deleteWebhook(webhook);
       if (res.status === "ok") { invalidateList(); navigate("/webhooks"); }
-      else modal.toast(res.msg || t("common.deleteFailed" as any), "error");
+      else modal.toast(res.msg || t("common.deleteFailed"), "error");
     });
   };
 
@@ -148,7 +148,7 @@ export default function WebhookEditPage() {
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-6 ">
       <StickyEditHeader
-        title={`${isAddMode ? t("common.add") : t("common.edit")} ${t("webhooks.title" as any)}`}
+        title={`${isAddMode ? t("common.add") : t("common.edit")} ${t("webhooks.title")}`}
         subtitle={`${owner}/${name}`}
         onBack={handleBack}
       >
@@ -156,47 +156,47 @@ export default function WebhookEditPage() {
                     <SaveButton onClick={handleSave} saving={saving} saved={saved} label={t("common.save")} />
           <button onClick={handleSaveAndExit} disabled={saving} className="flex items-center gap-1.5 rounded-lg bg-accent px-4 py-2 text-[13px] font-semibold text-white hover:bg-accent-hover disabled:opacity-50 transition-colors">
             {saving ? <div className="h-3.5 w-3.5 rounded-full border-2 border-white/30 border-t-white animate-spin" /> : <LogOut size={14} />}
-            {t("common.saveAndExit" as any)}
+            {t("common.saveAndExit")}
           </button>
       </StickyEditHeader>
 
       {showBanner && <UnsavedBanner isAddMode={isAddMode} />}
 
       {/* Basic */}
-      <FormSection title={t("webhooks.section.basic" as any)}>
-        <FormField label={t("col.organization" as any)}>
+      <FormSection title={t("webhooks.section.basic")}>
+        <FormField label={t("col.organization")}>
           <input value={webhook.organization} onChange={(e) => set("organization", e.target.value)} disabled={!isGlobalAdmin} className={inputClass} />
         </FormField>
         <FormField label={t("field.name")} required>
           <input value={webhook.name} onChange={(e) => set("name", e.target.value)} className={monoInputClass} />
         </FormField>
-        <FormField label={t("webhooks.field.url" as any)} span="full">
+        <FormField label={t("webhooks.field.url")} span="full">
           <input value={webhook.url} onChange={(e) => set("url", e.target.value)} className={inputClass} placeholder="https://example.com/callback" />
         </FormField>
-        <FormField label={t("webhooks.field.method" as any)}>
+        <FormField label={t("webhooks.field.method")}>
           <SimpleSelect value={webhook.method} options={METHODS.map((m) => ({ value: m, label: m }))} onChange={(v) => set("method", v)} />
         </FormField>
-        <FormField label={t("webhooks.field.contentType" as any)}>
+        <FormField label={t("webhooks.field.contentType")}>
           <SimpleSelect value={webhook.contentType} options={CONTENT_TYPES.map((ct) => ({ value: ct, label: ct }))} onChange={(v) => set("contentType", v)} />
         </FormField>
       </FormSection>
 
       {/* Headers */}
-      <FormSection title={t("webhooks.field.headers" as any)}>
+      <FormSection title={t("webhooks.field.headers")}>
         <div className="col-span-2 space-y-2">
           {(webhook.headers ?? []).map((header, idx) => (
             <div key={idx} className="flex items-center gap-2">
               <input value={header.name} onChange={(e) => updateHeader(idx, "name", e.target.value)} placeholder={t("field.name")} className={`${inputClass} flex-1`} />
-              <input value={header.value} onChange={(e) => updateHeader(idx, "value", e.target.value)} placeholder={t("webhooks.field.headerValue" as any)} className={`${inputClass} flex-1`} />
+              <input value={header.value} onChange={(e) => updateHeader(idx, "value", e.target.value)} placeholder={t("webhooks.field.headerValue")} className={`${inputClass} flex-1`} />
               <button onClick={() => removeHeader(idx)} className="rounded p-1.5 text-text-muted hover:text-danger hover:bg-danger/10 transition-colors"><X size={14} /></button>
             </div>
           ))}
-          <button onClick={addHeader} className="flex items-center gap-1 text-[12px] font-medium text-accent hover:underline"><Plus size={14} /> {t("webhooks.field.addHeader" as any)}</button>
+          <button onClick={addHeader} className="flex items-center gap-1 text-[12px] font-medium text-accent hover:underline"><Plus size={14} /> {t("webhooks.field.addHeader")}</button>
         </div>
       </FormSection>
 
       {/* Events */}
-      <FormSection title={t("webhooks.field.events" as any)}>
+      <FormSection title={t("webhooks.field.events")}>
         <div className="col-span-2">
           <div className="flex flex-wrap gap-2">
             {EVENT_OPTIONS.map((event) => {
@@ -216,8 +216,8 @@ export default function WebhookEditPage() {
       </FormSection>
 
       {/* Object Fields */}
-      <FormSection title={t("webhooks.field.objectFields" as any)}>
-        <FormField label={t("webhooks.field.objectFields" as any)} span="full">
+      <FormSection title={t("webhooks.field.objectFields")}>
+        <FormField label={t("webhooks.field.objectFields")} span="full">
           <div className="flex flex-wrap gap-2">
             {OBJECT_FIELD_OPTIONS.map((field) => {
               const selected = (webhook.objectFields ?? []).includes(field);
@@ -244,11 +244,11 @@ export default function WebhookEditPage() {
       </FormSection>
 
       {/* Extended User */}
-      <FormSection title={t("webhooks.section.advanced" as any)}>
-        <FormField label={t("webhooks.field.isUserExtended" as any)}>
+      <FormSection title={t("webhooks.section.advanced")}>
+        <FormField label={t("webhooks.field.isUserExtended")}>
           <Switch checked={webhook.isUserExtended} onChange={(v) => set("isUserExtended", v)} />
         </FormField>
-        <FormField label={t("webhooks.field.extendedUserFields" as any)} span="full">
+        <FormField label={t("webhooks.field.extendedUserFields")} span="full">
           <input
             value={(webhook.tokenFields ?? []).join(", ")}
             onChange={(e) => set("tokenFields", e.target.value.split(",").map(s => s.trim()).filter(Boolean))}
@@ -256,10 +256,10 @@ export default function WebhookEditPage() {
             placeholder="Owner, Name, CreatedTime, ..."
           />
         </FormField>
-        <FormField label={t("webhooks.field.singleOrgOnly" as any)}>
+        <FormField label={t("webhooks.field.singleOrgOnly")}>
           <Switch checked={webhook.singleOrgOnly} onChange={(v) => set("singleOrgOnly", v)} />
         </FormField>
-        <FormField label={t("col.isEnabled" as any)}>
+        <FormField label={t("col.isEnabled")}>
           <Switch checked={webhook.isEnabled} onChange={(v) => set("isEnabled", v)} />
         </FormField>
       </FormSection>

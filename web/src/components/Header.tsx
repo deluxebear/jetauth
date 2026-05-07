@@ -60,7 +60,7 @@ export default function Header({ user, onLogout }: HeaderProps) {
         <button
           onClick={toggleTheme}
           className="rounded-lg p-2 text-text-muted hover:text-text-secondary hover:bg-surface-2 transition-colors"
-          title={theme === "dark" ? t("header.switchToLight" as any) : t("header.switchToDark" as any)}
+          title={theme === "dark" ? t("header.switchToLight") : t("header.switchToDark")}
         >
           {theme === "dark" ? <Sun size={17} /> : <Moon size={17} />}
         </button>
@@ -141,7 +141,7 @@ export default function Header({ user, onLogout }: HeaderProps) {
                 className="flex w-full items-center gap-2 px-3 py-2 text-[13px] text-text-secondary hover:bg-surface-3 transition-colors"
               >
                 <UserCircle size={14} />
-                {t("nav.myProfile" as any)}
+                {t("nav.myProfile")}
               </Link>
               <button
                 onClick={onLogout}

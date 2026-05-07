@@ -86,12 +86,12 @@ export default function SigninProvidersSubtable({ appProviders, value, onChange 
   };
 
   const sizeOpts = [
-    { value: "small", label: t("apps.providerConfig.size.small" as any) },
-    { value: "large", label: t("apps.providerConfig.size.large" as any) },
+    { value: "small", label: t("apps.providerConfig.size.small") },
+    { value: "large", label: t("apps.providerConfig.size.large") },
   ];
   const groupOpts = [
-    { value: "primary", label: t("apps.providerConfig.group.primary" as any) },
-    { value: "secondary", label: t("apps.providerConfig.group.secondary" as any) },
+    { value: "primary", label: t("apps.providerConfig.group.primary") },
+    { value: "secondary", label: t("apps.providerConfig.group.secondary") },
   ];
 
   return (
@@ -99,10 +99,10 @@ export default function SigninProvidersSubtable({ appProviders, value, onChange 
       <div className="px-4 py-2.5 border-b border-border-subtle bg-surface-2/30 flex items-center justify-between gap-3">
         <div className="min-w-0">
           <h4 className="text-[13px] font-semibold text-text-primary">
-            {t("apps.providerConfig.title" as any)}
+            {t("apps.providerConfig.title")}
           </h4>
           <p className="mt-0.5 text-[11px] text-text-muted">
-            {t("apps.providerConfig.hint" as any)}
+            {t("apps.providerConfig.hint")}
           </p>
         </div>
         {missing.length > 0 && (
@@ -116,18 +116,18 @@ export default function SigninProvidersSubtable({ appProviders, value, onChange 
         <div className="px-4 py-6 text-center text-[12px] text-text-muted">
           {appProviders.length === 0 ? (
             <>
-              <p>{t("apps.providerConfig.emptyNoProviders" as any)}</p>
+              <p>{t("apps.providerConfig.emptyNoProviders")}</p>
             </>
           ) : (
             <div className="flex flex-col items-center gap-3">
-              <p>{t("apps.providerConfig.emptyWithProviders" as any).replace("{count}", String(appProviders.length))}</p>
+              <p>{t("apps.providerConfig.emptyWithProviders").replace("{count}", String(appProviders.length))}</p>
               <button
                 type="button"
                 onClick={addAll}
                 className="inline-flex items-center gap-1.5 rounded-lg bg-accent px-3.5 py-1.5 text-[12px] font-semibold text-white hover:bg-accent-hover transition-colors"
               >
                 <Plus size={13} />
-                {t("apps.providerConfig.addAll" as any)}
+                {t("apps.providerConfig.addAll")}
               </button>
             </div>
           )}
@@ -139,10 +139,10 @@ export default function SigninProvidersSubtable({ appProviders, value, onChange 
             className="grid items-center gap-2 px-4 py-2 text-[11px] font-medium uppercase tracking-wide text-text-muted border-b border-border-subtle"
             style={{ gridTemplateColumns: "minmax(0, 1.8fr) 80px 120px 120px 80px" }}
           >
-            <div>{t("apps.providerConfig.col.provider" as any)}</div>
-            <div>{t("apps.providerConfig.col.visible" as any)}</div>
-            <div>{t("apps.providerConfig.col.size" as any)}</div>
-            <div>{t("apps.providerConfig.col.group" as any)}</div>
+            <div>{t("apps.providerConfig.col.provider")}</div>
+            <div>{t("apps.providerConfig.col.visible")}</div>
+            <div>{t("apps.providerConfig.col.size")}</div>
+            <div>{t("apps.providerConfig.col.group")}</div>
             <div />
           </div>
 

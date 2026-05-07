@@ -72,7 +72,7 @@ export default function TokenEditPage() {
     try {
       const res = await TokenBackend.updateToken(token.owner, name!, token);
       if (res.status === "ok") {
-        modal.toast(t("common.saveSuccess" as any));
+        modal.toast(t("common.saveSuccess"));
         setSaved(true);
         setOriginalJson(JSON.stringify(token));
         setIsAddMode(false);
@@ -81,7 +81,7 @@ export default function TokenEditPage() {
           navigate(`/tokens/${token.name}`, { replace: true });
         }
       } else {
-        modal.toast(friendlyError(res.msg, t) || t("common.saveFailed" as any), "error");
+        modal.toast(friendlyError(res.msg, t) || t("common.saveFailed"), "error");
       }
     } catch (e) {
       console.error(e);
@@ -94,14 +94,14 @@ export default function TokenEditPage() {
     try {
       const res = await TokenBackend.updateToken(token.owner, name!, token);
       if (res.status === "ok") {
-        modal.toast(t("common.saveSuccess" as any));
+        modal.toast(t("common.saveSuccess"));
         invalidateList();
         navigate("/tokens");
       } else {
-        modal.toast(friendlyError(res.msg, t) || t("common.saveFailed" as any), "error");
+        modal.toast(friendlyError(res.msg, t) || t("common.saveFailed"), "error");
       }
     } catch (e: any) {
-      modal.toast(e?.message || t("common.saveFailed" as any), "error");
+      modal.toast(e?.message || t("common.saveFailed"), "error");
     } finally {
       setSaving(false);
     }
@@ -123,7 +123,7 @@ export default function TokenEditPage() {
           invalidateList();
           navigate("/tokens");
         } else {
-          modal.toast(res.msg || t("common.deleteFailed" as any), "error");
+          modal.toast(res.msg || t("common.deleteFailed"), "error");
         }
       } catch (e) {
         console.error(e);
@@ -133,7 +133,7 @@ export default function TokenEditPage() {
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
-    modal.toast(t("common.copySuccess" as any));
+    modal.toast(t("common.copySuccess"));
   };
 
   const parsedResult = parseAccessToken(token.accessToken);
@@ -141,7 +141,7 @@ export default function TokenEditPage() {
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-6 ">
       <StickyEditHeader
-        title={`${isAddMode ? t("common.add") : t("common.edit")} ${t("tokens.title" as any)}`}
+        title={`${isAddMode ? t("common.add") : t("common.edit")} ${t("tokens.title")}`}
         subtitle={`${token.owner}/${name}`}
         onBack={handleBack}
       >
@@ -151,54 +151,54 @@ export default function TokenEditPage() {
                     <SaveButton onClick={handleSave} saving={saving} saved={saved} label={t("common.save")} />
           <button onClick={handleSaveAndExit} disabled={saving} className="flex items-center gap-1.5 rounded-lg bg-accent px-4 py-2 text-[13px] font-semibold text-white hover:bg-accent-hover disabled:opacity-50 transition-colors">
             {saving ? <div className="h-3.5 w-3.5 rounded-full border-2 border-white/30 border-t-white animate-spin" /> : <LogOut size={14} />}
-            {t("common.saveAndExit" as any)}
+            {t("common.saveAndExit")}
           </button>
       </StickyEditHeader>
 
       {showBanner && <UnsavedBanner isAddMode={isAddMode} />}
 
       {/* Basic Info */}
-      <FormSection title={t("tokens.section.basic" as any)}>
+      <FormSection title={t("tokens.section.basic")}>
         <FormField label={t("field.name")} required>
           <input value={token.name} onChange={(e) => set("name", e.target.value)} className={monoInputClass} />
         </FormField>
-        <FormField label={t("col.application" as any)}>
+        <FormField label={t("col.application")}>
           <input value={token.application} onChange={(e) => set("application", e.target.value)} className={inputClass} />
         </FormField>
-        <FormField label={t("col.organization" as any)}>
+        <FormField label={t("col.organization")}>
           <input value={token.organization} onChange={(e) => set("organization", e.target.value)} disabled={!isGlobalAdmin} className={inputClass} />
         </FormField>
-        <FormField label={t("col.user" as any)}>
+        <FormField label={t("col.user")}>
           <input value={token.user} onChange={(e) => set("user", e.target.value)} className={inputClass} />
         </FormField>
       </FormSection>
 
       {/* Token Details */}
-      <FormSection title={t("tokens.section.details" as any)}>
-        <FormField label={t("tokens.field.authorizationCode" as any)}>
+      <FormSection title={t("tokens.section.details")}>
+        <FormField label={t("tokens.field.authorizationCode")}>
           <input value={token.code} onChange={(e) => set("code", e.target.value)} className={monoInputClass} />
         </FormField>
-        <FormField label={t("tokens.field.expiresIn" as any)}>
+        <FormField label={t("tokens.field.expiresIn")}>
           <input type="number" value={token.expiresIn} onChange={(e) => set("expiresIn", parseInt(e.target.value) || 0)} className={monoInputClass} />
         </FormField>
-        <FormField label={t("col.scope" as any)}>
+        <FormField label={t("col.scope")}>
           <input value={token.scope} onChange={(e) => set("scope", e.target.value)} className={inputClass} />
         </FormField>
-        <FormField label={t("tokens.field.tokenType" as any)}>
+        <FormField label={t("tokens.field.tokenType")}>
           <input value={token.tokenType} onChange={(e) => set("tokenType", e.target.value)} className={inputClass} />
         </FormField>
       </FormSection>
 
       {/* Access Token */}
-      <FormSection title={t("tokens.field.accessToken" as any)}>
-        <FormField label={t("tokens.field.accessToken" as any)} span="full">
+      <FormSection title={t("tokens.field.accessToken")}>
+        <FormField label={t("tokens.field.accessToken")} span="full">
           <div className="flex gap-2 mb-2">
             <button
               onClick={() => copyToClipboard(token.accessToken)}
               disabled={!token.accessToken}
               className="flex items-center gap-1 rounded-lg border border-border px-2.5 py-1.5 text-[12px] font-medium text-text-secondary hover:bg-surface-2 transition-colors disabled:opacity-30"
             >
-              <Copy size={12} /> {t("tokens.copyAccessToken" as any)}
+              <Copy size={12} /> {t("tokens.copyAccessToken")}
             </button>
           </div>
           <textarea
@@ -208,14 +208,14 @@ export default function TokenEditPage() {
             className={`${monoInputClass} text-[11px]`}
           />
         </FormField>
-        <FormField label={t("tokens.parsedResult" as any)} span="full">
+        <FormField label={t("tokens.parsedResult")} span="full">
           <div className="flex gap-2 mb-2">
             <button
               onClick={() => copyToClipboard(parsedResult)}
               disabled={!parsedResult.includes('"alg"')}
               className="flex items-center gap-1 rounded-lg border border-border px-2.5 py-1.5 text-[12px] font-medium text-text-secondary hover:bg-surface-2 transition-colors disabled:opacity-30"
             >
-              <Copy size={12} /> {t("tokens.copyParsedResult" as any)}
+              <Copy size={12} /> {t("tokens.copyParsedResult")}
             </button>
           </div>
           <textarea

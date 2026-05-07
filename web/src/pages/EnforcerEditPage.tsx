@@ -58,7 +58,7 @@ export default function EnforcerEditPage() {
     try {
       const res = await EnforcerBackend.updateEnforcer(owner!, name!, enforcer);
       if (res.status === "ok") {
-        modal.toast(t("common.saveSuccess" as any));
+        modal.toast(t("common.saveSuccess"));
         setSaved(true);
         setOriginalJson(JSON.stringify(enforcer));
         setIsAddMode(false);
@@ -67,7 +67,7 @@ export default function EnforcerEditPage() {
           navigate(`/enforcers/${enforcer.owner}/${enforcer.name}`, { replace: true });
         }
       } else {
-        modal.toast(friendlyError(res.msg, t) || t("common.saveFailed" as any), "error");
+        modal.toast(friendlyError(res.msg, t) || t("common.saveFailed"), "error");
       }
     } catch (e) {
       console.error(e);
@@ -80,14 +80,14 @@ export default function EnforcerEditPage() {
     try {
       const res = await EnforcerBackend.updateEnforcer(owner!, name!, enforcer);
       if (res.status === "ok") {
-        modal.toast(t("common.saveSuccess" as any));
+        modal.toast(t("common.saveSuccess"));
         invalidateList();
         navigate("/enforcers");
       } else {
-        modal.toast(friendlyError(res.msg, t) || t("common.saveFailed" as any), "error");
+        modal.toast(friendlyError(res.msg, t) || t("common.saveFailed"), "error");
       }
     } catch (e: any) {
-      modal.toast(e?.message || t("common.saveFailed" as any), "error");
+      modal.toast(e?.message || t("common.saveFailed"), "error");
     } finally {
       setSaving(false);
     }
@@ -109,7 +109,7 @@ export default function EnforcerEditPage() {
           invalidateList();
           navigate("/enforcers");
         } else {
-          modal.toast(res.msg || t("common.deleteFailed" as any), "error");
+          modal.toast(res.msg || t("common.deleteFailed"), "error");
         }
       } catch (e) {
         console.error(e);
@@ -120,7 +120,7 @@ export default function EnforcerEditPage() {
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-6 ">
       <StickyEditHeader
-        title={`${isAddMode ? t("common.add") : t("common.edit")} ${t("enforcers.title" as any)}`}
+        title={`${isAddMode ? t("common.add") : t("common.edit")} ${t("enforcers.title")}`}
         subtitle={`${owner}/${name}`}
         onBack={handleBack}
       >
@@ -130,34 +130,34 @@ export default function EnforcerEditPage() {
                     <SaveButton onClick={handleSave} saving={saving} saved={saved} label={t("common.save")} />
           <button onClick={handleSaveAndExit} disabled={saving} className="flex items-center gap-1.5 rounded-lg bg-accent px-4 py-2 text-[13px] font-semibold text-white hover:bg-accent-hover disabled:opacity-50 transition-colors">
             {saving ? <div className="h-3.5 w-3.5 rounded-full border-2 border-white/30 border-t-white animate-spin" /> : <LogOut size={14} />}
-            {t("common.saveAndExit" as any)}
+            {t("common.saveAndExit")}
           </button>
       </StickyEditHeader>
 
       {showBanner && <UnsavedBanner isAddMode={isAddMode} />}
 
       {/* Basic Info */}
-      <FormSection title={t("enforcers.section.basic" as any)}>
-        <FormField label={t("field.owner" as any)}>
+      <FormSection title={t("enforcers.section.basic")}>
+        <FormField label={t("field.owner")}>
           <input value={enforcer.owner} disabled className={inputClass} />
         </FormField>
-        <FormField label={t("field.name" as any)} required>
+        <FormField label={t("field.name")} required>
           <input value={enforcer.name} onChange={(e) => set("name", e.target.value)} className={monoInputClass} />
         </FormField>
-        <FormField label={t("field.displayName" as any)}>
+        <FormField label={t("field.displayName")}>
           <input value={enforcer.displayName} onChange={(e) => set("displayName", e.target.value)} className={inputClass} />
         </FormField>
-        <FormField label={t("field.description" as any)}>
+        <FormField label={t("field.description")}>
           <input value={enforcer.description || ""} onChange={(e) => set("description", e.target.value)} className={inputClass} />
         </FormField>
       </FormSection>
 
       {/* Configuration */}
-      <FormSection title={t("enforcers.section.config" as any)}>
-        <FormField label={t("col.model" as any)}>
+      <FormSection title={t("enforcers.section.config")}>
+        <FormField label={t("col.model")}>
           <input value={enforcer.model} onChange={(e) => set("model", e.target.value)} className={monoInputClass} placeholder="owner/model_name" />
         </FormField>
-        <FormField label={t("col.adapter" as any)}>
+        <FormField label={t("col.adapter")}>
           <input value={enforcer.adapter} onChange={(e) => set("adapter", e.target.value)} className={monoInputClass} placeholder="owner/adapter_name" />
         </FormField>
       </FormSection>

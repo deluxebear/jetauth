@@ -30,7 +30,7 @@ export default function RuleListPage() {
     if (res.status === "ok") {
       navigate(`/rules/${rule.owner}/${rule.name}`, { state: { mode: "add" } });
     } else {
-      modal.toast(res.msg || t("common.addFailed" as any), "error");
+      modal.toast(res.msg || t("common.addFailed"), "error");
     }
   };
 
@@ -41,34 +41,34 @@ export default function RuleListPage() {
       async () => {
         const res = await RuleBackend.deleteRule(record);
         if (res.status === "ok") list.refetch();
-        else modal.toast(res.msg || t("common.deleteFailed" as any), "error");
+        else modal.toast(res.msg || t("common.deleteFailed"), "error");
       }
     );
   };
 
   const columns: Column<Rule>[] = [
     {
-      key: "owner", title: t("col.owner" as any), sortable: true, width: "150px",
+      key: "owner", title: t("col.owner"), sortable: true, width: "150px",
       render: (_, r) => <span className="text-[12px] text-text-secondary">{r.owner}</span>,
     },
     {
-      key: "name", title: t("col.name" as any), sortable: true, fixed: "left" as const, width: "200px",
+      key: "name", title: t("col.name"), sortable: true, fixed: "left" as const, width: "200px",
       render: (_, r) => <Link to={`/rules/${r.owner}/${r.name}`} className="font-mono font-medium text-accent hover:underline" onClick={(e) => e.stopPropagation()}>{r.name}</Link>,
     },
     {
-      key: "createdTime", title: t("col.created" as any), sortable: true, width: "200px",
+      key: "createdTime", title: t("col.created"), sortable: true, width: "200px",
       render: (_, r) => <span className="text-[12px] text-text-muted font-mono">{r.createdTime ? new Date(r.createdTime).toLocaleString() : "\u2014"}</span>,
     },
     {
-      key: "updatedTime", title: t("col.updated" as any), sortable: true, width: "200px",
+      key: "updatedTime", title: t("col.updated"), sortable: true, width: "200px",
       render: (_, r) => <span className="text-[12px] text-text-muted font-mono">{r.updatedTime ? new Date(r.updatedTime).toLocaleString() : "\u2014"}</span>,
     },
     {
-      key: "type", title: t("rules.field.type" as any), sortable: true, width: "100px",
+      key: "type", title: t("rules.field.type"), sortable: true, width: "100px",
       render: (_, r) => <span className="inline-block rounded px-1.5 py-0.5 text-[11px] bg-info/10 text-info">{r.type}</span>,
     },
     {
-      key: "expressions", title: t("rules.field.expressions" as any), sortable: true,
+      key: "expressions", title: t("rules.field.expressions"), sortable: true,
       render: (_, r) => (
         <div className="flex flex-wrap gap-1">
           {(r.expressions || []).map((expr, i) => (
@@ -79,14 +79,14 @@ export default function RuleListPage() {
         </div>
       ),
     },
-    { key: "action", title: t("common.action" as any), sortable: true, width: "100px" },
-    { key: "statusCode", title: t("rules.field.statusCode" as any), sortable: true, width: "120px" },
+    { key: "action", title: t("common.action"), sortable: true, width: "100px" },
+    { key: "statusCode", title: t("rules.field.statusCode"), sortable: true, width: "120px" },
     {
-      key: "reason", title: t("rules.field.reason" as any), sortable: true, width: "300px",
+      key: "reason", title: t("rules.field.reason"), sortable: true, width: "300px",
       render: (_, r) => <span className="text-[12px] text-text-secondary">{r.reason}</span>,
     },
     {
-      key: "__actions", fixed: "right" as const, title: t("common.action" as any), width: "120px",
+      key: "__actions", fixed: "right" as const, title: t("common.action"), width: "120px",
       render: (_, r) => (
         <div className="flex items-center gap-1">
           <Link to={`/rules/${r.owner}/${r.name}`} className="rounded p-1.5 text-text-muted hover:text-warning hover:bg-warning/10 transition-colors" title={t("common.edit")} onClick={(e) => e.stopPropagation()}><Pencil size={14} /></Link>
@@ -100,13 +100,13 @@ export default function RuleListPage() {
     <div className="space-y-5">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold tracking-tight">{t("rules.title" as any)}</h1>
-          <p className="text-[13px] text-text-muted mt-0.5">{t("rules.subtitle" as any)}</p>
+          <h1 className="text-xl font-bold tracking-tight">{t("rules.title")}</h1>
+          <p className="text-[13px] text-text-muted mt-0.5">{t("rules.subtitle")}</p>
         </div>
         <div className="flex items-center gap-2">
           <motion.button whileHover={{ rotate: 180 }} transition={{ duration: 0.3 }} onClick={list.refetch} className="rounded-lg border border-border p-2 text-text-muted hover:bg-surface-2 transition-colors" title={t("common.refresh")}><RefreshCw size={15} /></motion.button>
           <ColumnsMenu columns={columns} hidden={prefs.hidden} onToggle={prefs.toggleHidden} onResetWidths={prefs.resetWidths} />
-          <button onClick={handleAdd} className="flex items-center gap-1.5 rounded-lg bg-accent px-3 py-2 text-[13px] font-semibold text-white hover:bg-accent-hover transition-colors"><Plus size={15} /> {t("rules.add" as any)}</button>
+          <button onClick={handleAdd} className="flex items-center gap-1.5 rounded-lg bg-accent px-3 py-2 text-[13px] font-semibold text-white hover:bg-accent-hover transition-colors"><Plus size={15} /> {t("rules.add")}</button>
         </div>
       </div>
       <DataTable

@@ -34,7 +34,7 @@ export default function LdapSyncPage() {
         setUsers(usersRes.data.users ?? []);
         setExistUuids(usersRes.data.existUuids ?? []);
       } else {
-        modal.toast(usersRes.msg || t("ldap.sync.fetchFailed" as any), "error");
+        modal.toast(usersRes.msg || t("ldap.sync.fetchFailed"), "error");
       }
     } catch (e: any) {
       modal.toast(e.message || "Failed to fetch LDAP users", "error");
@@ -69,7 +69,7 @@ export default function LdapSyncPage() {
     if (toSync.length === 0) return;
 
     modal.showConfirm(
-      `${t("ldap.sync.confirmSync" as any)} ${toSync.length} ${t("ldap.sync.users" as any)}?`,
+      `${t("ldap.sync.confirmSync")} ${toSync.length} ${t("ldap.sync.users")}?`,
       async () => {
         setSyncing(true);
         try {
@@ -80,19 +80,19 @@ export default function LdapSyncPage() {
             const failedCount = data?.failed?.length ?? 0;
             const successCount = toSync.length - existCount - failedCount;
 
-            let msg = `${t("ldap.sync.synced" as any)}: ${successCount}`;
-            if (existCount > 0) msg += `, ${t("ldap.sync.existed" as any)}: ${existCount}`;
-            if (failedCount > 0) msg += `, ${t("ldap.sync.failed" as any)}: ${failedCount}`;
+            let msg = `${t("ldap.sync.synced")}: ${successCount}`;
+            if (existCount > 0) msg += `, ${t("ldap.sync.existed")}: ${existCount}`;
+            if (failedCount > 0) msg += `, ${t("ldap.sync.failed")}: ${failedCount}`;
 
             modal.toast(msg, failedCount > 0 ? "error" : "success");
             setSelected(new Set());
             // Refresh
             fetchData();
           } else {
-            modal.toast(res.msg || t("ldap.sync.syncFailed" as any), "error");
+            modal.toast(res.msg || t("ldap.sync.syncFailed"), "error");
           }
         } catch (e: any) {
-          modal.toast(e.message || t("ldap.sync.syncFailed" as any), "error");
+          modal.toast(e.message || t("ldap.sync.syncFailed"), "error");
         } finally {
           setSyncing(false);
         }
@@ -112,7 +112,7 @@ export default function LdapSyncPage() {
             <ArrowLeft size={18} />
           </button>
           <div>
-            <h1 className="text-xl font-bold tracking-tight">{t("ldap.sync.title" as any)}</h1>
+            <h1 className="text-xl font-bold tracking-tight">{t("ldap.sync.title")}</h1>
             <p className="text-[13px] text-text-muted font-mono mt-0.5">{ldap?.serverName ?? `${owner}/${id}`}</p>
           </div>
         </div>
@@ -120,11 +120,11 @@ export default function LdapSyncPage() {
           <button onClick={handleSync} disabled={syncing || selected.size === 0}
             className="flex items-center gap-1.5 rounded-lg bg-accent px-4 py-2 text-[13px] font-semibold text-white hover:bg-accent-hover disabled:opacity-50 transition-colors">
             {syncing ? <div className="h-3.5 w-3.5 rounded-full border-2 border-white/30 border-t-white animate-spin" /> : <RefreshCw size={14} />}
-            {t("common.sync" as any)} ({selected.size})
+            {t("common.sync")} ({selected.size})
           </button>
           <Link to={`/ldap/${owner}/${id}`}
             className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-[13px] font-medium text-text-secondary hover:bg-surface-2 transition-colors">
-            <Pencil size={14} /> {t("ldap.sync.editLdap" as any)}
+            <Pencil size={14} /> {t("ldap.sync.editLdap")}
           </Link>
           <button onClick={() => navigate(`/organizations/admin/${owner}`)}
             className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-[13px] font-medium text-text-secondary hover:bg-surface-2 transition-colors">
@@ -138,14 +138,14 @@ export default function LdapSyncPage() {
         <div className="flex items-center justify-center py-24"><div className="h-8 w-8 rounded-full border-2 border-accent/30 border-t-accent animate-spin" /></div>
       ) : users.length === 0 ? (
         <div className="rounded-xl border border-border bg-surface-1 px-5 py-12 text-center text-[13px] text-text-muted">
-          {t("ldap.sync.noUsers" as any)}
+          {t("ldap.sync.noUsers")}
         </div>
       ) : (
         <div className="rounded-xl border border-border bg-surface-1 overflow-hidden">
           <div className="px-5 py-3 border-b border-border-subtle bg-surface-2/30 flex items-center justify-between">
             <h3 className="text-[13px] font-semibold text-text-primary">
-              {t("ldap.sync.ldapUsers" as any)} ({users.length})
-              {unsyncedCount > 0 && <span className="text-text-muted font-normal ml-2">· {unsyncedCount} {t("ldap.sync.unsynced" as any)}</span>}
+              {t("ldap.sync.ldapUsers")} ({users.length})
+              {unsyncedCount > 0 && <span className="text-text-muted font-normal ml-2">· {unsyncedCount} {t("ldap.sync.unsynced")}</span>}
             </h3>
           </div>
           <div className="overflow-x-auto">
@@ -178,9 +178,9 @@ export default function LdapSyncPage() {
                         <div className="flex items-center gap-2">
                           {user.cn}
                           {synced ? (
-                            <span className="inline-flex items-center rounded-full bg-success/15 border border-success/20 px-1.5 py-0.5 text-[10px] font-medium text-success">{t("ldap.sync.syncedTag" as any)}</span>
+                            <span className="inline-flex items-center rounded-full bg-success/15 border border-success/20 px-1.5 py-0.5 text-[10px] font-medium text-success">{t("ldap.sync.syncedTag")}</span>
                           ) : (
-                            <span className="inline-flex items-center rounded-full bg-warning/15 border border-warning/20 px-1.5 py-0.5 text-[10px] font-medium text-warning">{t("ldap.sync.unsyncedTag" as any)}</span>
+                            <span className="inline-flex items-center rounded-full bg-warning/15 border border-warning/20 px-1.5 py-0.5 text-[10px] font-medium text-warning">{t("ldap.sync.unsyncedTag")}</span>
                           )}
                         </div>
                       </td>

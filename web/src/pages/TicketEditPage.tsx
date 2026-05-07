@@ -69,7 +69,7 @@ export default function TicketEditPage() {
     try {
       const res = await TicketBackend.updateTicket(owner!, name!, ticket);
       if (res.status === "ok") {
-        modal.toast(t("common.saveSuccess" as any));
+        modal.toast(t("common.saveSuccess"));
         setSaved(true);
         setOriginalJson(JSON.stringify(ticket));
         setIsAddMode(false);
@@ -79,10 +79,10 @@ export default function TicketEditPage() {
           navigate(`/tickets/${ticket.owner}/${ticket.name}`, { replace: true });
         }
       } else {
-        modal.toast(friendlyError(res.msg, t) || t("common.saveFailed" as any), "error");
+        modal.toast(friendlyError(res.msg, t) || t("common.saveFailed"), "error");
       }
     } catch (e: any) {
-      modal.toast(e?.message || t("common.saveFailed" as any), "error");
+      modal.toast(e?.message || t("common.saveFailed"), "error");
     } finally {
       setSaving(false);
     }
@@ -94,14 +94,14 @@ export default function TicketEditPage() {
     try {
       const res = await TicketBackend.updateTicket(owner!, name!, ticket);
       if (res.status === "ok") {
-        modal.toast(t("common.saveSuccess" as any));
+        modal.toast(t("common.saveSuccess"));
         invalidateList();
         navigate("/tickets");
       } else {
-        modal.toast(friendlyError(res.msg, t) || t("common.saveFailed" as any), "error");
+        modal.toast(friendlyError(res.msg, t) || t("common.saveFailed"), "error");
       }
     } catch (e: any) {
-      modal.toast(e?.message || t("common.saveFailed" as any), "error");
+      modal.toast(e?.message || t("common.saveFailed"), "error");
     } finally {
       setSaving(false);
     }
@@ -114,7 +114,7 @@ export default function TicketEditPage() {
       invalidateList();
       navigate("/tickets");
     } else {
-      modal.toast(res.msg || t("common.deleteFailed" as any), "error");
+      modal.toast(res.msg || t("common.deleteFailed"), "error");
     }
   };
 
@@ -128,13 +128,13 @@ export default function TicketEditPage() {
     modal.showConfirm(t("common.confirmDelete"), async () => {
       const res = await TicketBackend.deleteTicket(ticket);
       if (res.status === "ok") navigate("/tickets");
-      else modal.toast(res.msg || t("common.deleteFailed" as any), "error");
+      else modal.toast(res.msg || t("common.deleteFailed"), "error");
     });
   };
 
   const handleSendMessage = async () => {
     if (!messageText.trim()) {
-      modal.toast(t("tickets.field.enterMessage" as any), "error");
+      modal.toast(t("tickets.field.enterMessage"), "error");
       return;
     }
     setSending(true);
@@ -147,11 +147,11 @@ export default function TicketEditPage() {
       };
       const res = await TicketBackend.addTicketMessage(owner!, name!, message);
       if (res.status === "ok") {
-        modal.toast(t("common.sendSuccess" as any));
+        modal.toast(t("common.sendSuccess"));
         setMessageText("");
         invalidate();
       } else {
-        modal.toast(res.msg || t("common.sendFailed" as any), "error");
+        modal.toast(res.msg || t("common.sendFailed"), "error");
       }
     } finally {
       setSending(false);
@@ -161,7 +161,7 @@ export default function TicketEditPage() {
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-6 ">
       <StickyEditHeader
-        title={isAddMode ? t("tickets.newTicket" as any) : `${t("common.edit")} ${t("tickets.title" as any)}`}
+        title={isAddMode ? t("tickets.newTicket") : `${t("common.edit")} ${t("tickets.title")}`}
         subtitle={`${owner}/${name}`}
         onBack={handleBack}
       >
@@ -174,7 +174,7 @@ export default function TicketEditPage() {
               <SaveButton onClick={handleSave} saving={saving} saved={saved} label={t("common.save")} />
               <button onClick={handleSaveAndExit} disabled={saving} className="flex items-center gap-1.5 rounded-lg bg-accent px-4 py-2 text-[13px] font-semibold text-white hover:bg-accent-hover disabled:opacity-50 transition-colors">
                 {saving ? <div className="h-3.5 w-3.5 rounded-full border-2 border-white/30 border-t-white animate-spin" /> : <LogOut size={14} />}
-                {t("common.saveAndExit" as any)}
+                {t("common.saveAndExit")}
               </button>
             </>
           ) : (
@@ -186,7 +186,7 @@ export default function TicketEditPage() {
               <SaveButton onClick={handleSave} saving={saving} saved={saved} label={t("common.save")} />
               <button onClick={handleSaveAndExit} disabled={saving} className="flex items-center gap-1.5 rounded-lg bg-accent px-4 py-2 text-[13px] font-semibold text-white hover:bg-accent-hover disabled:opacity-50 transition-colors">
                 {saving ? <div className="h-3.5 w-3.5 rounded-full border-2 border-white/30 border-t-white animate-spin" /> : <LogOut size={14} />}
-                {t("common.saveAndExit" as any)}
+                {t("common.saveAndExit")}
               </button>
             </>
           )}
@@ -195,38 +195,38 @@ export default function TicketEditPage() {
       {showBanner && <UnsavedBanner isAddMode={isAddMode} />}
 
       {/* Basic Info */}
-      <FormSection title={t("tickets.section.basic" as any)}>
-        <FormField label={t("col.organization" as any)}>
+      <FormSection title={t("tickets.section.basic")}>
+        <FormField label={t("col.organization")}>
           <input value={ticket.owner} disabled className={inputClass} />
         </FormField>
         <FormField label={t("field.name")} required>
           <input value={ticket.name} onChange={(e) => set("name", e.target.value)} className={monoInputClass} />
         </FormField>
-        <FormField label={t("col.displayName" as any)}>
+        <FormField label={t("col.displayName")}>
           <input value={ticket.displayName} onChange={(e) => set("displayName", e.target.value)} className={inputClass} />
         </FormField>
-        <FormField label={t("col.created" as any)}>
+        <FormField label={t("col.created")}>
           <input value={ticket.createdTime} disabled className={monoInputClass} />
         </FormField>
-        <FormField label={t("col.updated" as any)}>
+        <FormField label={t("col.updated")}>
           <input value={ticket.updatedTime} disabled className={monoInputClass} />
         </FormField>
-        <FormField label={t("tickets.field.title" as any)}>
+        <FormField label={t("tickets.field.title")}>
           <input value={ticket.title} onChange={(e) => set("title", e.target.value)} className={inputClass} />
         </FormField>
-        <FormField label={t("tickets.field.content" as any)} span="full">
+        <FormField label={t("tickets.field.content")} span="full">
           <textarea value={ticket.content} onChange={(e) => set("content", e.target.value)} rows={4} className={inputClass} />
         </FormField>
-        <FormField label={t("col.user" as any)}>
+        <FormField label={t("col.user")}>
           <input value={ticket.user} disabled className={inputClass} />
         </FormField>
-        <FormField label={t("tickets.field.state" as any)}>
+        <FormField label={t("tickets.field.state")}>
           <SimpleSelect value={ticket.state} options={STATES.map((s) => ({ value: s, label: s }))} onChange={(v) => set("state", v)} />
         </FormField>
       </FormSection>
 
       {/* Messages */}
-      <FormSection title={t("tickets.section.messages" as any)}>
+      <FormSection title={t("tickets.section.messages")}>
         <div className="col-span-2 space-y-3">
           {(ticket.messages ?? []).length === 0 && (
             <p className="text-[13px] text-text-muted">{t("common.noData")}</p>
@@ -239,7 +239,7 @@ export default function TicketEditPage() {
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
                   <span className="text-[13px] font-medium">{msg.author}</span>
-                  {msg.isAdmin && <span className="inline-flex items-center rounded-full bg-accent/10 px-1.5 py-0.5 text-[10px] font-medium text-accent">{t("tickets.field.admin" as any)}</span>}
+                  {msg.isAdmin && <span className="inline-flex items-center rounded-full bg-accent/10 px-1.5 py-0.5 text-[10px] font-medium text-accent">{t("tickets.field.admin")}</span>}
                   <span className="text-[11px] text-text-muted">{msg.timestamp ? new Date(msg.timestamp).toLocaleString() : ""}</span>
                 </div>
                 <p className="text-[13px] text-text-secondary mt-1 whitespace-pre-wrap break-words">{msg.text}</p>
@@ -252,7 +252,7 @@ export default function TicketEditPage() {
             <textarea
               value={messageText}
               onChange={(e) => setMessageText(e.target.value)}
-              placeholder={t("tickets.field.typeMessage" as any)}
+              placeholder={t("tickets.field.typeMessage")}
               rows={3}
               className={inputClass}
               onKeyDown={(e) => {
@@ -260,14 +260,14 @@ export default function TicketEditPage() {
               }}
             />
             <div className="flex items-center justify-between mt-2">
-              <span className="text-[11px] text-text-muted">{t("tickets.field.ctrlEnterToSend" as any)}</span>
+              <span className="text-[11px] text-text-muted">{t("tickets.field.ctrlEnterToSend")}</span>
               <button
                 onClick={handleSendMessage}
                 disabled={sending}
                 className="flex items-center gap-1.5 rounded-lg bg-accent px-3 py-2 text-[13px] font-semibold text-white hover:bg-accent-hover disabled:opacity-50 transition-colors"
               >
                 {sending ? <div className="h-3.5 w-3.5 rounded-full border-2 border-white/30 border-t-white animate-spin" /> : <Send size={14} />}
-                {t("common.send" as any)}
+                {t("common.send")}
               </button>
             </div>
           </div>

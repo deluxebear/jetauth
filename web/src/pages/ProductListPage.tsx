@@ -32,7 +32,7 @@ export default function ProductListPage() {
     if (res.status === "ok") {
       navigate(`/products/${product.owner}/${product.name}`, { state: { mode: "add" } });
     } else {
-      modal.toast(res.msg || t("common.addFailed" as any), "error");
+      modal.toast(res.msg || t("common.addFailed"), "error");
     }
   };
 
@@ -43,10 +43,10 @@ export default function ProductListPage() {
       async () => {
         const res = await ProductBackend.deleteProduct(record);
         if (res.status === "ok") {
-          modal.toast(t("common.deleteSuccess" as any), "success");
+          modal.toast(t("common.deleteSuccess"), "success");
           list.refetch();
         } else {
-          modal.toast(res.msg || t("common.deleteFailed" as any), "error");
+          modal.toast(res.msg || t("common.deleteFailed"), "error");
         }
       }
     );
@@ -55,7 +55,7 @@ export default function ProductListPage() {
   const columns: Column<Product>[] = [
     {
       key: "name",
-      title: t("col.name" as any),
+      title: t("col.name"),
       sortable: true,
       filterable: true,
       fixed: "left" as const,
@@ -72,19 +72,19 @@ export default function ProductListPage() {
     },
     {
       key: "owner",
-      title: t("col.organization" as any),
+      title: t("col.organization"),
       sortable: true,
       filterable: true,
       width: "120px",
       render: (_, r) => (
         <span className="text-[12px] text-text-secondary">
-          {r.owner === "admin" ? t("common.adminShared" as any) : r.owner}
+          {r.owner === "admin" ? t("common.adminShared") : r.owner}
         </span>
       ),
     },
     {
       key: "createdTime",
-      title: t("col.created" as any),
+      title: t("col.created"),
       sortable: true,
       width: "160px",
       render: (_, r) => (
@@ -95,14 +95,14 @@ export default function ProductListPage() {
     },
     {
       key: "displayName",
-      title: t("col.displayName" as any),
+      title: t("col.displayName"),
       sortable: true,
       filterable: true,
       width: "200px",
     },
     {
       key: "image",
-      title: t("products.field.image" as any),
+      title: t("products.field.image"),
       width: "170px",
       render: (_, r) =>
         r.image ? (
@@ -115,21 +115,21 @@ export default function ProductListPage() {
     },
     {
       key: "tag",
-      title: t("products.field.tag" as any),
+      title: t("products.field.tag"),
       sortable: true,
       filterable: true,
       width: "160px",
     },
     {
       key: "price",
-      title: t("products.field.price" as any),
+      title: t("products.field.price"),
       sortable: true,
       width: "140px",
       render: (_, r) => (
         <span className="text-[12px] font-mono font-medium">
           {r.isRecharge ? (
             <span className="text-text-muted italic">
-              {t("products.field.isRecharge" as any)}
+              {t("products.field.isRecharge")}
             </span>
           ) : (
             formatPrice(r.price, r.currency)
@@ -139,7 +139,7 @@ export default function ProductListPage() {
     },
     {
       key: "quantity",
-      title: t("products.field.quantity" as any),
+      title: t("products.field.quantity"),
       sortable: true,
       width: "100px",
       render: (_, r) => (
@@ -148,7 +148,7 @@ export default function ProductListPage() {
     },
     {
       key: "sold",
-      title: t("products.field.sold" as any),
+      title: t("products.field.sold"),
       sortable: true,
       width: "100px",
       render: (_, r) => (
@@ -157,7 +157,7 @@ export default function ProductListPage() {
     },
     {
       key: "state",
-      title: t("col.state" as any),
+      title: t("col.state"),
       sortable: true,
       filterable: true,
       width: "100px",
@@ -170,14 +170,14 @@ export default function ProductListPage() {
           }`}
         >
           {r.state === "Published"
-            ? t("products.state.published" as any)
-            : t("products.state.draft" as any)}
+            ? t("products.state.published")
+            : t("products.state.draft")}
         </span>
       ),
     },
     {
       key: "providers",
-      title: t("products.field.providers" as any),
+      title: t("products.field.providers"),
       width: "250px",
       render: (_, r) => {
         const providers = r.providers || [];
@@ -203,7 +203,7 @@ export default function ProductListPage() {
     {
       key: "__actions",
       fixed: "right" as const,
-      title: t("common.action" as any),
+      title: t("common.action"),
       width: "110px",
       render: (_, r) => (
         <div className="flex items-center gap-1">
@@ -232,10 +232,10 @@ export default function ProductListPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-bold tracking-tight">
-            {t("products.title" as any)}
+            {t("products.title")}
           </h1>
           <p className="text-[13px] text-text-muted mt-0.5">
-            {t("products.subtitle" as any)}
+            {t("products.subtitle")}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -253,7 +253,7 @@ export default function ProductListPage() {
             onClick={handleAdd}
             className="flex items-center gap-1.5 rounded-lg bg-accent px-3 py-2 text-[13px] font-semibold text-white hover:bg-accent-hover transition-colors"
           >
-            <Plus size={15} /> {t("products.add" as any)}
+            <Plus size={15} /> {t("products.add")}
           </button>
         </div>
       </div>

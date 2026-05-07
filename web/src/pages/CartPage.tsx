@@ -100,11 +100,11 @@ export default function CartPage() {
       updated.splice(index, 1);
       return updated;
     });
-    modal.toast(t("common.deleteSuccess" as any), "success");
+    modal.toast(t("common.deleteSuccess"), "success");
   };
 
   const handleClearCart = () => {
-    modal.showConfirm(t("cart.confirmClear" as any), async () => {
+    modal.showConfirm(t("cart.confirmClear"), async () => {
       await saveCart([]);
       setCartItems([]);
     });
@@ -129,10 +129,10 @@ export default function CartPage() {
         setCartItems([]);
         navigate(`/orders/${res.data.owner}/${res.data.name}/pay`);
       } else {
-        modal.toast(res.msg || t("cart.checkoutFailed" as any), "error");
+        modal.toast(res.msg || t("cart.checkoutFailed"), "error");
       }
     } catch {
-      modal.toast(t("cart.checkoutFailed" as any), "error");
+      modal.toast(t("cart.checkoutFailed"), "error");
     } finally {
       setChecking(false);
     }
@@ -151,7 +151,7 @@ export default function CartPage() {
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-bold tracking-tight flex items-center gap-2">
           <ShoppingCart size={20} className="text-accent" />
-          {t("cart.title" as any)}
+          {t("cart.title")}
           {cartItems.length > 0 && (
             <span className="text-[13px] font-normal text-text-muted">
               ({cartItems.length})
@@ -163,7 +163,7 @@ export default function CartPage() {
             onClick={handleClearCart}
             className="text-[12px] text-text-muted hover:text-danger transition-colors"
           >
-            {t("cart.clearAll" as any)}
+            {t("cart.clearAll")}
           </button>
         )}
       </div>
@@ -174,16 +174,16 @@ export default function CartPage() {
             <Package size={36} className="text-text-muted/40" />
           </div>
           <h3 className="text-[15px] font-semibold text-text-secondary">
-            {t("cart.empty" as any)}
+            {t("cart.empty")}
           </h3>
           <p className="text-[13px] text-text-muted mt-1 mb-4">
-            {t("cart.emptyDesc" as any)}
+            {t("cart.emptyDesc")}
           </p>
           <Link
             to="/product-store"
             className="flex items-center gap-1.5 rounded-lg bg-accent px-4 py-2 text-[13px] font-semibold text-white hover:bg-accent-hover transition-colors"
           >
-            {t("cart.goShopping" as any)} <ArrowRight size={14} />
+            {t("cart.goShopping")} <ArrowRight size={14} />
           </Link>
         </div>
       ) : (
@@ -219,7 +219,7 @@ export default function CartPage() {
                       </h3>
                       {!item.valid && (
                         <span className="text-[11px] text-danger font-medium">
-                          {t("cart.invalidProduct" as any)}
+                          {t("cart.invalidProduct")}
                         </span>
                       )}
                     </div>
@@ -260,7 +260,7 @@ export default function CartPage() {
 
                     {item.isRecharge && (
                       <span className="text-[11px] text-text-muted italic">
-                        {t("store.recharge" as any)}
+                        {t("store.recharge")}
                       </span>
                     )}
                   </div>
@@ -273,12 +273,12 @@ export default function CartPage() {
           <div className="sticky bottom-0 rounded-xl border border-border bg-surface-1 p-4 shadow-lg">
             <div className="flex items-center justify-between">
               <div>
-                <span className="text-[13px] text-text-muted">{t("cart.total" as any)}: </span>
+                <span className="text-[13px] text-text-muted">{t("cart.total")}: </span>
                 <span className="text-xl font-bold text-danger font-mono">
                   {formatPrice(totalPrice, currency)}
                 </span>
                 <span className="text-[12px] text-text-muted ml-1">
-                  ({validItems.length} {t("cart.items" as any)})
+                  ({validItems.length} {t("cart.items")})
                 </span>
               </div>
               <button
@@ -291,7 +291,7 @@ export default function CartPage() {
                 ) : (
                   <ArrowRight size={16} />
                 )}
-                {t("cart.checkout" as any)}
+                {t("cart.checkout")}
               </button>
             </div>
           </div>

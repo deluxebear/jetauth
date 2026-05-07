@@ -19,7 +19,7 @@ export function BulkDeleteBar<T>({
   return (
     <div className="flex items-center gap-2">
       <span className="text-[12px] font-medium text-text-primary">
-        {selected.length} {t("common.bulk.selected" as any) || "已选"}
+        {selected.length} {t("common.bulk.selected") || "已选"}
       </span>
       <button
         onClick={() => onDelete(selected, clear)}

@@ -148,7 +148,7 @@ export default function UserPermissionOverview({ userOwner, userName }: Props) {
                     {r.split("/").pop()}
                   </span>
                 )) : (
-                  <span className="text-[11px] text-text-muted">{t("authz.userPerms.noRole" as any)} · {t("authz.userPerms.noPermission" as any)}</span>
+                  <span className="text-[11px] text-text-muted">{t("authz.userPerms.noRole")} · {t("authz.userPerms.noPermission")}</span>
                 )}
               </div>
             </div>
@@ -158,10 +158,10 @@ export default function UserPermissionOverview({ userOwner, userName }: Props) {
               <table className="w-full text-[12px]">
                 <thead>
                   <tr className="border-b border-border-subtle">
-                    <th className="text-left px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-text-muted">{t("authz.perms.col.resources" as any)}</th>
-                    <th className="text-left px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-text-muted">{t("authz.userPerms.allowedActions" as any)}</th>
-                    <th className="text-left px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-text-muted">{t("authz.userPerms.deniedActions" as any)}</th>
-                    <th className="text-left px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-text-muted">{t("authz.userPerms.sourceRule" as any)}</th>
+                    <th className="text-left px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-text-muted">{t("authz.perms.col.resources")}</th>
+                    <th className="text-left px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-text-muted">{t("authz.userPerms.allowedActions")}</th>
+                    <th className="text-left px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-text-muted">{t("authz.userPerms.deniedActions")}</th>
+                    <th className="text-left px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-text-muted">{t("authz.userPerms.sourceRule")}</th>
                   </tr>
                 </thead>
                 <tbody>

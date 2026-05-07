@@ -28,7 +28,7 @@ function SessionIdCell({
   const hasMore = ids.length > threshold;
 
   if (ids.length === 0) {
-    return <span className="text-[12px] text-text-muted">{t("sessions.noSessions" as any)}</span>;
+    return <span className="text-[12px] text-text-muted">{t("sessions.noSessions")}</span>;
   }
 
   return (
@@ -64,12 +64,12 @@ function SessionIdCell({
           {expanded ? (
             <>
               <ChevronUp size={12} />
-              {t("sessions.collapse" as any)}
+              {t("sessions.collapse")}
             </>
           ) : (
             <>
               <ChevronDown size={12} />
-              {t("sessions.showAll" as any)} ({ids.length})
+              {t("sessions.showAll")} ({ids.length})
             </>
           )}
         </button>
@@ -97,10 +97,10 @@ export default function SessionListPage() {
       async () => {
         const res = await SessionBackend.deleteSession(record);
         if (res.status === "ok") {
-          modal.toast(t("common.deleteSuccess" as any), "success");
+          modal.toast(t("common.deleteSuccess"), "success");
           list.refetch();
         } else {
-          modal.toast(res.msg || t("common.deleteFailed" as any), "error");
+          modal.toast(res.msg || t("common.deleteFailed"), "error");
         }
       }
     );
@@ -108,14 +108,14 @@ export default function SessionListPage() {
 
   const handleDeleteSessionId = (record: Session, sessionId: string) => {
     modal.showConfirm(
-      `${t("common.confirmDelete")} ${t("sessions.field.sessionId" as any)}: ${sessionId}`,
+      `${t("common.confirmDelete")} ${t("sessions.field.sessionId")}: ${sessionId}`,
       async () => {
         const res = await SessionBackend.deleteSession(record, sessionId);
         if (res.status === "ok") {
-          modal.toast(t("common.deleteSuccess" as any), "success");
+          modal.toast(t("common.deleteSuccess"), "success");
           list.refetch();
         } else {
-          modal.toast(res.msg || t("common.deleteFailed" as any), "error");
+          modal.toast(res.msg || t("common.deleteFailed"), "error");
         }
       }
     );
@@ -124,7 +124,7 @@ export default function SessionListPage() {
   const columns: Column<Session>[] = [
     {
       key: "name",
-      title: t("col.user" as any),
+      title: t("col.user"),
       sortable: true,
       filterable: true,
       fixed: "left" as const,
@@ -141,7 +141,7 @@ export default function SessionListPage() {
     },
     {
       key: "owner",
-      title: t("col.organization" as any),
+      title: t("col.organization"),
       sortable: true,
       filterable: true,
       width: "110px",
@@ -157,7 +157,7 @@ export default function SessionListPage() {
     },
     {
       key: "application",
-      title: t("col.application" as any),
+      title: t("col.application"),
       sortable: true,
       filterable: true,
       width: "140px",
@@ -173,7 +173,7 @@ export default function SessionListPage() {
     },
     {
       key: "createdTime",
-      title: t("col.created" as any),
+      title: t("col.created"),
       sortable: true,
       width: "180px",
       render: (_, r) => (
@@ -184,7 +184,7 @@ export default function SessionListPage() {
     },
     {
       key: "sessionId",
-      title: t("sessions.field.sessionId" as any),
+      title: t("sessions.field.sessionId"),
       width: "280px",
       render: (_, r) => (
         <SessionIdCell
@@ -197,7 +197,7 @@ export default function SessionListPage() {
     {
       key: "__actions",
       fixed: "right" as const,
-      title: t("common.action" as any),
+      title: t("common.action"),
       width: "100px",
       render: (_, r) => (
         <div className="flex items-center gap-1">
@@ -208,7 +208,7 @@ export default function SessionListPage() {
             }}
             className="text-accent hover:text-accent-hover text-[12px] font-medium transition-colors"
           >
-            {t("common.detail" as any)}
+            {t("common.detail")}
           </button>
           <button
             onClick={(e) => handleDeleteSession(r, e)}
@@ -227,10 +227,10 @@ export default function SessionListPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-bold tracking-tight">
-            {t("sessions.title" as any)}
+            {t("sessions.title")}
           </h1>
           <p className="text-[13px] text-text-muted mt-0.5">
-            {t("sessions.subtitle" as any)}
+            {t("sessions.subtitle")}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -286,7 +286,7 @@ export default function SessionListPage() {
           >
             <div className="sticky top-0 z-10 flex items-center justify-between bg-surface-0 border-b border-border px-6 py-4">
               <h2 className="text-lg font-bold">
-                {t("common.detail" as any)}
+                {t("common.detail")}
               </h2>
               <button
                 onClick={() => setDetailSession(null)}
@@ -298,10 +298,10 @@ export default function SessionListPage() {
             <div className="p-6 space-y-4">
               {(
                 [
-                  [t("sessions.field.name" as any), "name"],
-                  [t("sessions.field.owner" as any), "owner"],
-                  [t("sessions.field.application" as any), "application"],
-                  [t("sessions.field.createdTime" as any), "createdTime"],
+                  [t("sessions.field.name"), "name"],
+                  [t("sessions.field.owner"), "owner"],
+                  [t("sessions.field.application"), "application"],
+                  [t("sessions.field.createdTime"), "createdTime"],
                 ] as [string, string][]
               ).map(([label, key]) => (
                 <div
@@ -346,10 +346,10 @@ export default function SessionListPage() {
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <span className="text-[13px] font-medium text-text-secondary">
-                    {t("sessions.field.sessionId" as any)}
+                    {t("sessions.field.sessionId")}
                   </span>
                   <span className="text-[11px] text-text-muted rounded-full bg-surface-3 px-2 py-0.5">
-                    {(t("sessions.sessionCount" as any) as string).replace(
+                    {(t("sessions.sessionCount") as string).replace(
                       "{count}",
                       String(detailSession.sessionId?.length || 0)
                     )}
@@ -358,7 +358,7 @@ export default function SessionListPage() {
                 <div className="rounded-lg bg-surface-2 p-3 space-y-1.5">
                   {(detailSession.sessionId || []).length === 0 ? (
                     <span className="text-[12px] text-text-muted">
-                      {t("sessions.noSessions" as any)}
+                      {t("sessions.noSessions")}
                     </span>
                   ) : (
                     (detailSession.sessionId || []).map((sid, idx) => (

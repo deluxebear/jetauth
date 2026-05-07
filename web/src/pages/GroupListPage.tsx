@@ -52,14 +52,14 @@ export default function GroupListPage() {
     modal.showConfirm(`${t("common.confirmDelete")} [${record.displayName || record.name}]`, async () => {
       const res = await GroupBackend.deleteGroup(record);
       if (res.status === "ok") list.refetch();
-      else modal.toast(res.msg || t("common.deleteFailed" as any), "error");
+      else modal.toast(res.msg || t("common.deleteFailed"), "error");
     });
   };
 
   const columns: Column<Group>[] = [
     {
       key: "name",
-      title: t("col.name" as any),
+      title: t("col.name"),
       sortable: true,
       filterable: true,
       width: "150px",
@@ -69,43 +69,43 @@ export default function GroupListPage() {
         </Link>
       ),
     },
-    { key: "owner", title: t("col.organization" as any), sortable: true, filterable: true, width: "140px" },
+    { key: "owner", title: t("col.organization"), sortable: true, filterable: true, width: "140px" },
     {
       key: "createdTime",
-      title: t("col.created" as any),
+      title: t("col.created"),
       sortable: true,
       width: "160px",
       render: (_, r) => <span className="text-[12px] text-text-muted font-mono">{r.createdTime ? new Date(r.createdTime).toLocaleString() : "—"}</span>,
     },
     {
       key: "updatedTime",
-      title: t("col.updated" as any),
+      title: t("col.updated"),
       sortable: true,
       width: "160px",
       render: (_, r) => <span className="text-[12px] text-text-muted font-mono">{r.updatedTime ? new Date(r.updatedTime).toLocaleString() : "—"}</span>,
     },
-    { key: "displayName", title: t("col.displayName" as any), sortable: true, filterable: true },
+    { key: "displayName", title: t("col.displayName"), sortable: true, filterable: true },
     {
       key: "type",
-      title: t("col.type" as any),
+      title: t("col.type"),
       width: "100px",
       render: (_, r) => (
         <span className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${
           r.type === "Physical" ? "bg-info/15 text-info border border-info/20" : "bg-surface-3 text-text-muted border border-border"
         }`}>
-          {r.type === "Physical" ? t("groups.type.physical" as any) : t("groups.type.virtual" as any)}
+          {r.type === "Physical" ? t("groups.type.physical") : t("groups.type.virtual")}
         </span>
       ),
     },
     {
       key: "parentId",
-      title: t("col.parent" as any),
+      title: t("col.parent"),
       width: "140px",
       render: (_, r) => <span className="text-text-secondary text-[12px]">{r.parentId || "—"}</span>,
     },
     {
       key: "users",
-      title: t("col.users" as any),
+      title: t("col.users"),
       render: (_, r) => {
         const users = r.users ?? [];
         if (users.length === 0) return <span className="text-text-muted text-[12px]">—</span>;
@@ -121,14 +121,14 @@ export default function GroupListPage() {
     },
     {
       key: "isEnabled",
-      title: t("col.enabled" as any),
+      title: t("col.enabled"),
       width: "80px",
       render: (_, r) => <StatusBadge status={r.isEnabled ? "active" : "inactive"} label={r.isEnabled ? "ON" : "OFF"} />,
     },
     {
       key: "__actions",
       fixed: "right" as const,
-      title: t("common.action" as any),
+      title: t("common.action"),
       width: "90px",
       render: (_, r) => (
         <div className="flex items-center gap-1">
@@ -152,8 +152,8 @@ export default function GroupListPage() {
     <div className="space-y-5">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold tracking-tight">{t("groups.title" as any)}</h1>
-          <p className="text-[13px] text-text-muted mt-0.5">{t("groups.subtitle" as any)}</p>
+          <h1 className="text-xl font-bold tracking-tight">{t("groups.title")}</h1>
+          <p className="text-[13px] text-text-muted mt-0.5">{t("groups.subtitle")}</p>
         </div>
         <div className="flex items-center gap-2">
           <motion.button whileHover={{ rotate: 180 }} transition={{ duration: 0.3 }} onClick={list.refetch} className="rounded-lg border border-border p-2 text-text-muted hover:bg-surface-2 transition-colors">
@@ -162,7 +162,7 @@ export default function GroupListPage() {
           <ColumnsMenu columns={columns} hidden={prefs.hidden} onToggle={prefs.toggleHidden} onResetWidths={prefs.resetWidths} />
           <button onClick={handleAdd} className="flex items-center gap-1.5 rounded-lg bg-accent px-3 py-2 text-[13px] font-semibold text-white hover:bg-accent-hover transition-colors">
             <Plus size={15} />
-            {t("groups.add" as any)}
+            {t("groups.add")}
           </button>
         </div>
       </div>

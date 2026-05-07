@@ -94,7 +94,7 @@ export default function AgentEditPage() {
     try {
       const res = await AgentBackend.updateAgent(owner!, name!, agent);
       if (res.status === "ok") {
-        modal.toast(t("common.saveSuccess" as any));
+        modal.toast(t("common.saveSuccess"));
         setSaved(true);
         setOriginalJson(JSON.stringify(agent));
         setIsAddMode(false);
@@ -103,7 +103,7 @@ export default function AgentEditPage() {
           navigate(`/agents/${agent.owner}/${agent.name}`, { replace: true });
         }
       } else {
-        modal.toast(friendlyError(res.msg, t) || t("common.saveFailed" as any), "error");
+        modal.toast(friendlyError(res.msg, t) || t("common.saveFailed"), "error");
       }
     } catch (e) {
       console.error(e);
@@ -117,14 +117,14 @@ export default function AgentEditPage() {
     try {
       const res = await AgentBackend.updateAgent(owner!, name!, agent);
       if (res.status === "ok") {
-        modal.toast(t("common.saveSuccess" as any));
+        modal.toast(t("common.saveSuccess"));
         invalidateList();
         navigate("/agents");
       } else {
-        modal.toast(friendlyError(res.msg, t) || t("common.saveFailed" as any), "error");
+        modal.toast(friendlyError(res.msg, t) || t("common.saveFailed"), "error");
       }
     } catch (e: any) {
-      modal.toast(e?.message || t("common.saveFailed" as any), "error");
+      modal.toast(e?.message || t("common.saveFailed"), "error");
     } finally {
       setSaving(false);
     }
@@ -146,7 +146,7 @@ export default function AgentEditPage() {
           invalidateList();
           navigate("/agents");
         } else {
-          modal.toast(res.msg || t("common.deleteFailed" as any), "error");
+          modal.toast(res.msg || t("common.deleteFailed"), "error");
         }
       } catch (e) {
         console.error(e);
@@ -157,7 +157,7 @@ export default function AgentEditPage() {
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
       <StickyEditHeader
-        title={`${isAddMode ? t("common.add") : t("common.edit")} ${t("agents.title" as any)}`}
+        title={`${isAddMode ? t("common.add") : t("common.edit")} ${t("agents.title")}`}
         subtitle={`${owner}/${name}`}
         onBack={handleBack}
       >
@@ -167,21 +167,21 @@ export default function AgentEditPage() {
         <SaveButton onClick={handleSave} saving={saving} saved={saved} label={t("common.save")} />
         <button onClick={handleSaveAndExit} disabled={saving} className="flex items-center gap-1.5 rounded-lg bg-accent px-4 py-2 text-[13px] font-semibold text-white hover:bg-accent-hover disabled:opacity-50 transition-colors">
           {saving ? <div className="h-3.5 w-3.5 rounded-full border-2 border-white/30 border-t-white animate-spin" /> : <LogOut size={14} />}
-          {t("common.saveAndExit" as any)}
+          {t("common.saveAndExit")}
         </button>
       </StickyEditHeader>
 
       {showBanner && <UnsavedBanner isAddMode={isAddMode} />}
 
       {/* Basic Info */}
-      <FormSection title={t("agents.section.basic" as any)}>
-        <FormField label={t("field.owner")} tooltip={t("agents.tooltip.organization" as any)}>
+      <FormSection title={t("agents.section.basic")}>
+        <FormField label={t("field.owner")} tooltip={t("agents.tooltip.organization")}>
           {isAdmin ? (
             <SingleSearchSelect
               value={agent.owner}
               options={orgOptions}
               onChange={(v) => handleOwnerChange(v)}
-              placeholder={t("common.search" as any)}
+              placeholder={t("common.search")}
             />
           ) : (
             <input value={agent.owner} disabled className={inputClass} />
@@ -196,19 +196,19 @@ export default function AgentEditPage() {
       </FormSection>
 
       {/* Configuration */}
-      <FormSection title={t("agents.section.config" as any)}>
-        <FormField label={t("agents.field.listeningUrl" as any)} tooltip={t("agents.tooltip.listeningUrl" as any)}>
+      <FormSection title={t("agents.section.config")}>
+        <FormField label={t("agents.field.listeningUrl")} tooltip={t("agents.tooltip.listeningUrl")}>
           <input value={agent.url} onChange={(e) => set("url", e.target.value)} className={monoInputClass} placeholder="https://..." />
         </FormField>
-        <FormField label={t("agents.field.accessToken" as any)} tooltip={t("agents.tooltip.accessToken" as any)}>
+        <FormField label={t("agents.field.accessToken")} tooltip={t("agents.tooltip.accessToken")}>
           <input type="password" value={agent.token} onChange={(e) => set("token", e.target.value)} className={monoInputClass} placeholder="***" />
         </FormField>
-        <FormField label={t("col.application" as any)} tooltip={t("agents.tooltip.application" as any)}>
+        <FormField label={t("col.application")} tooltip={t("agents.tooltip.application")}>
           <SingleSearchSelect
             value={agent.application}
             options={appOptions}
             onChange={(v) => set("application", v)}
-            placeholder={t("common.search" as any)}
+            placeholder={t("common.search")}
           />
         </FormField>
       </FormSection>

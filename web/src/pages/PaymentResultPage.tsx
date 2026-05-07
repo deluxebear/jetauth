@@ -109,15 +109,15 @@ export default function PaymentResultPage() {
         {/* Title */}
         <div>
           <h1 className="text-xl font-bold">
-            {state === "Paid" && t("payResult.paid" as any)}
-            {state === "Created" && t("payResult.processing" as any)}
-            {state === "Canceled" && t("payResult.canceled" as any)}
-            {state === "Timeout" && t("payResult.timeout" as any)}
-            {state === "Error" && t("payResult.error" as any)}
+            {state === "Paid" && t("payResult.paid")}
+            {state === "Created" && t("payResult.processing")}
+            {state === "Canceled" && t("payResult.canceled")}
+            {state === "Timeout" && t("payResult.timeout")}
+            {state === "Error" && t("payResult.error")}
           </h1>
           {state === "Created" && (
             <p className="text-[13px] text-text-muted mt-1">
-              {t("payResult.processingDesc" as any)}
+              {t("payResult.processingDesc")}
             </p>
           )}
           {state === "Error" && payment.message && (
@@ -128,24 +128,24 @@ export default function PaymentResultPage() {
         {/* Payment details */}
         <div className="rounded-lg bg-surface-2 p-4 space-y-2 text-[13px]">
           <div className="flex justify-between">
-            <span className="text-text-muted">{t("payResult.amount" as any)}</span>
+            <span className="text-text-muted">{t("payResult.amount")}</span>
             <span className="font-mono font-bold text-text-primary">
               {formatPrice(payment.price, payment.currency)}
             </span>
           </div>
           <div className="flex justify-between">
-            <span className="text-text-muted">{t("payResult.paymentId" as any)}</span>
+            <span className="text-text-muted">{t("payResult.paymentId")}</span>
             <span className="font-mono text-text-secondary">{payment.name}</span>
           </div>
           {payment.provider && (
             <div className="flex justify-between">
-              <span className="text-text-muted">{t("payResult.provider" as any)}</span>
+              <span className="text-text-muted">{t("payResult.provider")}</span>
               <span className="text-text-secondary">{payment.provider}</span>
             </div>
           )}
           {payment.productsDisplayName && (
             <div className="flex justify-between">
-              <span className="text-text-muted">{t("payResult.products" as any)}</span>
+              <span className="text-text-muted">{t("payResult.products")}</span>
               <span className="text-text-secondary truncate max-w-[200px]" title={payment.productsDisplayName}>
                 {payment.productsDisplayName}
               </span>
@@ -161,7 +161,7 @@ export default function PaymentResultPage() {
               className="flex items-center gap-1.5 rounded-lg border border-border px-4 py-2 text-[13px] font-medium text-text-secondary hover:bg-surface-2 transition-colors"
             >
               <FileText size={14} />
-              {t("payResult.viewOrder" as any)}
+              {t("payResult.viewOrder")}
             </Link>
           )}
           <Link
@@ -169,7 +169,7 @@ export default function PaymentResultPage() {
             className="flex items-center gap-1.5 rounded-lg bg-accent px-4 py-2 text-[13px] font-semibold text-white hover:bg-accent-hover transition-colors"
           >
             <ShoppingBag size={14} />
-            {t("payResult.backToStore" as any)}
+            {t("payResult.backToStore")}
           </Link>
         </div>
       </div>

@@ -59,7 +59,7 @@ export default function PaymentEditPage() {
     try {
       const res = await PaymentBackend.updatePayment(owner!, name!, payment);
       if (res.status === "ok") {
-        modal.toast(t("common.saveSuccess" as any));
+        modal.toast(t("common.saveSuccess"));
         setSaved(true);
         setOriginalJson(JSON.stringify(payment));
         setIsAddMode(false);
@@ -68,7 +68,7 @@ export default function PaymentEditPage() {
           navigate(`/payments/${payment.owner}/${payment.name}`, { replace: true });
         }
       } else {
-        modal.toast(friendlyError(res.msg, t) || t("common.saveFailed" as any), "error");
+        modal.toast(friendlyError(res.msg, t) || t("common.saveFailed"), "error");
       }
     } catch (e) {
       console.error(e);
@@ -81,14 +81,14 @@ export default function PaymentEditPage() {
     try {
       const res = await PaymentBackend.updatePayment(owner!, name!, payment);
       if (res.status === "ok") {
-        modal.toast(t("common.saveSuccess" as any));
+        modal.toast(t("common.saveSuccess"));
         invalidateList();
         navigate("/payments");
       } else {
-        modal.toast(friendlyError(res.msg, t) || t("common.saveFailed" as any), "error");
+        modal.toast(friendlyError(res.msg, t) || t("common.saveFailed"), "error");
       }
     } catch (e: any) {
-      modal.toast(e?.message || t("common.saveFailed" as any), "error");
+      modal.toast(e?.message || t("common.saveFailed"), "error");
     } finally {
       setSaving(false);
     }
@@ -110,7 +110,7 @@ export default function PaymentEditPage() {
           invalidateList();
           navigate("/payments");
         } else {
-          modal.toast(res.msg || t("common.deleteFailed" as any), "error");
+          modal.toast(res.msg || t("common.deleteFailed"), "error");
         }
       } catch (e) {
         console.error(e);
@@ -121,7 +121,7 @@ export default function PaymentEditPage() {
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-6 ">
       <StickyEditHeader
-        title={`${isAddMode ? t("common.add") : t("common.edit")} ${t("payments.title" as any)}`}
+        title={`${isAddMode ? t("common.add") : t("common.edit")} ${t("payments.title")}`}
         subtitle={`${owner}/${name}`}
         onBack={handleBack}
       >
@@ -131,14 +131,14 @@ export default function PaymentEditPage() {
                     <SaveButton onClick={handleSave} saving={saving} saved={saved} label={t("common.save")} />
           <button onClick={handleSaveAndExit} disabled={saving} className="flex items-center gap-1.5 rounded-lg bg-accent px-4 py-2 text-[13px] font-semibold text-white hover:bg-accent-hover disabled:opacity-50 transition-colors">
             {saving ? <div className="h-3.5 w-3.5 rounded-full border-2 border-white/30 border-t-white animate-spin" /> : <LogOut size={14} />}
-            {t("common.saveAndExit" as any)}
+            {t("common.saveAndExit")}
           </button>
       </StickyEditHeader>
 
       {showBanner && <UnsavedBanner isAddMode={isAddMode} />}
 
       {/* Basic Info (mostly read-only) */}
-      <FormSection title={t("payments.section.basic" as any)}>
+      <FormSection title={t("payments.section.basic")}>
         <FormField label={t("field.owner")}>
           <input value={payment.owner} disabled className={inputClass} />
         </FormField>
@@ -151,58 +151,58 @@ export default function PaymentEditPage() {
       </FormSection>
 
       {/* Payment Details (read-only) */}
-      <FormSection title={t("payments.section.details" as any)}>
-        <FormField label={t("payments.field.provider" as any)}>
+      <FormSection title={t("payments.section.details")}>
+        <FormField label={t("payments.field.provider")}>
           <input value={payment.provider} disabled className={inputClass} />
         </FormField>
-        <FormField label={t("payments.field.type" as any)}>
+        <FormField label={t("payments.field.type")}>
           <input value={payment.type} disabled className={inputClass} />
         </FormField>
-        <FormField label={t("payments.field.price" as any)}>
+        <FormField label={t("payments.field.price")}>
           <input value={String(payment.price)} disabled className={monoInputClass} />
         </FormField>
-        <FormField label={t("payments.field.currency" as any)}>
+        <FormField label={t("payments.field.currency")}>
           <input value={payment.currency} disabled className={inputClass} />
         </FormField>
-        <FormField label={t("col.state" as any)}>
+        <FormField label={t("col.state")}>
           <input value={payment.state} disabled className={inputClass} />
         </FormField>
-        <FormField label={t("payments.field.message" as any)}>
+        <FormField label={t("payments.field.message")}>
           <input value={payment.message} disabled className={inputClass} />
         </FormField>
       </FormSection>
 
       {/* Invoice Info (editable) */}
-      <FormSection title={t("payments.section.invoice" as any)}>
-        <FormField label={t("payments.field.personName" as any)}>
+      <FormSection title={t("payments.section.invoice")}>
+        <FormField label={t("payments.field.personName")}>
           <input value={payment.personName} onChange={(e) => set("personName", e.target.value)} disabled={!!payment.invoiceUrl} className={inputClass} />
         </FormField>
-        <FormField label={t("payments.field.personIdCard" as any)}>
+        <FormField label={t("payments.field.personIdCard")}>
           <input value={payment.personIdCard} onChange={(e) => set("personIdCard", e.target.value)} disabled={!!payment.invoiceUrl} className={inputClass} />
         </FormField>
-        <FormField label={t("payments.field.personEmail" as any)}>
+        <FormField label={t("payments.field.personEmail")}>
           <input value={payment.personEmail} onChange={(e) => set("personEmail", e.target.value)} disabled={!!payment.invoiceUrl} className={inputClass} />
         </FormField>
-        <FormField label={t("payments.field.personPhone" as any)}>
+        <FormField label={t("payments.field.personPhone")}>
           <input value={payment.personPhone} onChange={(e) => set("personPhone", e.target.value)} disabled={!!payment.invoiceUrl} className={inputClass} />
         </FormField>
-        <FormField label={t("payments.field.invoiceType" as any)}>
+        <FormField label={t("payments.field.invoiceType")}>
           <SimpleSelect value={payment.invoiceType} options={[
-            { value: "", label: t("common.none" as any) },
-            { value: "Individual", label: t("payments.field.individual" as any) },
-            { value: "Organization", label: t("col.organization" as any) },
+            { value: "", label: t("common.none") },
+            { value: "Individual", label: t("payments.field.individual") },
+            { value: "Organization", label: t("col.organization") },
           ]} onChange={(v) => set("invoiceType", v)} disabled={!!payment.invoiceUrl} />
         </FormField>
-        <FormField label={t("payments.field.invoiceTitle" as any)}>
+        <FormField label={t("payments.field.invoiceTitle")}>
           <input value={payment.invoiceTitle} onChange={(e) => set("invoiceTitle", e.target.value)} disabled={!!payment.invoiceUrl || payment.invoiceType === "Individual"} className={inputClass} />
         </FormField>
-        <FormField label={t("payments.field.invoiceTaxId" as any)}>
+        <FormField label={t("payments.field.invoiceTaxId")}>
           <input value={payment.invoiceTaxId} onChange={(e) => set("invoiceTaxId", e.target.value)} disabled={!!payment.invoiceUrl || payment.invoiceType === "Individual"} className={inputClass} />
         </FormField>
-        <FormField label={t("payments.field.invoiceRemark" as any)}>
+        <FormField label={t("payments.field.invoiceRemark")}>
           <input value={payment.invoiceRemark} onChange={(e) => set("invoiceRemark", e.target.value)} disabled={!!payment.invoiceUrl} className={inputClass} />
         </FormField>
-        <FormField label={t("payments.field.invoiceUrl" as any)}>
+        <FormField label={t("payments.field.invoiceUrl")}>
           <input value={payment.invoiceUrl} disabled className={monoInputClass} />
         </FormField>
       </FormSection>

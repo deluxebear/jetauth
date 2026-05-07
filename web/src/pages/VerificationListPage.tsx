@@ -15,9 +15,9 @@ function TypeBadge({ type, t }: { type: string; t: (key: string) => string }) {
   const isPhone = type.toLowerCase() === "phone" || type.toLowerCase() === "sms";
   const Icon = isEmail ? Mail : isPhone ? Smartphone : null;
   const label = isEmail
-    ? t("verifications.type.email" as any)
+    ? t("verifications.type.email")
     : isPhone
-      ? t("verifications.type.phone" as any)
+      ? t("verifications.type.phone")
       : type;
   const cls = isEmail
     ? "bg-blue-500/15 text-blue-600 dark:text-blue-400"
@@ -58,7 +58,7 @@ export default function VerificationListPage() {
   const columns: Column<Verification>[] = [
     {
       key: "owner",
-      title: t("col.organization" as any),
+      title: t("col.organization"),
       sortable: true,
       filterable: true,
       width: "120px",
@@ -66,7 +66,7 @@ export default function VerificationListPage() {
         if (r.owner === "admin") {
           return (
             <span className="text-[12px] text-text-muted">
-              ({t("common.empty" as any)})
+              ({t("common.empty")})
             </span>
           );
         }
@@ -83,7 +83,7 @@ export default function VerificationListPage() {
     },
     {
       key: "name",
-      title: t("col.name" as any),
+      title: t("col.name"),
       sortable: true,
       filterable: true,
       fixed: "left" as const,
@@ -91,7 +91,7 @@ export default function VerificationListPage() {
     },
     {
       key: "createdTime",
-      title: t("col.created" as any),
+      title: t("col.created"),
       sortable: true,
       width: "160px",
       render: (_, r) => (
@@ -102,7 +102,7 @@ export default function VerificationListPage() {
     },
     {
       key: "type",
-      title: t("col.type" as any),
+      title: t("col.type"),
       sortable: true,
       filterable: true,
       width: "100px",
@@ -110,7 +110,7 @@ export default function VerificationListPage() {
     },
     {
       key: "user",
-      title: t("col.user" as any),
+      title: t("col.user"),
       sortable: true,
       filterable: true,
       width: "120px",
@@ -129,7 +129,7 @@ export default function VerificationListPage() {
     },
     {
       key: "provider",
-      title: t("col.provider" as any),
+      title: t("col.provider"),
       sortable: true,
       filterable: true,
       width: "150px",
@@ -148,7 +148,7 @@ export default function VerificationListPage() {
     },
     {
       key: "remoteAddr",
-      title: t("verifications.field.remoteAddr" as any),
+      title: t("verifications.field.remoteAddr"),
       sortable: true,
       filterable: true,
       width: "120px",
@@ -170,7 +170,7 @@ export default function VerificationListPage() {
     },
     {
       key: "receiver",
-      title: t("verifications.field.receiver" as any),
+      title: t("verifications.field.receiver"),
       sortable: true,
       filterable: true,
       width: "140px",
@@ -182,7 +182,7 @@ export default function VerificationListPage() {
     },
     {
       key: "code",
-      title: t("verifications.field.code" as any),
+      title: t("verifications.field.code"),
       sortable: true,
       filterable: true,
       width: "120px",
@@ -194,7 +194,7 @@ export default function VerificationListPage() {
     },
     {
       key: "isUsed",
-      title: t("verifications.field.isUsed" as any),
+      title: t("verifications.field.isUsed"),
       sortable: true,
       width: "90px",
       fixed: "right" as const,
@@ -207,15 +207,15 @@ export default function VerificationListPage() {
           }`}
         >
           {r.isUsed
-            ? t("verifications.state.used" as any)
-            : t("verifications.state.unused" as any)}
+            ? t("verifications.state.used")
+            : t("verifications.state.unused")}
         </span>
       ),
     },
     {
       key: "__actions",
       fixed: "right" as const,
-      title: t("common.action" as any),
+      title: t("common.action"),
       width: "80px",
       render: (_, r) => (
         <button
@@ -225,7 +225,7 @@ export default function VerificationListPage() {
           }}
           className="text-accent hover:text-accent-hover text-[12px] font-medium transition-colors"
         >
-          {t("common.detail" as any)}
+          {t("common.detail")}
         </button>
       ),
     },
@@ -236,10 +236,10 @@ export default function VerificationListPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-bold tracking-tight">
-            {t("verifications.title" as any)}
+            {t("verifications.title")}
           </h1>
           <p className="text-[13px] text-text-muted mt-0.5">
-            {t("verifications.subtitle" as any)}
+            {t("verifications.subtitle")}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -291,7 +291,7 @@ export default function VerificationListPage() {
           >
             <div className="sticky top-0 z-10 flex items-center justify-between bg-surface-0 border-b border-border px-6 py-4">
               <h2 className="text-lg font-bold">
-                {t("common.detail" as any)}
+                {t("common.detail")}
               </h2>
               <button
                 onClick={() => setDetailRecord(null)}
@@ -304,17 +304,17 @@ export default function VerificationListPage() {
               {/* Basic fields */}
               {(
                 [
-                  [t("verifications.field.name" as any), "name"],
-                  [t("verifications.field.owner" as any), "owner"],
-                  [t("verifications.field.createdTime" as any), "createdTime"],
-                  [t("verifications.field.type" as any), "type"],
-                  [t("verifications.field.user" as any), "user"],
-                  [t("verifications.field.provider" as any), "provider"],
-                  [t("verifications.field.remoteAddr" as any), "remoteAddr"],
-                  [t("verifications.field.receiver" as any), "receiver"],
-                  [t("verifications.field.code" as any), "code"],
-                  [t("verifications.field.time" as any), "time"],
-                  [t("verifications.field.isUsed" as any), "isUsed"],
+                  [t("verifications.field.name"), "name"],
+                  [t("verifications.field.owner"), "owner"],
+                  [t("verifications.field.createdTime"), "createdTime"],
+                  [t("verifications.field.type"), "type"],
+                  [t("verifications.field.user"), "user"],
+                  [t("verifications.field.provider"), "provider"],
+                  [t("verifications.field.remoteAddr"), "remoteAddr"],
+                  [t("verifications.field.receiver"), "receiver"],
+                  [t("verifications.field.code"), "code"],
+                  [t("verifications.field.time"), "time"],
+                  [t("verifications.field.isUsed"), "isUsed"],
                 ] as [string, string][]
               ).map(([label, key]) => (
                 <div
@@ -328,7 +328,7 @@ export default function VerificationListPage() {
                     {key === "owner" ? (
                       detailRecord.owner === "admin" ? (
                         <span className="text-text-muted">
-                          ({t("common.empty" as any)})
+                          ({t("common.empty")})
                         </span>
                       ) : (
                         <Link
@@ -395,8 +395,8 @@ export default function VerificationListPage() {
                         }`}
                       >
                         {detailRecord.isUsed
-                          ? t("verifications.state.used" as any)
-                          : t("verifications.state.unused" as any)}
+                          ? t("verifications.state.used")
+                          : t("verifications.state.unused")}
                       </span>
                     ) : key === "createdTime" ? (
                       <span className="font-mono text-[12px]">

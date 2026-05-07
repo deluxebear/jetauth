@@ -78,27 +78,27 @@ export default function UserListPage() {
     modal.showConfirm(`${t("common.confirmDelete")} [${record.displayName || record.name}]`, async () => {
       const res = await UserBackend.deleteUser(record);
       if (res.status === "ok") list.refetch();
-      else modal.toast(res.msg || t("common.deleteFailed" as any), "error");
+      else modal.toast(res.msg || t("common.deleteFailed"), "error");
     });
   };
 
   const handleImpersonate = (record: User, e: React.MouseEvent) => {
     e.stopPropagation();
     if (record.isDeleted) {
-      modal.toast(t("users.impersonate.deletedUser" as any), "error");
+      modal.toast(t("users.impersonate.deletedUser"), "error");
       return;
     }
     if (record.isForbidden) {
-      modal.toast(t("users.impersonate.forbiddenUser" as any), "error");
+      modal.toast(t("users.impersonate.forbiddenUser"), "error");
       return;
     }
-    modal.showConfirm(`${t("users.impersonate.confirm" as any)} "${record.owner}/${record.name}"?`, async () => {
+    modal.showConfirm(`${t("users.impersonate.confirm")} "${record.owner}/${record.name}"?`, async () => {
       const res: any = await UserBackend.impersonateUser(record.owner, record.name);
       if (res.status === "ok") {
         window.location.href = "/";
       } else {
         const { friendlyError } = await import("../utils/errorHelper");
-        modal.toast(friendlyError(res.msg, t) || t("users.impersonate.failed" as any), "error");
+        modal.toast(friendlyError(res.msg, t) || t("users.impersonate.failed"), "error");
       }
     });
   };
@@ -169,7 +169,7 @@ export default function UserListPage() {
     reader.onload = (ev) => {
       try {
         const wb = XLSX.read(ev.target?.result, { type: "array" });
-        if (!wb.SheetNames?.length) { modal.toast(t("users.upload.noSheets" as any), "error"); return; }
+        if (!wb.SheetNames?.length) { modal.toast(t("users.upload.noSheets"), "error"); return; }
         const ws = wb.Sheets[wb.SheetNames[0]];
         const json = XLSX.utils.sheet_to_json<Record<string, unknown>>(ws);
         const cols = Object.keys(json[0] ?? {});
@@ -178,7 +178,7 @@ export default function UserListPage() {
         setUploadFile(file);
         setShowUploadModal(true);
       } catch (err: any) {
-        modal.toast(err.message || t("users.upload.parseFailed" as any), "error");
+        modal.toast(err.message || t("users.upload.parseFailed"), "error");
       }
     };
     reader.readAsArrayBuffer(file);
@@ -193,13 +193,13 @@ export default function UserListPage() {
       formData.append("file", uploadFile);
       const res = await fetch("/api/upload-users", { method: "POST", body: formData, credentials: "include" }).then((r) => r.json());
       if (res.status === "ok") {
-        modal.toast(t("users.upload.success" as any));
+        modal.toast(t("users.upload.success"));
         list.refetch();
       } else {
-        modal.toast(res.msg || t("users.upload.failed" as any), "error");
+        modal.toast(res.msg || t("users.upload.failed"), "error");
       }
     } catch (err: any) {
-      modal.toast(err.message || t("users.upload.failed" as any), "error");
+      modal.toast(err.message || t("users.upload.failed"), "error");
     } finally {
       setUploading(false);
       setShowUploadModal(false);
@@ -211,60 +211,60 @@ export default function UserListPage() {
 
   const columns: Column<User>[] = [
     {
-      key: "owner", title: t("col.organization" as any), sortable: true, filterable: true, fixed: "left" as const, width: "120px",
+      key: "owner", title: t("col.organization"), sortable: true, filterable: true, fixed: "left" as const, width: "120px",
       render: (_, r) => <Link to={`/organizations/admin/${r.owner}`} className="text-accent hover:underline text-[12px]" onClick={(e) => e.stopPropagation()}>{r.owner}</Link>,
     },
     {
-      key: "signupApplication", title: t("col.signupApp" as any), sortable: true, filterable: true, fixed: "left" as const, width: "120px",
+      key: "signupApplication", title: t("col.signupApp"), sortable: true, filterable: true, fixed: "left" as const, width: "120px",
       render: (_, r) => r.signupApplication
         ? <Link to={`/applications/${r.owner}/${r.signupApplication}`} className="text-accent hover:underline text-[12px]" onClick={(e) => e.stopPropagation()}>{String(r.signupApplication)}</Link>
         : <span className="text-text-muted text-[12px]">—</span>,
     },
     {
-      key: "name", title: t("col.name" as any), sortable: true, filterable: true, fixed: "left" as const, width: "110px",
+      key: "name", title: t("col.name"), sortable: true, filterable: true, fixed: "left" as const, width: "110px",
       render: (_, r) => <Link to={`/users/${r.owner}/${r.name}`} className="font-mono font-medium text-accent hover:underline" onClick={(e) => e.stopPropagation()}>{r.name}</Link>,
     },
     {
-      key: "createdTime", title: t("col.created" as any), sortable: true, width: "160px",
+      key: "createdTime", title: t("col.created"), sortable: true, width: "160px",
       render: (_, r) => <span className="text-[12px] text-text-muted font-mono">{r.createdTime ? new Date(r.createdTime).toLocaleString() : "—"}</span>,
     },
-    { key: "displayName", title: t("col.displayName" as any), sortable: true, filterable: true, width: "130px" },
+    { key: "displayName", title: t("col.displayName"), sortable: true, filterable: true, width: "130px" },
     {
-      key: "avatar", title: t("col.avatar" as any), width: "80px",
+      key: "avatar", title: t("col.avatar"), width: "80px",
       render: (_, r) => r.avatar
         ? <img src={r.avatar} alt="" className="h-8 w-8 rounded-full object-cover border border-border" referrerPolicy="no-referrer" />
         : <div className="h-8 w-8 rounded-full bg-surface-3 flex items-center justify-center text-[10px] font-bold text-text-muted">{String(r.displayName ?? r.name ?? "?")[0]}</div>,
     },
     {
-      key: "email", title: t("col.email" as any), sortable: true, filterable: true, width: "160px",
+      key: "email", title: t("col.email"), sortable: true, filterable: true, width: "160px",
       render: (_, r) => r.email ? <a href={`mailto:${r.email}`} className="text-accent hover:underline text-[12px]" onClick={(e) => e.stopPropagation()}>{r.email}</a> : <span className="text-text-muted text-[12px]">—</span>,
     },
-    { key: "phone", title: t("col.phone" as any), sortable: true, filterable: true, width: "120px", render: (_, r) => textCol(r.phone) },
-    { key: "affiliation", title: t("col.affiliation" as any), sortable: true, filterable: true, width: "140px", render: (_, r) => textCol(r.affiliation) },
-    { key: "realName", title: t("col.realName" as any), sortable: true, filterable: true, width: "120px", render: (_, r) => textCol(r.realName) },
-    { key: "isVerified", title: t("col.isVerified" as any), sortable: true, width: "120px", render: (_, r) => boolCol(r.isVerified) },
-    { key: "region", title: t("col.region" as any), sortable: true, filterable: true, width: "140px", render: (_, r) => textCol(r.region) },
-    { key: "type", title: t("col.userType" as any), sortable: true, filterable: true, width: "120px", render: (_, r) => textCol(r.type) },
-    { key: "tag", title: t("col.tag" as any), sortable: true, filterable: true, width: "110px", render: (_, r) => textCol(r.tag) },
-    { key: "registerType", title: t("col.registerType" as any), sortable: true, filterable: true, width: "150px", render: (_, r) => textCol(r.registerType) },
-    { key: "registerSource", title: t("col.registerSource" as any), sortable: true, filterable: true, width: "150px", render: (_, r) => textCol(r.registerSource) },
-    { key: "balance", title: t("col.balance" as any), sortable: true, width: "120px", render: (_, r) => <span className="font-mono text-[12px] text-text-muted">{String(r.balance ?? "—")}</span> },
-    { key: "balanceCredit", title: t("col.balanceCredit" as any), sortable: true, width: "120px", render: (_, r) => <span className="font-mono text-[12px] text-text-muted">{String(r.balanceCredit ?? "—")}</span> },
-    { key: "balanceCurrency", title: t("col.balanceCurrency" as any), sortable: true, width: "140px", render: (_, r) => textCol(r.balanceCurrency) },
-    { key: "isAdmin", title: t("col.admin" as any), sortable: true, width: "120px", render: (_, r) => boolCol(r.isAdmin) },
-    { key: "isForbidden", title: t("col.forbidden" as any), sortable: true, width: "110px", render: (_, r) => boolCol(r.isForbidden) },
-    { key: "isDeleted", title: t("col.deleted" as any), sortable: true, width: "110px", render: (_, r) => boolCol(r.isDeleted) },
+    { key: "phone", title: t("col.phone"), sortable: true, filterable: true, width: "120px", render: (_, r) => textCol(r.phone) },
+    { key: "affiliation", title: t("col.affiliation"), sortable: true, filterable: true, width: "140px", render: (_, r) => textCol(r.affiliation) },
+    { key: "realName", title: t("col.realName"), sortable: true, filterable: true, width: "120px", render: (_, r) => textCol(r.realName) },
+    { key: "isVerified", title: t("col.isVerified"), sortable: true, width: "120px", render: (_, r) => boolCol(r.isVerified) },
+    { key: "region", title: t("col.region"), sortable: true, filterable: true, width: "140px", render: (_, r) => textCol(r.region) },
+    { key: "type", title: t("col.userType"), sortable: true, filterable: true, width: "120px", render: (_, r) => textCol(r.type) },
+    { key: "tag", title: t("col.tag"), sortable: true, filterable: true, width: "110px", render: (_, r) => textCol(r.tag) },
+    { key: "registerType", title: t("col.registerType"), sortable: true, filterable: true, width: "150px", render: (_, r) => textCol(r.registerType) },
+    { key: "registerSource", title: t("col.registerSource"), sortable: true, filterable: true, width: "150px", render: (_, r) => textCol(r.registerSource) },
+    { key: "balance", title: t("col.balance"), sortable: true, width: "120px", render: (_, r) => <span className="font-mono text-[12px] text-text-muted">{String(r.balance ?? "—")}</span> },
+    { key: "balanceCredit", title: t("col.balanceCredit"), sortable: true, width: "120px", render: (_, r) => <span className="font-mono text-[12px] text-text-muted">{String(r.balanceCredit ?? "—")}</span> },
+    { key: "balanceCurrency", title: t("col.balanceCurrency"), sortable: true, width: "140px", render: (_, r) => textCol(r.balanceCurrency) },
+    { key: "isAdmin", title: t("col.admin"), sortable: true, width: "120px", render: (_, r) => boolCol(r.isAdmin) },
+    { key: "isForbidden", title: t("col.forbidden"), sortable: true, width: "110px", render: (_, r) => boolCol(r.isForbidden) },
+    { key: "isDeleted", title: t("col.deleted"), sortable: true, width: "110px", render: (_, r) => boolCol(r.isDeleted) },
     {
       key: "__actions",
       fixed: "right" as const,
-      title: t("common.action" as any),
+      title: t("common.action"),
       width: "120px",
       render: (_, r) => (
         <div className="flex items-center gap-1">
           <button
             onClick={(e) => handleImpersonate(r, e)}
             className="rounded p-1.5 text-text-muted hover:text-success hover:bg-success/10 transition-colors"
-            title={t("users.impersonate.title" as any)}
+            title={t("users.impersonate.title")}
           >
             <UserCheck size={14} />
           </button>
@@ -287,9 +287,9 @@ export default function UserListPage() {
     <div className="space-y-5">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold tracking-tight">{t("users.title" as any)}</h1>
+          <h1 className="text-xl font-bold tracking-tight">{t("users.title")}</h1>
           <p className="text-[13px] text-text-muted mt-0.5">
-            {t("users.subtitle" as any)}
+            {t("users.subtitle")}
             {!isAll && <span className="ml-2 font-mono text-accent">({selectedOrg})</span>}
           </p>
         </div>
@@ -297,9 +297,9 @@ export default function UserListPage() {
           {/* Filter: Active / Deleted / All */}
           <div className="flex rounded-lg border border-border overflow-hidden">
             {([
-              { key: "active", label: t("users.filter.active" as any) },
-              { key: "deleted", label: t("users.filter.deleted" as any) },
-              { key: "all", label: t("users.filter.all" as any) },
+              { key: "active", label: t("users.filter.active") },
+              { key: "deleted", label: t("users.filter.deleted") },
+              { key: "all", label: t("users.filter.all") },
             ] as const).map(({ key, label }) => (
               <button key={key} onClick={() => setUserFilter(key)}
                 className={`px-3 py-1.5 text-[12px] font-medium transition-colors ${userFilter === key ? "bg-accent text-white" : "text-text-secondary hover:bg-surface-2"}`}>
@@ -313,15 +313,15 @@ export default function UserListPage() {
           <ColumnsMenu columns={columns} hidden={prefs.hidden} onToggle={prefs.toggleHidden} onResetWidths={prefs.resetWidths} />
           <button onClick={handleAdd} className="flex items-center gap-1.5 rounded-lg bg-accent px-3 py-2 text-[13px] font-semibold text-white hover:bg-accent-hover transition-colors">
             <Plus size={15} />
-            {t("users.addUser" as any)}
+            {t("users.addUser")}
           </button>
           <button onClick={handleDownloadTemplate} className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-[13px] font-medium text-text-secondary hover:bg-surface-2 transition-colors">
             <Download size={15} />
-            {t("users.downloadTemplate" as any)}
+            {t("users.downloadTemplate")}
           </button>
           <label className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-[13px] font-medium text-text-secondary hover:bg-surface-2 transition-colors cursor-pointer">
             <Upload size={15} />
-            {t("users.uploadXlsx" as any)}
+            {t("users.uploadXlsx")}
             <input ref={fileInputRef} type="file" accept=".xlsx" onChange={handleFileSelect} className="hidden" />
           </label>
         </div>
@@ -354,7 +354,7 @@ export default function UserListPage() {
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50" onClick={() => { setShowUploadModal(false); setUploadData([]); setUploadColumns([]); setUploadFile(null); }}>
           <div onClick={(e) => e.stopPropagation()} className="bg-surface-1 rounded-xl border border-border shadow-xl w-[90vw] max-h-[80vh] flex flex-col">
             <div className="px-5 py-3 border-b border-border flex items-center justify-between">
-              <h3 className="text-[14px] font-semibold text-text-primary">{t("users.uploadXlsx" as any)} ({uploadData.length} {t("users.upload.rows" as any)})</h3>
+              <h3 className="text-[14px] font-semibold text-text-primary">{t("users.uploadXlsx")} ({uploadData.length} {t("users.upload.rows")})</h3>
               <button onClick={() => { setShowUploadModal(false); setUploadData([]); setUploadColumns([]); setUploadFile(null); }}
                 className="text-text-muted hover:text-text-primary transition-colors text-[18px]">×</button>
             </div>
@@ -383,7 +383,7 @@ export default function UserListPage() {
                 className="rounded-lg border border-border px-4 py-2 text-[13px] font-medium text-text-secondary hover:bg-surface-2 transition-colors">{t("common.cancel")}</button>
               <button onClick={handleUploadConfirm} disabled={uploading}
                 className="rounded-lg bg-accent px-4 py-2 text-[13px] font-semibold text-white hover:bg-accent-hover disabled:opacity-50 transition-colors">
-                {uploading ? t("users.upload.uploading" as any) : t("users.upload.confirmUpload" as any)}
+                {uploading ? t("users.upload.uploading") : t("users.upload.confirmUpload")}
               </button>
             </div>
           </div>

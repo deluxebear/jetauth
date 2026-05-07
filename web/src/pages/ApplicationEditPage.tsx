@@ -265,7 +265,7 @@ export default function ApplicationEditPage() {
       return next as AppData;
     });
     setTemplateGalleryOpen(false);
-    modal.toast(`${tmpl.name} — ${t("apps.template.applied" as any)}`, "success");
+    modal.toast(`${tmpl.name} — ${t("apps.template.applied")}`, "success");
   }, [modal, t]);
   // Preview → admin inspect link (P4): clicking an element in the iframe
   // posts {section, field}; we close the modal, scroll to the matching
@@ -310,7 +310,7 @@ export default function ApplicationEditPage() {
         setApp(application);
         setOriginalJson(JSON.stringify(application));
       }
-    } catch (e: any) { modal.toast(e?.message || t("common.saveFailed" as any), "error"); }
+    } catch (e: any) { modal.toast(e?.message || t("common.saveFailed"), "error"); }
     finally { setLoading(false); }
   }, [name, isNew]);
 
@@ -404,15 +404,15 @@ export default function ApplicationEditPage() {
         ? await AppBackend.addApplication(payload)
         : await AppBackend.updateApplication(app.owner || "admin", name!, payload);
       if (res.status === "ok") {
-        modal.toast(t("common.saveSuccess" as any));
+        modal.toast(t("common.saveSuccess"));
         setSaved(true);
         setOriginalJson(JSON.stringify(app));
         setIsAddMode(false);
         invalidateList();
       } else {
-        modal.toast(friendlyError(res.msg, t) || t("common.saveFailed" as any), "error");
+        modal.toast(friendlyError(res.msg, t) || t("common.saveFailed"), "error");
       }
-    } catch (e: any) { modal.toast(e?.message || t("common.saveFailed" as any), "error"); }
+    } catch (e: any) { modal.toast(e?.message || t("common.saveFailed"), "error"); }
     finally { setSaving(false); }
   };
 
@@ -424,14 +424,14 @@ export default function ApplicationEditPage() {
         ? await AppBackend.addApplication(payload)
         : await AppBackend.updateApplication(app.owner || "admin", name!, payload);
       if (res.status === "ok") {
-        modal.toast(t("common.saveSuccess" as any));
+        modal.toast(t("common.saveSuccess"));
         invalidateList();
         navigate("/applications");
       } else {
-        modal.toast(friendlyError(res.msg, t) || t("common.saveFailed" as any), "error");
+        modal.toast(friendlyError(res.msg, t) || t("common.saveFailed"), "error");
       }
     } catch (e: any) {
-      modal.toast(e?.message || t("common.saveFailed" as any), "error");
+      modal.toast(e?.message || t("common.saveFailed"), "error");
     } finally {
       setSaving(false);
     }
@@ -453,17 +453,17 @@ export default function ApplicationEditPage() {
           invalidateList();
           navigate("/applications");
         } else {
-          modal.toast(res.msg || t("common.deleteFailed" as any), "error");
+          modal.toast(res.msg || t("common.deleteFailed"), "error");
         }
       } catch (e: any) {
-        modal.toast(e?.message || t("common.deleteFailed" as any), "error");
+        modal.toast(e?.message || t("common.deleteFailed"), "error");
       }
     });
   };
 
   const copyText = (text: string) => {
     navigator.clipboard.writeText(text);
-    modal.toast(t("common.copySuccess" as any));
+    modal.toast(t("common.copySuccess"));
   };
 
   const isDirty = originalJson !== "" && JSON.stringify(app) !== originalJson;
@@ -510,14 +510,14 @@ export default function ApplicationEditPage() {
   }
 
   const tabs = [
-    { key: "basic", label: t("apps.tab.basic" as any), icon: <Settings size={14} /> },
-    { key: "auth", label: t("apps.tab.auth" as any), icon: <KeyRound size={14} /> },
-    { key: "oauth", label: t("apps.tab.oauth" as any), icon: <Lock size={14} /> },
-    { key: "saml", label: t("apps.tab.saml" as any), icon: <FileKey2 size={14} /> },
-    { key: "providers", label: t("apps.tab.providers" as any), icon: <Puzzle size={14} /> },
-    { key: "ui", label: t("apps.tab.ui" as any), icon: <Palette size={14} /> },
-    { key: "security", label: t("apps.tab.security" as any), icon: <ShieldCheck size={14} /> },
-    { key: "proxy", label: t("apps.tab.proxy" as any), icon: <Network size={14} /> },
+    { key: "basic", label: t("apps.tab.basic"), icon: <Settings size={14} /> },
+    { key: "auth", label: t("apps.tab.auth"), icon: <KeyRound size={14} /> },
+    { key: "oauth", label: t("apps.tab.oauth"), icon: <Lock size={14} /> },
+    { key: "saml", label: t("apps.tab.saml"), icon: <FileKey2 size={14} /> },
+    { key: "providers", label: t("apps.tab.providers"), icon: <Puzzle size={14} /> },
+    { key: "ui", label: t("apps.tab.ui"), icon: <Palette size={14} /> },
+    { key: "security", label: t("apps.tab.security"), icon: <ShieldCheck size={14} /> },
+    { key: "proxy", label: t("apps.tab.proxy"), icon: <Network size={14} /> },
   ];
 
   // ── Basic Tab ──
@@ -533,13 +533,13 @@ export default function ApplicationEditPage() {
             onChange={(e) => set("name", e.target.value)}
             disabled={app.name === "app-built-in"}
             className={monoInputClass}
-            placeholder={t("help.placeholder.name" as any)}
+            placeholder={t("help.placeholder.name")}
           />
         </FormField>
         <FormField label={t("field.displayName")}>
           <input value={String(app.displayName ?? "")} onChange={(e) => set("displayName", e.target.value)} className={inputClass} />
         </FormField>
-        <FormField label={t("apps.field.category" as any)}>
+        <FormField label={t("apps.field.category")}>
           <SimpleSelect
             value={String(app.category ?? "Default")}
             options={[{ value: "Default", label: "Default" }, { value: "Agent", label: "Agent" }]}
@@ -559,7 +559,7 @@ export default function ApplicationEditPage() {
               : ["All", "OIDC", "OAuth", "SAML", "CAS"]
             ).map((v) => ({ value: v, label: v }))} onChange={(v) => set("type", v)} />
         </FormField>
-        <FormField label={t("apps.field.isShared" as any)}>
+        <FormField label={t("apps.field.isShared")}>
           <Switch checked={!!app.isShared} onChange={(v) => set("isShared", v)} />
         </FormField>
         <FormField label={t("field.description")} span="full">
@@ -567,23 +567,23 @@ export default function ApplicationEditPage() {
         </FormField>
       </FormSection>
 
-      <FormSection title={t("apps.section.branding" as any)}>
-        <FormField label={t("apps.field.logo" as any)} span="full">
+      <FormSection title={t("apps.section.branding")}>
+        <FormField label={t("apps.field.logo")} span="full">
           <ImageUrlInput value={String(app.logo ?? "")} onChange={(v) => set("logo", v)} owner={String(app.organization ?? "")} tag="app-logo" outputWidth={500} outputHeight={250} />
         </FormField>
-        <FormField label={t("apps.field.title" as any)}>
+        <FormField label={t("apps.field.title")}>
           <input value={String(app.title ?? "")} onChange={(e) => set("title", e.target.value)} className={inputClass} />
         </FormField>
-        <FormField label={t("apps.field.favicon" as any)}>
+        <FormField label={t("apps.field.favicon")}>
           <ImageUrlInput value={String(app.favicon ?? "")} onChange={(v) => set("favicon", v)} owner={String(app.organization ?? "")} tag="app-favicon" outputWidth={64} outputHeight={64} accept="image/x-icon,image/png,image/svg+xml" />
         </FormField>
         <FormField label={t("apps.field.homepageUrl")} span="full">
-          <input value={String(app.homepageUrl ?? "")} onChange={(e) => set("homepageUrl", e.target.value)} className={inputClass} placeholder={t("help.placeholder.homepageUrl" as any)} />
+          <input value={String(app.homepageUrl ?? "")} onChange={(e) => set("homepageUrl", e.target.value)} className={inputClass} placeholder={t("help.placeholder.homepageUrl")} />
         </FormField>
         <FormField label={t("apps.field.organization")}>
           <input value={String(app.organization ?? "")} onChange={(e) => set("organization", e.target.value)} className={inputClass} />
         </FormField>
-        <FormField label={t("apps.field.tags" as any)}>
+        <FormField label={t("apps.field.tags")}>
           <input
             value={Array.isArray(app.tags) ? app.tags.join(", ") : ""}
             onChange={(e) => set("tags", e.target.value.split(",").map((s) => s.trim()).filter(Boolean))}
@@ -591,7 +591,7 @@ export default function ApplicationEditPage() {
             placeholder="tag1, tag2, ..."
           />
         </FormField>
-        <FormField label={t("apps.field.order" as any)}>
+        <FormField label={t("apps.field.order")}>
           <input type="number" value={app.order ?? 0} onChange={(e) => set("order", Number(e.target.value))} min={0} step={1} className={monoInputClass} />
         </FormField>
       </FormSection>
@@ -601,31 +601,31 @@ export default function ApplicationEditPage() {
   // ── Authentication Tab ──
   const authTab = (
     <div className="space-y-5">
-      <FormSection title={t("apps.section.signin" as any)}>
-        <FormField label={t("apps.field.cookieExpireHours" as any)}>
+      <FormSection title={t("apps.section.signin")}>
+        <FormField label={t("apps.field.cookieExpireHours")}>
           <input type="number" value={app.cookieExpireInHours ?? 720} onChange={(e) => set("cookieExpireInHours", Number(e.target.value))} min={1} step={1} className={monoInputClass} />
         </FormField>
-        <FormField label={t("apps.field.defaultGroup" as any)}>
+        <FormField label={t("apps.field.defaultGroup")}>
           <SingleSearchSelect
             value={String(app.defaultGroup ?? "")}
             options={groupOptions}
             onChange={(v) => set("defaultGroup", v)}
-            placeholder={t("common.search" as any)}
+            placeholder={t("common.search")}
           />
         </FormField>
         <FormField label={t("apps.field.enableSignUp")}>
           <Switch checked={!!app.enableSignUp} onChange={(v) => set("enableSignUp", v)} />
         </FormField>
-        <FormField label={t("apps.field.disableSignin" as any)}>
+        <FormField label={t("apps.field.disableSignin")}>
           <Switch checked={!!app.disableSignin} onChange={(v) => set("disableSignin", v)} />
         </FormField>
-        <FormField label={t("apps.field.enableGuestSignin" as any)}>
+        <FormField label={t("apps.field.enableGuestSignin")}>
           <Switch checked={!!app.enableGuestSignin} onChange={(v) => set("enableGuestSignin", v)} />
         </FormField>
-        <FormField label={t("apps.field.enableExclusiveSignin" as any)}>
+        <FormField label={t("apps.field.enableExclusiveSignin")}>
           <Switch checked={!!app.enableExclusiveSignin} onChange={(v) => set("enableExclusiveSignin", v)} />
         </FormField>
-        <FormField label={t("apps.field.enableSigninSession" as any)}>
+        <FormField label={t("apps.field.enableSigninSession")}>
           <Switch
             checked={!!app.enableSigninSession}
             onChange={(v) => {
@@ -634,7 +634,7 @@ export default function ApplicationEditPage() {
             }}
           />
         </FormField>
-        <FormField label={t("apps.field.enableAutoSignin")} help={t("help.requiresSigninSession" as any)}>
+        <FormField label={t("apps.field.enableAutoSignin")} help={t("help.requiresSigninSession")}>
           <Switch
             checked={!!app.enableAutoSignin}
             onChange={(v) => set("enableAutoSignin", v)}
@@ -647,23 +647,23 @@ export default function ApplicationEditPage() {
         <FormField label={t("apps.field.enableCodeSignin")}>
           <Switch checked={!!app.enableCodeSignin} onChange={(v) => set("enableCodeSignin", v)} />
         </FormField>
-        <FormField label={t("apps.field.enableLinkWithEmail" as any)}>
+        <FormField label={t("apps.field.enableLinkWithEmail")}>
           <Switch checked={!!app.enableLinkWithEmail} onChange={(v) => set("enableLinkWithEmail", v)} />
         </FormField>
       </FormSection>
 
-      <FormSection title={t("apps.section.urls" as any)}>
+      <FormSection title={t("apps.section.urls")}>
         <FormField label={t("apps.field.signupUrl")} span="full">
-          <input value={String(app.signupUrl ?? "")} onChange={(e) => set("signupUrl", e.target.value)} className={inputClass} placeholder={t("help.placeholder.signupUrl" as any)} />
+          <input value={String(app.signupUrl ?? "")} onChange={(e) => set("signupUrl", e.target.value)} className={inputClass} placeholder={t("help.placeholder.signupUrl")} />
         </FormField>
-        <FormField label={t("apps.field.signinUrl")} span="full" help={t("help.signinUrl" as any)}>
-          <input value={String(app.signinUrl ?? "")} onChange={(e) => set("signinUrl", e.target.value)} className={inputClass} placeholder={t("help.placeholder.signinUrl" as any)} />
+        <FormField label={t("apps.field.signinUrl")} span="full" help={t("help.signinUrl")}>
+          <input value={String(app.signinUrl ?? "")} onChange={(e) => set("signinUrl", e.target.value)} className={inputClass} placeholder={t("help.placeholder.signinUrl")} />
         </FormField>
         <FormField label={t("apps.field.forgetUrl")} span="full">
-          <input value={String(app.forgetUrl ?? "")} onChange={(e) => set("forgetUrl", e.target.value)} className={inputClass} placeholder={t("help.placeholder.forgetUrl" as any)} />
+          <input value={String(app.forgetUrl ?? "")} onChange={(e) => set("forgetUrl", e.target.value)} className={inputClass} placeholder={t("help.placeholder.forgetUrl")} />
         </FormField>
-        <FormField label={t("apps.field.affiliationUrl" as any)} span="full">
-          <input value={String(app.affiliationUrl ?? "")} onChange={(e) => set("affiliationUrl", e.target.value)} className={inputClass} placeholder={t("help.placeholder.url" as any)} />
+        <FormField label={t("apps.field.affiliationUrl")} span="full">
+          <input value={String(app.affiliationUrl ?? "")} onChange={(e) => set("affiliationUrl", e.target.value)} className={inputClass} placeholder={t("help.placeholder.url")} />
         </FormField>
       </FormSection>
     </div>
@@ -672,11 +672,11 @@ export default function ApplicationEditPage() {
   // ── OAuth Tab ──
   const oauthTab = (
     <div className="space-y-5">
-      <FormSection title={t("apps.section.credentials" as any)}>
+      <FormSection title={t("apps.section.credentials")}>
         <FormField label={t("apps.field.clientId")} span="full">
           <div className="flex gap-2">
             <input value={String(app.clientId ?? "")} onChange={(e) => set("clientId", e.target.value)} className={`${monoInputClass} flex-1`} />
-            <button onClick={() => copyText(String(app.clientId ?? ""))} className="rounded-lg border border-border p-2 text-text-muted hover:bg-surface-2 transition-colors" title={t("common.copy" as any)}>
+            <button onClick={() => copyText(String(app.clientId ?? ""))} className="rounded-lg border border-border p-2 text-text-muted hover:bg-surface-2 transition-colors" title={t("common.copy")}>
               <Copy size={14} />
             </button>
           </div>
@@ -684,26 +684,26 @@ export default function ApplicationEditPage() {
         <FormField label={t("apps.field.clientSecret")} span="full">
           <div className="flex gap-2">
             <input value={String(app.clientSecret ?? "")} onChange={(e) => set("clientSecret", e.target.value)} type="password" className={`${monoInputClass} flex-1`} />
-            <button onClick={() => copyText(String(app.clientSecret ?? ""))} className="rounded-lg border border-border p-2 text-text-muted hover:bg-surface-2 transition-colors" title={t("common.copy" as any)}>
+            <button onClick={() => copyText(String(app.clientSecret ?? ""))} className="rounded-lg border border-border p-2 text-text-muted hover:bg-surface-2 transition-colors" title={t("common.copy")}>
               <Copy size={14} />
             </button>
           </div>
         </FormField>
       </FormSection>
 
-      <FormSection title={t("apps.section.redirectUris" as any)}>
+      <FormSection title={t("apps.section.redirectUris")}>
         <FormField label={t("apps.field.redirectUris")} span="full">
           <RedirectUriEditor
             uris={Array.isArray(app.redirectUris) ? app.redirectUris : []}
             onChange={(v) => set("redirectUris", v)}
           />
         </FormField>
-        <FormField label={t("apps.field.forcedRedirectOrigin" as any)} span="full">
-          <input value={String(app.forcedRedirectOrigin ?? "")} onChange={(e) => set("forcedRedirectOrigin", e.target.value)} className={inputClass} placeholder={t("help.placeholder.url" as any)} />
+        <FormField label={t("apps.field.forcedRedirectOrigin")} span="full">
+          <input value={String(app.forcedRedirectOrigin ?? "")} onChange={(e) => set("forcedRedirectOrigin", e.target.value)} className={inputClass} placeholder={t("help.placeholder.url")} />
         </FormField>
       </FormSection>
 
-      <FormSection title={t("apps.section.tokenConfig" as any)}>
+      <FormSection title={t("apps.section.tokenConfig")}>
         <FormField label={t("apps.field.grantTypes")} span="full">
           <div className="flex flex-wrap gap-2">
             {GRANT_TYPES.map((gt) => {
@@ -731,11 +731,11 @@ export default function ApplicationEditPage() {
         <FormField label={t("apps.field.tokenFormat")}>
           <SimpleSelect value={String(app.tokenFormat ?? "JWT")} options={TOKEN_FORMATS.map((f) => ({ value: f, label: f }))} onChange={(v) => set("tokenFormat", v)} />
         </FormField>
-        <FormField label={t("apps.field.signingMethod" as any)}>
+        <FormField label={t("apps.field.signingMethod")}>
           <SimpleSelect value={String(app.tokenSigningMethod || "RS256")} options={SIGNING_METHODS.map((m) => ({ value: m, label: m }))} onChange={(v) => set("tokenSigningMethod", v)} />
         </FormField>
         {app.tokenFormat === "JWT-Custom" && (
-          <FormField label={t("apps.field.tokenFields" as any)} span="full">
+          <FormField label={t("apps.field.tokenFields")} span="full">
             <input
               value={Array.isArray(app.tokenFields) ? app.tokenFields.join(", ") : ""}
               onChange={(e) => set("tokenFields", e.target.value.split(",").map((s) => s.trim()).filter(Boolean))}
@@ -747,19 +747,19 @@ export default function ApplicationEditPage() {
         {app.tokenFormat === "JWT-Custom" && (
           <div className="col-span-2">
             <EditableTable
-              title={t("apps.oauth.tokenAttributes" as any)}
+              title={t("apps.oauth.tokenAttributes")}
               columns={[
-                { key: "name", title: t("col.name" as any), width: "25%", placeholder: "e.g., department" },
-                { key: "category", title: t("apps.oauth.category" as any), width: "20%", type: "select", options: TOKEN_ATTR_CATEGORIES },
+                { key: "name", title: t("col.name"), width: "25%", placeholder: "e.g., department" },
+                { key: "category", title: t("apps.oauth.category"), width: "20%", type: "select", options: TOKEN_ATTR_CATEGORIES },
                 {
-                  key: "value", title: t("col.value" as any), width: "30%",
+                  key: "value", title: t("col.value"), width: "30%",
                   render: (row, _i, onChange) => (
                     row.category === "Existing Field"
                       ? <SimpleSelect value={String(row.value ?? "")} options={TOKEN_ATTR_USER_FIELDS.map((f) => ({ value: f, label: f }))} onChange={(v) => onChange("value", v)} />
                       : <input value={String(row.value ?? "")} onChange={(e) => onChange("value", e.target.value)} className={`${inputClass} !py-1 !text-[12px]`} />
                   ),
                 },
-                { key: "type", title: t("field.type" as any), width: "15%", type: "select", options: TOKEN_ATTR_TYPES },
+                { key: "type", title: t("field.type"), width: "15%", type: "select", options: TOKEN_ATTR_TYPES },
               ]}
               rows={(app.tokenAttributes as Record<string, unknown>[]) ?? []}
               onChange={(rows) => set("tokenAttributes", rows)}
@@ -767,10 +767,10 @@ export default function ApplicationEditPage() {
             />
           </div>
         )}
-        <FormField label={t("apps.field.expireInHours")} help={t("help.tokenLifetime" as any)}>
+        <FormField label={t("apps.field.expireInHours")} help={t("help.tokenLifetime")}>
           <input type="number" value={app.expireInHours ?? 168} onChange={(e) => set("expireInHours", Number(e.target.value))} min={0.01} step={0.01} className={monoInputClass} />
         </FormField>
-        <FormField label={t("apps.field.refreshExpireHours" as any)}>
+        <FormField label={t("apps.field.refreshExpireHours")}>
           <input type="number" value={app.refreshExpireInHours ?? 168} onChange={(e) => set("refreshExpireInHours", Number(e.target.value))} min={0.01} step={0.01} className={monoInputClass} />
         </FormField>
       </FormSection>
@@ -778,12 +778,12 @@ export default function ApplicationEditPage() {
       {/* Scopes table — only for Agent category */}
       {app.category === "Agent" && (
         <EditableTable
-          title={t("apps.oauth.scopes" as any)}
+          title={t("apps.oauth.scopes")}
           columns={[
-            { key: "name", title: t("col.name" as any), width: "20%", placeholder: "e.g., files:read" },
-            { key: "displayName", title: t("col.displayName" as any), width: "20%", placeholder: "e.g., Read Files" },
-            { key: "description", title: t("field.description" as any), width: "30%", placeholder: "e.g., Allow reading your files" },
-            { key: "tools", title: t("apps.oauth.tools" as any), width: "20%",
+            { key: "name", title: t("col.name"), width: "20%", placeholder: "e.g., files:read" },
+            { key: "displayName", title: t("col.displayName"), width: "20%", placeholder: "e.g., Read Files" },
+            { key: "description", title: t("field.description"), width: "30%", placeholder: "e.g., Allow reading your files" },
+            { key: "tools", title: t("apps.oauth.tools"), width: "20%",
               render: (row, _i, onChange) => (
                 <input
                   value={Array.isArray(row.tools) ? (row.tools as string[]).join(", ") : String(row.tools ?? "")}
@@ -804,13 +804,13 @@ export default function ApplicationEditPage() {
 
   // ── SAML Tab ──
   const samlAttributeColumns: EditableColumn<Record<string, unknown>>[] = [
-    { key: "Name", title: t("col.name" as any), width: "25%", placeholder: "e.g., email" },
+    { key: "Name", title: t("col.name"), width: "25%", placeholder: "e.g., email" },
     {
-      key: "nameFormat", title: t("apps.saml.nameFormat" as any), width: "30%", type: "select",
+      key: "nameFormat", title: t("apps.saml.nameFormat"), width: "30%", type: "select",
       options: SAML_NAME_FORMATS,
     },
     {
-      key: "value", title: t("col.value" as any), width: "30%",
+      key: "value", title: t("col.value"), width: "30%",
       render: (row, _i, onChange) => (
         <AutocompleteInput
           value={String(row.value ?? "")}
@@ -824,20 +824,20 @@ export default function ApplicationEditPage() {
 
   const samlTab = (
     <div className="space-y-5">
-      <FormSection title={t("apps.section.saml" as any)}>
-        <FormField label={t("apps.field.samlReplyUrl" as any)} span="full">
-          <input value={String(app.samlReplyUrl ?? "")} onChange={(e) => set("samlReplyUrl", e.target.value)} className={inputClass} placeholder={t("help.placeholder.samlReplyUrl" as any)} />
+      <FormSection title={t("apps.section.saml")}>
+        <FormField label={t("apps.field.samlReplyUrl")} span="full">
+          <input value={String(app.samlReplyUrl ?? "")} onChange={(e) => set("samlReplyUrl", e.target.value)} className={inputClass} placeholder={t("help.placeholder.samlReplyUrl")} />
         </FormField>
-        <FormField label={t("apps.field.enableSamlCompress" as any)}>
+        <FormField label={t("apps.field.enableSamlCompress")}>
           <Switch checked={!!app.enableSamlCompress} onChange={(v) => set("enableSamlCompress", v)} />
         </FormField>
-        <FormField label={t("apps.field.enableSamlC14n" as any)}>
+        <FormField label={t("apps.field.enableSamlC14n")}>
           <Switch checked={!!app.enableSamlC14n10} onChange={(v) => set("enableSamlC14n10", v)} />
         </FormField>
-        <FormField label={t("apps.field.useEmailSamlNameId" as any)}>
+        <FormField label={t("apps.field.useEmailSamlNameId")}>
           <Switch checked={!!app.useEmailAsSamlNameId} onChange={(v) => set("useEmailAsSamlNameId", v)} />
         </FormField>
-        <FormField label={t("apps.field.enableSamlPostBinding" as any)}>
+        <FormField label={t("apps.field.enableSamlPostBinding")}>
           <Switch
             checked={!!app.enableSamlPostBinding}
             onChange={(v) => {
@@ -846,13 +846,13 @@ export default function ApplicationEditPage() {
             }}
           />
         </FormField>
-        <FormField label={t("apps.field.samlHashAlgorithm" as any)}>
+        <FormField label={t("apps.field.samlHashAlgorithm")}>
           <SimpleSelect value={String(app.samlHashAlgorithm ?? "")} options={SAML_HASH_ALGORITHMS.map((a) => ({ value: a, label: a }))} onChange={(v) => set("samlHashAlgorithm", v)} />
         </FormField>
-        <FormField label={t("apps.field.disableSamlAttributes" as any)}>
+        <FormField label={t("apps.field.disableSamlAttributes")}>
           <Switch checked={!!app.disableSamlAttributes} onChange={(v) => set("disableSamlAttributes", v)} />
         </FormField>
-        <FormField label={t("apps.field.enableSamlAssertionSig" as any)}>
+        <FormField label={t("apps.field.enableSamlAssertionSig")}>
           <Switch checked={!!app.enableSamlAssertionSignature} onChange={(v) => set("enableSamlAssertionSignature", v)} />
         </FormField>
       </FormSection>
@@ -860,7 +860,7 @@ export default function ApplicationEditPage() {
       {/* SAML Attributes Table */}
       {!app.disableSamlAttributes && (
         <EditableTable
-          title={t("apps.saml.attributes" as any)}
+          title={t("apps.saml.attributes")}
           columns={samlAttributeColumns}
           rows={(app.samlAttributes as Record<string, unknown>[]) ?? []}
           onChange={(rows) => set("samlAttributes", rows)}
@@ -869,7 +869,7 @@ export default function ApplicationEditPage() {
       )}
 
       {/* SAML Metadata */}
-      <FormSection title={t("apps.saml.metadata" as any)}>
+      <FormSection title={t("apps.saml.metadata")}>
         <FormField label="" span="full">
           <div className="space-y-3">
             <textarea
@@ -877,17 +877,17 @@ export default function ApplicationEditPage() {
               readOnly
               rows={12}
               className={`${inputClass} font-mono text-[11px] bg-surface-2 cursor-default whitespace-pre`}
-              placeholder={loadingMetadata ? t("common.loading" as any) : t("apps.saml.metadataPlaceholder" as any)}
+              placeholder={loadingMetadata ? t("common.loading") : t("apps.saml.metadataPlaceholder")}
             />
             <button
               onClick={() => {
                 const url = `${window.location.origin}/api/saml/metadata?application=admin/${encodeURIComponent(name!)}&enablePostBinding=${!!app.enableSamlPostBinding}`;
                 navigator.clipboard.writeText(url);
-                modal.toast(t("common.copySuccess" as any));
+                modal.toast(t("common.copySuccess"));
               }}
               className="flex items-center gap-1.5 rounded-lg bg-accent px-3 py-1.5 text-[12px] font-medium text-white hover:bg-accent-hover transition-colors"
             >
-              <Copy size={13} /> {t("apps.saml.copyMetadataUrl" as any)}
+              <Copy size={13} /> {t("apps.saml.copyMetadataUrl")}
             </button>
           </div>
         </FormField>
@@ -905,21 +905,21 @@ export default function ApplicationEditPage() {
 
   const getRuleOptions = (prov: Provider | undefined): { value: string; label: string }[] | null => {
     if (!prov) return null;
-    if (prov.type === "Google") return [{ value: "Default", label: t("apps.providers.rule.default" as any) }, { value: "OneTap", label: "OneTap" }];
+    if (prov.type === "Google") return [{ value: "Default", label: t("apps.providers.rule.default") }, { value: "OneTap", label: "OneTap" }];
     if (prov.category === "Captcha") return [
-      { value: "None", label: t("apps.providers.rule.none" as any) },
-      { value: "Dynamic", label: t("apps.providers.rule.dynamic" as any) },
-      { value: "Always", label: t("apps.providers.rule.always" as any) },
-      { value: "Internet-Only", label: t("apps.providers.rule.internetOnly" as any) },
+      { value: "None", label: t("apps.providers.rule.none") },
+      { value: "Dynamic", label: t("apps.providers.rule.dynamic") },
+      { value: "Always", label: t("apps.providers.rule.always") },
+      { value: "Internet-Only", label: t("apps.providers.rule.internetOnly") },
     ];
     if (prov.category === "SMS" || prov.category === "Email") return [
-      { value: "All", label: t("apps.providers.rule.all" as any) },
-      { value: "signup", label: t("apps.providers.rule.signup" as any) },
-      { value: "login", label: t("apps.providers.rule.login" as any) },
-      { value: "forget", label: t("apps.providers.rule.forget" as any) },
-      { value: "reset", label: t("apps.providers.rule.reset" as any) },
-      { value: "mfaSetup", label: t("apps.providers.rule.mfaSetup" as any) },
-      { value: "mfaAuth", label: t("apps.providers.rule.mfaAuth" as any) },
+      { value: "All", label: t("apps.providers.rule.all") },
+      { value: "signup", label: t("apps.providers.rule.signup") },
+      { value: "login", label: t("apps.providers.rule.login") },
+      { value: "forget", label: t("apps.providers.rule.forget") },
+      { value: "reset", label: t("apps.providers.rule.reset") },
+      { value: "mfaSetup", label: t("apps.providers.rule.mfaSetup") },
+      { value: "mfaAuth", label: t("apps.providers.rule.mfaAuth") },
     ];
     return null;
   };
@@ -937,7 +937,7 @@ export default function ApplicationEditPage() {
       <div className="rounded-xl border border-border bg-surface-1 overflow-visible">
         {/* Title bar */}
         <div className="px-4 py-2.5 border-b border-border-subtle bg-surface-2/30 flex items-center justify-between">
-          <h4 className="text-[13px] font-semibold text-text-primary">{t("apps.section.providers" as any)}</h4>
+          <h4 className="text-[13px] font-semibold text-text-primary">{t("apps.section.providers")}</h4>
           <button
             onClick={() => {
               set("providers", [...providerItems, { name: "", canSignUp: true, canSignIn: true, canUnlink: true, prompted: false, signupGroup: "", rule: "None" }]);
@@ -981,7 +981,7 @@ export default function ApplicationEditPage() {
                       }
                       set("providers", next);
                     }}
-                    placeholder={t("apps.providers.selectProvider" as any)}
+                    placeholder={t("apps.providers.selectProvider")}
                   />
                 </div>
                 {cat && (
@@ -1004,7 +1004,7 @@ export default function ApplicationEditPage() {
                   {/* SMS: Country/Region codes */}
                   {cat === "SMS" && (
                     <div className="flex items-center gap-1.5">
-                      <span className="text-text-muted font-medium">{t("apps.providers.countryCodes" as any)}</span>
+                      <span className="text-text-muted font-medium">{t("apps.providers.countryCodes")}</span>
                       <div className="flex flex-wrap gap-1">
                         {(Array.isArray(item.countryCodes) && item.countryCodes.length > 0 ? item.countryCodes : ["All"]).map((code: string, ci: number) => (
                           <span key={ci} className="rounded bg-surface-3 px-1.5 py-0.5 text-[10px] font-mono">{code}</span>
@@ -1032,23 +1032,23 @@ export default function ApplicationEditPage() {
                     <>
                       <label className="flex items-center gap-1">
                         <input type="checkbox" checked={!!item.canSignUp} onChange={(e) => updateProvider(i, "canSignUp", e.target.checked)} className="rounded" />
-                        {t("apps.providers.canSignUp" as any)}
+                        {t("apps.providers.canSignUp")}
                       </label>
                       <label className="flex items-center gap-1">
                         <input type="checkbox" checked={!!item.canSignIn} onChange={(e) => updateProvider(i, "canSignIn", e.target.checked)} className="rounded" />
-                        {t("apps.providers.canSignIn" as any)}
+                        {t("apps.providers.canSignIn")}
                       </label>
                       <label className="flex items-center gap-1">
                         <input type="checkbox" checked={!!item.canUnlink} onChange={(e) => updateProvider(i, "canUnlink", e.target.checked)} className="rounded" />
-                        {t("apps.providers.canUnlink" as any)}
+                        {t("apps.providers.canUnlink")}
                       </label>
                       <label className="flex items-center gap-1">
                         <input type="checkbox" checked={!!item.prompted} onChange={(e) => updateProvider(i, "prompted", e.target.checked)} className="rounded" />
-                        {t("apps.providers.prompted" as any)}
+                        {t("apps.providers.prompted")}
                       </label>
                       {/* Binding rule multi-select */}
                       <div className="flex items-center gap-1">
-                        <span className="text-text-muted font-medium">{t("apps.providers.bindingRule" as any)}</span>
+                        <span className="text-text-muted font-medium">{t("apps.providers.bindingRule")}</span>
                         {["Email", "Name", "Phone"].map((opt) => {
                           const rules: string[] = Array.isArray(item.bindingRule) ? item.bindingRule : ["Email", "Phone", "Name"];
                           const checked = rules.includes(opt);
@@ -1074,13 +1074,13 @@ export default function ApplicationEditPage() {
                   {/* OAuth/Web3 only: signupGroup */}
                   {(cat === "OAuth" || cat === "Web3") && (
                     <div className="flex items-center gap-1.5">
-                      <span className="text-text-muted font-medium">{t("apps.providers.signupGroup" as any)}</span>
+                      <span className="text-text-muted font-medium">{t("apps.providers.signupGroup")}</span>
                       <div className="w-64">
                         <SingleSearchSelect
                           value={item.signupGroup ?? ""}
                           options={groupOptions}
                           onChange={(v) => updateProvider(i, "signupGroup", v)}
-                          placeholder={t("common.search" as any)}
+                          placeholder={t("common.search")}
                         />
                       </div>
                     </div>
@@ -1089,7 +1089,7 @@ export default function ApplicationEditPage() {
                   {/* Rule dropdown (varies by type) */}
                   {ruleOptions && (
                     <div className="flex items-center gap-1.5">
-                      <span className="text-text-muted font-medium">{t("apps.ui.rule" as any)}</span>
+                      <span className="text-text-muted font-medium">{t("apps.ui.rule")}</span>
                       <div className="w-32">
                         <SimpleSelect
                           value={item.rule ?? "None"}
@@ -1115,7 +1115,7 @@ export default function ApplicationEditPage() {
 
   const signinMethodColumns: EditableColumn<Record<string, unknown>>[] = [
     {
-      key: "name", title: t("col.name" as any), width: "30%",
+      key: "name", title: t("col.name"), width: "30%",
       render: (row, _i, onChange) => {
         const available = [...availableSigninMethods, ...(row.name ? [SIGNIN_METHOD_OPTIONS.find((m) => m.name === row.name)].filter(Boolean) : [])];
         return (
@@ -1133,9 +1133,9 @@ export default function ApplicationEditPage() {
         );
       },
     },
-    { key: "displayName", title: t("col.displayName" as any), width: "30%" },
+    { key: "displayName", title: t("col.displayName"), width: "30%" },
     {
-      key: "rule", title: t("apps.ui.rule" as any), width: "25%",
+      key: "rule", title: t("apps.ui.rule"), width: "25%",
       render: (row, _i, onChange) => {
         const rules = SIGNIN_METHOD_RULES[String(row.name)] ?? [];
         if (rules.length === 0) {
@@ -1148,7 +1148,7 @@ export default function ApplicationEditPage() {
 
   const signinItemColumns: EditableColumn<Record<string, unknown>>[] = [
     {
-      key: "name", title: t("col.name" as any), width: "22%",
+      key: "name", title: t("col.name"), width: "22%",
       render: (row, _i, onChange) => {
         if (row.isCustom) {
           return <input value={String(row.name ?? "")} disabled className={`${inputClass} !py-1 !text-[12px] opacity-60`} />;
@@ -1171,9 +1171,9 @@ export default function ApplicationEditPage() {
         );
       },
     },
-    { key: "visible", title: t("apps.ui.visible" as any), width: "10%", type: "switch" },
+    { key: "visible", title: t("apps.ui.visible"), width: "10%", type: "switch" },
     {
-      key: "label", title: t("apps.ui.label" as any), width: "15%",
+      key: "label", title: t("apps.ui.label"), width: "15%",
       visible: (row) => {
         const n = String(row.name);
         return (
@@ -1193,7 +1193,7 @@ export default function ApplicationEditPage() {
       },
     },
     {
-      key: "placeholder", title: t("apps.ui.placeholder" as any), width: "20%", placeholder: "e.g. you@example.com",
+      key: "placeholder", title: t("apps.ui.placeholder"), width: "20%", placeholder: "e.g. you@example.com",
       // Rows whose UI element has no placeholder concept — hide the cell so
       // the admin doesn't think a placeholder will show somewhere. Checkbox/
       // toggle-style items (Agreement, Auto sign in) fall here, as do pure
@@ -1210,7 +1210,7 @@ export default function ApplicationEditPage() {
 
   const forgetItemColumns: EditableColumn<Record<string, unknown>>[] = [
     {
-      key: "name", title: t("col.name" as any), width: "22%",
+      key: "name", title: t("col.name"), width: "22%",
       render: (row, _i, onChange) => {
         if (row.isCustom) {
           return <input value={String(row.name ?? "")} disabled className={`${inputClass} !py-1 !text-[12px] opacity-60`} />;
@@ -1233,9 +1233,9 @@ export default function ApplicationEditPage() {
         );
       },
     },
-    { key: "visible", title: t("apps.ui.visible" as any), width: "10%", type: "switch" },
+    { key: "visible", title: t("apps.ui.visible"), width: "10%", type: "switch" },
     {
-      key: "label", title: t("apps.ui.label" as any), width: "15%",
+      key: "label", title: t("apps.ui.label"), width: "15%",
       visible: (row) => {
         const n = String(row.name);
         return !!row.isCustom || n.startsWith("Text ") || [
@@ -1245,13 +1245,13 @@ export default function ApplicationEditPage() {
         ].includes(n);
       },
     },
-    { key: "placeholder", title: t("apps.ui.placeholder" as any), width: "20%", placeholder: "e.g. you@example.com" },
+    { key: "placeholder", title: t("apps.ui.placeholder"), width: "20%", placeholder: "e.g. you@example.com" },
     { key: "customCss", title: "CSS", width: "20%", placeholder: ".this-row { ... }" },
   ];
 
   const signupItemColumns: EditableColumn<Record<string, unknown>>[] = [
     {
-      key: "name", title: t("col.name" as any), width: "22%",
+      key: "name", title: t("col.name"), width: "22%",
       render: (row, _i, onChange) => {
         const usedNames = ((app.signupItems as any[]) ?? []).filter((it: any) => it.name !== row.name).map((it: any) => it.name);
         const available = SIGNUP_ITEM_NAMES.filter((n) => !usedNames.includes(n));
@@ -1268,16 +1268,16 @@ export default function ApplicationEditPage() {
       },
     },
     {
-      key: "visible", title: t("apps.ui.visible" as any), width: "10%", type: "switch",
+      key: "visible", title: t("apps.ui.visible"), width: "10%", type: "switch",
       visible: (row) => row.name !== "ID",
     },
     {
-      key: "required", title: t("apps.ui.required" as any), width: "10%", type: "switch",
+      key: "required", title: t("apps.ui.required"), width: "10%", type: "switch",
       visible: (row) => !!row.visible && !["Signup button", "Providers", "ID"].includes(String(row.name)),
       disabled: (row) => row.name === "Password",
     },
     {
-      key: "rule", title: t("apps.ui.rule" as any), width: "20%",
+      key: "rule", title: t("apps.ui.rule"), width: "20%",
       render: (row, _i, onChange) => {
         const rules = SIGNUP_ITEM_RULES[String(row.name)] ?? [];
         if (rules.length === 0) return <span className="text-[12px] text-text-muted">—</span>;
@@ -1288,18 +1288,18 @@ export default function ApplicationEditPage() {
   ];
 
   const uiNavItems = [
-    { id: "theme", label: t("apps.uiGroup.theme.title" as any), icon: <Palette size={14} /> },
-    { id: "layout-template", label: t("apps.uiGroup.layoutTemplate.title" as any), icon: <LayoutTemplate size={14} /> },
-    { id: "signin", label: t("apps.uiGroup.signin.title" as any), icon: <LogIn size={14} /> },
-    { id: "signup", label: t("apps.uiGroup.signup.title" as any), icon: <UserPlus size={14} /> },
-    { id: "forget", label: t("apps.uiGroup.forget.title" as any), icon: <KeyRound size={14} /> },
-    { id: "layout", label: t("apps.uiGroup.layout.title" as any), icon: <LayoutGrid size={14} /> },
+    { id: "theme", label: t("apps.uiGroup.theme.title"), icon: <Palette size={14} /> },
+    { id: "layout-template", label: t("apps.uiGroup.layoutTemplate.title"), icon: <LayoutTemplate size={14} /> },
+    { id: "signin", label: t("apps.uiGroup.signin.title"), icon: <LogIn size={14} /> },
+    { id: "signup", label: t("apps.uiGroup.signup.title"), icon: <UserPlus size={14} /> },
+    { id: "forget", label: t("apps.uiGroup.forget.title"), icon: <KeyRound size={14} /> },
+    { id: "layout", label: t("apps.uiGroup.layout.title"), icon: <LayoutGrid size={14} /> },
   ];
 
   const uiTab = (
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-3 rounded-xl border border-border bg-surface-1 px-4 py-2.5 sticky top-[96px] z-10 backdrop-blur-sm">
-        <p className="text-[13px] text-text-muted">{t("apps.uiGroup.hint" as any)}</p>
+        <p className="text-[13px] text-text-muted">{t("apps.uiGroup.hint")}</p>
         <div className="flex items-center gap-2">
           <button
             type="button"
@@ -1307,7 +1307,7 @@ export default function ApplicationEditPage() {
             className="inline-flex items-center gap-1.5 rounded-lg border border-accent/40 bg-accent/10 px-3.5 py-1.5 text-[13px] font-semibold text-accent hover:bg-accent/15 hover:border-accent/60 transition-colors"
           >
             <Sparkles size={14} />
-            {t("apps.template.browse" as any)}
+            {t("apps.template.browse")}
           </button>
           <button
             type="button"
@@ -1315,7 +1315,7 @@ export default function ApplicationEditPage() {
             className="inline-flex items-center gap-1.5 rounded-lg bg-accent px-3.5 py-1.5 text-[13px] font-semibold text-white hover:bg-accent-hover transition-colors"
           >
             <Eye size={14} />
-            {t("apps.uiGroup.openPreview" as any)}
+            {t("apps.uiGroup.openPreview")}
           </button>
         </div>
       </div>
@@ -1324,30 +1324,30 @@ export default function ApplicationEditPage() {
         <div className="flex-1 min-w-0 space-y-4">
           <CollapsibleCard
             id="theme"
-            title={t("apps.uiGroup.theme.title" as any)}
-            subtitle={t("apps.uiGroup.theme.subtitle" as any)}
+            title={t("apps.uiGroup.theme.title")}
+            subtitle={t("apps.uiGroup.theme.subtitle")}
             icon={<Palette size={16} />}
             defaultOpen
             modified={isSectionModified(UI_SECTION_FIELDS.theme)}
             onReset={() => resetSection(UI_SECTION_FIELDS.theme)}
-            modifiedLabel={t("common.modifiedBadge" as any)}
-            resetLabel={t("common.resetSection" as any)}
+            modifiedLabel={t("common.modifiedBadge")}
+            resetLabel={t("common.resetSection")}
             highlight={highlightedSection === "theme"}
           >
             <div className="grid grid-cols-2 gap-x-6 gap-y-4">
-              <FormField label={t("apps.field.colorPrimary" as any)}>
+              <FormField label={t("apps.field.colorPrimary")}>
                 <ColorPicker
                   value={(app.themeData as Record<string, string> | undefined)?.colorPrimary ?? "#2563EB"}
                   onChange={(hex) => set("themeData", { ...(app.themeData as Record<string, unknown> ?? {}), colorPrimary: hex, isEnabled: true })}
                 />
               </FormField>
-              <FormField label={t("apps.field.darkColorPrimary" as any)}>
+              <FormField label={t("apps.field.darkColorPrimary")}>
                 <ColorPicker
                   value={(app.themeData as Record<string, string> | undefined)?.darkColorPrimary ?? "#3b82f6"}
                   onChange={(hex) => set("themeData", { ...(app.themeData as Record<string, unknown> ?? {}), darkColorPrimary: hex, isEnabled: true })}
                 />
               </FormField>
-              <FormField label={t("apps.field.borderRadius" as any)}>
+              <FormField label={t("apps.field.borderRadius")}>
                 <div className="flex items-center gap-3">
                   <input
                     type="range"
@@ -1363,7 +1363,7 @@ export default function ApplicationEditPage() {
                   </span>
                 </div>
               </FormField>
-              <FormField label={t("apps.field.fontFamily" as any)}>
+              <FormField label={t("apps.field.fontFamily")}>
                 <div className="flex items-center gap-2">
                   <Type size={14} className="text-text-muted shrink-0" />
                   <input
@@ -1381,13 +1381,13 @@ export default function ApplicationEditPage() {
                   onClick={() =>
                     modal.showInfo(
                       <ThemeExport themeData={app.themeData as Record<string, unknown> | null | undefined} />,
-                      t("apps.theme.exportTitle" as any),
+                      t("apps.theme.exportTitle"),
                     )
                   }
                   className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface-1 px-3 py-1.5 text-[12px] font-medium text-text-secondary hover:bg-surface-2 hover:text-text-primary transition-colors"
                 >
                   {"{…}"}
-                  {t("apps.theme.exportButton" as any)}
+                  {t("apps.theme.exportButton")}
                 </button>
               </div>
             </div>
@@ -1395,14 +1395,14 @@ export default function ApplicationEditPage() {
 
           <CollapsibleCard
             id="layout-template"
-            title={t("apps.uiGroup.layoutTemplate.title" as any)}
-            subtitle={t("apps.uiGroup.layoutTemplate.subtitle" as any)}
+            title={t("apps.uiGroup.layoutTemplate.title")}
+            subtitle={t("apps.uiGroup.layoutTemplate.subtitle")}
             icon={<LayoutTemplate size={16} />}
             defaultOpen
             modified={isSectionModified(UI_SECTION_FIELDS.layoutTemplate)}
             onReset={() => resetSection(UI_SECTION_FIELDS.layoutTemplate)}
-            modifiedLabel={t("common.modifiedBadge" as any)}
-            resetLabel={t("common.resetSection" as any)}
+            modifiedLabel={t("common.modifiedBadge")}
+            resetLabel={t("common.resetSection")}
             highlight={highlightedSection === "layout-template"}
           >
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -1433,7 +1433,7 @@ export default function ApplicationEditPage() {
                     {isActive && (
                       <span className="absolute top-2 right-2 z-10 inline-flex items-center gap-1 rounded-full bg-accent px-1.5 py-0.5 text-[10px] font-semibold text-white shadow-sm">
                         <Check size={10} />
-                        {t("apps.uiGroup.layoutTemplate.active" as any)}
+                        {t("apps.uiGroup.layoutTemplate.active")}
                       </span>
                     )}
                     <div className="aspect-[3/2] w-full bg-surface-2 border-b border-border relative">
@@ -1451,11 +1451,11 @@ export default function ApplicationEditPage() {
                           setTemplatePreviewId(tpl.id);
                         }}
                         className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/35 opacity-0 group-hover:opacity-100 transition-all"
-                        aria-label={t("apps.uiGroup.layoutTemplate.preview" as any)}
+                        aria-label={t("apps.uiGroup.layoutTemplate.preview")}
                       >
                         <span className="inline-flex items-center gap-1.5 rounded-lg bg-white/95 px-3 py-1.5 text-[12px] font-semibold text-text-primary shadow-lg">
                           <Eye size={13} />
-                          {t("apps.uiGroup.layoutTemplate.preview" as any)}
+                          {t("apps.uiGroup.layoutTemplate.preview")}
                         </span>
                       </button>
                     </div>
@@ -1487,10 +1487,10 @@ export default function ApplicationEditPage() {
                 </span>
                 <span className="min-w-0">
                   <span className="block text-[13px] font-semibold text-text-primary">
-                    {t("apps.template.browse" as any)}
+                    {t("apps.template.browse")}
                   </span>
                   <span className="block text-[11px] text-text-muted leading-snug">
-                    {t("apps.template.storeHint" as any)}
+                    {t("apps.template.storeHint")}
                   </span>
                 </span>
               </span>
@@ -1500,35 +1500,35 @@ export default function ApplicationEditPage() {
 
           <CollapsibleCard
             id="signin"
-            title={t("apps.uiGroup.signin.title" as any)}
-            subtitle={t("apps.uiGroup.signin.subtitle" as any)}
+            title={t("apps.uiGroup.signin.title")}
+            subtitle={t("apps.uiGroup.signin.subtitle")}
             icon={<LogIn size={16} />}
             modified={isSectionModified(UI_SECTION_FIELDS.signin)}
             onReset={() => resetSection(UI_SECTION_FIELDS.signin)}
-            modifiedLabel={t("common.modifiedBadge" as any)}
-            resetLabel={t("common.resetSection" as any)}
+            modifiedLabel={t("common.modifiedBadge")}
+            resetLabel={t("common.resetSection")}
             highlight={highlightedSection === "signin"}
           >
             <div className="grid grid-cols-2 gap-x-6 gap-y-4">
-              <FormField label={t("apps.field.orgChoiceMode" as any)}>
+              <FormField label={t("apps.field.orgChoiceMode")}>
                 <SimpleSelect value={String(app.orgChoiceMode ?? "None")} options={[{ value: "None", label: "None" }, { value: "Select", label: "Select" }, { value: "Input", label: "Input" }]} onChange={(v) => set("orgChoiceMode", v)} />
               </FormField>
               <FormField
-                label={t("apps.field.signinMethodMode" as any)}
-                tooltip={t("apps.field.signinMethodMode.desc" as any)}
+                label={t("apps.field.signinMethodMode")}
+                tooltip={t("apps.field.signinMethodMode.desc")}
               >
                 <SimpleSelect
                   value={String(app.signinMethodMode ?? "default")}
                   options={[
-                    { value: "default", label: t("apps.signinMethodMode.default" as any) },
-                    { value: "classic", label: t("apps.signinMethodMode.classic" as any) },
+                    { value: "default", label: t("apps.signinMethodMode.default") },
+                    { value: "classic", label: t("apps.signinMethodMode.classic") },
                   ]}
                   onChange={(v) => set("signinMethodMode", v)}
                 />
               </FormField>
               <div className="col-span-2">
                 <EditableTable
-                  title={t("apps.field.signinMethods" as any)}
+                  title={t("apps.field.signinMethods")}
                   columns={signinMethodColumns}
                   rows={(app.signinMethods as Record<string, unknown>[]) ?? []}
                   onChange={(rows) => set("signinMethods", rows)}
@@ -1540,7 +1540,7 @@ export default function ApplicationEditPage() {
               </div>
               <div className="col-span-2">
                 <div className="text-[13px] font-semibold text-text-primary mb-2">
-                  {t("apps.field.signinItems.toggles" as any)}
+                  {t("apps.field.signinItems.toggles")}
                 </div>
                 <ItemFeatureToggles<SigninItem>
                   items={(app.signinItems as SigninItem[] | undefined) ?? []}
@@ -1563,11 +1563,11 @@ export default function ApplicationEditPage() {
                 <details className="group">
                   <summary className="cursor-pointer text-[12px] font-medium text-text-muted hover:text-text-secondary select-none flex items-center gap-1">
                     <span className="inline-block transition-transform group-open:rotate-90">▸</span>
-                    {t("apps.field.signinItems.advanced" as any)}
+                    {t("apps.field.signinItems.advanced")}
                   </summary>
                   <div className="mt-3">
                     <EditableTable
-                      title={t("apps.field.signinItems" as any)}
+                      title={t("apps.field.signinItems")}
                       columns={signinItemColumns}
                       rows={(app.signinItems as Record<string, unknown>[]) ?? []}
                       onChange={(rows) => set("signinItems", rows)}
@@ -1576,7 +1576,7 @@ export default function ApplicationEditPage() {
                         const items = (app.signinItems as Record<string, unknown>[]) ?? [];
                         set("signinItems", [...items, { name: `Text ${Date.now()}`, visible: true, isCustom: true }]);
                       }}
-                      addCustomLabel={t("apps.ui.addCustom" as any)}
+                      addCustomLabel={t("apps.ui.addCustom")}
                       sortable
                     />
                   </div>
@@ -1613,7 +1613,7 @@ export default function ApplicationEditPage() {
                   </div>
                 );
               })()}
-              <FormField label={t("apps.field.signinHtml" as any)} span="full">
+              <FormField label={t("apps.field.signinHtml")} span="full">
                 <textarea value={String(app.signinHtml ?? "")} onChange={(e) => set("signinHtml", e.target.value)} rows={3} className={`${inputClass} font-mono text-[12px]`} />
               </FormField>
             </div>
@@ -1621,13 +1621,13 @@ export default function ApplicationEditPage() {
 
           <CollapsibleCard
             id="signup"
-            title={t("apps.uiGroup.signup.title" as any)}
-            subtitle={t("apps.uiGroup.signup.subtitle" as any)}
+            title={t("apps.uiGroup.signup.title")}
+            subtitle={t("apps.uiGroup.signup.subtitle")}
             icon={<UserPlus size={16} />}
             modified={isSectionModified(UI_SECTION_FIELDS.signup)}
             onReset={() => resetSection(UI_SECTION_FIELDS.signup)}
-            modifiedLabel={t("common.modifiedBadge" as any)}
-            resetLabel={t("common.resetSection" as any)}
+            modifiedLabel={t("common.modifiedBadge")}
+            resetLabel={t("common.resetSection")}
             highlight={highlightedSection === "signup"}
           >
             <div className="grid grid-cols-2 gap-x-6 gap-y-4">
@@ -1635,7 +1635,7 @@ export default function ApplicationEditPage() {
                 <>
                   <div className="col-span-2">
                     <div className="text-[13px] font-semibold text-text-primary mb-2">
-                      {t("apps.field.signupItems.toggles" as any)}
+                      {t("apps.field.signupItems.toggles")}
                     </div>
                     <ItemFeatureToggles
                       items={(app.signupItems as Array<Record<string, unknown>>) ?? []}
@@ -1662,11 +1662,11 @@ export default function ApplicationEditPage() {
                     <details className="group">
                       <summary className="cursor-pointer text-[12px] font-medium text-text-muted hover:text-text-secondary select-none flex items-center gap-1">
                         <span className="inline-block transition-transform group-open:rotate-90">▸</span>
-                        {t("apps.field.signupItems.advanced" as any)}
+                        {t("apps.field.signupItems.advanced")}
                       </summary>
                       <div className="mt-3">
                         <EditableTable
-                          title={t("apps.field.signupItems" as any)}
+                          title={t("apps.field.signupItems")}
                           columns={signupItemColumns}
                           rows={(app.signupItems as Record<string, unknown>[]) ?? []}
                           onChange={(rows) => set("signupItems", rows)}
@@ -1678,7 +1678,7 @@ export default function ApplicationEditPage() {
                   </div>
                 </>
               )}
-              <FormField label={t("apps.field.signupHtml" as any)} span="full">
+              <FormField label={t("apps.field.signupHtml")} span="full">
                 <textarea value={String(app.signupHtml ?? "")} onChange={(e) => set("signupHtml", e.target.value)} rows={3} className={`${inputClass} font-mono text-[12px]`} />
               </FormField>
             </div>
@@ -1686,19 +1686,19 @@ export default function ApplicationEditPage() {
 
           <CollapsibleCard
             id="forget"
-            title={t("apps.uiGroup.forget.title" as any)}
-            subtitle={t("apps.uiGroup.forget.subtitle" as any)}
+            title={t("apps.uiGroup.forget.title")}
+            subtitle={t("apps.uiGroup.forget.subtitle")}
             icon={<KeyRound size={16} />}
             modified={isSectionModified(UI_SECTION_FIELDS.forget)}
             onReset={() => resetSection(UI_SECTION_FIELDS.forget)}
-            modifiedLabel={t("common.modifiedBadge" as any)}
-            resetLabel={t("common.resetSection" as any)}
+            modifiedLabel={t("common.modifiedBadge")}
+            resetLabel={t("common.resetSection")}
             highlight={highlightedSection === "forget"}
           >
             <div className="grid grid-cols-2 gap-x-6 gap-y-4">
               <div className="col-span-2">
                 <div className="text-[13px] font-semibold text-text-primary mb-2">
-                  {t("apps.field.forgetItems.toggles" as any)}
+                  {t("apps.field.forgetItems.toggles")}
                 </div>
                 <ItemFeatureToggles<SigninItem>
                   items={(app.forgetItems as SigninItem[] | undefined) ?? []}
@@ -1721,11 +1721,11 @@ export default function ApplicationEditPage() {
                 <details className="group">
                   <summary className="cursor-pointer text-[12px] font-medium text-text-muted hover:text-text-secondary select-none flex items-center gap-1">
                     <span className="inline-block transition-transform group-open:rotate-90">▸</span>
-                    {t("apps.field.forgetItems.advanced" as any)}
+                    {t("apps.field.forgetItems.advanced")}
                   </summary>
                   <div className="mt-3">
                     <EditableTable
-                      title={t("apps.field.forgetItems" as any)}
+                      title={t("apps.field.forgetItems")}
                       columns={forgetItemColumns}
                       rows={(app.forgetItems as Record<string, unknown>[]) ?? []}
                       onChange={(rows) => set("forgetItems", rows)}
@@ -1734,13 +1734,13 @@ export default function ApplicationEditPage() {
                         const items = (app.forgetItems as Record<string, unknown>[]) ?? [];
                         set("forgetItems", [...items, { name: `Text ${Date.now()}`, visible: true, isCustom: true }]);
                       }}
-                      addCustomLabel={t("apps.ui.addCustom" as any)}
+                      addCustomLabel={t("apps.ui.addCustom")}
                       sortable
                     />
                   </div>
                 </details>
               </div>
-              <FormField label={t("apps.field.forgetHtml" as any)} span="full">
+              <FormField label={t("apps.field.forgetHtml")} span="full">
                 <textarea value={String(app.forgetHtml ?? "")} onChange={(e) => set("forgetHtml", e.target.value)} rows={3} className={`${inputClass} font-mono text-[12px]`} />
               </FormField>
             </div>
@@ -1748,23 +1748,23 @@ export default function ApplicationEditPage() {
 
           <CollapsibleCard
             id="layout"
-            title={t("apps.uiGroup.layout.title" as any)}
-            subtitle={t("apps.uiGroup.layout.subtitle" as any)}
+            title={t("apps.uiGroup.layout.title")}
+            subtitle={t("apps.uiGroup.layout.subtitle")}
             icon={<LayoutGrid size={16} />}
             modified={isSectionModified(UI_SECTION_FIELDS.layout)}
             onReset={() => resetSection(UI_SECTION_FIELDS.layout)}
-            modifiedLabel={t("common.modifiedBadge" as any)}
-            resetLabel={t("common.resetSection" as any)}
+            modifiedLabel={t("common.modifiedBadge")}
+            resetLabel={t("common.resetSection")}
             highlight={highlightedSection === "layout"}
           >
             <div className="grid grid-cols-2 gap-x-6 gap-y-4">
-              <FormField label={t("apps.field.formPosition" as any)} span="full">
+              <FormField label={t("apps.field.formPosition")} span="full">
                 <div className="flex gap-2">
                   {([
-                    { value: 1, label: t("apps.formPosition.left" as any) },
-                    { value: 2, label: t("apps.formPosition.center" as any) },
-                    { value: 3, label: t("apps.formPosition.right" as any) },
-                    { value: 4, label: t("apps.formPosition.sidePanel" as any) },
+                    { value: 1, label: t("apps.formPosition.left") },
+                    { value: 2, label: t("apps.formPosition.center") },
+                    { value: 3, label: t("apps.formPosition.right") },
+                    { value: 4, label: t("apps.formPosition.sidePanel") },
                   ] as const).map((pos) => (
                     <button
                       key={pos.value}
@@ -1782,36 +1782,36 @@ export default function ApplicationEditPage() {
                 </div>
               </FormField>
               {app.formOffset === 4 && (
-                <FormField label={t("apps.field.sidePanelHtml" as any)} span="full">
+                <FormField label={t("apps.field.sidePanelHtml")} span="full">
                   <textarea value={String(app.formSideHtml ?? "")} onChange={(e) => set("formSideHtml", e.target.value)} rows={4} className={`${inputClass} font-mono text-[12px]`} />
                 </FormField>
               )}
-              <FormField label={t("apps.field.backgroundUrl" as any)} span="full">
+              <FormField label={t("apps.field.backgroundUrl")} span="full">
                 <div className="flex gap-3 items-start">
-                  <input value={String(app.formBackgroundUrl ?? "")} onChange={(e) => set("formBackgroundUrl", e.target.value)} className={`${inputClass} flex-1`} placeholder={t("help.placeholder.url" as any)} />
+                  <input value={String(app.formBackgroundUrl ?? "")} onChange={(e) => set("formBackgroundUrl", e.target.value)} className={`${inputClass} flex-1`} placeholder={t("help.placeholder.url")} />
                   {app.formBackgroundUrl && <img src={app.formBackgroundUrl as string} alt="" className="h-10 w-10 rounded-lg border border-border object-contain bg-surface-2" />}
                 </div>
               </FormField>
-              <FormField label={t("apps.field.backgroundUrlMobile" as any)} span="full">
+              <FormField label={t("apps.field.backgroundUrlMobile")} span="full">
                 <div className="flex gap-3 items-start">
-                  <input value={String(app.formBackgroundUrlMobile ?? "")} onChange={(e) => set("formBackgroundUrlMobile", e.target.value)} className={`${inputClass} flex-1`} placeholder={t("help.placeholder.url" as any)} />
+                  <input value={String(app.formBackgroundUrlMobile ?? "")} onChange={(e) => set("formBackgroundUrlMobile", e.target.value)} className={`${inputClass} flex-1`} placeholder={t("help.placeholder.url")} />
                   {app.formBackgroundUrlMobile && <img src={app.formBackgroundUrlMobile as string} alt="" className="h-10 w-10 rounded-lg border border-border object-contain bg-surface-2" />}
                 </div>
               </FormField>
-              <FormField label={t("apps.field.customCss" as any)} span="full">
+              <FormField label={t("apps.field.customCss")} span="full">
                 <Suspense fallback={<CssEditorFallback />}>
                   <CssEditor value={String(app.formCss ?? "")} onChange={(v) => set("formCss", v)} placeholder=".my-form { ... }" />
                 </Suspense>
               </FormField>
-              <FormField label={t("apps.field.customCssMobile" as any)} span="full">
+              <FormField label={t("apps.field.customCssMobile")} span="full">
                 <Suspense fallback={<CssEditorFallback />}>
                   <CssEditor value={String(app.formCssMobile ?? "")} onChange={(v) => set("formCssMobile", v)} placeholder=".my-form { ... }" />
                 </Suspense>
               </FormField>
-              <FormField label={t("apps.field.headerHtml" as any)} span="full">
+              <FormField label={t("apps.field.headerHtml")} span="full">
                 <textarea value={String(app.headerHtml ?? "")} onChange={(e) => set("headerHtml", e.target.value)} rows={3} className={`${inputClass} font-mono text-[12px]`} />
               </FormField>
-              <FormField label={t("apps.field.footerHtml" as any)} span="full">
+              <FormField label={t("apps.field.footerHtml")} span="full">
                 <textarea value={String(app.footerHtml ?? "")} onChange={(e) => set("footerHtml", e.target.value)} rows={3} className={`${inputClass} font-mono text-[12px]`} />
               </FormField>
             </div>
@@ -1827,7 +1827,7 @@ export default function ApplicationEditPage() {
             <div className="flex items-center justify-between px-4 py-2 border-b border-border bg-surface-1">
               <div className="flex items-center gap-2">
                 <Eye size={14} className="text-text-muted" />
-                <h3 className="text-[14px] font-semibold text-text-primary">{t("apps.uiGroup.previewTitle" as any)}</h3>
+                <h3 className="text-[14px] font-semibold text-text-primary">{t("apps.uiGroup.previewTitle")}</h3>
               </div>
               <button
                 type="button"
@@ -1878,49 +1878,49 @@ export default function ApplicationEditPage() {
   // ── Security Tab ──
   const securityTab = (
     <div className="space-y-5">
-      <FormSection title={t("apps.section.certs" as any)}>
-        <FormField label={t("apps.field.tokenCert" as any)}>
+      <FormSection title={t("apps.section.certs")}>
+        <FormField label={t("apps.field.tokenCert")}>
           <SingleSearchSelect
             value={String(app.cert ?? "")}
             options={certOptions}
             onChange={(v) => set("cert", v)}
-            placeholder={t("common.search" as any)}
+            placeholder={t("common.search")}
           />
         </FormField>
-        <FormField label={t("apps.field.clientCert" as any)}>
+        <FormField label={t("apps.field.clientCert")}>
           <SingleSearchSelect
             value={String(app.clientCert ?? "")}
             options={certOptions}
             onChange={(v) => set("clientCert", v)}
-            placeholder={t("common.search" as any)}
+            placeholder={t("common.search")}
           />
         </FormField>
       </FormSection>
 
-      <FormSection title={t("apps.section.signinLimits" as any)}>
-        <FormField label={t("apps.field.failedSigninLimit" as any)} help={t("apps.help.failedSigninLimit" as any)}>
+      <FormSection title={t("apps.section.signinLimits")}>
+        <FormField label={t("apps.field.failedSigninLimit")} help={t("apps.help.failedSigninLimit")}>
           <input type="number" value={app.failedSigninLimit ?? 0} onChange={(e) => set("failedSigninLimit", Number(e.target.value))} min={0} step={1} className={monoInputClass} />
         </FormField>
-        <FormField label={t("apps.field.failedSigninFrozenTime" as any)} help={t("apps.help.failedSigninFrozenTime" as any)}>
+        <FormField label={t("apps.field.failedSigninFrozenTime")} help={t("apps.help.failedSigninFrozenTime")}>
           <input type="number" value={app.failedSigninFrozenTime ?? 0} onChange={(e) => set("failedSigninFrozenTime", Number(e.target.value))} min={0} step={1} className={monoInputClass} />
         </FormField>
-        <FormField label={t("apps.field.codeResendTimeout" as any)} help={t("apps.help.codeResendTimeout" as any)}>
+        <FormField label={t("apps.field.codeResendTimeout")} help={t("apps.help.codeResendTimeout")}>
           <input type="number" value={app.codeResendTimeout ?? 0} onChange={(e) => set("codeResendTimeout", Number(e.target.value))} min={0} step={1} className={monoInputClass} />
         </FormField>
       </FormSection>
 
-      <FormSection title={t("apps.section.ipSecurity" as any)}>
-        <FormField label={t("apps.field.ipWhitelist" as any)} span="full">
+      <FormSection title={t("apps.section.ipSecurity")}>
+        <FormField label={t("apps.field.ipWhitelist")} span="full">
           <input value={String(app.ipWhitelist ?? "")} onChange={(e) => set("ipWhitelist", e.target.value)} className={inputClass} />
         </FormField>
-        <FormField label={t("apps.field.ipRestriction" as any)} span="full">
+        <FormField label={t("apps.field.ipRestriction")} span="full">
           <input value={String(app.ipRestriction ?? "")} onChange={(e) => set("ipRestriction", e.target.value)} className={inputClass} />
         </FormField>
       </FormSection>
 
-      <FormSection title={t("apps.section.termsOfUse" as any)}>
-        <FormField label={t("apps.field.termsOfUse" as any)} span="full">
-          <input value={String(app.termsOfUse ?? "")} onChange={(e) => set("termsOfUse", e.target.value)} className={inputClass} placeholder={t("help.placeholder.url" as any)} />
+      <FormSection title={t("apps.section.termsOfUse")}>
+        <FormField label={t("apps.field.termsOfUse")} span="full">
+          <input value={String(app.termsOfUse ?? "")} onChange={(e) => set("termsOfUse", e.target.value)} className={inputClass} placeholder={t("help.placeholder.url")} />
         </FormField>
       </FormSection>
     </div>
@@ -1929,11 +1929,11 @@ export default function ApplicationEditPage() {
   // ── Reverse Proxy Tab ──
   const proxyTab = (
     <div className="space-y-5">
-      <FormSection title={t("apps.section.domainConfig" as any)}>
-        <FormField label={t("apps.field.domain" as any)} span="full">
-          <input value={String(app.domain ?? "")} onChange={(e) => set("domain", e.target.value)} className={inputClass} placeholder={t("apps.help.domain" as any)} />
+      <FormSection title={t("apps.section.domainConfig")}>
+        <FormField label={t("apps.field.domain")} span="full">
+          <input value={String(app.domain ?? "")} onChange={(e) => set("domain", e.target.value)} className={inputClass} placeholder={t("apps.help.domain")} />
         </FormField>
-        <FormField label={t("apps.field.otherDomains" as any)} span="full">
+        <FormField label={t("apps.field.otherDomains")} span="full">
           <RedirectUriEditor
             uris={Array.isArray(app.otherDomains) ? app.otherDomains : []}
             onChange={(v) => set("otherDomains", v)}
@@ -1941,22 +1941,22 @@ export default function ApplicationEditPage() {
         </FormField>
       </FormSection>
 
-      <FormSection title={t("apps.section.upstream" as any)}>
-        <FormField label={t("apps.field.upstreamHost" as any)} span="full">
-          <input value={String(app.upstreamHost ?? "")} onChange={(e) => set("upstreamHost", e.target.value)} className={inputClass} placeholder={t("apps.help.upstreamHost" as any)} />
+      <FormSection title={t("apps.section.upstream")}>
+        <FormField label={t("apps.field.upstreamHost")} span="full">
+          <input value={String(app.upstreamHost ?? "")} onChange={(e) => set("upstreamHost", e.target.value)} className={inputClass} placeholder={t("apps.help.upstreamHost")} />
         </FormField>
       </FormSection>
 
-      <FormSection title={t("apps.section.ssl" as any)}>
-        <FormField label={t("apps.field.sslMode" as any)}>
+      <FormSection title={t("apps.section.ssl")}>
+        <FormField label={t("apps.field.sslMode")}>
           <SimpleSelect value={String(app.sslMode ?? "")} options={SSL_MODES} onChange={(v) => set("sslMode", v)} />
         </FormField>
-        <FormField label={t("apps.field.sslCert" as any)}>
+        <FormField label={t("apps.field.sslCert")}>
           <SingleSearchSelect
             value={String(app.sslCert ?? "")}
             options={[{ value: "", label: "None" }, ...certOptions]}
             onChange={(v) => set("sslCert", v)}
-            placeholder={t("common.search" as any)}
+            placeholder={t("common.search")}
           />
         </FormField>
       </FormSection>
@@ -2002,7 +2002,7 @@ export default function ApplicationEditPage() {
                     <SaveButton onClick={handleSave} saving={saving} saved={saved} label={t("common.save")} />
           <button onClick={handleSaveAndExit} disabled={saving} className="flex items-center gap-1.5 rounded-lg bg-accent px-4 py-2 text-[13px] font-semibold text-white hover:bg-accent-hover disabled:opacity-50 transition-colors">
             {saving ? <div className="h-3.5 w-3.5 rounded-full border-2 border-white/30 border-t-white animate-spin" /> : <LogOut size={14} />}
-            {t("common.saveAndExit" as any)}
+            {t("common.saveAndExit")}
           </button>
       </StickyEditHeader>
 
@@ -2057,14 +2057,14 @@ function RedirectUriEditor({ uris, onChange }: { uris: string[]; onChange: (v: s
               setInput("");
             }
           }}
-          placeholder={t("help.placeholder.callbackUrl" as any)}
+          placeholder={t("help.placeholder.callbackUrl")}
           className={`${inputClass} flex-1 text-[12px]`}
         />
         <button
           onClick={() => { if (input.trim()) { onChange([...uris, input.trim()]); setInput(""); } }}
           className="rounded-lg bg-accent px-3 py-2 text-[12px] font-medium text-white hover:bg-accent-hover transition-colors"
         >
-          {t("apps.addUri" as any)}
+          {t("apps.addUri")}
         </button>
       </div>
     </div>

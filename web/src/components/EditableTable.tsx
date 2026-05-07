@@ -278,7 +278,7 @@ export default function EditableTable<T extends Record<string, unknown>>({
         {columns.map((col) => (
           <div key={col.key}>{col.title}</div>
         ))}
-        <div className="text-right">{t("common.action" as any)}</div>
+        <div className="text-right">{t("common.action")}</div>
       </div>
 
       {/* Rows — SortableList for drag-sort, or plain map */}

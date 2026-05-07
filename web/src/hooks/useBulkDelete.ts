@@ -23,7 +23,7 @@ export function useBulkDelete<T>(
   return useCallback(
     (selected: T[], clear: () => void) => {
       if (selected.length === 0) return;
-      const noun = t("common.items" as any) || "项";
+      const noun = t("common.items") || "项";
       modal.showConfirm(
         `${t("common.confirmDelete")} ${selected.length} ${noun}?`,
         async () => {
@@ -35,12 +35,12 @@ export function useBulkDelete<T>(
           });
           if (failed.length > 0) {
             modal.toast(
-              `${failed.length}/${selected.length} ${t("common.deleteFailed" as any) || "失败"}`,
+              `${failed.length}/${selected.length} ${t("common.deleteFailed") || "失败"}`,
               "error",
             );
           } else {
             modal.toast(
-              `${t("common.bulk.deleted" as any) || "已删除"} ${selected.length}`,
+              `${t("common.bulk.deleted") || "已删除"} ${selected.length}`,
               "success",
             );
           }

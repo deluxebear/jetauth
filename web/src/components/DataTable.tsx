@@ -810,7 +810,7 @@ export default function DataTable<T extends object>({
                 aria-label="Rows per page"
               >
                 {pageSizeOptions.map((n) => (
-                  <option key={n} value={n}>{(t("common.rowsPerPage" as any) || "{n} / page").replace("{n}", String(n))}</option>
+                  <option key={n} value={n}>{(t("common.rowsPerPage") || "{n} / page").replace("{n}", String(n))}</option>
                 ))}
               </select>
             )}
@@ -919,7 +919,7 @@ function FilterPopover({
                 onClick={() => { onApply(""); onToggle(); }}
                 className="w-full text-left px-3 py-1.5 text-[12px] text-text-muted hover:bg-surface-3 transition-colors whitespace-nowrap"
               >
-                {t("common.viewAll" as any)}
+                {t("common.viewAll")}
               </button>
               {options.map((opt) => (
                 <button
@@ -942,7 +942,7 @@ function FilterPopover({
                     if (e.key === "Enter") onApply(value);
                     if (e.key === "Escape") onToggle();
                   }}
-                  placeholder={t("common.search" as any)}
+                  placeholder={t("common.search")}
                   className="flex-1 rounded border border-border bg-surface-1 px-2 py-1 text-[12px] text-text-primary placeholder:text-text-muted outline-none focus:border-accent"
                 />
                 <button
@@ -1054,8 +1054,8 @@ export function ColumnsMenu<T>({
       <button
         onClick={() => setOpen((v) => !v)}
         className="flex items-center gap-1.5 rounded-lg border border-border bg-surface-1 px-2.5 py-2 text-[12px] font-medium text-text-secondary hover:bg-surface-2 transition-colors"
-        title={t("common.columns" as any) || "Columns"}
-        aria-label={t("common.columns" as any) || "Columns"}
+        title={t("common.columns") || "Columns"}
+        aria-label={t("common.columns") || "Columns"}
       >
         <Columns3 size={13} />
         <ChevronDown size={11} />
@@ -1084,7 +1084,7 @@ export function ColumnsMenu<T>({
                 onClick={() => { onResetWidths(); setOpen(false); }}
                 className="w-full text-left rounded px-2 py-1.5 text-[12px] text-text-secondary hover:bg-surface-2 transition-colors"
               >
-                {t("common.resetColumnWidths" as any) || "重置列宽"}
+                {t("common.resetColumnWidths") || "重置列宽"}
               </button>
             </>
           )}

@@ -37,74 +37,74 @@ export default function InvitationListPage() {
     modal.showConfirm(`${t("common.confirmDelete")} [${record.displayName || record.name}]`, async () => {
       const res = await InvBackend.deleteInvitation(record);
       if (res.status === "ok") list.refetch();
-      else modal.toast(res.msg || t("common.deleteFailed" as any), "error");
+      else modal.toast(res.msg || t("common.deleteFailed"), "error");
     });
   };
 
   const columns: Column<Invitation>[] = [
     {
       key: "name",
-      title: t("col.name" as any),
+      title: t("col.name"),
       sortable: true,
       filterable: true,
       width: "140px",
       render: (_, r) => <Link to={`/invitations/${r.owner}/${r.name}`} className="font-mono font-medium text-accent hover:underline" onClick={(e) => e.stopPropagation()}>{r.name}</Link>,
     },
-    { key: "owner", title: t("col.organization" as any), sortable: true, width: "120px" },
+    { key: "owner", title: t("col.organization"), sortable: true, width: "120px" },
     {
       key: "updatedTime",
-      title: t("col.updated" as any),
+      title: t("col.updated"),
       sortable: true,
       width: "160px",
       render: (_, r) => <span className="text-[12px] text-text-muted font-mono">{r.updatedTime ? new Date(r.updatedTime).toLocaleString() : "—"}</span>,
     },
-    { key: "displayName", title: t("col.displayName" as any), sortable: true, filterable: true },
+    { key: "displayName", title: t("col.displayName"), sortable: true, filterable: true },
     {
       key: "code",
-      title: t("col.code" as any),
+      title: t("col.code"),
       width: "130px",
       render: (_, r) => <span className="font-mono text-[12px] text-text-secondary">{r.code || "—"}</span>,
     },
     {
       key: "quota",
-      title: t("col.quota" as any),
+      title: t("col.quota"),
       width: "70px",
       render: (_, r) => <span className="font-mono text-[12px] text-text-muted">{r.quota}</span>,
     },
     {
       key: "usedCount",
-      title: t("col.used" as any),
+      title: t("col.used"),
       width: "70px",
       render: (_, r) => <span className="font-mono text-[12px] text-text-muted">{r.usedCount}</span>,
     },
     {
       key: "application",
-      title: t("col.application" as any),
+      title: t("col.application"),
       width: "130px",
       render: (_, r) => <span className="text-[12px] text-text-secondary">{r.application || "—"}</span>,
     },
     {
       key: "email",
-      title: t("col.email" as any),
+      title: t("col.email"),
       width: "160px",
       render: (_, r) => r.email ? <a href={`mailto:${r.email}`} className="text-accent hover:underline text-[12px]" onClick={(e) => e.stopPropagation()}>{r.email}</a> : <span className="text-text-muted text-[12px]">—</span>,
     },
     {
       key: "phone",
-      title: t("col.phone" as any),
+      title: t("col.phone"),
       width: "140px",
       render: (_, r) => r.phone ? <a href={`tel:${r.phone}`} className="text-accent hover:underline text-[12px]" onClick={(e) => e.stopPropagation()}>{r.phone}</a> : <span className="text-text-muted text-[12px]">—</span>,
     },
     {
       key: "state",
-      title: t("col.state" as any),
+      title: t("col.state"),
       width: "100px",
       render: (_, r) => <StatusBadge status={r.state === "Active" ? "active" : "inactive"} label={r.state || "—"} />,
     },
     {
       key: "__actions",
       fixed: "right" as const,
-      title: t("common.action" as any),
+      title: t("common.action"),
       width: "90px",
       render: (_, r) => (
         <div className="flex items-center gap-1">
@@ -123,8 +123,8 @@ export default function InvitationListPage() {
     <div className="space-y-5">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold tracking-tight">{t("invitations.title" as any)}</h1>
-          <p className="text-[13px] text-text-muted mt-0.5">{t("invitations.subtitle" as any)}</p>
+          <h1 className="text-xl font-bold tracking-tight">{t("invitations.title")}</h1>
+          <p className="text-[13px] text-text-muted mt-0.5">{t("invitations.subtitle")}</p>
         </div>
         <div className="flex items-center gap-2">
           <motion.button whileHover={{ rotate: 180 }} transition={{ duration: 0.3 }} onClick={list.refetch} className="rounded-lg border border-border p-2 text-text-muted hover:bg-surface-2 transition-colors">
@@ -133,7 +133,7 @@ export default function InvitationListPage() {
           <ColumnsMenu columns={columns} hidden={prefs.hidden} onToggle={prefs.toggleHidden} onResetWidths={prefs.resetWidths} />
           <button onClick={handleAdd} className="flex items-center gap-1.5 rounded-lg bg-accent px-3 py-2 text-[13px] font-semibold text-white hover:bg-accent-hover transition-colors">
             <Plus size={15} />
-            {t("invitations.add" as any)}
+            {t("invitations.add")}
           </button>
         </div>
       </div>

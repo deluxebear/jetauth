@@ -64,7 +64,7 @@ export default function PlanEditPage() {
     try {
       const res = await PlanBackend.updatePlan(owner!, name!, plan);
       if (res.status === "ok") {
-        modal.toast(t("common.saveSuccess" as any));
+        modal.toast(t("common.saveSuccess"));
         setSaved(true);
         setOriginalJson(JSON.stringify(plan));
         setIsAddMode(false);
@@ -73,7 +73,7 @@ export default function PlanEditPage() {
           navigate(`/plans/${plan.owner}/${plan.name}`, { replace: true });
         }
       } else {
-        modal.toast(friendlyError(res.msg, t) || t("common.saveFailed" as any), "error");
+        modal.toast(friendlyError(res.msg, t) || t("common.saveFailed"), "error");
       }
     } catch (e) {
       console.error(e);
@@ -86,14 +86,14 @@ export default function PlanEditPage() {
     try {
       const res = await PlanBackend.updatePlan(owner!, name!, plan);
       if (res.status === "ok") {
-        modal.toast(t("common.saveSuccess" as any));
+        modal.toast(t("common.saveSuccess"));
         invalidateList();
         navigate("/plans");
       } else {
-        modal.toast(friendlyError(res.msg, t) || t("common.saveFailed" as any), "error");
+        modal.toast(friendlyError(res.msg, t) || t("common.saveFailed"), "error");
       }
     } catch (e: any) {
-      modal.toast(e?.message || t("common.saveFailed" as any), "error");
+      modal.toast(e?.message || t("common.saveFailed"), "error");
     } finally {
       setSaving(false);
     }
@@ -115,7 +115,7 @@ export default function PlanEditPage() {
           invalidateList();
           navigate("/plans");
         } else {
-          modal.toast(res.msg || t("common.deleteFailed" as any), "error");
+          modal.toast(res.msg || t("common.deleteFailed"), "error");
         }
       } catch (e) {
         console.error(e);
@@ -126,7 +126,7 @@ export default function PlanEditPage() {
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-6 ">
       <StickyEditHeader
-        title={`${isAddMode ? t("common.add") : t("common.edit")} ${t("plans.title" as any)}`}
+        title={`${isAddMode ? t("common.add") : t("common.edit")} ${t("plans.title")}`}
         subtitle={`${owner}/${name}`}
         onBack={handleBack}
       >
@@ -136,14 +136,14 @@ export default function PlanEditPage() {
                     <SaveButton onClick={handleSave} saving={saving} saved={saved} label={t("common.save")} />
           <button onClick={handleSaveAndExit} disabled={saving} className="flex items-center gap-1.5 rounded-lg bg-accent px-4 py-2 text-[13px] font-semibold text-white hover:bg-accent-hover disabled:opacity-50 transition-colors">
             {saving ? <div className="h-3.5 w-3.5 rounded-full border-2 border-white/30 border-t-white animate-spin" /> : <LogOut size={14} />}
-            {t("common.saveAndExit" as any)}
+            {t("common.saveAndExit")}
           </button>
       </StickyEditHeader>
 
       {showBanner && <UnsavedBanner isAddMode={isAddMode} />}
 
       {/* Basic Info */}
-      <FormSection title={t("plans.section.basic" as any)}>
+      <FormSection title={t("plans.section.basic")}>
         <FormField label={t("field.owner")}>
           <input value={plan.owner} disabled className={inputClass} />
         </FormField>
@@ -153,40 +153,40 @@ export default function PlanEditPage() {
         <FormField label={t("field.displayName")}>
           <input value={plan.displayName} onChange={(e) => set("displayName", e.target.value)} className={inputClass} />
         </FormField>
-        <FormField label={t("plans.field.description" as any)}>
+        <FormField label={t("plans.field.description")}>
           <input value={plan.description} onChange={(e) => set("description", e.target.value)} className={inputClass} />
         </FormField>
-        <FormField label={t("plans.field.role" as any)}>
+        <FormField label={t("plans.field.role")}>
           <input value={plan.role} onChange={(e) => set("role", e.target.value)} className={inputClass} />
         </FormField>
       </FormSection>
 
       {/* Pricing */}
-      <FormSection title={t("plans.section.pricing" as any)}>
-        <FormField label={t("plans.field.price" as any)}>
+      <FormSection title={t("plans.section.pricing")}>
+        <FormField label={t("plans.field.price")}>
           <input type="number" value={plan.price} onChange={(e) => set("price", Number(e.target.value))} className={monoInputClass} />
         </FormField>
-        <FormField label={t("plans.field.currency" as any)}>
+        <FormField label={t("plans.field.currency")}>
           <input value={plan.currency} onChange={(e) => set("currency", e.target.value)} className={inputClass} />
         </FormField>
-        <FormField label={t("plans.field.period" as any)}>
+        <FormField label={t("plans.field.period")}>
           <SimpleSelect value={plan.period} options={PERIOD_OPTIONS.map((o) => ({ value: o.id, label: o.name }))} onChange={(v) => set("period", v)} />
         </FormField>
       </FormSection>
 
       {/* Providers & Options */}
-      <FormSection title={t("plans.section.providers" as any)}>
-        <FormField label={t("plans.field.paymentProviders" as any)} span="full">
+      <FormSection title={t("plans.section.providers")}>
+        <FormField label={t("plans.field.paymentProviders")} span="full">
           <input value={(plan.paymentProviders || []).join(", ")} onChange={(e) => set("paymentProviders", e.target.value.split(",").map((s) => s.trim()).filter(Boolean))} className={inputClass} />
         </FormField>
       </FormSection>
 
       {/* Flags */}
-      <FormSection title={t("plans.section.flags" as any)}>
-        <FormField label={t("col.isEnabled" as any)}>
+      <FormSection title={t("plans.section.flags")}>
+        <FormField label={t("col.isEnabled")}>
           <Switch checked={plan.isEnabled} onChange={(v) => set("isEnabled", v)} />
         </FormField>
-        <FormField label={t("plans.field.isExclusive" as any)}>
+        <FormField label={t("plans.field.isExclusive")}>
           <Switch checked={plan.isExclusive} onChange={(v) => set("isExclusive", v)} />
         </FormField>
       </FormSection>

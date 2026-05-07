@@ -55,14 +55,14 @@ export function BodyTemplateEditor({ value, onChange, contentType, className }: 
           rows={12}
           spellCheck={false}
           className="w-full rounded-lg border border-border bg-surface px-3 py-2 font-mono text-[11px]"
-          placeholder={t("providers.httpEmail.bodyTemplatePlaceholder" as any)}
+          placeholder={t("providers.httpEmail.bodyTemplatePlaceholder")}
         />
         <pre className="max-h-[300px] overflow-auto rounded-lg border border-border bg-surface-2 px-3 py-2 font-mono text-[11px] whitespace-pre-wrap">
           {preview}
         </pre>
       </div>
       <p className="mt-1 text-[11px] text-text-tertiary">
-        {t("providers.httpEmail.contentTypeNote" as any)}: <code>{contentType || "(none)"}</code>
+        {t("providers.httpEmail.contentTypeNote")}: <code>{contentType || "(none)"}</code>
       </p>
     </div>
   );

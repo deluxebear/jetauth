@@ -83,7 +83,7 @@ export default function MfaSetup({
       }).then(r => r.json());
 
       if (loginRes.status === "error") {
-        setError(t("mfa.setup.passwordIncorrect" as any));
+        setError(t("mfa.setup.passwordIncorrect"));
         return;
       }
 
@@ -197,9 +197,9 @@ export default function MfaSetup({
   };
 
   const steps = [
-    t("mfa.setup.step.password" as any),
-    t("mfa.setup.step.verify" as any),
-    t("mfa.setup.step.enable" as any),
+    t("mfa.setup.step.password"),
+    t("mfa.setup.step.verify"),
+    t("mfa.setup.step.enable"),
   ];
 
   const inputClass = "login-input w-full border border-border bg-surface-1 px-3.5 py-2.5 text-[14px] text-text-primary placeholder:text-text-muted focus:border-accent focus:ring-1 focus:ring-accent/30 outline-none transition-all";
@@ -221,8 +221,8 @@ export default function MfaSetup({
           )}
         </div>
 
-        <h2 className="text-xl font-bold text-center text-text-primary mb-1">{t("mfa.setup.title" as any)}</h2>
-        <p className="text-[13px] text-center text-text-muted mb-6">{t("mfa.setup.subtitle" as any)}</p>
+        <h2 className="text-xl font-bold text-center text-text-primary mb-1">{t("mfa.setup.title")}</h2>
+        <p className="text-[13px] text-center text-text-muted mb-6">{t("mfa.setup.subtitle")}</p>
 
         <div className="flex items-center justify-center gap-2 mb-8">
           {steps.map((label, i) => (
@@ -247,7 +247,7 @@ export default function MfaSetup({
         {step === 0 && (
           <div className="space-y-4">
             <div>
-              <label className="block text-[12px] font-medium text-text-secondary mb-1.5">{t("mfa.setup.enterPassword" as any)}</label>
+              <label className="block text-[12px] font-medium text-text-secondary mb-1.5">{t("mfa.setup.enterPassword")}</label>
               <div className="relative">
                 <input
                   type={showPw ? "text" : "password"}
@@ -264,7 +264,7 @@ export default function MfaSetup({
               </div>
             </div>
             <button onClick={handlePasswordVerify} disabled={loading || !password} className="login-btn w-full flex items-center justify-center gap-2 bg-accent py-2.5 text-[14px] font-semibold text-white hover:bg-accent-hover disabled:opacity-50 disabled:cursor-not-allowed transition-all">
-              {loading ? <div className="h-4 w-4 rounded-full border-2 border-white/30 border-t-white animate-spin" /> : <>{t("mfa.setup.next" as any)} <ArrowRight size={16} /></>}
+              {loading ? <div className="h-4 w-4 rounded-full border-2 border-white/30 border-t-white animate-spin" /> : <>{t("mfa.setup.next")} <ArrowRight size={16} /></>}
             </button>
           </div>
         )}
@@ -273,7 +273,7 @@ export default function MfaSetup({
           <div className="space-y-4">
             {mfaType === "app" && (
               <>
-                <p className="text-[13px] text-text-secondary">{t("mfa.setup.totpDesc" as any)}</p>
+                <p className="text-[13px] text-text-secondary">{t("mfa.setup.totpDesc")}</p>
                 {qrDataUrl && (
                   <div className="flex justify-center">
                     <div className="p-3 bg-white rounded-xl border border-border">
@@ -282,10 +282,10 @@ export default function MfaSetup({
                   </div>
                 )}
                 <div className="flex items-center gap-2">
-                  <span className="text-[11px] text-text-muted">{t("mfa.setup.secretKey" as any)}:</span>
+                  <span className="text-[11px] text-text-muted">{t("mfa.setup.secretKey")}:</span>
                   <code className="flex-1 text-[11px] font-mono text-text-secondary bg-surface-2 px-2 py-1 rounded truncate">{secret}</code>
                   <button onClick={handleCopySecret} className="shrink-0 text-[11px] text-accent hover:underline">
-                    {copied ? t("mfa.setup.copied" as any) : t("mfa.setup.copySecret" as any)}
+                    {copied ? t("mfa.setup.copied") : t("mfa.setup.copySecret")}
                   </button>
                 </div>
               </>
@@ -293,11 +293,11 @@ export default function MfaSetup({
 
             {mfaType === "sms" && (
               <>
-                <p className="text-[13px] text-text-secondary">{t("mfa.setup.smsDesc" as any)}</p>
+                <p className="text-[13px] text-text-secondary">{t("mfa.setup.smsDesc")}</p>
                 <div className="flex items-center gap-2">
                   <span className="text-[13px] text-text-primary font-mono">{secret}</span>
                   <button onClick={handleSendCode} disabled={countdown > 0} className="login-btn shrink-0 border border-accent bg-accent/10 px-3 py-1.5 text-[12px] font-semibold text-accent hover:bg-accent/20 disabled:opacity-50 transition-colors">
-                    {countdown > 0 ? `${t("mfa.setup.codeSent" as any)} (${countdown}s)` : t("mfa.setup.sendCode" as any)}
+                    {countdown > 0 ? `${t("mfa.setup.codeSent")} (${countdown}s)` : t("mfa.setup.sendCode")}
                   </button>
                 </div>
               </>
@@ -305,18 +305,18 @@ export default function MfaSetup({
 
             {mfaType === "email" && (
               <>
-                <p className="text-[13px] text-text-secondary">{t("mfa.setup.emailDesc" as any)}</p>
+                <p className="text-[13px] text-text-secondary">{t("mfa.setup.emailDesc")}</p>
                 <div className="flex items-center gap-2">
                   <span className="text-[13px] text-text-primary font-mono">{secret}</span>
                   <button onClick={handleSendCode} disabled={countdown > 0} className="login-btn shrink-0 border border-accent bg-accent/10 px-3 py-1.5 text-[12px] font-semibold text-accent hover:bg-accent/20 disabled:opacity-50 transition-colors">
-                    {countdown > 0 ? `${t("mfa.setup.codeSent" as any)} (${countdown}s)` : t("mfa.setup.sendCode" as any)}
+                    {countdown > 0 ? `${t("mfa.setup.codeSent")} (${countdown}s)` : t("mfa.setup.sendCode")}
                   </button>
                 </div>
               </>
             )}
 
             <div>
-              <label className="block text-[12px] font-medium text-text-secondary mb-1.5">{t("mfa.setup.enterCode" as any)}</label>
+              <label className="block text-[12px] font-medium text-text-secondary mb-1.5">{t("mfa.setup.enterCode")}</label>
               <input
                 type="text"
                 value={passcode}
@@ -329,7 +329,7 @@ export default function MfaSetup({
               />
             </div>
             <button onClick={handleVerifyCode} disabled={loading || passcode.length !== 6} className="login-btn w-full flex items-center justify-center gap-2 bg-accent py-2.5 text-[14px] font-semibold text-white hover:bg-accent-hover disabled:opacity-50 disabled:cursor-not-allowed transition-all">
-              {loading ? <div className="h-4 w-4 rounded-full border-2 border-white/30 border-t-white animate-spin" /> : <>{t("mfa.setup.verify" as any)} <ArrowRight size={16} /></>}
+              {loading ? <div className="h-4 w-4 rounded-full border-2 border-white/30 border-t-white animate-spin" /> : <>{t("mfa.setup.verify")} <ArrowRight size={16} /></>}
             </button>
           </div>
         )}
@@ -338,9 +338,9 @@ export default function MfaSetup({
           <div className="space-y-4">
             <div className="flex items-center gap-2 text-accent mb-2">
               <Check size={18} />
-              <span className="text-[14px] font-semibold">{t("mfa.setup.recoveryTitle" as any)}</span>
+              <span className="text-[14px] font-semibold">{t("mfa.setup.recoveryTitle")}</span>
             </div>
-            <p className="text-[13px] text-text-secondary">{t("mfa.setup.recoveryDesc" as any)}</p>
+            <p className="text-[13px] text-text-secondary">{t("mfa.setup.recoveryDesc")}</p>
 
             <div className="relative">
               <div className="bg-surface-2 border border-border rounded-lg px-4 py-3 font-mono text-[14px] text-text-primary break-all">
@@ -351,10 +351,10 @@ export default function MfaSetup({
               </button>
             </div>
 
-            <p className="text-[12px] text-warning font-medium">⚠ {t("mfa.setup.recoveryWarning" as any)}</p>
+            <p className="text-[12px] text-warning font-medium">⚠ {t("mfa.setup.recoveryWarning")}</p>
 
             <button onClick={handleEnable} disabled={loading} className="login-btn w-full flex items-center justify-center gap-2 bg-accent py-2.5 text-[14px] font-semibold text-white hover:bg-accent-hover disabled:opacity-50 disabled:cursor-not-allowed transition-all">
-              {loading ? <div className="h-4 w-4 rounded-full border-2 border-white/30 border-t-white animate-spin" /> : <>{t("mfa.setup.confirmEnable" as any)} <ArrowRight size={16} /></>}
+              {loading ? <div className="h-4 w-4 rounded-full border-2 border-white/30 border-t-white animate-spin" /> : <>{t("mfa.setup.confirmEnable")} <ArrowRight size={16} /></>}
             </button>
           </div>
         )}

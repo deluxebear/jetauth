@@ -157,10 +157,10 @@ export default function UserEditPage() {
       <div className="space-y-5">
         <div className="rounded-xl border border-danger/30 bg-danger/5 p-6 text-center">
           <p className="text-[14px] font-medium text-danger">
-            {t("users.error.noApp" as any).replace("{org}", owner || "")}
+            {t("users.error.noApp").replace("{org}", owner || "")}
           </p>
           <button onClick={() => navigate("/users")} className="mt-4 rounded-lg bg-accent px-4 py-2 text-[13px] font-semibold text-white hover:bg-accent-hover transition-colors">
-            {t("common.back" as any)}
+            {t("common.back")}
           </button>
         </div>
       </div>
@@ -237,7 +237,7 @@ export default function UserEditPage() {
       // addUser takes the password directly; no need to redact.
       const res = await UserBackend.addUser(userData);
       if (res.status !== "ok") {
-        modal.toast(friendlyError(res.msg, t) || t("common.saveFailed" as any), "error");
+        modal.toast(friendlyError(res.msg, t) || t("common.saveFailed"), "error");
         return null;
       }
       return userData as UserType;
@@ -247,13 +247,13 @@ export default function UserEditPage() {
     userData.password = "***";
     const res = await UserBackend.updateUser(owner!, name!, userData);
     if (res.status !== "ok") {
-      modal.toast(friendlyError(res.msg, t) || t("common.saveFailed" as any), "error");
+      modal.toast(friendlyError(res.msg, t) || t("common.saveFailed"), "error");
       return null;
     }
     if (passwordChanged) {
       const pwdRes = await UserBackend.setPassword(owner!, name!, "", obfuscatePassword(newPassword));
       if (pwdRes.status !== "ok") {
-        modal.toast(pwdRes.msg || t("common.saveFailed" as any), "error");
+        modal.toast(pwdRes.msg || t("common.saveFailed"), "error");
         return null;
       }
     }
@@ -265,7 +265,7 @@ export default function UserEditPage() {
     try {
       const saved = await saveUser();
       if (saved) {
-        modal.toast(t("common.saveSuccess" as any));
+        modal.toast(t("common.saveSuccess"));
         setIsAddMode(false);
         setSaved(true);
         setOriginalJson(JSON.stringify(user));
@@ -278,7 +278,7 @@ export default function UserEditPage() {
           navigate(`/users/${user.owner}/${user.name}`, { replace: true });
         }
       }
-    } catch (e: any) { modal.toast(e.message || t("common.saveFailed" as any), "error"); }
+    } catch (e: any) { modal.toast(e.message || t("common.saveFailed"), "error"); }
     finally { setSaving(false); }
   };
 
@@ -290,7 +290,7 @@ export default function UserEditPage() {
     try {
       const saved = await saveUser();
       if (!saved) return;
-      modal.toast(t("users.savedAndReady" as any));
+      modal.toast(t("users.savedAndReady"));
       invalidateList();
       const nextDraft = UserBackend.newUser(owner!) as UserType;
       try {
@@ -303,7 +303,7 @@ export default function UserEditPage() {
       // Make sure the URL stays /new so the next save re-enters add mode.
       if (!isNew) navigate(`/users/${owner}/new`, { replace: true, state: { mode: "add" } });
     } catch (e: any) {
-      modal.toast(e?.message || t("common.saveFailed" as any), "error");
+      modal.toast(e?.message || t("common.saveFailed"), "error");
     } finally {
       setSaving(false);
     }
@@ -314,12 +314,12 @@ export default function UserEditPage() {
     try {
       const saved = await saveUser();
       if (saved) {
-        modal.toast(t("common.saveSuccess" as any));
+        modal.toast(t("common.saveSuccess"));
         invalidateList();
         navigate("/users");
       }
     } catch (e: any) {
-      modal.toast(e?.message || t("common.saveFailed" as any), "error");
+      modal.toast(e?.message || t("common.saveFailed"), "error");
     } finally {
       setSaving(false);
     }
@@ -349,7 +349,7 @@ export default function UserEditPage() {
     modal.showConfirm(`${t("common.confirmDelete")} [${user.displayName || user.name}]`, async () => {
       const res = await UserBackend.deleteUser(user);
       if (res.status === "ok") { invalidateList(); navigate("/users"); }
-      else modal.toast(res.msg || t("common.deleteFailed" as any), "error");
+      else modal.toast(res.msg || t("common.deleteFailed"), "error");
     });
   };
 
@@ -363,7 +363,7 @@ export default function UserEditPage() {
     try {
       const re = new RegExp(pattern);
       if (!re.test(value)) {
-        setRegexErrors((prev) => ({ ...prev, [name]: t("users.error.regexMismatch" as any) }));
+        setRegexErrors((prev) => ({ ...prev, [name]: t("users.error.regexMismatch") }));
       } else {
         setRegexErrors((prev) => { const next = { ...prev }; delete next[name]; return next; });
       }
@@ -397,49 +397,49 @@ export default function UserEditPage() {
   const TYPE_OPTIONS = orgUserTypes.length > 0
     ? orgUserTypes.map((ut) => ({ value: ut, label: ut }))
     : [
-        { value: "normal-user", label: t("users.type.normal" as any) },
-        { value: "paid-user", label: t("users.type.paid" as any) },
+        { value: "normal-user", label: t("users.type.normal") },
+        { value: "paid-user", label: t("users.type.paid") },
       ];
 
   const GENDER_OPTIONS = [
     { value: "", label: "" },
-    { value: "Male", label: t("users.gender.male" as any) },
-    { value: "Female", label: t("users.gender.female" as any) },
-    { value: "Other", label: t("users.gender.other" as any) },
+    { value: "Male", label: t("users.gender.male") },
+    { value: "Female", label: t("users.gender.female") },
+    { value: "Other", label: t("users.gender.other") },
   ];
 
   const EDUCATION_OPTIONS = [
-    { value: "", label: t("users.education.none" as any) },
-    { value: "Doctorate", label: t("users.education.doctorate" as any) },
-    { value: "Master", label: t("users.education.master" as any) },
-    { value: "Bachelor", label: t("users.education.bachelor" as any) },
-    { value: "Junior College", label: t("users.education.juniorCollege" as any) },
-    { value: "High School", label: t("users.education.highSchool" as any) },
-    { value: "Middle School", label: t("users.education.middleSchool" as any) },
-    { value: "Primary School", label: t("users.education.primarySchool" as any) },
-    { value: "Other", label: t("users.education.other" as any) },
+    { value: "", label: t("users.education.none") },
+    { value: "Doctorate", label: t("users.education.doctorate") },
+    { value: "Master", label: t("users.education.master") },
+    { value: "Bachelor", label: t("users.education.bachelor") },
+    { value: "Junior College", label: t("users.education.juniorCollege") },
+    { value: "High School", label: t("users.education.highSchool") },
+    { value: "Middle School", label: t("users.education.middleSchool") },
+    { value: "Primary School", label: t("users.education.primarySchool") },
+    { value: "Other", label: t("users.education.other") },
   ];
 
   const ID_CARD_TYPES = [
     { value: "", label: "" },
-    { value: "ID card", label: t("users.idCardType.idCard" as any) },
-    { value: "Passport", label: t("users.idCardType.passport" as any) },
-    { value: "Driver's license", label: t("users.idCardType.driversLicense" as any) },
+    { value: "ID card", label: t("users.idCardType.idCard") },
+    { value: "Passport", label: t("users.idCardType.passport") },
+    { value: "Driver's license", label: t("users.idCardType.driversLicense") },
   ];
 
   const tabs = [
-    { key: "basic", label: t("users.tab.basic" as any), icon: <User size={14} /> },
-    { key: "profile", label: t("users.tab.profile" as any), icon: <Heart size={14} /> },
-    { key: "security", label: t("users.tab.security" as any), icon: <Shield size={14} /> },
-    { key: "finance", label: t("users.tab.finance" as any), icon: <Wallet size={14} /> },
-    { key: "permissions", label: t("authz.userPerms.tab" as any), icon: <ShieldCheck size={14} /> },
-    ...(!isSelf ? [{ key: "admin", label: t("users.tab.admin" as any), icon: <Settings size={14} /> }] : []),
+    { key: "basic", label: t("users.tab.basic"), icon: <User size={14} /> },
+    { key: "profile", label: t("users.tab.profile"), icon: <Heart size={14} /> },
+    { key: "security", label: t("users.tab.security"), icon: <Shield size={14} /> },
+    { key: "finance", label: t("users.tab.finance"), icon: <Wallet size={14} /> },
+    { key: "permissions", label: t("authz.userPerms.tab"), icon: <ShieldCheck size={14} /> },
+    ...(!isSelf ? [{ key: "admin", label: t("users.tab.admin"), icon: <Settings size={14} /> }] : []),
   ];
 
   // Tab 1: Basic Info — Identity + Signup Application + Contact
   const basicTab = (
     <div className="space-y-5">
-      <FormSection title={t("users.section.identity" as any)}>
+      <FormSection title={t("users.section.identity")}>
         {dynField("Organization", undefined, <div className="relative" ref={orgDropdownRef}>
             <input
               value={orgDropdownOpen ? orgSearch : (user.owner || "")}
@@ -447,7 +447,7 @@ export default function UserEditPage() {
               onFocus={() => { setOrgSearch(""); setOrgDropdownOpen(true); }}
               disabled={!isGlobalAdmin || isFieldDisabled("Organization")}
               className={inputClass}
-              placeholder={t("help.placeholder.searchOrg" as any)}
+              placeholder={t("help.placeholder.searchOrg")}
             />
             {orgDropdownOpen && isGlobalAdmin && !isFieldDisabled("Organization") && (
               <div className="absolute left-0 top-full mt-1 w-full max-h-48 overflow-y-auto rounded-lg border border-border bg-surface-0 py-1 shadow-lg z-50">
@@ -495,26 +495,26 @@ export default function UserEditPage() {
             value={user.type ?? "normal-user"}
             options={TYPE_OPTIONS}
             onChange={(v) => set("type", v || "normal-user")}
-            placeholder={t("common.search" as any)}
+            placeholder={t("common.search")}
           />)}
       </FormSection>
 
-      <FormSection title={t("users.section.membership" as any)}>
+      <FormSection title={t("users.section.membership")}>
         {dynField("Groups", undefined, <MultiSearchSelect
             selected={user.groups ?? []}
             options={orgGroups.map((g: any) => ({ value: `${g.owner}/${g.name}`, label: g.displayName || g.name }))}
             onChange={(v) => set("groups", v)}
-            placeholder={t("common.search" as any)}
+            placeholder={t("common.search")}
           />)}
         {dynField("Signup application", undefined, <SingleSearchSelect
             value={user.signupApplication ?? ""}
             options={orgApps.map((a) => ({ value: a.name, label: (a as any).displayName || a.name }))}
             onChange={(v) => set("signupApplication", v)}
-            placeholder={t("common.search" as any)}
+            placeholder={t("common.search")}
           />)}
       </FormSection>
 
-      <FormSection title={t("users.section.contact" as any)}>
+      <FormSection title={t("users.section.contact")}>
         {dynField("Email", undefined, <input value={user.email ?? ""} onChange={(e) => setWithValidation("Email", "email", e.target.value)} disabled={isFieldDisabled("Email")} type="email" className={inputClass} />)}
         {dynField("Phone", undefined, <div className="flex gap-2">
             <PhoneCodeSelect value={user.countryCode ?? ""} onChange={(v) => set("countryCode", v)} />
@@ -524,11 +524,11 @@ export default function UserEditPage() {
         {dynField("Location", undefined, <input value={user.location ?? ""} onChange={(e) => setWithValidation("Location", "location", e.target.value)} disabled={isFieldDisabled("Location")} className={inputClass} />)}
         {dynField("Address", "full", <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-[11px] text-text-muted mb-1">{t("users.field.address1" as any)}</label>
+              <label className="block text-[11px] text-text-muted mb-1">{t("users.field.address1")}</label>
               <input value={Array.isArray(user.address) ? user.address[0] ?? "" : String(user.address ?? "")} onChange={(e) => { const arr = Array.isArray(user.address) ? [...user.address] : [String(user.address ?? ""), ""]; arr[0] = e.target.value; set("address", arr as any); }} className={inputClass} />
             </div>
             <div>
-              <label className="block text-[11px] text-text-muted mb-1">{t("users.field.address2" as any)}</label>
+              <label className="block text-[11px] text-text-muted mb-1">{t("users.field.address2")}</label>
               <input value={Array.isArray(user.address) ? user.address[1] ?? "" : ""} onChange={(e) => { const arr = Array.isArray(user.address) ? [...user.address] : [String(user.address ?? ""), ""]; arr[1] = e.target.value; set("address", arr as any); }} className={inputClass} />
             </div>
           </div>)}
@@ -540,14 +540,14 @@ export default function UserEditPage() {
   // Tab 2: Profile — Professional + Personal
   const profileTab = (
     <div className="space-y-5">
-      <FormSection title={t("users.section.professional" as any)}>
+      <FormSection title={t("users.section.professional")}>
         {dynField("Affiliation", undefined, <input value={user.affiliation ?? ""} onChange={(e) => set("affiliation", e.target.value)} disabled={isFieldDisabled("Affiliation")} className={inputClass} />)}
         {dynField("Title", undefined, <input value={user.title ?? ""} onChange={(e) => setWithValidation("Title", "title", e.target.value)} disabled={isFieldDisabled("Title")} className={inputClass} />)}
-        {dynField("Homepage", "full", <input value={user.homepage ?? ""} onChange={(e) => setWithValidation("Homepage", "homepage", e.target.value)} disabled={isFieldDisabled("Homepage")} className={inputClass} placeholder={t("help.placeholder.url" as any)} />)}
+        {dynField("Homepage", "full", <input value={user.homepage ?? ""} onChange={(e) => setWithValidation("Homepage", "homepage", e.target.value)} disabled={isFieldDisabled("Homepage")} className={inputClass} placeholder={t("help.placeholder.url")} />)}
         {dynField("Bio", "full", <textarea value={user.bio ?? ""} onChange={(e) => setWithValidation("Bio", "bio", e.target.value)} disabled={isFieldDisabled("Bio")} rows={3} className={inputClass} />)}
       </FormSection>
 
-      <FormSection title={t("users.section.personal" as any)}>
+      <FormSection title={t("users.section.personal")}>
         {dynField("Tag", undefined, orgTags.length > 0 ? (
           <SimpleSelect
             value={user.tag ?? ""}
@@ -568,50 +568,50 @@ export default function UserEditPage() {
         {dynField("Education", undefined, <SimpleSelect value={user.education ?? ""} options={EDUCATION_OPTIONS} onChange={(v) => set("education", v)} disabled={isFieldDisabled("Education")} />)}
       </FormSection>
 
-      <FormSection title={t("users.section.verification" as any)}>
+      <FormSection title={t("users.section.verification")}>
         {/* Row 1: idCardType + idCard + realName + verify button in 4 columns */}
         {(isFieldVisible("ID card type") || isFieldVisible("ID card") || isFieldVisible("Real name") || isFieldVisible("ID verification")) && (
           <div className="col-span-2">
             <div className="grid grid-cols-4 gap-4">
               {isFieldVisible("ID card type") && (
                 <div>
-                  <label className="block text-[12px] font-medium text-text-secondary mb-1.5">{t("users.field.idCardType" as any)}</label>
+                  <label className="block text-[12px] font-medium text-text-secondary mb-1.5">{t("users.field.idCardType")}</label>
                   <SimpleSelect value={user.idCardType ?? ""} options={ID_CARD_TYPES} onChange={(v) => set("idCardType", v)} disabled={user.isVerified === true} />
                 </div>
               )}
               {isFieldVisible("ID card") && (
                 <div>
-                  <label className="block text-[12px] font-medium text-text-secondary mb-1.5">{t("users.field.idCard" as any)}</label>
+                  <label className="block text-[12px] font-medium text-text-secondary mb-1.5">{t("users.field.idCard")}</label>
                   <input value={user.idCard ?? ""} onChange={(e) => set("idCard", e.target.value)} disabled={user.isVerified === true} className={monoInputClass} />
                 </div>
               )}
               {isFieldVisible("Real name") && (
                 <div>
-                  <label className="block text-[12px] font-medium text-text-secondary mb-1.5">{t("users.field.realName" as any)}</label>
+                  <label className="block text-[12px] font-medium text-text-secondary mb-1.5">{t("users.field.realName")}</label>
                   <input value={user.realName ?? ""} onChange={(e) => set("realName", e.target.value)} disabled={user.isVerified === true} className={inputClass} />
                 </div>
               )}
               {isFieldVisible("ID verification") && (
                 <div>
-                  <label className="block text-[12px] font-medium text-text-secondary mb-1.5">{t("users.field.isVerified" as any)}</label>
+                  <label className="block text-[12px] font-medium text-text-secondary mb-1.5">{t("users.field.isVerified")}</label>
                   {user.isVerified === true ? (
                     <span className="inline-flex items-center gap-1.5 rounded-full bg-success/15 border border-success/20 px-3 py-2 text-[12px] font-medium text-success">
-                      ✓ {t("users.verify.verified" as any)}
+                      ✓ {t("users.verify.verified")}
                     </span>
                   ) : (
                     <button
                       type="button"
                       disabled={!user.idCard || !user.idCardType || !user.realName}
                       onClick={async () => {
-                        if (!user.idCard || !user.idCardType) { modal.toast(t("users.verify.fillIdCard" as any), "error"); return; }
-                        if (!user.realName) { modal.toast(t("users.verify.fillRealName" as any), "error"); return; }
+                        if (!user.idCard || !user.idCardType) { modal.toast(t("users.verify.fillIdCard"), "error"); return; }
+                        if (!user.realName) { modal.toast(t("users.verify.fillRealName"), "error"); return; }
                         const res = await UserBackend.verifyIdentification(user.owner, user.name);
-                        if (res.status === "ok") { modal.toast(t("users.verify.success" as any)); set("isVerified", true); }
-                        else { modal.toast(res.msg || t("users.verify.failed" as any), "error"); }
+                        if (res.status === "ok") { modal.toast(t("users.verify.success")); set("isVerified", true); }
+                        else { modal.toast(res.msg || t("users.verify.failed"), "error"); }
                       }}
                       className="rounded-lg bg-accent px-4 py-2 text-[13px] font-semibold text-white hover:bg-accent-hover disabled:opacity-50 transition-colors"
                     >
-                      {t("users.verify.verifyIdentity" as any)}
+                      {t("users.verify.verifyIdentity")}
                     </button>
                   )}
                 </div>
@@ -622,9 +622,9 @@ export default function UserEditPage() {
         {dynField("ID card info", "full",
           <div className="grid grid-cols-3 gap-4">
             {([
-              { key: "idCardFront", label: t("users.field.idCardFront" as any) },
-              { key: "idCardBack", label: t("users.field.idCardBack" as any) },
-              { key: "idCardWithPerson", label: t("users.field.idCardWithPerson" as any) },
+              { key: "idCardFront", label: t("users.field.idCardFront") },
+              { key: "idCardBack", label: t("users.field.idCardBack") },
+              { key: "idCardWithPerson", label: t("users.field.idCardWithPerson") },
             ] as const).map(({ key, label }) => {
               const url = (user.properties as any)?.[key] || "";
               return (
@@ -635,7 +635,7 @@ export default function UserEditPage() {
                     <div className="flex h-28 w-full items-center justify-center rounded-lg border-2 border-dashed border-border bg-surface-2">
                       <div className="text-center text-text-muted">
                         <span className="text-2xl block">+</span>
-                        <span className="text-[11px]">({t("common.none" as any)})</span>
+                        <span className="text-[11px]">({t("common.none")})</span>
                       </div>
                     </div>
                   )}
@@ -651,9 +651,9 @@ export default function UserEditPage() {
                       if (res.status === "ok" && res.data) {
                         const props = { ...(user.properties ?? {}), [key]: res.data, isIdCardVerified: "false" };
                         set("properties", props);
-                        modal.toast(t("faceId.uploadSuccess" as any));
+                        modal.toast(t("faceId.uploadSuccess"));
                       } else {
-                        modal.toast(res.msg || t("faceId.uploadFailed" as any), "error");
+                        modal.toast(res.msg || t("faceId.uploadFailed"), "error");
                       }
                       e.target.value = "";
                     }} />
@@ -666,7 +666,7 @@ export default function UserEditPage() {
       </FormSection>
 
       {anySectionFieldVisible("Properties") && (
-      <FormSection title={t("users.section.properties" as any)} action={!isFieldDisabled("Properties") ? (
+      <FormSection title={t("users.section.properties")} action={!isFieldDisabled("Properties") ? (
         <button onClick={() => { const key = `key_${Date.now()}`; set("properties", { ...(user.properties ?? {}), [key]: "" }); }}
           className="rounded-lg bg-accent px-2 py-0.5 text-[11px] font-medium text-white hover:bg-accent-hover transition-colors">{t("common.add")}</button>
       ) : undefined}>
@@ -688,7 +688,7 @@ export default function UserEditPage() {
   const securityTab = (
     <div className="space-y-5">
       {anySectionFieldVisible("Password", "IP whitelist", "Last change password time") && (
-      <FormSection title={t("users.section.security" as any)}>
+      <FormSection title={t("users.section.security")}>
         {isSelf ? (
           isFieldVisible("Password") && (
             <div className="col-span-2">
@@ -713,8 +713,8 @@ export default function UserEditPage() {
             <button type="button" onClick={() => { const p = UserBackend.generateRandomPassword(); set("password", p); setShowPassword(true); }}
               disabled={isFieldDisabled("Password")}
               className="shrink-0 rounded-lg border border-border bg-surface-2 px-3 py-2 text-[12px] font-medium text-text-secondary hover:bg-surface-3 hover:text-text-primary transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-              title={t("users.generatePassword" as any)}>
-              {t("users.generatePassword" as any)}
+              title={t("users.generatePassword")}>
+              {t("users.generatePassword")}
             </button>
           </div>
         ))}
@@ -734,7 +734,7 @@ export default function UserEditPage() {
       )}
 
       {anySectionFieldVisible("3rd-party logins") && (
-      <FormSection title={t("users.section.thirdPartyLogins" as any)}>
+      <FormSection title={t("users.section.thirdPartyLogins")}>
         {dynField("3rd-party logins", "full", (() => {
           const PROVIDER_FIELDS = [
             "github", "google", "qq", "wechat", "facebook", "dingtalk", "weibo", "gitee",
@@ -759,7 +759,7 @@ export default function UserEditPage() {
                   <span className="text-[13px] font-medium text-text-primary capitalize">{provider}</span>
                   <span className="text-[12px] text-text-muted font-mono truncate max-w-[300px]">{(user as any)[provider]}</span>
                   <span className="ml-auto inline-flex items-center gap-1 rounded-full bg-success/15 border border-success/20 px-2 py-0.5 text-[10px] font-medium text-success">
-                    ✓ {t("users.provider.linked" as any)}
+                    ✓ {t("users.provider.linked")}
                   </span>
                 </div>
               ))}
@@ -770,7 +770,7 @@ export default function UserEditPage() {
       )}
 
       {anySectionFieldVisible("Multi-factor authentication", "MFA accounts", "MFA items", "WebAuthn credentials", "Managed accounts", "Face ID") && (
-      <FormSection title={t("users.section.mfa" as any)}>
+      <FormSection title={t("users.section.mfa")}>
         {dynField("Multi-factor authentication", "full",
           <MfaSection
             multiFactorAuths={(user as any).multiFactorAuths ?? (user as any).mfaProps ?? []}
@@ -782,7 +782,7 @@ export default function UserEditPage() {
           />
         )}
         {dynBlock("MFA accounts",
-          <SimpleTable data={(user as any).mfaAccounts ?? []} columns={["issuer", "accountName"]} emptyText={t("common.noData")} title={t("users.field.mfaAccounts" as any)} />
+          <SimpleTable data={(user as any).mfaAccounts ?? []} columns={["issuer", "accountName"]} emptyText={t("common.noData")} title={t("users.field.mfaAccounts")} />
         )}
         {dynBlock("MFA items",
           <MfaItemsTable
@@ -825,7 +825,7 @@ export default function UserEditPage() {
   const financeTab = (
     <div className="space-y-5">
       {anySectionFieldVisible("Balance", "Balance credit", "Balance currency") && (
-        <FormSection title={t("users.section.finance" as any)}>
+        <FormSection title={t("users.section.finance")}>
           {dynField("Balance", undefined, <input type="number" value={user.balance ?? 0} onChange={(e) => set("balance", Number(e.target.value))} disabled={isFieldDisabled("Balance")} className={monoInputClass} />)}
           {dynField("Balance credit", undefined, <input type="number" value={user.balanceCredit ?? 0} onChange={(e) => set("balanceCredit", Number(e.target.value))} disabled={isFieldDisabled("Balance credit")} className={monoInputClass} />)}
           {dynField("Balance currency", undefined, <CurrencySelect value={user.balanceCurrency ?? "CNY"} onChange={(v) => set("balanceCurrency", v)} disabled={isFieldDisabled("Balance currency")} />)}
@@ -833,7 +833,7 @@ export default function UserEditPage() {
       )}
 
       {anySectionFieldVisible("Cart", "Transactions") && (
-        <FormSection title={t("users.section.cart" as any)}>
+        <FormSection title={t("users.section.cart")}>
           {dynBlock("Cart",
             <SimpleTable data={(user as any).cart ?? []} columns={["name", "price", "quantity", "currency"]} emptyText={t("common.noData")} title={getFieldLabel("Cart")} />
           )}
@@ -844,7 +844,7 @@ export default function UserEditPage() {
       )}
 
       {anySectionFieldVisible("Score", "Karma", "Ranking", "Register type", "Register source") && (
-        <FormSection title={t("users.section.registration" as any)}>
+        <FormSection title={t("users.section.registration")}>
           {dynField("Score", undefined, <input type="number" value={user.score ?? 0} onChange={(e) => set("score", Number(e.target.value))} disabled={isFieldDisabled("Score")} className={monoInputClass} />)}
           {dynField("Karma", undefined, <input type="number" value={user.karma ?? 0} onChange={(e) => set("karma", Number(e.target.value))} disabled={isFieldDisabled("Karma")} className={monoInputClass} />)}
           {dynField("Ranking", undefined, <input type="number" value={user.ranking ?? 0} onChange={(e) => set("ranking", Number(e.target.value))} disabled={isFieldDisabled("Ranking")} className={monoInputClass} />)}
@@ -859,7 +859,7 @@ export default function UserEditPage() {
   const adminTab = (
     <div className="space-y-5">
       {anySectionFieldVisible("Is admin", "Is forbidden", "Is deleted", "Need update password", "Is online") && (
-      <FormSection title={t("users.section.admin" as any)}>
+      <FormSection title={t("users.section.admin")}>
         {dynField("Is admin", undefined, <Switch checked={!!user.isAdmin} onChange={(v) => set("isAdmin", v)} disabled={isFieldDisabled("Is admin")} />)}
         {dynField("Is forbidden", undefined, <Switch checked={!!user.isForbidden} onChange={(v) => set("isForbidden", v)} disabled={isFieldDisabled("Is forbidden")} />)}
         {dynField("Is deleted", undefined, <Switch checked={!!user.isDeleted} onChange={(v) => { set("isDeleted", v); setAny("deletedTime", v ? new Date().toISOString() : ""); }} disabled={isFieldDisabled("Is deleted")} />)}
@@ -871,7 +871,7 @@ export default function UserEditPage() {
       )}
 
       {anySectionFieldVisible("Roles", "Permissions") && (
-      <FormSection title={t("users.section.roles" as any)}>
+      <FormSection title={t("users.section.roles")}>
         {dynField("Roles", "full",
           <div className="flex flex-wrap gap-1.5">
             {((user as any).roles ?? []).length > 0 ? ((user as any).roles as { name: string; displayName?: string }[]).map((r, i) => (
@@ -890,7 +890,7 @@ export default function UserEditPage() {
       )}
 
       {anySectionFieldVisible("Consents") && (
-      <FormSection title={t("users.section.consents" as any)}>
+      <FormSection title={t("users.section.consents")}>
         {dynBlock("Consents",
           <SimpleTable data={(user as any).consents ?? []} columns={["application", "grantedScopes"]} emptyText={t("common.noData")} />
         )}
@@ -912,7 +912,7 @@ export default function UserEditPage() {
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-5 ">
       <StickyEditHeader
-        title={isSelf ? t("users.myProfile" as any) : `${isAddMode ? t("common.add") : t("common.edit")} ${t("users.title" as any)}`}
+        title={isSelf ? t("users.myProfile") : `${isAddMode ? t("common.add") : t("common.edit")} ${t("users.title")}`}
         subtitle={!isSelf ? `${owner}/${name}` : undefined}
         onBack={handleBack}
         tabs={
@@ -953,7 +953,7 @@ export default function UserEditPage() {
                 disabled={saving}
                 className="flex items-center gap-1.5 rounded-lg border border-border bg-surface-1 px-4 py-2 text-[13px] font-medium text-text-secondary hover:bg-surface-2 disabled:opacity-50 transition-colors"
               >
-                <LogOut size={14} /> {t("common.saveAndExit" as any)}
+                <LogOut size={14} /> {t("common.saveAndExit")}
               </button>
               <button
                 onClick={handleSaveAndNew}
@@ -961,7 +961,7 @@ export default function UserEditPage() {
                 className="flex items-center gap-1.5 rounded-lg bg-accent px-4 py-2 text-[13px] font-semibold text-white hover:bg-accent-hover disabled:opacity-50 transition-colors"
               >
                 {saving ? <div className="h-3.5 w-3.5 rounded-full border-2 border-white/30 border-t-white animate-spin" /> : <Check size={14} />}
-                {t("users.saveAndNew" as any)}
+                {t("users.saveAndNew")}
               </button>
             </>
           ) : (
@@ -969,7 +969,7 @@ export default function UserEditPage() {
               <SaveButton onClick={handleSave} saving={saving} saved={saved} label={t("common.save")} />
               <button onClick={handleSaveAndExit} disabled={saving} className="flex items-center gap-1.5 rounded-lg bg-accent px-4 py-2 text-[13px] font-semibold text-white hover:bg-accent-hover disabled:opacity-50 transition-colors">
                 {saving ? <div className="h-3.5 w-3.5 rounded-full border-2 border-white/30 border-t-white animate-spin" /> : <LogOut size={14} />}
-                {t("common.saveAndExit" as any)}
+                {t("common.saveAndExit")}
               </button>
             </>
           )}
@@ -983,10 +983,10 @@ export default function UserEditPage() {
           <div className="flex items-center gap-2">
             <LockKeyhole size={16} className="text-danger" />
             <span className="text-[13px] font-medium text-danger">
-              {t("users.locked.message" as any)}
+              {t("users.locked.message")}
             </span>
             <span className="text-[12px] text-text-muted">
-              ({t("users.locked.wrongTimes" as any)}: {(user as any).signinWrongTimes})
+              ({t("users.locked.wrongTimes")}: {(user as any).signinWrongTimes})
             </span>
           </div>
           <button
@@ -996,15 +996,15 @@ export default function UserEditPage() {
               const userData = { ...user, signinWrongTimes: 0, lastSigninWrongTime: "" };
               const res = await UserBackend.updateUser(owner!, name!, userData);
               if (res.status === "ok") {
-                modal.toast(t("users.locked.unlockSuccess" as any));
+                modal.toast(t("users.locked.unlockSuccess"));
                 invalidate();
               } else {
-                modal.toast(res.msg || t("common.saveFailed" as any), "error");
+                modal.toast(res.msg || t("common.saveFailed"), "error");
               }
             }}
             className="rounded-lg bg-danger px-3 py-1.5 text-[12px] font-semibold text-white hover:bg-danger/90 transition-colors"
           >
-            {t("users.locked.unlock" as any)}
+            {t("users.locked.unlock")}
           </button>
         </div>
       )}
@@ -1099,7 +1099,7 @@ function PhoneCodeSelect({ value, onChange }: { value: string; onChange: (v: str
                 ref={searchRef}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder={t("common.searchCountry" as any)}
+                placeholder={t("common.searchCountry")}
                 className="w-full rounded-lg border border-border bg-surface-2 pl-8 pr-3 py-1.5 text-[12px] text-text-primary placeholder:text-text-muted outline-none focus:border-accent transition-colors"
               />
             </div>
@@ -1126,7 +1126,7 @@ function PhoneCodeSelect({ value, onChange }: { value: string; onChange: (v: str
             })}
             {filtered.length === 0 && (
               <div className="px-3 py-6 text-center text-[12px] text-text-muted">
-                {t("common.noResults" as any)}
+                {t("common.noResults")}
               </div>
             )}
           </div>
@@ -1253,7 +1253,7 @@ function MfaItemsTable({ items, onChange, t }: { items: { name: string; rule: st
   return (
     <div className="rounded-xl border border-border bg-surface-1 overflow-visible">
       <div className="px-4 py-2.5 border-b border-border-subtle bg-surface-2/30 flex items-center justify-between">
-        <span className="text-[12px] font-semibold text-text-primary">{t("users.field.mfaItems" as any)}</span>
+        <span className="text-[12px] font-semibold text-text-primary">{t("users.field.mfaItems")}</span>
         <button disabled={items.length >= 4} onClick={addRow}
           className="rounded-lg bg-accent px-2 py-0.5 text-[11px] font-medium text-white hover:bg-accent-hover disabled:opacity-50 transition-colors">{t("common.add")}</button>
       </div>
@@ -1262,9 +1262,9 @@ function MfaItemsTable({ items, onChange, t }: { items: { name: string; rule: st
       ) : (
         <table className="w-full text-left">
           <thead><tr className="border-b border-border bg-surface-2/30">
-            <th className="px-3 py-1.5 text-[11px] font-semibold uppercase text-text-muted">{t("common.name" as any)}</th>
-            <th className="px-3 py-1.5 text-[11px] font-semibold uppercase text-text-muted w-32">{t("users.mfaTable.rule" as any)}</th>
-            <th className="px-3 py-1.5 text-[11px] font-semibold uppercase text-text-muted w-24">{t("common.action" as any)}</th>
+            <th className="px-3 py-1.5 text-[11px] font-semibold uppercase text-text-muted">{t("common.name")}</th>
+            <th className="px-3 py-1.5 text-[11px] font-semibold uppercase text-text-muted w-32">{t("users.mfaTable.rule")}</th>
+            <th className="px-3 py-1.5 text-[11px] font-semibold uppercase text-text-muted w-24">{t("common.action")}</th>
           </tr></thead>
           <tbody>
             {items.map((item, idx) => (
@@ -1311,7 +1311,7 @@ function WebAuthnTable({ items, onChange, isSelf, t, onRefresh }: {
 
   const handleRegister = async () => {
     if (!window.PublicKeyCredential) {
-      modal.toast(t("users.webauthn.notSupported" as any), "error");
+      modal.toast(t("users.webauthn.notSupported"), "error");
       return;
     }
     setRegistering(true);
@@ -1319,16 +1319,16 @@ function WebAuthnTable({ items, onChange, isSelf, t, onRefresh }: {
       const { registerWebauthnCredential } = await import("../backend/WebauthnBackend");
       const res = await registerWebauthnCredential();
       if (res.status === "ok") {
-        modal.toast(t("users.webauthn.registerSuccess" as any));
+        modal.toast(t("users.webauthn.registerSuccess"));
         onRefresh?.();
       } else {
-        modal.toast(friendlyError(res.msg ?? "", t) || t("users.webauthn.registerFailed" as any), "error");
+        modal.toast(friendlyError(res.msg ?? "", t) || t("users.webauthn.registerFailed"), "error");
       }
     } catch (e: any) {
       if (e.name === "NotAllowedError") {
-        modal.toast(t("users.webauthn.cancelled" as any), "error");
+        modal.toast(t("users.webauthn.cancelled"), "error");
       } else {
-        modal.toast(friendlyError(e.message, t) || t("users.webauthn.registerFailed" as any), "error");
+        modal.toast(friendlyError(e.message, t) || t("users.webauthn.registerFailed"), "error");
       }
     } finally {
       setRegistering(false);
@@ -1340,13 +1340,13 @@ function WebAuthnTable({ items, onChange, isSelf, t, onRefresh }: {
   return (
     <div className="rounded-xl border border-border bg-surface-1 overflow-visible">
       <div className="px-4 py-2.5 border-b border-border-subtle bg-surface-2/30 flex items-center justify-between">
-        <span className="text-[12px] font-semibold text-text-primary">{t("users.field.webauthnCredentials" as any)}</span>
+        <span className="text-[12px] font-semibold text-text-primary">{t("users.field.webauthnCredentials")}</span>
         <button onClick={handleRegister} disabled={!isSelf || registering}
           className="rounded-lg bg-accent px-2 py-0.5 text-[11px] font-medium text-white hover:bg-accent-hover disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
           {registering ? (
             <span className="flex items-center gap-1">
               <span className="inline-block h-3 w-3 rounded-full border-2 border-text-muted/30 border-t-text-muted animate-spin" />
-              {t("users.webauthn.registering" as any)}
+              {t("users.webauthn.registering")}
             </span>
           ) : t("common.add")}
         </button>
@@ -1356,8 +1356,8 @@ function WebAuthnTable({ items, onChange, isSelf, t, onRefresh }: {
       ) : (
         <table className="w-full text-left">
           <thead><tr className="border-b border-border bg-surface-2/30">
-            <th className="px-3 py-1.5 text-[11px] font-semibold uppercase text-text-muted">{t("common.name" as any)}</th>
-            <th className="px-3 py-1.5 text-[11px] font-semibold uppercase text-text-muted w-20">{t("common.action" as any)}</th>
+            <th className="px-3 py-1.5 text-[11px] font-semibold uppercase text-text-muted">{t("common.name")}</th>
+            <th className="px-3 py-1.5 text-[11px] font-semibold uppercase text-text-muted w-20">{t("common.action")}</th>
           </tr></thead>
           <tbody>
             {items.map((item, idx) => (
@@ -1392,7 +1392,7 @@ function ManagedAccountsTable({ items, onChange, applications, t }: {
   return (
     <div className="rounded-xl border border-border bg-surface-1 overflow-visible">
       <div className="px-4 py-2.5 border-b border-border-subtle bg-surface-2/30 flex items-center justify-between">
-        <span className="text-[12px] font-semibold text-text-primary">{t("users.field.managedAccounts" as any)}</span>
+        <span className="text-[12px] font-semibold text-text-primary">{t("users.field.managedAccounts")}</span>
         <button onClick={addRow}
           className="rounded-lg bg-accent px-2 py-0.5 text-[11px] font-medium text-white hover:bg-accent-hover transition-colors">{t("common.add")}</button>
       </div>
@@ -1402,11 +1402,11 @@ function ManagedAccountsTable({ items, onChange, applications, t }: {
         <div className="overflow-x-auto">
           <table className="w-full text-left" style={{ minWidth: "max-content" }}>
             <thead><tr className="border-b border-border bg-surface-2/30">
-              <th className="px-3 py-1.5 text-[11px] font-semibold uppercase text-text-muted">{t("users.managed.application" as any)}</th>
-              <th className="px-3 py-1.5 text-[11px] font-semibold uppercase text-text-muted">{t("users.managed.signinUrl" as any)}</th>
-              <th className="px-3 py-1.5 text-[11px] font-semibold uppercase text-text-muted w-[180px]">{t("users.managed.username" as any)}</th>
-              <th className="px-3 py-1.5 text-[11px] font-semibold uppercase text-text-muted w-[180px]">{t("users.managed.password" as any)}</th>
-              <th className="px-3 py-1.5 text-[11px] font-semibold uppercase text-text-muted w-24">{t("common.action" as any)}</th>
+              <th className="px-3 py-1.5 text-[11px] font-semibold uppercase text-text-muted">{t("users.managed.application")}</th>
+              <th className="px-3 py-1.5 text-[11px] font-semibold uppercase text-text-muted">{t("users.managed.signinUrl")}</th>
+              <th className="px-3 py-1.5 text-[11px] font-semibold uppercase text-text-muted w-[180px]">{t("users.managed.username")}</th>
+              <th className="px-3 py-1.5 text-[11px] font-semibold uppercase text-text-muted w-[180px]">{t("users.managed.password")}</th>
+              <th className="px-3 py-1.5 text-[11px] font-semibold uppercase text-text-muted w-24">{t("common.action")}</th>
             </tr></thead>
             <tbody>
               {items.map((item, idx) => (
@@ -1493,7 +1493,7 @@ function RegionSelect({ value, onChange }: { value: string; onChange: (v: string
         className={`flex items-center rounded-lg border bg-surface-2 px-3 py-2 min-h-[38px] cursor-pointer transition-colors ${open ? "border-accent ring-1 ring-accent/30" : "border-border"}`}>
         {open ? (
           <input autoFocus value={search} onChange={(e) => setSearch(e.target.value)}
-            placeholder={t("common.searchCountryRegion" as any)}
+            placeholder={t("common.searchCountryRegion")}
             className="flex-1 bg-transparent text-[13px] text-text-primary outline-none placeholder:text-text-muted" />
         ) : (
           <span className="text-[13px] text-text-primary flex-1">{displayLabel}</span>
@@ -1542,10 +1542,10 @@ function MfaSection({ multiFactorAuths, user, isSelf, isAdmin, onRefresh, t }: {
       const MfaBackend = await import("../backend/MfaBackend");
       const res = await MfaBackend.setPreferredMfa(user.owner, user.name, mfaType);
       if (res.status === "ok") {
-        modal.toast(t("users.mfa.setPreferredSuccess" as any));
+        modal.toast(t("users.mfa.setPreferredSuccess"));
         onRefresh?.();
       } else {
-        modal.toast(res.msg || t("common.saveFailed" as any), "error");
+        modal.toast(res.msg || t("common.saveFailed"), "error");
       }
     } finally {
       setLoading(null);
@@ -1553,14 +1553,14 @@ function MfaSection({ multiFactorAuths, user, isSelf, isAdmin, onRefresh, t }: {
   };
 
   const handleDisableAll = () => {
-    modal.showConfirm(t("users.mfa.confirmDisableAll" as any), async () => {
+    modal.showConfirm(t("users.mfa.confirmDisableAll"), async () => {
       const MfaBackend = await import("../backend/MfaBackend");
       const res = await MfaBackend.deleteMfa(user.owner, user.name);
       if (res.status === "ok") {
-        modal.toast(t("users.mfa.disableSuccess" as any));
+        modal.toast(t("users.mfa.disableSuccess"));
         onRefresh?.();
       } else {
-        modal.toast(res.msg || t("common.saveFailed" as any), "error");
+        modal.toast(res.msg || t("common.saveFailed"), "error");
       }
     });
   };
@@ -1568,30 +1568,30 @@ function MfaSection({ multiFactorAuths, user, isSelf, isAdmin, onRefresh, t }: {
   const handleEnableForUser = async (mfaType: string) => {
     // Validate: non-TOTP types require email/phone
     if (mfaType === "email" && !user.email) {
-      modal.toast(t("users.mfa.needEmail" as any), "error");
+      modal.toast(t("users.mfa.needEmail"), "error");
       return;
     }
     if (mfaType !== "email" && mfaType !== "app" && !user.phone) {
-      modal.toast(t("users.mfa.needPhone" as any), "error");
+      modal.toast(t("users.mfa.needPhone"), "error");
       return;
     }
     modal.showConfirm(
-      `${t("users.mfa.confirmEnable" as any)}\n${t("users.mfa.userLabel" as any)}: ${user.owner}/${user.name}\n${mfaType === "email" ? `${t("users.mfa.emailLabel" as any)}: ${user.email}` : `${t("users.mfa.phoneLabel" as any)}: ${user.phone}`}`,
+      `${t("users.mfa.confirmEnable")}\n${t("users.mfa.userLabel")}: ${user.owner}/${user.name}\n${mfaType === "email" ? `${t("users.mfa.emailLabel")}: ${user.email}` : `${t("users.mfa.phoneLabel")}: ${user.phone}`}`,
       async () => {
         setLoading(`enable-${mfaType}`);
         try {
           const MfaBackend = await import("../backend/MfaBackend");
           const initRes = await MfaBackend.mfaSetupInitiate(user.owner, user.name, mfaType);
           if (initRes.status !== "ok") {
-            modal.toast(initRes.msg || t("users.mfa.enableFailed" as any), "error");
+            modal.toast(initRes.msg || t("users.mfa.enableFailed"), "error");
             return;
           }
           const enableRes = await MfaBackend.mfaSetupEnable(mfaType, user as Record<string, unknown>);
           if (enableRes.status === "ok") {
-            modal.toast(t("users.mfa.enableSuccess" as any));
+            modal.toast(t("users.mfa.enableSuccess"));
             onRefresh?.();
           } else {
-            modal.toast(enableRes.msg || t("users.mfa.enableFailed" as any), "error");
+            modal.toast(enableRes.msg || t("users.mfa.enableFailed"), "error");
           }
         } finally {
           setLoading(null);
@@ -1613,7 +1613,7 @@ function MfaSection({ multiFactorAuths, user, isSelf, isAdmin, onRefresh, t }: {
         <div className="flex justify-end mb-1">
           <button onClick={handleDisableAll}
             className="rounded-lg border border-danger/30 px-2.5 py-1 text-[11px] font-medium text-danger hover:bg-danger/10 transition-colors">
-            {t("users.mfa.disableAll" as any)}
+            {t("users.mfa.disableAll")}
           </button>
         </div>
       )}
@@ -1626,17 +1626,17 @@ function MfaSection({ multiFactorAuths, user, isSelf, isAdmin, onRefresh, t }: {
               {mfa.enabled ? (
                 <>
                   <span className="inline-flex items-center gap-1 rounded-full bg-success/15 border border-success/20 px-2 py-0.5 text-[10px] font-medium text-success">
-                    ✓ {t("common.enabled" as any)}
+                    ✓ {t("common.enabled")}
                   </span>
                   {mfa.isPreferred ? (
                     <span className="rounded-full bg-info/15 border border-info/20 px-2 py-0.5 text-[10px] font-medium text-info">
-                      {t("users.mfa.preferred" as any)}
+                      {t("users.mfa.preferred")}
                     </span>
                   ) : (isSelf || isAdmin) ? (
                     <button onClick={() => handleSetPreferred(mfaType)}
                       disabled={loading === `pref-${mfaType}`}
                       className="rounded-lg bg-accent px-2 py-0.5 text-[11px] font-medium text-white hover:bg-accent-hover disabled:opacity-50 transition-colors">
-                      {t("users.mfa.setPreferred" as any)}
+                      {t("users.mfa.setPreferred")}
                     </button>
                   ) : null}
                   {isSelf && (
@@ -1648,19 +1648,19 @@ function MfaSection({ multiFactorAuths, user, isSelf, isAdmin, onRefresh, t }: {
                 </>
               ) : (
                 <>
-                  <span className="text-[12px] text-text-muted">{t("common.disabled" as any)}</span>
+                  <span className="text-[12px] text-text-muted">{t("common.disabled")}</span>
                   {/* Admin can enable non-TOTP MFA for other users */}
                   {mfaType !== "app" && isAdmin && !isSelf && (
                     <button onClick={() => handleEnableForUser(mfaType)}
                       disabled={loading === `enable-${mfaType}`}
                       className="rounded-lg bg-accent px-2 py-0.5 text-[11px] font-medium text-white hover:bg-accent-hover disabled:opacity-50 transition-colors">
-                      {t("common.enable" as any)}
+                      {t("common.enable")}
                     </button>
                   )}
                   {isSelf && (
                     <button onClick={() => navigate(`/mfa/setup?mfaType=${mfaType}`)}
                       className="rounded-lg bg-accent px-2 py-0.5 text-[11px] font-medium text-white hover:bg-accent-hover transition-colors">
-                      {t("users.mfa.setup" as any)}
+                      {t("users.mfa.setup")}
                     </button>
                   )}
                 </>
@@ -1710,7 +1710,7 @@ function PropertyTable({ properties, onChange, disabled, t, hideHeader }: {
     <div className={hideHeader ? "" : "rounded-xl border border-border bg-surface-1 overflow-visible"}>
       {!hideHeader && (
         <div className="px-4 py-2.5 border-b border-border-subtle bg-surface-2/30 flex items-center justify-between">
-          <span className="text-[12px] font-semibold text-text-primary">{t("users.section.properties" as any)}</span>
+          <span className="text-[12px] font-semibold text-text-primary">{t("users.section.properties")}</span>
           {!disabled && (
             <button onClick={addRow}
               className="rounded-lg bg-accent px-2 py-0.5 text-[11px] font-medium text-white hover:bg-accent-hover transition-colors">{t("common.add")}</button>
@@ -1722,9 +1722,9 @@ function PropertyTable({ properties, onChange, disabled, t, hideHeader }: {
       ) : (
         <table className="w-full text-left">
           <thead><tr className="border-b border-border bg-surface-2/30">
-            <th className="px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-text-muted">{t("users.prop.key" as any)}</th>
-            <th className="px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-text-muted">{t("users.prop.value" as any)}</th>
-            {!disabled && <th className="px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-text-muted w-16">{t("common.action" as any)}</th>}
+            <th className="px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-text-muted">{t("users.prop.key")}</th>
+            <th className="px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-text-muted">{t("users.prop.value")}</th>
+            {!disabled && <th className="px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-text-muted w-16">{t("common.action")}</th>}
           </tr></thead>
           <tbody>
             {entries.map(([k, v]) => (
@@ -1772,7 +1772,7 @@ function AddressesTable({ items, onChange, t }: {
   return (
     <div className="rounded-xl border border-border bg-surface-1 overflow-visible">
       <div className="px-4 py-2.5 border-b border-border-subtle bg-surface-2/30 flex items-center justify-between">
-        <span className="text-[12px] font-semibold text-text-primary">{t("users.field.addresses" as any)}</span>
+        <span className="text-[12px] font-semibold text-text-primary">{t("users.field.addresses")}</span>
         <button onClick={addRow} className="rounded-lg bg-accent px-2 py-0.5 text-[11px] font-medium text-white hover:bg-accent-hover transition-colors">{t("common.add")}</button>
       </div>
       {items.length === 0 ? (
@@ -1781,14 +1781,14 @@ function AddressesTable({ items, onChange, t }: {
         <div className="overflow-visible">
           <table className="w-full text-left" style={{ minWidth: "max-content" }}>
             <thead><tr className="border-b border-border bg-surface-2/30">
-              <th className="px-3 py-1.5 text-[11px] font-semibold uppercase text-text-muted">{t("users.addr.label" as any)}</th>
-              <th className="px-3 py-1.5 text-[11px] font-semibold uppercase text-text-muted">{t("users.field.address1" as any)}</th>
-              <th className="px-3 py-1.5 text-[11px] font-semibold uppercase text-text-muted">{t("users.field.address2" as any)}</th>
-              <th className="px-3 py-1.5 text-[11px] font-semibold uppercase text-text-muted">{t("users.addr.city" as any)}</th>
-              <th className="px-3 py-1.5 text-[11px] font-semibold uppercase text-text-muted">{t("users.addr.state" as any)}</th>
-              <th className="px-3 py-1.5 text-[11px] font-semibold uppercase text-text-muted">{t("users.addr.zipCode" as any)}</th>
-              <th className="px-3 py-1.5 text-[11px] font-semibold uppercase text-text-muted">{t("users.addr.region" as any)}</th>
-              <th className="px-3 py-1.5 text-[11px] font-semibold uppercase text-text-muted w-16">{t("common.action" as any)}</th>
+              <th className="px-3 py-1.5 text-[11px] font-semibold uppercase text-text-muted">{t("users.addr.label")}</th>
+              <th className="px-3 py-1.5 text-[11px] font-semibold uppercase text-text-muted">{t("users.field.address1")}</th>
+              <th className="px-3 py-1.5 text-[11px] font-semibold uppercase text-text-muted">{t("users.field.address2")}</th>
+              <th className="px-3 py-1.5 text-[11px] font-semibold uppercase text-text-muted">{t("users.addr.city")}</th>
+              <th className="px-3 py-1.5 text-[11px] font-semibold uppercase text-text-muted">{t("users.addr.state")}</th>
+              <th className="px-3 py-1.5 text-[11px] font-semibold uppercase text-text-muted">{t("users.addr.zipCode")}</th>
+              <th className="px-3 py-1.5 text-[11px] font-semibold uppercase text-text-muted">{t("users.addr.region")}</th>
+              <th className="px-3 py-1.5 text-[11px] font-semibold uppercase text-text-muted w-16">{t("common.action")}</th>
             </tr></thead>
             <tbody>
               {items.map((item, idx) => (

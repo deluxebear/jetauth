@@ -78,7 +78,7 @@ export default function SyncerEditPage() {
     try {
       const res = await SyncerBackend.updateSyncer(owner!, name!, syncer);
       if (res.status === "ok") {
-        modal.toast(t("common.saveSuccess" as any));
+        modal.toast(t("common.saveSuccess"));
         setSaved(true);
         setOriginalJson(JSON.stringify(syncer));
         setIsAddMode(false);
@@ -87,7 +87,7 @@ export default function SyncerEditPage() {
           navigate(`/syncers/${syncer.name}`, { replace: true });
         }
       } else {
-        modal.toast(friendlyError(res.msg, t) || t("common.saveFailed" as any), "error");
+        modal.toast(friendlyError(res.msg, t) || t("common.saveFailed"), "error");
       }
     } finally {
       setSaving(false);
@@ -98,14 +98,14 @@ export default function SyncerEditPage() {
     try {
       const res = await SyncerBackend.updateSyncer(owner!, name!, syncer);
       if (res.status === "ok") {
-        modal.toast(t("common.saveSuccess" as any));
+        modal.toast(t("common.saveSuccess"));
         invalidateList();
         navigate("/syncers");
       } else {
-        modal.toast(friendlyError(res.msg, t) || t("common.saveFailed" as any), "error");
+        modal.toast(friendlyError(res.msg, t) || t("common.saveFailed"), "error");
       }
     } catch (e: any) {
-      modal.toast(e?.message || t("common.saveFailed" as any), "error");
+      modal.toast(e?.message || t("common.saveFailed"), "error");
     } finally {
       setSaving(false);
     }
@@ -123,7 +123,7 @@ export default function SyncerEditPage() {
     modal.showConfirm(t("common.confirmDelete"), async () => {
       const res = await SyncerBackend.deleteSyncer(syncer);
       if (res.status === "ok") { invalidateList(); navigate("/syncers"); }
-      else modal.toast(res.msg || t("common.deleteFailed" as any), "error");
+      else modal.toast(res.msg || t("common.deleteFailed"), "error");
     });
   };
 
@@ -132,9 +132,9 @@ export default function SyncerEditPage() {
     try {
       const res = await SyncerBackend.testSyncerDb(syncer);
       if (res.status === "ok") {
-        modal.toast(t("syncers.field.testSuccess" as any));
+        modal.toast(t("syncers.field.testSuccess"));
       } else {
-        modal.toast(res.msg || t("syncers.field.testFailed" as any), "error");
+        modal.toast(res.msg || t("syncers.field.testFailed"), "error");
       }
     } finally {
       setTestDbLoading(false);
@@ -153,7 +153,7 @@ export default function SyncerEditPage() {
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-6 ">
       <StickyEditHeader
-        title={`${isAddMode ? t("common.add") : t("common.edit")} ${t("syncers.title" as any)}`}
+        title={`${isAddMode ? t("common.add") : t("common.edit")} ${t("syncers.title")}`}
         subtitle={`${owner}/${name}`}
         onBack={handleBack}
       >
@@ -161,100 +161,100 @@ export default function SyncerEditPage() {
                     <SaveButton onClick={handleSave} saving={saving} saved={saved} label={t("common.save")} />
           <button onClick={handleSaveAndExit} disabled={saving} className="flex items-center gap-1.5 rounded-lg bg-accent px-4 py-2 text-[13px] font-semibold text-white hover:bg-accent-hover disabled:opacity-50 transition-colors">
             {saving ? <div className="h-3.5 w-3.5 rounded-full border-2 border-white/30 border-t-white animate-spin" /> : <LogOut size={14} />}
-            {t("common.saveAndExit" as any)}
+            {t("common.saveAndExit")}
           </button>
       </StickyEditHeader>
 
       {showBanner && <UnsavedBanner isAddMode={isAddMode} />}
 
       {/* Basic */}
-      <FormSection title={t("syncers.section.basic" as any)}>
-        <FormField label={t("col.organization" as any)}>
+      <FormSection title={t("syncers.section.basic")}>
+        <FormField label={t("col.organization")}>
           <input value={syncer.organization} onChange={(e) => set("organization", e.target.value)} disabled={!isGlobalAdmin} className={inputClass} />
         </FormField>
         <FormField label={t("field.name")} required>
           <input value={syncer.name} onChange={(e) => set("name", e.target.value)} className={monoInputClass} />
         </FormField>
-        <FormField label={t("col.type" as any)}>
+        <FormField label={t("col.type")}>
           <SimpleSelect value={syncer.type} options={SYNCER_TYPES.map((tp) => ({ value: tp, label: tp }))} onChange={(v) => set("type", v)} />
         </FormField>
         {!isNonDb && (
-          <FormField label={t("syncers.field.databaseType" as any)}>
+          <FormField label={t("syncers.field.databaseType")}>
             <SimpleSelect value={syncer.databaseType} options={DB_TYPES.map((db) => ({ value: db.id, label: db.name }))} onChange={(v) => { set("databaseType", v); if (v === "postgres") set("sslMode", "disable"); else set("sslMode", ""); }} />
           </FormField>
         )}
         {showSslMode && (
-          <FormField label={t("syncers.field.sslMode" as any)}>
+          <FormField label={t("syncers.field.sslMode")}>
             <SimpleSelect value={syncer.sslMode} options={SSL_MODES.map((m) => ({ value: m, label: m }))} onChange={(v) => set("sslMode", v)} />
           </FormField>
         )}
       </FormSection>
 
       {/* Connection */}
-      <FormSection title={t("syncers.section.connection" as any)}>
+      <FormSection title={t("syncers.section.connection")}>
         {showHost && (
-          <FormField label={t("syncers.field.host" as any)}>
+          <FormField label={t("syncers.field.host")}>
             <input value={syncer.host} onChange={(e) => set("host", e.target.value)} className={inputClass} />
           </FormField>
         )}
         {showPort && (
-          <FormField label={t("syncers.field.port" as any)}>
+          <FormField label={t("syncers.field.port")}>
             <input type="number" value={syncer.port} onChange={(e) => set("port", parseInt(e.target.value) || 0)} className={monoInputClass} />
           </FormField>
         )}
         {showUser && (
-          <FormField label={t("col.user" as any)}>
+          <FormField label={t("col.user")}>
             <input value={syncer.user} onChange={(e) => set("user", e.target.value)} className={inputClass} />
           </FormField>
         )}
-        <FormField label={t("syncers.field.password" as any)}>
+        <FormField label={t("syncers.field.password")}>
           <input type="password" value={syncer.password} onChange={(e) => set("password", e.target.value)} className={inputClass} />
         </FormField>
         {showDatabase && (
-          <FormField label={t("syncers.field.database" as any)}>
+          <FormField label={t("syncers.field.database")}>
             <input value={syncer.database} onChange={(e) => set("database", e.target.value)} className={inputClass} />
           </FormField>
         )}
         {showTable && (
-          <FormField label={t("syncers.field.table" as any)}>
+          <FormField label={t("syncers.field.table")}>
             <input value={syncer.table} onChange={(e) => set("table", e.target.value)} className={inputClass} />
           </FormField>
         )}
-        <FormField label={t("syncers.field.testConnection" as any)} span="full">
+        <FormField label={t("syncers.field.testConnection")} span="full">
           <button onClick={handleTestDb} disabled={testDbLoading} className="flex items-center gap-1.5 rounded-lg bg-accent px-3 py-2 text-[13px] font-semibold text-white hover:bg-accent-hover disabled:opacity-50 transition-colors">
             {testDbLoading ? <div className="h-3.5 w-3.5 rounded-full border-2 border-white/30 border-t-white animate-spin" /> : null}
-            {t("syncers.field.testConnection" as any)}
+            {t("syncers.field.testConnection")}
           </button>
         </FormField>
       </FormSection>
 
       {/* SSH */}
       {needSshFields && (
-        <FormSection title={t("syncers.section.ssh" as any)}>
-          <FormField label={t("syncers.field.sshType" as any)}>
+        <FormSection title={t("syncers.section.ssh")}>
+          <FormField label={t("syncers.field.sshType")}>
             <SimpleSelect value={syncer.sshType} options={[
-              { value: "", label: t("common.none" as any) },
-              { value: "password", label: t("syncers.field.password" as any) },
-              { value: "cert", label: t("syncers.field.cert" as any) },
+              { value: "", label: t("common.none") },
+              { value: "password", label: t("syncers.field.password") },
+              { value: "cert", label: t("syncers.field.cert") },
             ]} onChange={(v) => set("sshType", v)} />
           </FormField>
           {syncer.sshType && (
             <>
-              <FormField label={t("syncers.field.sshHost" as any)}>
+              <FormField label={t("syncers.field.sshHost")}>
                 <input value={syncer.sshHost} onChange={(e) => set("sshHost", e.target.value)} className={inputClass} />
               </FormField>
-              <FormField label={t("syncers.field.sshPort" as any)}>
+              <FormField label={t("syncers.field.sshPort")}>
                 <input type="number" value={syncer.sshPort} onChange={(e) => set("sshPort", parseInt(e.target.value) || 0)} className={monoInputClass} />
               </FormField>
-              <FormField label={t("syncers.field.sshUser" as any)}>
+              <FormField label={t("syncers.field.sshUser")}>
                 <input value={syncer.sshUser} onChange={(e) => set("sshUser", e.target.value)} className={inputClass} />
               </FormField>
               {syncer.sshType === "password" ? (
-                <FormField label={t("syncers.field.sshPassword" as any)}>
+                <FormField label={t("syncers.field.sshPassword")}>
                   <input type="password" value={syncer.sshPassword} onChange={(e) => set("sshPassword", e.target.value)} className={inputClass} />
                 </FormField>
               ) : (
-                <FormField label={t("syncers.field.cert" as any)}>
+                <FormField label={t("syncers.field.cert")}>
                   <input value={syncer.cert} onChange={(e) => set("cert", e.target.value)} className={inputClass} />
                 </FormField>
               )}
@@ -264,8 +264,8 @@ export default function SyncerEditPage() {
       )}
 
       {/* Table Columns (JSON editor - simplified) */}
-      <FormSection title={t("syncers.section.tableColumns" as any)}>
-        <FormField label={t("syncers.field.tableColumns" as any)} span="full">
+      <FormSection title={t("syncers.section.tableColumns")}>
+        <FormField label={t("syncers.field.tableColumns")} span="full">
           <textarea
             value={JSON.stringify(syncer.tableColumns ?? [], null, 2)}
             onChange={(e) => {
@@ -278,23 +278,23 @@ export default function SyncerEditPage() {
       </FormSection>
 
       {/* Sync Settings */}
-      <FormSection title={t("syncers.section.syncSettings" as any)}>
-        <FormField label={t("syncers.field.affiliationTable" as any)}>
+      <FormSection title={t("syncers.section.syncSettings")}>
+        <FormField label={t("syncers.field.affiliationTable")}>
           <input value={syncer.affiliationTable} onChange={(e) => set("affiliationTable", e.target.value)} className={inputClass} />
         </FormField>
-        <FormField label={t("syncers.field.avatarBaseUrl" as any)}>
+        <FormField label={t("syncers.field.avatarBaseUrl")}>
           <input value={syncer.avatarBaseUrl} onChange={(e) => set("avatarBaseUrl", e.target.value)} className={inputClass} />
         </FormField>
-        <FormField label={t("syncers.field.syncInterval" as any)}>
+        <FormField label={t("syncers.field.syncInterval")}>
           <input type="number" value={syncer.syncInterval} onChange={(e) => set("syncInterval", parseInt(e.target.value) || 0)} className={monoInputClass} />
         </FormField>
-        <FormField label={t("syncers.field.errorText" as any)} span="full">
+        <FormField label={t("syncers.field.errorText")} span="full">
           <textarea value={syncer.errorText} readOnly rows={6} className={`${monoInputClass} text-[11px]`} />
         </FormField>
-        <FormField label={t("syncers.field.isReadOnly" as any)}>
+        <FormField label={t("syncers.field.isReadOnly")}>
           <Switch checked={syncer.isReadOnly} onChange={(v) => set("isReadOnly", v)} />
         </FormField>
-        <FormField label={t("col.isEnabled" as any)}>
+        <FormField label={t("col.isEnabled")}>
           <Switch checked={syncer.isEnabled} onChange={(v) => set("isEnabled", v)} />
         </FormField>
       </FormSection>

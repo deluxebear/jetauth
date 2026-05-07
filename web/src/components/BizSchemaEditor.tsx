@@ -434,13 +434,13 @@ export default function BizSchemaEditor({ appId, modelId, mode = "view", onPubli
     const r = res.data as SaveAuthorizationModelResult;
     if (r.outcome === "advanced") {
       setDryRun({ kind: "valid" });
-      modal.toast(t("rebac.schema.validatePassed" as any), "success");
+      modal.toast(t("rebac.schema.validatePassed"), "success");
     } else if (r.outcome === "unchanged") {
       setDryRun({ kind: "unchanged" });
-      modal.toast(t("rebac.schema.validateUnchanged" as any), "info");
+      modal.toast(t("rebac.schema.validateUnchanged"), "info");
     } else {
       setDryRun({ kind: "conflict", conflicts: r.conflicts ?? [] });
-      modal.toast(t("rebac.schema.validateConflict" as any), "error");
+      modal.toast(t("rebac.schema.validateConflict"), "error");
     }
   }, [appId, dsl, modal, t]);
 
@@ -448,26 +448,26 @@ export default function BizSchemaEditor({ appId, modelId, mode = "view", onPubli
     if (!meta) return;
     // Use showConfirm (callback-based) since modal.confirm doesn't exist.
     modal.showConfirm(
-      t("rebac.schema.rollbackConfirmBody" as any),
+      t("rebac.schema.rollbackConfirmBody"),
       async () => {
         const res = await BizBackend.activateBizAuthorizationModel(appId, meta.id);
         if (res.status !== "ok") {
           modal.toast(res.msg || t("rebac.common.error"), "error");
           return;
         }
-        modal.toast(t("rebac.schema.rollbackDone" as any), "success");
+        modal.toast(t("rebac.schema.rollbackDone"), "success");
         onPublishNew?.(meta.id);
       },
-      t("rebac.schema.rollbackConfirmTitle" as any),
+      t("rebac.schema.rollbackConfirmTitle"),
     );
   }, [appId, meta, modal, t, onPublishNew]);
 
   const handlePublishNew = useCallback(async () => {
     const description = await modal.prompt({
-      title: t("rebac.schema.publishPromptTitle" as any),
-      placeholder: t("rebac.schema.publishPromptPlaceholder" as any),
+      title: t("rebac.schema.publishPromptTitle"),
+      placeholder: t("rebac.schema.publishPromptPlaceholder"),
       maxLength: 500,
-      confirmLabel: t("rebac.schema.publishNew" as any),
+      confirmLabel: t("rebac.schema.publishNew"),
     });
     if (description === null) return; // user cancelled
 
@@ -482,7 +482,7 @@ export default function BizSchemaEditor({ appId, modelId, mode = "view", onPubli
       }
       const r = res.data as SaveAuthorizationModelResult;
       if (r.outcome === "advanced") {
-        modal.toast(t("rebac.schema.publishDone" as any), "success");
+        modal.toast(t("rebac.schema.publishDone"), "success");
         onPublishNew?.(r.authorizationModelId ?? "");
       } else if (r.outcome === "unchanged") {
         modal.toast(t("rebac.schema.outcomeUnchanged"), "info");
@@ -525,30 +525,30 @@ export default function BizSchemaEditor({ appId, modelId, mode = "view", onPubli
                 onClick={onBack}
                 className="text-[12px] text-text-muted hover:text-accent mb-2 flex items-center gap-1"
               >
-                ← {t("rebac.schema.back" as any)}
+                ← {t("rebac.schema.back")}
               </button>
             )}
             <div className="flex items-center gap-2 flex-wrap">
               <h2 className="text-[18px] font-bold text-text-primary">
                 {mode === "new"
-                  ? t("rebac.schema.newDraftTitle" as any)
+                  ? t("rebac.schema.newDraftTitle")
                   : `v${Math.max(1, totalVersions - versionIndexFromNewest)}${meta.description ? ` · ${meta.description}` : ""}`}
               </h2>
               {mode === "view" && meta.id === activeModelId && (
                 <span className="px-2 py-0.5 text-[11px] rounded-full bg-accent/15 text-accent">
-                  {t("rebac.schema.activeBadge" as any)}
+                  {t("rebac.schema.activeBadge")}
                 </span>
               )}
               {mode === "new" && (
                 <span className="px-2 py-0.5 text-[11px] rounded-full bg-amber-500/15 text-amber-700 dark:text-amber-300">
-                  {t("rebac.schema.draftBadge" as any)}
+                  {t("rebac.schema.draftBadge")}
                 </span>
               )}
             </div>
             <p className="text-[12px] text-text-muted mt-1 font-mono">
               {mode === "new"
-                ? t("rebac.schema.newDraftHint" as any)
-                : `${meta.id.slice(0, 5)}…${meta.id.slice(-5)}${meta.createdTime ? ` · ${meta.createdTime}` : ""}${meta.createdBy ? ` · ${t("rebac.schema.publishedBy" as any)} ${meta.createdBy}` : ""}`}
+                ? t("rebac.schema.newDraftHint")
+                : `${meta.id.slice(0, 5)}…${meta.id.slice(-5)}${meta.createdTime ? ` · ${meta.createdTime}` : ""}${meta.createdBy ? ` · ${t("rebac.schema.publishedBy")} ${meta.createdBy}` : ""}`}
             </p>
           </div>
           <div className="flex items-center gap-2 shrink-0">
@@ -557,7 +557,7 @@ export default function BizSchemaEditor({ appId, modelId, mode = "view", onPubli
               onClick={() => void handleValidate()}
               className="px-3 py-1.5 rounded-md border border-border text-[13px] flex items-center gap-2 hover:bg-surface-2"
             >
-              {t("rebac.schema.validate" as any)}
+              {t("rebac.schema.validate")}
             </button>
             {mode === "view" && meta.id !== activeModelId && (
               <button
@@ -565,7 +565,7 @@ export default function BizSchemaEditor({ appId, modelId, mode = "view", onPubli
                 onClick={() => handleRollback()}
                 className="px-3 py-1.5 rounded-md border border-border text-[13px] hover:bg-surface-2"
               >
-                {t("rebac.schema.rollback" as any)}
+                {t("rebac.schema.rollback")}
               </button>
             )}
             <button
@@ -574,7 +574,7 @@ export default function BizSchemaEditor({ appId, modelId, mode = "view", onPubli
               disabled={saving}
               className="px-3 py-1.5 rounded-md bg-accent text-white text-[13px] flex items-center gap-2 hover:bg-accent/90 disabled:opacity-50"
             >
-              + {t("rebac.schema.publishNew" as any)}
+              + {t("rebac.schema.publishNew")}
             </button>
           </div>
         </div>

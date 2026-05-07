@@ -73,7 +73,7 @@ export default function SubscriptionEditPage() {
     try {
       const res = await SubscriptionBackend.updateSubscription(owner!, name!, sub);
       if (res.status === "ok") {
-        modal.toast(t("common.saveSuccess" as any));
+        modal.toast(t("common.saveSuccess"));
         setSaved(true);
         setOriginalJson(JSON.stringify(sub));
         setIsAddMode(false);
@@ -82,7 +82,7 @@ export default function SubscriptionEditPage() {
           navigate(`/subscriptions/${sub.owner}/${sub.name}`, { replace: true });
         }
       } else {
-        modal.toast(friendlyError(res.msg, t) || t("common.saveFailed" as any), "error");
+        modal.toast(friendlyError(res.msg, t) || t("common.saveFailed"), "error");
       }
     } catch (e) {
       console.error(e);
@@ -95,14 +95,14 @@ export default function SubscriptionEditPage() {
     try {
       const res = await SubscriptionBackend.updateSubscription(owner!, name!, sub);
       if (res.status === "ok") {
-        modal.toast(t("common.saveSuccess" as any));
+        modal.toast(t("common.saveSuccess"));
         invalidateList();
         navigate("/subscriptions");
       } else {
-        modal.toast(friendlyError(res.msg, t) || t("common.saveFailed" as any), "error");
+        modal.toast(friendlyError(res.msg, t) || t("common.saveFailed"), "error");
       }
     } catch (e: any) {
-      modal.toast(e?.message || t("common.saveFailed" as any), "error");
+      modal.toast(e?.message || t("common.saveFailed"), "error");
     } finally {
       setSaving(false);
     }
@@ -124,7 +124,7 @@ export default function SubscriptionEditPage() {
           invalidateList();
           navigate("/subscriptions");
         } else {
-          modal.toast(res.msg || t("common.deleteFailed" as any), "error");
+          modal.toast(res.msg || t("common.deleteFailed"), "error");
         }
       } catch (e) {
         console.error(e);
@@ -135,7 +135,7 @@ export default function SubscriptionEditPage() {
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-6 ">
       <StickyEditHeader
-        title={`${isAddMode ? t("common.add") : t("common.edit")} ${t("subscriptions.title" as any)}`}
+        title={`${isAddMode ? t("common.add") : t("common.edit")} ${t("subscriptions.title")}`}
         subtitle={`${owner}/${name}`}
         onBack={handleBack}
       >
@@ -145,14 +145,14 @@ export default function SubscriptionEditPage() {
                     <SaveButton onClick={handleSave} saving={saving} saved={saved} label={t("common.save")} />
           <button onClick={handleSaveAndExit} disabled={saving} className="flex items-center gap-1.5 rounded-lg bg-accent px-4 py-2 text-[13px] font-semibold text-white hover:bg-accent-hover disabled:opacity-50 transition-colors">
             {saving ? <div className="h-3.5 w-3.5 rounded-full border-2 border-white/30 border-t-white animate-spin" /> : <LogOut size={14} />}
-            {t("common.saveAndExit" as any)}
+            {t("common.saveAndExit")}
           </button>
       </StickyEditHeader>
 
       {showBanner && <UnsavedBanner isAddMode={isAddMode} />}
 
       {/* Basic Info */}
-      <FormSection title={t("subscriptions.section.basic" as any)}>
+      <FormSection title={t("subscriptions.section.basic")}>
         <FormField label={t("field.owner")}>
           <input value={sub.owner} disabled className={inputClass} />
         </FormField>
@@ -162,43 +162,43 @@ export default function SubscriptionEditPage() {
         <FormField label={t("field.displayName")}>
           <input value={sub.displayName} onChange={(e) => set("displayName", e.target.value)} className={inputClass} />
         </FormField>
-        <FormField label={t("subscriptions.field.descriptionField" as any)}>
+        <FormField label={t("subscriptions.field.descriptionField")}>
           <input value={sub.description} onChange={(e) => set("description", e.target.value)} className={inputClass} />
         </FormField>
       </FormSection>
 
       {/* Time & Period */}
-      <FormSection title={t("subscriptions.section.schedule" as any)}>
-        <FormField label={t("subscriptions.field.startTime" as any)}>
+      <FormSection title={t("subscriptions.section.schedule")}>
+        <FormField label={t("subscriptions.field.startTime")}>
           <input type="date" value={sub.startTime ? sub.startTime.substring(0, 10) : ""} onChange={(e) => set("startTime", e.target.value ? new Date(e.target.value).toISOString() : "")} className={monoInputClass} />
         </FormField>
-        <FormField label={t("subscriptions.field.endTime" as any)}>
+        <FormField label={t("subscriptions.field.endTime")}>
           <input type="date" value={sub.endTime ? sub.endTime.substring(0, 10) : ""} onChange={(e) => set("endTime", e.target.value ? new Date(e.target.value).toISOString() : "")} className={monoInputClass} />
         </FormField>
-        <FormField label={t("subscriptions.field.period" as any)}>
+        <FormField label={t("subscriptions.field.period")}>
           <SimpleSelect value={sub.period} options={PERIOD_OPTIONS.map((o) => ({ value: o.id, label: o.name }))} onChange={(v) => set("period", v)} />
         </FormField>
       </FormSection>
 
       {/* Relations */}
-      <FormSection title={t("subscriptions.section.relations" as any)}>
-        <FormField label={t("subscriptions.field.user" as any)}>
+      <FormSection title={t("subscriptions.section.relations")}>
+        <FormField label={t("subscriptions.field.user")}>
           <input value={sub.user} onChange={(e) => set("user", e.target.value)} className={inputClass} />
         </FormField>
-        <FormField label={t("subscriptions.field.pricing" as any)}>
+        <FormField label={t("subscriptions.field.pricing")}>
           <input value={sub.pricing} onChange={(e) => set("pricing", e.target.value)} className={inputClass} />
         </FormField>
-        <FormField label={t("subscriptions.field.plan" as any)}>
+        <FormField label={t("subscriptions.field.plan")}>
           <input value={sub.plan} onChange={(e) => set("plan", e.target.value)} className={inputClass} />
         </FormField>
-        <FormField label={t("subscriptions.field.payment" as any)}>
+        <FormField label={t("subscriptions.field.payment")}>
           <input value={sub.payment} disabled className={inputClass} />
         </FormField>
       </FormSection>
 
       {/* State */}
-      <FormSection title={t("subscriptions.section.state" as any)}>
-        <FormField label={t("col.state" as any)}>
+      <FormSection title={t("subscriptions.section.state")}>
+        <FormField label={t("col.state")}>
           <SimpleSelect value={sub.state} options={STATE_OPTIONS.map((o) => ({ value: o.id, label: o.name }))} onChange={(v) => set("state", v)} />
         </FormField>
       </FormSection>

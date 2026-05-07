@@ -72,11 +72,11 @@ export default function EnableMfaNotification({ account, justLoggedIn, onDismiss
   if (!visible) return null;
 
   const mfaTypeLabels: Record<string, string> = {
-    sms: t("users.mfa.sms" as any),
-    email: t("users.mfa.email" as any),
-    app: t("users.mfa.app" as any),
-    push: t("users.mfa.push" as any),
-    radius: t("users.mfa.radius" as any),
+    sms: t("users.mfa.sms"),
+    email: t("users.mfa.email"),
+    app: t("users.mfa.app"),
+    push: t("users.mfa.push"),
+    radius: t("users.mfa.radius"),
   };
 
   const handleDismiss = () => {
@@ -99,10 +99,10 @@ export default function EnableMfaNotification({ account, justLoggedIn, onDismiss
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-[13px] font-semibold text-text-primary">
-              {t("mfa.notification.title" as any)}
+              {t("mfa.notification.title")}
             </p>
             <p className="text-[12px] text-text-secondary mt-1">
-              {t("mfa.notification.description" as any)}
+              {t("mfa.notification.description")}
             </p>
             <div className="flex flex-wrap gap-1.5 mt-2">
               {promptedTypes.map((type) => (
@@ -114,11 +114,11 @@ export default function EnableMfaNotification({ account, justLoggedIn, onDismiss
             <div className="flex items-center gap-2 mt-3">
               <button onClick={handleDismiss}
                 className="rounded-lg border border-border px-3 py-1.5 text-[12px] font-medium text-text-secondary hover:bg-surface-2 transition-colors">
-                {t("mfa.notification.later" as any)}
+                {t("mfa.notification.later")}
               </button>
               <button onClick={handleGoSetup}
                 className="rounded-lg bg-accent px-3 py-1.5 text-[12px] font-semibold text-white hover:bg-accent-hover transition-colors">
-                {t("mfa.notification.goEnable" as any)}
+                {t("mfa.notification.goEnable")}
               </button>
             </div>
           </div>

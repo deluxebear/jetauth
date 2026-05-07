@@ -145,7 +145,7 @@ function SidebarOrgSelector({
   }, [selectedOrg]);
 
   const currentLabel = selectedOrg === "All"
-    ? t("common.all" as any)
+    ? t("common.all")
     : orgOptions.find((o) => o.name === selectedOrg)?.displayName || selectedOrg;
 
   const filtered = orgOptions.filter((o) => {
@@ -181,7 +181,7 @@ function SidebarOrgSelector({
               <div className="relative">
                 <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none" />
                 <input ref={searchRef} value={search} onChange={(e) => setSearch(e.target.value)}
-                  placeholder={t("common.search" as any)}
+                  placeholder={t("common.search")}
                   className="w-full rounded-lg border border-border bg-surface-2 pl-8 pr-3 py-1.5 text-[12px] text-text-primary placeholder:text-text-muted outline-none focus:border-accent transition-colors" />
               </div>
             </div>
@@ -190,7 +190,7 @@ function SidebarOrgSelector({
                 className={`flex w-full items-center gap-2 px-3 py-2 text-[13px] transition-colors ${
                   selectedOrg === "All" ? "text-accent bg-accent/8 font-medium" : "text-text-primary hover:bg-surface-2"
                 }`}>
-                <span className="flex-1 text-left">{t("common.all" as any)}</span>
+                <span className="flex-1 text-left">{t("common.all")}</span>
                 {selectedOrg === "All" && <Check size={14} className="text-accent shrink-0" />}
               </button>
               {filtered.map((o) => (
@@ -228,7 +228,7 @@ function SidebarOrgSelector({
             <div className="relative">
               <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none" />
               <input ref={searchRef} value={search} onChange={(e) => setSearch(e.target.value)}
-                placeholder={t("common.search" as any)}
+                placeholder={t("common.search")}
                 className="w-full rounded-lg border border-border bg-surface-2 pl-8 pr-3 py-1.5 text-[12px] text-text-primary placeholder:text-text-muted outline-none focus:border-accent transition-colors" />
             </div>
           </div>
@@ -237,7 +237,7 @@ function SidebarOrgSelector({
               className={`flex w-full items-center gap-2 px-3 py-2 text-[13px] transition-colors ${
                 selectedOrg === "All" ? "text-accent bg-accent/8 font-medium" : "text-text-primary hover:bg-surface-2"
               }`}>
-              <span className="flex-1 text-left">{t("common.all" as any)}</span>
+              <span className="flex-1 text-left">{t("common.all")}</span>
               {selectedOrg === "All" && <Check size={14} className="text-accent shrink-0" />}
             </button>
             {filtered.map((o) => (
@@ -250,7 +250,7 @@ function SidebarOrgSelector({
               </button>
             ))}
             {filtered.length === 0 && (
-              <div className="px-3 py-4 text-center text-[12px] text-text-muted">{t("common.noResults" as any)}</div>
+              <div className="px-3 py-4 text-center text-[12px] text-text-muted">{t("common.noResults")}</div>
             )}
           </div>
         </div>

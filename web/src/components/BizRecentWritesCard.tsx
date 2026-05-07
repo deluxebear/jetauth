@@ -22,7 +22,7 @@ export default function BizRecentWritesCard({ writes, onViewAll }: Props) {
     <div className="rounded-xl border border-border bg-surface-1 p-4">
       <div className="flex items-center justify-between mb-3">
         <h3 className="text-[13px] font-semibold text-text-primary">
-          {t("rebac.overview.recentWrites" as any)}
+          {t("rebac.overview.recentWrites")}
         </h3>
         {onViewAll && (
           <button
@@ -30,13 +30,13 @@ export default function BizRecentWritesCard({ writes, onViewAll }: Props) {
             onClick={onViewAll}
             className="text-[12px] text-accent hover:underline"
           >
-            {t("rebac.overview.viewAll" as any)} →
+            {t("rebac.overview.viewAll")} →
           </button>
         )}
       </div>
       {writes.length === 0 ? (
         <p className="text-[12px] text-text-muted py-6 text-center">
-          {t("rebac.overview.noRecentWrites" as any)}
+          {t("rebac.overview.noRecentWrites")}
         </p>
       ) : (
         <ul className="flex flex-col gap-2">

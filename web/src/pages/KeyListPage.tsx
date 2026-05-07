@@ -34,7 +34,7 @@ export default function KeyListPage() {
     if (res.status === "ok") {
       navigate(`/keys/${key.owner}/${key.name}`, { state: { mode: "add" } });
     } else {
-      modal.toast(res.msg || t("common.addFailed" as any), "error");
+      modal.toast(res.msg || t("common.addFailed"), "error");
     }
   };
 
@@ -47,7 +47,7 @@ export default function KeyListPage() {
         if (res.status === "ok") {
           list.refetch();
         } else {
-          modal.toast(res.msg || t("common.deleteFailed" as any), "error");
+          modal.toast(res.msg || t("common.deleteFailed"), "error");
         }
       }
     );
@@ -56,7 +56,7 @@ export default function KeyListPage() {
   const columns: Column<Key>[] = [
     {
       key: "name",
-      title: t("col.name" as any),
+      title: t("col.name"),
       sortable: true,
       filterable: true,
       fixed: "left" as const,
@@ -69,24 +69,24 @@ export default function KeyListPage() {
     },
     {
       key: "owner",
-      title: t("col.organization" as any),
+      title: t("col.organization"),
       sortable: true,
       filterable: true,
       width: "150px",
-      render: (_, r) => <span className="text-[12px] text-text-secondary">{r.owner === "admin" ? t("common.adminShared" as any) : r.owner}</span>,
+      render: (_, r) => <span className="text-[12px] text-text-secondary">{r.owner === "admin" ? t("common.adminShared") : r.owner}</span>,
     },
     {
       key: "createdTime",
-      title: t("col.created" as any),
+      title: t("col.created"),
       sortable: true,
       width: "160px",
       render: (_, r) => <span className="text-[12px] text-text-muted font-mono">{r.createdTime ? new Date(r.createdTime).toLocaleString() : "—"}</span>,
     },
-    { key: "displayName", title: t("col.displayName" as any), sortable: true, filterable: true },
-    { key: "type", title: t("col.type" as any), sortable: true, filterable: true, width: "120px" },
+    { key: "displayName", title: t("col.displayName"), sortable: true, filterable: true },
+    { key: "type", title: t("col.type"), sortable: true, filterable: true, width: "120px" },
     {
       key: "accessKey",
-      title: t("keys.field.accessKey" as any),
+      title: t("keys.field.accessKey"),
       sortable: true,
       filterable: true,
       width: "150px",
@@ -94,14 +94,14 @@ export default function KeyListPage() {
     },
     {
       key: "expireTime",
-      title: t("keys.field.expireTime" as any),
+      title: t("keys.field.expireTime"),
       sortable: true,
       width: "160px",
       render: (_, r) => <span className="text-[12px] text-text-muted font-mono">{r.expireTime ? new Date(r.expireTime).toLocaleString() : "—"}</span>,
     },
     {
       key: "state",
-      title: t("col.state" as any),
+      title: t("col.state"),
       sortable: true,
       filterable: true,
       width: "90px",
@@ -110,7 +110,7 @@ export default function KeyListPage() {
     {
       key: "__actions",
       fixed: "right" as const,
-      title: t("common.action" as any),
+      title: t("common.action"),
       width: "120px",
       render: (_, r) => {
         const canOp = isAdmin || r.owner === account?.owner;
@@ -132,8 +132,8 @@ export default function KeyListPage() {
     <div className="space-y-5">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold tracking-tight">{t("keys.title" as any)}</h1>
-          <p className="text-[13px] text-text-muted mt-0.5">{t("keys.subtitle" as any)}</p>
+          <h1 className="text-xl font-bold tracking-tight">{t("keys.title")}</h1>
+          <p className="text-[13px] text-text-muted mt-0.5">{t("keys.subtitle")}</p>
         </div>
         <div className="flex items-center gap-2">
           <motion.button whileHover={{ rotate: 180 }} transition={{ duration: 0.3 }} onClick={list.refetch} className="rounded-lg border border-border p-2 text-text-muted hover:bg-surface-2 transition-colors" title={t("common.refresh")}>
@@ -141,7 +141,7 @@ export default function KeyListPage() {
           </motion.button>
           <ColumnsMenu columns={columns} hidden={prefs.hidden} onToggle={prefs.toggleHidden} onResetWidths={prefs.resetWidths} />
           <button onClick={handleAdd} className="flex items-center gap-1.5 rounded-lg bg-accent px-3 py-2 text-[13px] font-semibold text-white hover:bg-accent-hover transition-colors">
-            <Plus size={15} /> {t("keys.add" as any)}
+            <Plus size={15} /> {t("keys.add")}
           </button>
         </div>
       </div>

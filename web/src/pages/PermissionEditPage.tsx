@@ -73,7 +73,7 @@ export default function PermissionEditPage() {
     OrganizationBackend.getOrganizationNames("admin").then((res) => {
       if (res.status === "ok" && res.data) {
         setOrgOptions([
-          { value: "admin", label: t("common.adminShared" as any) },
+          { value: "admin", label: t("common.adminShared") },
           ...res.data.map((o) => ({ value: o.name, label: o.displayName || o.name })),
         ]);
       }
@@ -101,25 +101,25 @@ export default function PermissionEditPage() {
     const ow = permission.owner;
     UserBackend.getUsers({ owner: ow }).then((res) => {
       if (res.status === "ok" && res.data) {
-        const all = { value: "*", label: t("common.all" as any) || "All" };
+        const all = { value: "*", label: t("common.all") || "All" };
         setUserOptions([all, ...res.data.map((u) => ({ value: `${(u as any).owner}/${u.name}`, label: `${(u as any).owner}/${u.name}` }))]);
       }
     });
     GroupBackend.getGroups({ owner: ow }).then((res) => {
       if (res.status === "ok" && res.data) {
-        const all = { value: "*", label: t("common.all" as any) || "All" };
+        const all = { value: "*", label: t("common.all") || "All" };
         setGroupOptions([all, ...res.data.map((g) => ({ value: `${(g as any).owner}/${g.name}`, label: `${(g as any).owner}/${g.name}` }))]);
       }
     });
     RoleBackend.getRoles({ owner: ow }).then((res) => {
       if (res.status === "ok" && res.data) {
-        const all = { value: "*", label: t("common.all" as any) || "All" };
+        const all = { value: "*", label: t("common.all") || "All" };
         setRoleOptions([all, ...res.data.map((r) => ({ value: `${r.owner}/${r.name}`, label: `${r.owner}/${r.name}` }))]);
       }
     });
     ApplicationBackend.getApplicationsByOrganization({ owner: "admin", organization: ow }).then((res) => {
       if (res.status === "ok" && res.data) {
-        const all = { value: "*", label: t("common.all" as any) || "All" };
+        const all = { value: "*", label: t("common.all") || "All" };
         setAppOptions([all, ...res.data.map((a) => ({ value: a.name, label: (a as any).displayName || a.name }))]);
       }
     });
@@ -156,7 +156,7 @@ export default function PermissionEditPage() {
     try {
       const res = await PermissionBackend.updatePermission(owner!, name!, permission);
       if (res.status === "ok") {
-        modal.toast(t("common.saveSuccess" as any));
+        modal.toast(t("common.saveSuccess"));
         setSaved(true);
         setOriginalJson(JSON.stringify(permission));
         setIsAddMode(false);
@@ -165,7 +165,7 @@ export default function PermissionEditPage() {
           navigate(`/permissions/${permission.owner}/${permission.name}`, { replace: true });
         }
       } else {
-        modal.toast(friendlyError(res.msg, t) || t("common.saveFailed" as any), "error");
+        modal.toast(friendlyError(res.msg, t) || t("common.saveFailed"), "error");
       }
     } catch (e) {
       console.error(e);
@@ -178,14 +178,14 @@ export default function PermissionEditPage() {
     try {
       const res = await PermissionBackend.updatePermission(owner!, name!, permission);
       if (res.status === "ok") {
-        modal.toast(t("common.saveSuccess" as any));
+        modal.toast(t("common.saveSuccess"));
         invalidateList();
         navigate("/permissions");
       } else {
-        modal.toast(friendlyError(res.msg, t) || t("common.saveFailed" as any), "error");
+        modal.toast(friendlyError(res.msg, t) || t("common.saveFailed"), "error");
       }
     } catch (e: any) {
-      modal.toast(e?.message || t("common.saveFailed" as any), "error");
+      modal.toast(e?.message || t("common.saveFailed"), "error");
     } finally {
       setSaving(false);
     }
@@ -207,7 +207,7 @@ export default function PermissionEditPage() {
           invalidateList();
           navigate("/permissions");
         } else {
-          modal.toast(res.msg || t("common.deleteFailed" as any), "error");
+          modal.toast(res.msg || t("common.deleteFailed"), "error");
         }
       } catch (e) {
         console.error(e);
@@ -231,7 +231,7 @@ export default function PermissionEditPage() {
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
       <StickyEditHeader
-        title={`${isAddMode ? t("common.add") : t("common.edit")} ${t("permissions.title" as any)}`}
+        title={`${isAddMode ? t("common.add") : t("common.edit")} ${t("permissions.title")}`}
         subtitle={`${owner}/${name}`}
         onBack={handleBack}
       >
@@ -241,85 +241,85 @@ export default function PermissionEditPage() {
         <SaveButton onClick={handleSave} saving={saving} saved={saved} label={t("common.save")} />
         <button onClick={handleSaveAndExit} disabled={saving} className="flex items-center gap-1.5 rounded-lg bg-accent px-4 py-2 text-[13px] font-semibold text-white hover:bg-accent-hover disabled:opacity-50 transition-colors">
           {saving ? <div className="h-3.5 w-3.5 rounded-full border-2 border-white/30 border-t-white animate-spin" /> : <LogOut size={14} />}
-          {t("common.saveAndExit" as any)}
+          {t("common.saveAndExit")}
         </button>
       </StickyEditHeader>
 
       {showBanner && <UnsavedBanner isAddMode={isAddMode} />}
 
       {/* Basic Info */}
-      <FormSection title={t("permissions.section.basic" as any)}>
-        <FormField label={t("field.owner" as any)}>
+      <FormSection title={t("permissions.section.basic")}>
+        <FormField label={t("field.owner")}>
           {isAdmin ? (
-            <SingleSearchSelect value={permission.owner} options={orgOptions} onChange={(v) => set("owner", v)} placeholder={t("common.search" as any)} />
+            <SingleSearchSelect value={permission.owner} options={orgOptions} onChange={(v) => set("owner", v)} placeholder={t("common.search")} />
           ) : (
             <input value={permission.owner} disabled className={inputClass} />
           )}
         </FormField>
-        <FormField label={t("field.name" as any)} required>
+        <FormField label={t("field.name")} required>
           <input value={permission.name} onChange={(e) => set("name", e.target.value)} className={monoInputClass} />
         </FormField>
-        <FormField label={t("field.displayName" as any)}>
+        <FormField label={t("field.displayName")}>
           <input value={permission.displayName} onChange={(e) => set("displayName", e.target.value)} className={inputClass} />
         </FormField>
-        <FormField label={t("field.description" as any)}>
+        <FormField label={t("field.description")}>
           <input value={permission.description || ""} onChange={(e) => set("description", e.target.value)} className={inputClass} />
         </FormField>
-        <FormField label={t("col.model" as any)} tooltip={t("permissions.tooltip.model" as any)}>
-          <SingleSearchSelect value={permission.model} options={modelOptions} onChange={(v) => set("model", v)} placeholder={t("common.search" as any)} />
+        <FormField label={t("col.model")} tooltip={t("permissions.tooltip.model")}>
+          <SingleSearchSelect value={permission.model} options={modelOptions} onChange={(v) => set("model", v)} placeholder={t("common.search")} />
         </FormField>
-        <FormField label={t("permissions.field.adapter" as any)} tooltip={t("permissions.tooltip.adapter" as any)}>
-          <SingleSearchSelect value={permission.adapter} options={adapterOptions} onChange={(v) => set("adapter", v)} placeholder={t("common.search" as any)} />
+        <FormField label={t("permissions.field.adapter")} tooltip={t("permissions.tooltip.adapter")}>
+          <SingleSearchSelect value={permission.adapter} options={adapterOptions} onChange={(v) => set("adapter", v)} placeholder={t("common.search")} />
         </FormField>
       </FormSection>
 
       {/* Members */}
-      <FormSection title={t("permissions.section.members" as any)}>
-        <FormField label={t("roles.field.users" as any)} tooltip={t("permissions.tooltip.users" as any)} span="full">
-          <MultiSearchSelect selected={permission.users || []} options={userOptions} onChange={(v) => set("users", v)} placeholder={t("common.search" as any)} />
+      <FormSection title={t("permissions.section.members")}>
+        <FormField label={t("roles.field.users")} tooltip={t("permissions.tooltip.users")} span="full">
+          <MultiSearchSelect selected={permission.users || []} options={userOptions} onChange={(v) => set("users", v)} placeholder={t("common.search")} />
         </FormField>
-        <FormField label={t("roles.field.groups" as any)} tooltip={t("permissions.tooltip.groups" as any)} span="full">
-          <MultiSearchSelect selected={permission.groups || []} options={groupOptions} onChange={(v) => set("groups", v)} placeholder={t("common.search" as any)} />
+        <FormField label={t("roles.field.groups")} tooltip={t("permissions.tooltip.groups")} span="full">
+          <MultiSearchSelect selected={permission.groups || []} options={groupOptions} onChange={(v) => set("groups", v)} placeholder={t("common.search")} />
         </FormField>
-        <FormField label={t("roles.field.roles" as any)} tooltip={t("permissions.tooltip.roles" as any)} span="full">
-          <MultiSearchSelect selected={permission.roles || []} options={roleOptions} onChange={(v) => set("roles", v)} placeholder={t("common.search" as any)} />
+        <FormField label={t("roles.field.roles")} tooltip={t("permissions.tooltip.roles")} span="full">
+          <MultiSearchSelect selected={permission.roles || []} options={roleOptions} onChange={(v) => set("roles", v)} placeholder={t("common.search")} />
         </FormField>
-        <FormField label={t("roles.field.domains" as any)} tooltip={t("permissions.tooltip.domains" as any)} span="full">
-          <MultiSearchSelect selected={permission.domains || []} options={(permission.domains || []).map((d) => ({ value: d, label: d }))} onChange={(v) => set("domains", v)} placeholder={t("roles.field.domainsPlaceholder" as any)} />
+        <FormField label={t("roles.field.domains")} tooltip={t("permissions.tooltip.domains")} span="full">
+          <MultiSearchSelect selected={permission.domains || []} options={(permission.domains || []).map((d) => ({ value: d, label: d }))} onChange={(v) => set("domains", v)} placeholder={t("roles.field.domainsPlaceholder")} />
         </FormField>
       </FormSection>
 
       {/* Resources & Actions */}
-      <FormSection title={t("permissions.section.resources" as any)}>
-        <FormField label={t("permissions.field.resourceType" as any)} tooltip={t("permissions.tooltip.resourceType" as any)}>
+      <FormSection title={t("permissions.section.resources")}>
+        <FormField label={t("permissions.field.resourceType")} tooltip={t("permissions.tooltip.resourceType")}>
           <SimpleSelect value={permission.resourceType} options={RESOURCE_TYPE_OPTIONS} onChange={(v) => { set("resourceType", v); set("resources", []); set("actions", []); }} />
         </FormField>
-        <FormField label={t("permissions.field.resources" as any)} tooltip={t("permissions.tooltip.resources" as any)} span="full">
-          <MultiSearchSelect selected={permission.resources || []} options={resourceOpts} onChange={(v) => set("resources", v)} placeholder={isCustom || isAPI ? t("permissions.field.resourcesCustomPlaceholder" as any) : t("common.search" as any)} />
+        <FormField label={t("permissions.field.resources")} tooltip={t("permissions.tooltip.resources")} span="full">
+          <MultiSearchSelect selected={permission.resources || []} options={resourceOpts} onChange={(v) => set("resources", v)} placeholder={isCustom || isAPI ? t("permissions.field.resourcesCustomPlaceholder") : t("common.search")} />
         </FormField>
-        <FormField label={t("permissions.field.actions" as any)} tooltip={t("permissions.tooltip.actions" as any)} span="full">
-          <MultiSearchSelect selected={permission.actions || []} options={actionOpts} onChange={(v) => set("actions", v)} placeholder={t("common.search" as any)} />
+        <FormField label={t("permissions.field.actions")} tooltip={t("permissions.tooltip.actions")} span="full">
+          <MultiSearchSelect selected={permission.actions || []} options={actionOpts} onChange={(v) => set("actions", v)} placeholder={t("common.search")} />
         </FormField>
-        <FormField label={t("permissions.field.effect" as any)} tooltip={t("permissions.tooltip.effect" as any)}>
+        <FormField label={t("permissions.field.effect")} tooltip={t("permissions.tooltip.effect")}>
           <SimpleSelect value={permission.effect} options={EFFECT_OPTIONS.map((o) => ({ value: o.value, label: t(`permissions.effect${o.label}` as any) }))} onChange={(v) => set("effect", v)} />
         </FormField>
-        <FormField label={t("col.isEnabled" as any)}>
+        <FormField label={t("col.isEnabled")}>
           <Switch checked={permission.isEnabled} onChange={(v) => set("isEnabled", v)} />
         </FormField>
       </FormSection>
 
       {/* Approval */}
-      <FormSection title={t("permissions.section.approval" as any)}>
-        <FormField label={t("permissions.field.submitter" as any)} tooltip={t("permissions.tooltip.submitter" as any)}>
+      <FormSection title={t("permissions.section.approval")}>
+        <FormField label={t("permissions.field.submitter")} tooltip={t("permissions.tooltip.submitter")}>
           <input value={permission.submitter || ""} disabled className={inputClass} />
         </FormField>
-        <FormField label={t("permissions.field.approver" as any)} tooltip={t("permissions.tooltip.approver" as any)}>
+        <FormField label={t("permissions.field.approver")} tooltip={t("permissions.tooltip.approver")}>
           <input value={permission.approver || ""} disabled className={inputClass} />
         </FormField>
-        <FormField label={t("permissions.field.approveTime" as any)}>
+        <FormField label={t("permissions.field.approveTime")}>
           <input value={permission.approveTime ? new Date(permission.approveTime).toLocaleString() : "\u2014"} disabled className={inputClass} />
         </FormField>
-        <FormField label={t("permissions.field.state" as any)} tooltip={t("permissions.tooltip.state" as any)}>
+        <FormField label={t("permissions.field.state")} tooltip={t("permissions.tooltip.state")}>
           <SimpleSelect value={permission.state} options={STATE_OPTIONS.map((o) => ({ value: o.value, label: t(`permissions.state${o.label}` as any) }))} onChange={(v) => {
             if (v === "Approved") {
               set("approver", account?.name || "");

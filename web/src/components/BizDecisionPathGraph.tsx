@@ -119,14 +119,14 @@ export default function BizDecisionPathGraph({ root, highlightUser, matchedRule,
       {nodes.length > 0 && (
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-[13px] font-semibold text-text-primary">
-            {t("rebac.tester.decisionPath" as any)}
+            {t("rebac.tester.decisionPath")}
           </h3>
           <span className="text-[12px] text-text-muted">
-            {(t("rebac.tester.hops" as any) as string).replace("{n}", String(maxLayer))}
+            {(t("rebac.tester.hops") as string).replace("{n}", String(maxLayer))}
             {matchedRule !== undefined && (
               <>
                 {" · "}
-                {(t("rebac.tester.ruleMatched" as any) as string).replace("{rule}", String(matchedRule))}
+                {(t("rebac.tester.ruleMatched") as string).replace("{rule}", String(matchedRule))}
               </>
             )}
           </span>

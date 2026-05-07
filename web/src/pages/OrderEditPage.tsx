@@ -68,7 +68,7 @@ export default function OrderEditPage() {
     try {
       const res = await OrderBackend.updateOrder(owner!, name!, order);
       if (res.status === "ok") {
-        modal.toast(t("common.saveSuccess" as any));
+        modal.toast(t("common.saveSuccess"));
         setSaved(true);
         setOriginalJson(JSON.stringify(order));
         setIsAddMode(false);
@@ -77,7 +77,7 @@ export default function OrderEditPage() {
           navigate(`/orders/${order.owner}/${order.name}`, { replace: true });
         }
       } else {
-        modal.toast(friendlyError(res.msg, t) || t("common.saveFailed" as any), "error");
+        modal.toast(friendlyError(res.msg, t) || t("common.saveFailed"), "error");
       }
     } catch (e) {
       console.error(e);
@@ -90,14 +90,14 @@ export default function OrderEditPage() {
     try {
       const res = await OrderBackend.updateOrder(owner!, name!, order);
       if (res.status === "ok") {
-        modal.toast(t("common.saveSuccess" as any));
+        modal.toast(t("common.saveSuccess"));
         invalidateList();
         navigate("/orders");
       } else {
-        modal.toast(friendlyError(res.msg, t) || t("common.saveFailed" as any), "error");
+        modal.toast(friendlyError(res.msg, t) || t("common.saveFailed"), "error");
       }
     } catch (e: any) {
-      modal.toast(e?.message || t("common.saveFailed" as any), "error");
+      modal.toast(e?.message || t("common.saveFailed"), "error");
     } finally {
       setSaving(false);
     }
@@ -119,7 +119,7 @@ export default function OrderEditPage() {
           invalidateList();
           navigate("/orders");
         } else {
-          modal.toast(res.msg || t("common.deleteFailed" as any), "error");
+          modal.toast(res.msg || t("common.deleteFailed"), "error");
         }
       } catch (e) {
         console.error(e);
@@ -130,7 +130,7 @@ export default function OrderEditPage() {
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-6 ">
       <StickyEditHeader
-        title={`${isAddMode ? t("common.add") : t("common.edit")} ${t("orders.title" as any)}`}
+        title={`${isAddMode ? t("common.add") : t("common.edit")} ${t("orders.title")}`}
         subtitle={`${owner}/${name}`}
         onBack={handleBack}
       >
@@ -140,14 +140,14 @@ export default function OrderEditPage() {
                     <SaveButton onClick={handleSave} saving={saving} saved={saved} label={t("common.save")} />
           <button onClick={handleSaveAndExit} disabled={saving} className="flex items-center gap-1.5 rounded-lg bg-accent px-4 py-2 text-[13px] font-semibold text-white hover:bg-accent-hover disabled:opacity-50 transition-colors">
             {saving ? <div className="h-3.5 w-3.5 rounded-full border-2 border-white/30 border-t-white animate-spin" /> : <LogOut size={14} />}
-            {t("common.saveAndExit" as any)}
+            {t("common.saveAndExit")}
           </button>
       </StickyEditHeader>
 
       {showBanner && <UnsavedBanner isAddMode={isAddMode} />}
 
       {/* Basic Info */}
-      <FormSection title={t("orders.section.basic" as any)}>
+      <FormSection title={t("orders.section.basic")}>
         <FormField label={t("field.owner")}>
           <input value={order.owner} disabled className={inputClass} />
         </FormField>
@@ -160,28 +160,28 @@ export default function OrderEditPage() {
       </FormSection>
 
       {/* Products */}
-      <FormSection title={t("orders.section.products" as any)}>
-        <FormField label={t("orders.field.products" as any)} span="full">
+      <FormSection title={t("orders.section.products")}>
+        <FormField label={t("orders.field.products")} span="full">
           <input value={(order.products || []).join(", ")} onChange={(e) => set("products", e.target.value.split(",").map((s) => s.trim()).filter(Boolean))} className={inputClass} />
         </FormField>
       </FormSection>
 
       {/* Relations */}
-      <FormSection title={t("orders.section.relations" as any)}>
-        <FormField label={t("orders.field.user" as any)}>
+      <FormSection title={t("orders.section.relations")}>
+        <FormField label={t("orders.field.user")}>
           <input value={order.user} onChange={(e) => set("user", e.target.value)} className={inputClass} />
         </FormField>
-        <FormField label={t("orders.field.payment" as any)}>
+        <FormField label={t("orders.field.payment")}>
           <input value={order.payment} onChange={(e) => set("payment", e.target.value)} className={inputClass} />
         </FormField>
       </FormSection>
 
       {/* State */}
-      <FormSection title={t("orders.section.state" as any)}>
-        <FormField label={t("col.state" as any)}>
+      <FormSection title={t("orders.section.state")}>
+        <FormField label={t("col.state")}>
           <SimpleSelect value={order.state} options={STATE_OPTIONS.map((o) => ({ value: o.id, label: o.name }))} onChange={(v) => set("state", v)} />
         </FormField>
-        <FormField label={t("orders.field.message" as any)}>
+        <FormField label={t("orders.field.message")}>
           <input value={order.message} onChange={(e) => set("message", e.target.value)} className={inputClass} />
         </FormField>
       </FormSection>

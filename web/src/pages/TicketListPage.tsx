@@ -41,7 +41,7 @@ export default function TicketListPage() {
     if (res.status === "ok") {
       navigate(`/tickets/${ticket.owner}/${ticket.name}`, { state: { mode: "add" } });
     } else {
-      modal.toast(res.msg || t("common.addFailed" as any), "error");
+      modal.toast(res.msg || t("common.addFailed"), "error");
     }
   };
 
@@ -52,40 +52,40 @@ export default function TicketListPage() {
       async () => {
         const res = await TicketBackend.deleteTicket(record);
         if (res.status === "ok") list.refetch();
-        else modal.toast(res.msg || t("common.deleteFailed" as any), "error");
+        else modal.toast(res.msg || t("common.deleteFailed"), "error");
       }
     );
   };
 
   const columns: Column<Ticket>[] = [
     {
-      key: "name", title: t("col.name" as any), sortable: true, filterable: true, fixed: "left" as const, width: "140px",
+      key: "name", title: t("col.name"), sortable: true, filterable: true, fixed: "left" as const, width: "140px",
       render: (_, r) => <Link to={`/tickets/${r.owner}/${encodeURIComponent(r.name)}`} className="font-mono font-medium text-accent hover:underline" onClick={(e) => e.stopPropagation()}>{r.name}</Link>,
     },
     {
-      key: "createdTime", title: t("col.created" as any), sortable: true, width: "180px",
+      key: "createdTime", title: t("col.created"), sortable: true, width: "180px",
       render: (_, r) => <span className="text-[12px] text-text-muted font-mono">{r.createdTime ? new Date(r.createdTime).toLocaleString() : "\u2014"}</span>,
     },
     {
-      key: "updatedTime", title: t("col.updated" as any), sortable: true, width: "180px",
+      key: "updatedTime", title: t("col.updated"), sortable: true, width: "180px",
       render: (_, r) => <span className="text-[12px] text-text-muted font-mono">{r.updatedTime ? new Date(r.updatedTime).toLocaleString() : "\u2014"}</span>,
     },
     {
-      key: "displayName", title: t("col.displayName" as any), sortable: true, filterable: true, width: "250px",
+      key: "displayName", title: t("col.displayName"), sortable: true, filterable: true, width: "250px",
     },
     {
-      key: "title", title: t("tickets.field.title" as any), sortable: true, filterable: true,
+      key: "title", title: t("tickets.field.title"), sortable: true, filterable: true,
     },
     {
-      key: "user", title: t("col.user" as any), sortable: true, filterable: true, width: "140px",
+      key: "user", title: t("col.user"), sortable: true, filterable: true, width: "140px",
       render: (_, r) => <Link to={`/users/${r.user}`} className="text-accent hover:underline" onClick={(e) => e.stopPropagation()}>{r.user}</Link>,
     },
     {
-      key: "state", title: t("tickets.field.state" as any), sortable: true, filterable: true, width: "140px",
+      key: "state", title: t("tickets.field.state"), sortable: true, filterable: true, width: "140px",
       render: (_, r) => <TicketStateBadge state={r.state} />,
     },
     {
-      key: "__actions", fixed: "right" as const, title: t("common.action" as any), width: "110px",
+      key: "__actions", fixed: "right" as const, title: t("common.action"), width: "110px",
       render: (_, r) => (
         <div className="flex items-center gap-1">
           <Link to={`/tickets/${r.owner}/${encodeURIComponent(r.name)}`} className="rounded p-1.5 text-text-muted hover:text-warning hover:bg-warning/10 transition-colors" title={t("common.edit")} onClick={(e) => e.stopPropagation()}><Pencil size={14} /></Link>
@@ -99,13 +99,13 @@ export default function TicketListPage() {
     <div className="space-y-5">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold tracking-tight">{t("tickets.title" as any)}</h1>
-          <p className="text-[13px] text-text-muted mt-0.5">{t("tickets.subtitle" as any)}</p>
+          <h1 className="text-xl font-bold tracking-tight">{t("tickets.title")}</h1>
+          <p className="text-[13px] text-text-muted mt-0.5">{t("tickets.subtitle")}</p>
         </div>
         <div className="flex items-center gap-2">
           <motion.button whileHover={{ rotate: 180 }} transition={{ duration: 0.3 }} onClick={list.refetch} className="rounded-lg border border-border p-2 text-text-muted hover:bg-surface-2 transition-colors" title={t("common.refresh")}><RefreshCw size={15} /></motion.button>
           <ColumnsMenu columns={columns} hidden={prefs.hidden} onToggle={prefs.toggleHidden} onResetWidths={prefs.resetWidths} />
-          <button onClick={handleAdd} className="flex items-center gap-1.5 rounded-lg bg-accent px-3 py-2 text-[13px] font-semibold text-white hover:bg-accent-hover transition-colors"><Plus size={15} /> {t("tickets.add" as any)}</button>
+          <button onClick={handleAdd} className="flex items-center gap-1.5 rounded-lg bg-accent px-3 py-2 text-[13px] font-semibold text-white hover:bg-accent-hover transition-colors"><Plus size={15} /> {t("tickets.add")}</button>
         </div>
       </div>
       <DataTable

@@ -66,7 +66,7 @@ export default function CurrencySelect({ value, onChange, disabled }: {
         className={`flex items-center rounded-lg border bg-surface-2 px-2.5 py-2 min-h-[38px] cursor-pointer transition-colors ${open ? "border-accent ring-1 ring-accent/30" : "border-border"}`}>
         {open ? (
           <input autoFocus value={search} onChange={(e) => setSearch(e.target.value)}
-            placeholder={t("common.search" as any)}
+            placeholder={t("common.search")}
             className="flex-1 bg-transparent text-[13px] text-text-primary outline-none placeholder:text-text-muted" />
         ) : (
           <span className="text-[13px] text-text-primary flex-1">{label}</span>
@@ -88,7 +88,7 @@ export default function CurrencySelect({ value, onChange, disabled }: {
               </button>
             );
           })}
-          {filtered.length === 0 && <div className="px-3 py-4 text-center text-[12px] text-text-muted">{t("common.noResults" as any)}</div>}
+          {filtered.length === 0 && <div className="px-3 py-4 text-center text-[12px] text-text-muted">{t("common.noResults")}</div>}
         </div>
       )}
     </div>

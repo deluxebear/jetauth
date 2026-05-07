@@ -58,7 +58,7 @@ export default function TransactionEditPage() {
     try {
       const res = await TransactionBackend.updateTransaction(owner!, name!, txn);
       if (res.status === "ok") {
-        modal.toast(t("common.saveSuccess" as any));
+        modal.toast(t("common.saveSuccess"));
         setSaved(true);
         setOriginalJson(JSON.stringify(txn));
         setIsAddMode(false);
@@ -67,7 +67,7 @@ export default function TransactionEditPage() {
           navigate(`/transactions/${txn.owner}/${txn.name}`, { replace: true });
         }
       } else {
-        modal.toast(friendlyError(res.msg, t) || t("common.saveFailed" as any), "error");
+        modal.toast(friendlyError(res.msg, t) || t("common.saveFailed"), "error");
       }
     } catch (e) {
       console.error(e);
@@ -80,14 +80,14 @@ export default function TransactionEditPage() {
     try {
       const res = await TransactionBackend.updateTransaction(owner!, name!, txn);
       if (res.status === "ok") {
-        modal.toast(t("common.saveSuccess" as any));
+        modal.toast(t("common.saveSuccess"));
         invalidateList();
         navigate("/transactions");
       } else {
-        modal.toast(friendlyError(res.msg, t) || t("common.saveFailed" as any), "error");
+        modal.toast(friendlyError(res.msg, t) || t("common.saveFailed"), "error");
       }
     } catch (e: any) {
-      modal.toast(e?.message || t("common.saveFailed" as any), "error");
+      modal.toast(e?.message || t("common.saveFailed"), "error");
     } finally {
       setSaving(false);
     }
@@ -109,7 +109,7 @@ export default function TransactionEditPage() {
           invalidateList();
           navigate("/transactions");
         } else {
-          modal.toast(res.msg || t("common.deleteFailed" as any), "error");
+          modal.toast(res.msg || t("common.deleteFailed"), "error");
         }
       } catch (e) {
         console.error(e);
@@ -120,7 +120,7 @@ export default function TransactionEditPage() {
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-6 ">
       <StickyEditHeader
-        title={`${isAddMode ? t("common.add") : t("common.edit")} ${t("transactions.title" as any)}`}
+        title={`${isAddMode ? t("common.add") : t("common.edit")} ${t("transactions.title")}`}
         subtitle={`${owner}/${name}`}
         onBack={handleBack}
       >
@@ -130,14 +130,14 @@ export default function TransactionEditPage() {
                     <SaveButton onClick={handleSave} saving={saving} saved={saved} label={t("common.save")} />
           <button onClick={handleSaveAndExit} disabled={saving} className="flex items-center gap-1.5 rounded-lg bg-accent px-4 py-2 text-[13px] font-semibold text-white hover:bg-accent-hover disabled:opacity-50 transition-colors">
             {saving ? <div className="h-3.5 w-3.5 rounded-full border-2 border-white/30 border-t-white animate-spin" /> : <LogOut size={14} />}
-            {t("common.saveAndExit" as any)}
+            {t("common.saveAndExit")}
           </button>
       </StickyEditHeader>
 
       {showBanner && <UnsavedBanner isAddMode={isAddMode} />}
 
       {/* Basic Info (mostly read-only) */}
-      <FormSection title={t("transactions.section.basic" as any)}>
+      <FormSection title={t("transactions.section.basic")}>
         <FormField label={t("field.owner")}>
           <input value={txn.owner} disabled className={inputClass} />
         </FormField>
@@ -147,45 +147,45 @@ export default function TransactionEditPage() {
       </FormSection>
 
       {/* Details */}
-      <FormSection title={t("transactions.section.details" as any)}>
-        <FormField label={t("transactions.field.application" as any)}>
+      <FormSection title={t("transactions.section.details")}>
+        <FormField label={t("transactions.field.application")}>
           <input value={txn.application} disabled className={inputClass} />
         </FormField>
-        <FormField label={t("transactions.field.domain" as any)}>
+        <FormField label={t("transactions.field.domain")}>
           <input value={txn.domain} disabled className={monoInputClass} />
         </FormField>
-        <FormField label={t("transactions.field.category" as any)}>
+        <FormField label={t("transactions.field.category")}>
           <input value={txn.category} disabled className={inputClass} />
         </FormField>
-        <FormField label={t("transactions.field.type" as any)}>
+        <FormField label={t("transactions.field.type")}>
           <input value={txn.type} disabled className={inputClass} />
         </FormField>
-        <FormField label={t("transactions.field.subtype" as any)}>
+        <FormField label={t("transactions.field.subtype")}>
           <input value={txn.subtype} disabled className={inputClass} />
         </FormField>
-        <FormField label={t("transactions.field.provider" as any)}>
+        <FormField label={t("transactions.field.provider")}>
           <input value={txn.provider} disabled className={inputClass} />
         </FormField>
-        <FormField label={t("transactions.field.tag" as any)}>
+        <FormField label={t("transactions.field.tag")}>
           <input value={txn.tag} disabled className={inputClass} />
         </FormField>
-        <FormField label={t("transactions.field.user" as any)}>
+        <FormField label={t("transactions.field.user")}>
           <input value={txn.user} disabled className={inputClass} />
         </FormField>
       </FormSection>
 
       {/* Financial */}
-      <FormSection title={t("transactions.section.financial" as any)}>
-        <FormField label={t("transactions.field.amount" as any)}>
+      <FormSection title={t("transactions.section.financial")}>
+        <FormField label={t("transactions.field.amount")}>
           <input type="number" value={txn.amount} onChange={(e) => set("amount", Number(e.target.value))} className={monoInputClass} />
         </FormField>
-        <FormField label={t("transactions.field.currency" as any)}>
+        <FormField label={t("transactions.field.currency")}>
           <input value={txn.currency} onChange={(e) => set("currency", e.target.value)} className={inputClass} />
         </FormField>
-        <FormField label={t("transactions.field.payment" as any)}>
+        <FormField label={t("transactions.field.payment")}>
           <input value={txn.payment} disabled className={inputClass} />
         </FormField>
-        <FormField label={t("col.state" as any)}>
+        <FormField label={t("col.state")}>
           <input value={txn.state} disabled className={inputClass} />
         </FormField>
       </FormSection>

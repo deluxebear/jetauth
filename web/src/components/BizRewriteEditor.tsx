@@ -89,7 +89,7 @@ export function BizRewriteEditor({
           <button
             type="button"
             className="p-1 text-text-muted hover:text-danger hover:bg-danger/10 rounded"
-            title={t("rebac.rewrite.remove" as any) || "remove"}
+            title={t("rebac.rewrite.remove") || "remove"}
             onClick={onDelete}
           >
             <Trash2 className="w-3.5 h-3.5" />

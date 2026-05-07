@@ -27,7 +27,7 @@ export default function FloatingSaveBar({ visible, saving, onDiscard, onSave, me
         >
           <span className="inline-flex h-2 w-2 rounded-full bg-warning animate-pulse" />
           <span className="text-[13px] text-text-secondary whitespace-nowrap">
-            {message ?? t("common.unsavedChanges" as any)}
+            {message ?? t("common.unsavedChanges")}
           </span>
           <div className="h-5 w-px bg-border mx-1" />
           <button
@@ -37,7 +37,7 @@ export default function FloatingSaveBar({ visible, saving, onDiscard, onSave, me
             className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-[12px] font-medium text-text-secondary hover:bg-surface-2 disabled:opacity-50 transition-colors"
           >
             <Undo2 size={13} />
-            {t("common.discardChanges" as any)}
+            {t("common.discardChanges")}
           </button>
           <button
             type="button"

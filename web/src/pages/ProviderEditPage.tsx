@@ -134,64 +134,64 @@ const OAUTH_TYPE_CONFIG: Record<string, OAuthTypeConfig> = {
 // ── Dynamic label helpers ──
 
 function getClientIdLabel(cat: string, type: string, t: (k: string) => string): string {
-  if (cat === "OAuth" && type === "Apple") return t("providers.label.serviceIdIdentifier" as any);
-  if (cat === "Email") return t("providers.label.username" as any);
+  if (cat === "OAuth" && type === "Apple") return t("providers.label.serviceIdIdentifier");
+  if (cat === "Email") return t("providers.label.username");
   if (cat === "SMS") {
-    if (["Volc Engine SMS", "Amazon SNS", "Baidu Cloud SMS"].includes(type)) return t("providers.label.accessKey" as any);
-    if (type === "Huawei Cloud SMS") return t("providers.label.appKey" as any);
-    if (type === "UCloud SMS") return t("providers.label.publicKey" as any);
-    if (["Msg91 SMS", "Infobip SMS", "OSON SMS"].includes(type)) return t("providers.label.senderId" as any);
+    if (["Volc Engine SMS", "Amazon SNS", "Baidu Cloud SMS"].includes(type)) return t("providers.label.accessKey");
+    if (type === "Huawei Cloud SMS") return t("providers.label.appKey");
+    if (type === "UCloud SMS") return t("providers.label.publicKey");
+    if (["Msg91 SMS", "Infobip SMS", "OSON SMS"].includes(type)) return t("providers.label.senderId");
     return t("providers.field.clientId");
   }
   if (cat === "Captcha") {
-    if (type === "Aliyun Captcha") return t("providers.label.accessKey" as any);
-    return t("providers.label.siteKey" as any);
+    if (type === "Aliyun Captcha") return t("providers.label.accessKey");
+    return t("providers.label.siteKey");
   }
   if (cat === "Notification") {
-    if (type === "DingTalk") return t("providers.label.accessToken" as any);
-    if (type === "Webpush") return t("providers.label.publicKey" as any);
-    if (type === "Matrix") return t("providers.label.userId" as any);
-    if (type === "Twitter") return t("providers.label.consumerKey" as any);
-    if (type === "Viber") return t("providers.label.senderName" as any);
-    if (type === "CUCloud") return t("providers.label.accessKey" as any);
+    if (type === "DingTalk") return t("providers.label.accessToken");
+    if (type === "Webpush") return t("providers.label.publicKey");
+    if (type === "Matrix") return t("providers.label.userId");
+    if (type === "Twitter") return t("providers.label.consumerKey");
+    if (type === "Viber") return t("providers.label.senderName");
+    if (type === "CUCloud") return t("providers.label.accessKey");
     return t("providers.field.clientId");
   }
   return t("providers.field.clientId");
 }
 
 function getClientSecretLabel(cat: string, type: string, t: (k: string) => string): string {
-  if (cat === "OAuth" && type === "Apple") return t("providers.label.teamId" as any);
-  if (cat === "Storage" && type === "Google Cloud Storage") return t("providers.label.serviceAccountJson" as any);
+  if (cat === "OAuth" && type === "Apple") return t("providers.label.teamId");
+  if (cat === "Storage" && type === "Google Cloud Storage") return t("providers.label.serviceAccountJson");
   if (cat === "Email") {
-    if (["Azure ACS", "SendGrid", "Resend"].includes(type)) return t("providers.label.secretKey" as any);
-    return t("providers.label.password" as any);
+    if (["Azure ACS", "SendGrid", "Resend"].includes(type)) return t("providers.label.secretKey");
+    return t("providers.label.password");
   }
   if (cat === "SMS") {
-    if (["Volc Engine SMS", "Amazon SNS", "Baidu Cloud SMS", "OSON SMS"].includes(type)) return t("providers.label.secretAccessKey" as any);
-    if (type === "Huawei Cloud SMS") return t("providers.label.appSecret" as any);
-    if (type === "UCloud SMS") return t("providers.label.privateKey" as any);
-    if (type === "Msg91 SMS") return t("providers.label.authKey" as any);
-    if (type === "Infobip SMS") return t("providers.label.apiKey" as any);
+    if (["Volc Engine SMS", "Amazon SNS", "Baidu Cloud SMS", "OSON SMS"].includes(type)) return t("providers.label.secretAccessKey");
+    if (type === "Huawei Cloud SMS") return t("providers.label.appSecret");
+    if (type === "UCloud SMS") return t("providers.label.privateKey");
+    if (type === "Msg91 SMS") return t("providers.label.authKey");
+    if (type === "Infobip SMS") return t("providers.label.apiKey");
     return t("providers.field.clientSecret");
   }
   if (cat === "Captcha") {
-    if (type === "Aliyun Captcha") return t("providers.label.secretAccessKey" as any);
-    return t("providers.label.secretKey" as any);
+    if (type === "Aliyun Captcha") return t("providers.label.secretAccessKey");
+    return t("providers.label.secretKey");
   }
   if (cat === "Notification") {
-    if (["Lark", "Microsoft Teams", "WeCom"].includes(type)) return t("providers.label.webhookUrl" as any);
-    if (type === "Telegram") return t("providers.label.apiToken" as any);
-    if (type === "Bark") return t("providers.label.deviceKey" as any);
-    if (type === "Pushover") return t("providers.label.appToken" as any);
-    if (type === "Pushbullet") return t("providers.label.apiToken" as any);
-    if (type === "Slack") return t("providers.label.apiToken" as any);
-    if (type === "Discord") return t("providers.label.botToken" as any);
-    if (type === "DingTalk") return t("providers.label.secretKey" as any);
-    if (type === "Line") return t("providers.label.channelSecret" as any);
-    if (type === "Matrix") return t("providers.label.accessToken" as any);
-    if (type === "Webpush") return t("providers.label.privateKey" as any);
-    if (type === "Viber") return t("providers.label.appKey" as any);
-    if (type === "CUCloud") return t("providers.label.secretKey" as any);
+    if (["Lark", "Microsoft Teams", "WeCom"].includes(type)) return t("providers.label.webhookUrl");
+    if (type === "Telegram") return t("providers.label.apiToken");
+    if (type === "Bark") return t("providers.label.deviceKey");
+    if (type === "Pushover") return t("providers.label.appToken");
+    if (type === "Pushbullet") return t("providers.label.apiToken");
+    if (type === "Slack") return t("providers.label.apiToken");
+    if (type === "Discord") return t("providers.label.botToken");
+    if (type === "DingTalk") return t("providers.label.secretKey");
+    if (type === "Line") return t("providers.label.channelSecret");
+    if (type === "Matrix") return t("providers.label.accessToken");
+    if (type === "Webpush") return t("providers.label.privateKey");
+    if (type === "Viber") return t("providers.label.appKey");
+    if (type === "CUCloud") return t("providers.label.secretKey");
     return t("providers.field.clientSecret");
   }
   return t("providers.field.clientSecret");
@@ -232,26 +232,26 @@ function shouldShowClientId2(cat: string, type: string): boolean {
 }
 
 function getClientId2Label(cat: string, type: string, t: (k: string) => string): string {
-  if (cat === "OAuth" && type === "Apple") return t("providers.label.keyId" as any);
-  if (cat === "Email") return t("providers.label.fromAddress" as any);
-  if (type === "Aliyun Captcha") return t("providers.label.scene" as any);
-  if (type === "WeChat Pay") return t("providers.label.appId" as any);
-  if (type === "Adyen") return t("providers.label.merchantAccount" as any);
+  if (cat === "OAuth" && type === "Apple") return t("providers.label.keyId");
+  if (cat === "Email") return t("providers.label.fromAddress");
+  if (type === "Aliyun Captcha") return t("providers.label.scene");
+  if (type === "WeChat Pay") return t("providers.label.appId");
+  if (type === "Adyen") return t("providers.label.merchantAccount");
   // Notification
-  if (cat === "Notification" && type === "Twitter") return t("providers.label.accessToken" as any);
-  if (cat === "Notification" && type === "Reddit") return t("providers.label.username" as any);
-  if (cat === "Notification" && type === "CUCloud") return t("providers.label.accountId" as any);
-  return t("providers.label.clientId2" as any);
+  if (cat === "Notification" && type === "Twitter") return t("providers.label.accessToken");
+  if (cat === "Notification" && type === "Reddit") return t("providers.label.username");
+  if (cat === "Notification" && type === "CUCloud") return t("providers.label.accountId");
+  return t("providers.label.clientId2");
 }
 
 function getClientSecret2Label(cat: string, type: string, t: (k: string) => string): string {
-  if (cat === "OAuth" && type === "Apple") return t("providers.label.keyText" as any);
-  if (cat === "Email") return t("providers.label.fromName" as any);
-  if (type === "Aliyun Captcha") return t("providers.label.appKey" as any);
+  if (cat === "OAuth" && type === "Apple") return t("providers.label.keyText");
+  if (cat === "Email") return t("providers.label.fromName");
+  if (type === "Aliyun Captcha") return t("providers.label.appKey");
   // Notification
-  if (cat === "Notification" && type === "Twitter") return t("providers.label.accessTokenSecret" as any);
-  if (cat === "Notification" && type === "Reddit") return t("providers.label.password" as any);
-  return t("providers.label.clientSecret2" as any);
+  if (cat === "Notification" && type === "Twitter") return t("providers.label.accessTokenSecret");
+  if (cat === "Notification" && type === "Reddit") return t("providers.label.password");
+  return t("providers.label.clientSecret2");
 }
 
 function shouldHideClientSecret2(cat: string, type: string): boolean {
@@ -266,8 +266,8 @@ function getAppIdLabel(cat: string, type: string, t?: (k: string) => string): st
   if (type === "Infoflow") return "Agent ID";
   if (type === "AzureADB2C") return "User Flow";
   // SMS
-  if (type === "Twilio SMS") return t ? t("providers.label.senderNumber" as any) : "Sender Number";
-  if (cat === "SMS" && type === "Azure ACS") return t ? t("providers.label.senderNumber" as any) : "Sender Number";
+  if (type === "Twilio SMS") return t ? t("providers.label.senderNumber") : "Sender Number";
+  if (cat === "SMS" && type === "Azure ACS") return t ? t("providers.label.senderNumber") : "Sender Number";
   if (type === "Tencent Cloud SMS") return "App ID";
   if (type === "Volc Engine SMS") return "SMS Account";
   if (type === "Huawei Cloud SMS") return "Channel No.";
@@ -277,11 +277,11 @@ function getAppIdLabel(cat: string, type: string, t?: (k: string) => string): st
   if (type === "UCloud SMS") return "Project Id";
   // Email — SUBMAIL uses SMTP, no appId needed
   // Notification
-  if (cat === "Notification" && type === "Line") return t ? t("providers.label.accessToken" as any) : "Access Token";
-  if (cat === "Notification" && type === "Matrix") return t ? t("providers.label.roomId" as any) : "Room ID";
-  if (cat === "Notification" && type === "Rocket Chat") return t ? t("providers.field.endpoint" as any) : "Endpoint";
-  if (cat === "Notification" && type === "Viber") return t ? t("providers.label.webhookUrl" as any) : "Webhook URL";
-  if (cat === "Notification" && type === "CUCloud") return t ? t("providers.label.topicName" as any) : "Topic Name";
+  if (cat === "Notification" && type === "Line") return t ? t("providers.label.accessToken") : "Access Token";
+  if (cat === "Notification" && type === "Matrix") return t ? t("providers.label.roomId") : "Room ID";
+  if (cat === "Notification" && type === "Rocket Chat") return t ? t("providers.field.endpoint") : "Endpoint";
+  if (cat === "Notification" && type === "Viber") return t ? t("providers.label.webhookUrl") : "Webhook URL";
+  if (cat === "Notification" && type === "CUCloud") return t ? t("providers.label.topicName") : "Topic Name";
   return null;
 }
 
@@ -647,7 +647,7 @@ export default function ProviderEditPage() {
     try {
       const res = await ProvBackend.getProvider(owner!, name!);
       if (res.status === "ok" && res.data) { setProv(res.data); setOriginalJson(JSON.stringify(res.data)); }
-    } catch (e: any) { modal.toast(e?.message || t("common.saveFailed" as any), "error"); }
+    } catch (e: any) { modal.toast(e?.message || t("common.saveFailed"), "error"); }
     finally { setLoading(false); }
   }, [owner, name, isNew]);
 
@@ -722,15 +722,15 @@ export default function ProviderEditPage() {
         ? await ProvBackend.addProvider(prov as Provider)
         : await ProvBackend.updateProvider(owner!, name!, prov as Provider);
       if (res.status === "ok") {
-        modal.toast(t("common.saveSuccess" as any));
+        modal.toast(t("common.saveSuccess"));
         setSaved(true);
         setOriginalJson(JSON.stringify(prov));
         setIsAddMode(false);
         invalidateList();
       } else {
-        modal.toast(friendlyError(res.msg, t) || t("common.saveFailed" as any), "error");
+        modal.toast(friendlyError(res.msg, t) || t("common.saveFailed"), "error");
       }
-    } catch (e: any) { modal.toast(e?.message || t("common.saveFailed" as any), "error"); }
+    } catch (e: any) { modal.toast(e?.message || t("common.saveFailed"), "error"); }
     finally { setSaving(false); }
   };
 
@@ -741,14 +741,14 @@ export default function ProviderEditPage() {
         ? await ProvBackend.addProvider(prov as Provider)
         : await ProvBackend.updateProvider(owner!, name!, prov as Provider);
       if (res.status === "ok") {
-        modal.toast(t("common.saveSuccess" as any));
+        modal.toast(t("common.saveSuccess"));
         invalidateList();
         navigate("/providers");
       } else {
-        modal.toast(friendlyError(res.msg, t) || t("common.saveFailed" as any), "error");
+        modal.toast(friendlyError(res.msg, t) || t("common.saveFailed"), "error");
       }
     } catch (e: any) {
-      modal.toast(e?.message || t("common.saveFailed" as any), "error");
+      modal.toast(e?.message || t("common.saveFailed"), "error");
     } finally { setSaving(false); }
   };
 
@@ -768,10 +768,10 @@ export default function ProviderEditPage() {
           invalidateList();
           navigate("/providers");
         } else {
-          modal.toast(res.msg || t("common.deleteFailed" as any), "error");
+          modal.toast(res.msg || t("common.deleteFailed"), "error");
         }
       } catch (e: any) {
-        modal.toast(e?.message || t("common.deleteFailed" as any), "error");
+        modal.toast(e?.message || t("common.deleteFailed"), "error");
       }
     });
   };
@@ -796,7 +796,7 @@ export default function ProviderEditPage() {
     const hideClientId = shouldHideClientId(category, type);
     const hideClientSecret = shouldHideClientSecret(category, type);
     return (
-      <FormSection title={t("providers.section.credentials" as any)}>
+      <FormSection title={t("providers.section.credentials")}>
         {!hideClientId && (
           <FormField label={getClientIdLabel(category, type, t)}>
             <input value={String(prov.clientId ?? "")} onChange={(e) => set("clientId", e.target.value)} className={monoInputClass} />
@@ -919,7 +919,7 @@ export default function ProviderEditPage() {
       <div className="col-span-full">
         <button onClick={() => setShowGuide(!showGuide)} className="inline-flex items-center gap-1.5 text-[12px] text-accent hover:text-accent-hover transition-colors">
           <HelpCircle size={13} />
-          <span>{t("providers.notif.guideToggle" as any)}</span>
+          <span>{t("providers.notif.guideToggle")}</span>
           <ChevronRight size={12} className={`transition-transform duration-200 ${showGuide ? "rotate-90" : ""}`} />
         </button>
         {showGuide && (
@@ -959,7 +959,7 @@ export default function ProviderEditPage() {
           </FormField>
         )}
         {cfg.showScopesOverride && (
-          <FormField label={t("providers.field.scopes" as any)} help={t("providers.oauth.scopesHint" as any)} span="full">
+          <FormField label={t("providers.field.scopes")} help={t("providers.oauth.scopesHint")} span="full">
             <input
               value={String(prov.scopes ?? "")}
               onChange={(e) => set("scopes", e.target.value)}
@@ -980,35 +980,35 @@ export default function ProviderEditPage() {
   const renderOAuthFields = () => (
     <>
       {(getGuide() || OAUTH_TYPE_CONFIG[type]) && !isCustomOAuth && (
-        <FormSection title={t("providers.section.oauthConfig" as any)}>
+        <FormSection title={t("providers.section.oauthConfig")}>
           {renderGuide()}
           {renderOAuthTypeConfig()}
         </FormSection>
       )}
       {isCustomOAuth && (
         <>
-          <FormSection title={t("providers.section.customOAuth" as any)}>
+          <FormSection title={t("providers.section.customOAuth")}>
             {renderGuide()}
-            <FormField label={t("providers.field.customAuthUrl" as any)} span="full">
+            <FormField label={t("providers.field.customAuthUrl")} span="full">
               <input value={String(prov.customAuthUrl ?? "")} onChange={(e) => set("customAuthUrl", e.target.value)} className={inputClass} placeholder="https://example.com/oauth/authorize" />
             </FormField>
-            <FormField label={t("providers.field.customTokenUrl" as any)} span="full">
+            <FormField label={t("providers.field.customTokenUrl")} span="full">
               <input value={String(prov.customTokenUrl ?? "")} onChange={(e) => set("customTokenUrl", e.target.value)} className={inputClass} placeholder="https://example.com/oauth/token" />
             </FormField>
-            <FormField label={t("providers.field.scopes" as any)} span="full">
+            <FormField label={t("providers.field.scopes")} span="full">
               <input value={String(prov.scopes ?? "")} onChange={(e) => set("scopes", e.target.value)} className={inputClass} placeholder="openid profile email" />
             </FormField>
-            <FormField label={t("providers.field.customUserInfoUrl" as any)} span="full">
+            <FormField label={t("providers.field.customUserInfoUrl")} span="full">
               <input value={String(prov.customUserInfoUrl ?? "")} onChange={(e) => set("customUserInfoUrl", e.target.value)} className={inputClass} placeholder="https://example.com/api/userinfo" />
             </FormField>
-            <FormField label={t("providers.field.customLogoutUrl" as any)} span="full">
+            <FormField label={t("providers.field.customLogoutUrl")} span="full">
               <input value={String(prov.customLogoutUrl ?? "")} onChange={(e) => set("customLogoutUrl", e.target.value)} className={inputClass} />
             </FormField>
-            <FormField label={t("providers.field.enablePkce" as any)}>
+            <FormField label={t("providers.field.enablePkce")}>
               <Switch checked={!!prov.enablePkce} onChange={(v) => set("enablePkce", v)} />
             </FormField>
           </FormSection>
-          <FormSection title={t("providers.section.userMapping" as any)}>
+          <FormSection title={t("providers.section.userMapping")}>
             {OAUTH_MAPPING_FIELDS.map((field) => (
               <FormField key={field} label={t(`providers.mapping.${field}` as any)} required={OAUTH_MAPPING_REQUIRED.includes(field)}>
                 <input
@@ -1023,13 +1023,13 @@ export default function ProviderEditPage() {
         </>
       )}
       {category === "OAuth" && (
-        <FormSection title={t("providers.field.customLogo" as any)}>
+        <FormSection title={t("providers.field.customLogo")}>
           <FormField label="" span="full">
             <p className="text-[12px] text-text-muted">
-              {t("providers.section.customLogo.desc" as any)}
+              {t("providers.section.customLogo.desc")}
             </p>
           </FormField>
-          <FormField label={t("providers.field.customLogoLight" as any)}>
+          <FormField label={t("providers.field.customLogoLight")}>
             <ImageUrlInput
               value={String(prov.customLogo ?? "")}
               onChange={(v) => set("customLogo", v)}
@@ -1040,7 +1040,7 @@ export default function ProviderEditPage() {
               placeholder="https://… or /providers/custom.svg"
             />
           </FormField>
-          <FormField label={t("providers.field.customLogoDark" as any)}>
+          <FormField label={t("providers.field.customLogoDark")}>
             <ImageUrlInput
               value={String(prov.customLogoDark ?? "")}
               onChange={(v) => set("customLogoDark", v)}
@@ -1048,10 +1048,10 @@ export default function ProviderEditPage() {
               tag={`provider-logo-${String(prov.name ?? "provider")}-dark`}
               accept="image/png,image/svg+xml,image/jpeg,image/webp"
               previewClass="hidden"
-              placeholder={t("providers.field.customLogoDark.placeholder" as any)}
+              placeholder={t("providers.field.customLogoDark.placeholder")}
             />
           </FormField>
-          <FormField label={t("providers.field.customLogo.preview" as any)} span="full">
+          <FormField label={t("providers.field.customLogo.preview")} span="full">
             <LogoPreview
               light={String(prov.customLogo ?? "")}
               dark={String(prov.customLogoDark ?? "")}
@@ -1084,12 +1084,12 @@ export default function ProviderEditPage() {
       });
       const data = await res.json();
       if (data.status === "ok") {
-        modal.toast(testSmtp ? t("providers.email.smtpSuccess" as any) : t("providers.email.sendSuccess" as any));
+        modal.toast(testSmtp ? t("providers.email.smtpSuccess") : t("providers.email.sendSuccess"));
       } else {
-        modal.toast(data.msg || t("common.saveFailed" as any), "error");
+        modal.toast(data.msg || t("common.saveFailed"), "error");
       }
     } catch (e: any) {
-      modal.toast(e?.message || t("common.saveFailed" as any), "error");
+      modal.toast(e?.message || t("common.saveFailed"), "error");
     }
   };
 
@@ -1106,7 +1106,7 @@ export default function ProviderEditPage() {
     <>
       {type === "Custom HTTP Email" ? (
         <>
-          <FormSection title={t("providers.section.emailConfig" as any)}>
+          <FormSection title={t("providers.section.emailConfig")}>
             {renderGuide()}
             <FormField label="" span="full">
               <PresetPicker onPick={(p) => {
@@ -1120,7 +1120,7 @@ export default function ProviderEditPage() {
             <FormField label={t("providers.field.endpoint")} span="full">
               <input value={String(prov.endpoint ?? "")} onChange={(e) => set("endpoint", e.target.value)} className={inputClass} placeholder="https://api.example.com/send" />
             </FormField>
-            <FormField label={t("providers.field.method" as any)}>
+            <FormField label={t("providers.field.method")}>
               <SimpleSelect value={String(prov.method ?? "POST")} options={[
                 { value: "GET", label: "GET" },
                 { value: "POST", label: "POST" },
@@ -1129,19 +1129,19 @@ export default function ProviderEditPage() {
                 { value: "DELETE", label: "DELETE" },
               ]} onChange={(v) => set("method", v)} />
             </FormField>
-            <FormField label={t("providers.httpEmail.contentType" as any)}>
+            <FormField label={t("providers.httpEmail.contentType")}>
               <SimpleSelect value={String(prov.contentType ?? "application/json")} options={[
                 { value: "application/json", label: "application/json" },
                 { value: "application/x-www-form-urlencoded", label: "application/x-www-form-urlencoded" },
                 { value: "text/plain", label: "text/plain" },
               ]} onChange={(v) => set("contentType", v)} />
             </FormField>
-            <FormField label={t("providers.field.enableProxy" as any)}>
+            <FormField label={t("providers.field.enableProxy")}>
               <Switch checked={!!prov.enableProxy} onChange={(v) => set("enableProxy", v)} />
             </FormField>
           </FormSection>
 
-          <FormSection title={t("providers.section.httpHeaders" as any)}>
+          <FormSection title={t("providers.section.httpHeaders")}>
             <FormField label="" span="full">
               <HttpHeadersEditor
                 headers={(prov.httpHeaders as Record<string, string>) ?? {}}
@@ -1150,7 +1150,7 @@ export default function ProviderEditPage() {
             </FormField>
           </FormSection>
 
-          <FormSection title={t("providers.httpEmail.bodyTemplate" as any)}>
+          <FormSection title={t("providers.httpEmail.bodyTemplate")}>
             <FormField label="" span="full">
               <BodyTemplateEditor
                 value={String(prov.bodyTemplate ?? "")}
@@ -1160,22 +1160,22 @@ export default function ProviderEditPage() {
             </FormField>
           </FormSection>
 
-          <FormSection title={t("providers.httpEmail.senderIdentity" as any)}>
-            <FormField label={t("providers.field.fromAddress" as any)}>
+          <FormSection title={t("providers.httpEmail.senderIdentity")}>
+            <FormField label={t("providers.field.fromAddress")}>
               <input value={String(prov.clientId2 ?? "")} onChange={(e) => set("clientId2", e.target.value)} className={inputClass} placeholder="noreply@yourdomain.com" />
             </FormField>
-            <FormField label={t("providers.field.fromName" as any)}>
+            <FormField label={t("providers.field.fromName")}>
               <input value={String(prov.clientSecret2 ?? "")} onChange={(e) => set("clientSecret2", e.target.value)} className={inputClass} placeholder="JetAuth" />
             </FormField>
           </FormSection>
         </>
       ) : (
-        <FormSection title={t("providers.section.emailConfig" as any)}>
+        <FormSection title={t("providers.section.emailConfig")}>
           {renderGuide()}
           {/* Host: SMTP + Azure ACS + SendGrid (not Resend) */}
           {type !== "Resend" && (
             <FormField label={type === "Azure ACS" ? t("providers.field.endpoint") : t("providers.field.host")}>
-              <input value={String(prov.host ?? "")} onChange={(e) => set("host", e.target.value)} className={inputClass} placeholder={isSmtpEmail ? t("help.placeholder.smtpHost" as any) : ""} />
+              <input value={String(prov.host ?? "")} onChange={(e) => set("host", e.target.value)} className={inputClass} placeholder={isSmtpEmail ? t("help.placeholder.smtpHost") : ""} />
             </FormField>
           )}
           {/* Port + SSL: SMTP only */}
@@ -1184,14 +1184,14 @@ export default function ProviderEditPage() {
               <FormField label={t("providers.field.port")}>
                 <input type="number" value={String(prov.port ?? 465)} onChange={(e) => set("port", Number(e.target.value))} className={monoInputClass} />
               </FormField>
-              <FormField label={t("providers.field.sslMode" as any)}>
+              <FormField label={t("providers.field.sslMode")}>
                 <SimpleSelect value={String(prov.sslMode ?? "Auto")} options={[
-                  { value: "Auto", label: t("providers.sslMode.auto" as any) },
-                  { value: "Enable", label: t("providers.state.enabled" as any) },
-                  { value: "Disable", label: t("providers.state.disabled" as any) },
+                  { value: "Auto", label: t("providers.sslMode.auto") },
+                  { value: "Enable", label: t("providers.state.enabled") },
+                  { value: "Disable", label: t("providers.state.disabled") },
                 ]} onChange={(v) => set("sslMode", v)} />
               </FormField>
-              <FormField label={t("providers.field.enableProxy" as any)}>
+              <FormField label={t("providers.field.enableProxy")}>
                 <Switch checked={!!prov.enableProxy} onChange={(v) => set("enableProxy", v)} />
               </FormField>
             </>
@@ -1202,21 +1202,21 @@ export default function ProviderEditPage() {
               <input value={String(prov.endpoint ?? "")} onChange={(e) => set("endpoint", e.target.value)} className={inputClass} />
             </FormField>
           )}
-          <FormField label={t("providers.field.emailTitle" as any)} span="full">
+          <FormField label={t("providers.field.emailTitle")} span="full">
             <input value={String(prov.title ?? "")} onChange={(e) => set("title", e.target.value)} className={inputClass} />
           </FormField>
         </FormSection>
       )}
 
       {/* Email Content — editor + preview */}
-      <FormSection title={t("providers.field.emailContent" as any)}>
+      <FormSection title={t("providers.field.emailContent")}>
         <div className="col-span-2 space-y-2">
           <div className="flex gap-2">
             <button onClick={() => set("content", DEFAULT_EMAIL_TEXT)} className="rounded-lg border border-border px-2.5 py-1 text-[12px] font-medium text-text-secondary hover:bg-surface-2 transition-colors">
-              {t("providers.email.resetText" as any)}
+              {t("providers.email.resetText")}
             </button>
             <button onClick={() => set("content", DEFAULT_EMAIL_HTML)} className="rounded-lg bg-accent px-2.5 py-1 text-[12px] font-medium text-white hover:bg-accent-hover transition-colors">
-              {t("providers.email.resetHtml" as any)}
+              {t("providers.email.resetHtml")}
             </button>
           </div>
           <div className="grid grid-cols-2 gap-4">
@@ -1229,14 +1229,14 @@ export default function ProviderEditPage() {
       </FormSection>
 
       {/* Invitation Email Content — editor + preview */}
-      <FormSection title={t("providers.email.invitationContent" as any)}>
+      <FormSection title={t("providers.email.invitationContent")}>
         <div className="col-span-2 space-y-2">
           <div className="flex gap-2">
             <button onClick={() => set("metadata", DEFAULT_INVITATION_TEXT)} className="rounded-lg border border-border px-2.5 py-1 text-[12px] font-medium text-text-secondary hover:bg-surface-2 transition-colors">
-              {t("providers.email.resetText" as any)}
+              {t("providers.email.resetText")}
             </button>
             <button onClick={() => set("metadata", DEFAULT_INVITATION_HTML)} className="rounded-lg bg-accent px-2.5 py-1 text-[12px] font-medium text-white hover:bg-accent-hover transition-colors">
-              {t("providers.email.resetHtml" as any)}
+              {t("providers.email.resetHtml")}
             </button>
           </div>
           <div className="grid grid-cols-2 gap-4">
@@ -1249,13 +1249,13 @@ export default function ProviderEditPage() {
       </FormSection>
 
       {/* Test Email */}
-      <FormSection title={t("providers.email.testEmail" as any)}>
-        <FormField label={t("providers.field.receiver" as any)} span="full">
+      <FormSection title={t("providers.email.testEmail")}>
+        <FormField label={t("providers.field.receiver")} span="full">
           <div className="flex gap-2 items-center">
-            <input value={String(prov.receiver ?? "")} onChange={(e) => set("receiver", e.target.value)} className={`${inputClass} flex-1`} placeholder={t("providers.help.testReceiver" as any)} />
+            <input value={String(prov.receiver ?? "")} onChange={(e) => set("receiver", e.target.value)} className={`${inputClass} flex-1`} placeholder={t("providers.help.testReceiver")} />
             {!["Azure ACS", "SendGrid", "Resend"].includes(type) && (
               <button onClick={() => sendTestEmail(true)} className="rounded-lg border border-border px-3 py-2 text-[12px] font-medium text-text-secondary hover:bg-surface-2 transition-colors whitespace-nowrap">
-                {t("providers.email.testSmtp" as any)}
+                {t("providers.email.testSmtp")}
               </button>
             )}
             <button
@@ -1263,7 +1263,7 @@ export default function ProviderEditPage() {
               disabled={!prov.receiver || !String(prov.receiver).includes("@")}
               className="rounded-lg bg-accent px-3 py-2 text-[12px] font-medium text-white hover:bg-accent-hover disabled:opacity-50 transition-colors whitespace-nowrap"
             >
-              {t("providers.email.sendTest" as any)}
+              {t("providers.email.sendTest")}
             </button>
           </div>
         </FormField>
@@ -1278,11 +1278,11 @@ export default function ProviderEditPage() {
   const smsNeedsSignName = ["Aliyun SMS", "Baidu Cloud SMS", "Huawei Cloud SMS", "OSON SMS", "SmsBao SMS", "Tencent Cloud SMS", "UCloud SMS", "Volc Engine SMS"].includes(type);
 
   const renderSmsFields = () => (
-    <FormSection title={t("providers.section.smsConfig" as any)}>
+    <FormSection title={t("providers.section.smsConfig")}>
       {renderGuide()}
       {type === "Mock SMS" && (
         <div className="col-span-2 rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-[12px] text-amber-800 whitespace-pre-line leading-relaxed">
-          {t("providers.sms.mockNotice" as any)}
+          {t("providers.sms.mockNotice")}
         </div>
       )}
       {type === "Custom HTTP SMS" ? (
@@ -1290,14 +1290,14 @@ export default function ProviderEditPage() {
           <FormField label={t("providers.field.endpoint")} span="full">
             <input value={String(prov.endpoint ?? "")} onChange={(e) => set("endpoint", e.target.value)} className={inputClass} placeholder="https://example.com/send-sms" />
           </FormField>
-          <FormField label={t("providers.field.method" as any)}>
+          <FormField label={t("providers.field.method")}>
             <SimpleSelect value={String(prov.method ?? "GET")} options={[{ value: "GET", label: "GET" }, { value: "POST", label: "POST" }]} onChange={(v) => set("method", v)} />
           </FormField>
-          <FormField label={t("providers.field.enableProxy" as any)}>
+          <FormField label={t("providers.field.enableProxy")}>
             <Switch checked={!!prov.enableProxy} onChange={(v) => set("enableProxy", v)} />
           </FormField>
           {/* HTTP Headers */}
-          <FormField label={t("providers.section.httpHeaders" as any)} span="full">
+          <FormField label={t("providers.section.httpHeaders")} span="full">
             <HttpHeadersEditor
               headers={(prov.httpHeaders as Record<string, string>) ?? {}}
               onChange={(h) => set("httpHeaders", h)}
@@ -1318,11 +1318,11 @@ export default function ProviderEditPage() {
       ) : type !== "Mock SMS" ? (
         <>
           {smsNeedsSignName && (
-            <FormField label={t("providers.field.signName" as any)}>
+            <FormField label={t("providers.field.signName")}>
               <input value={String(prov.signName ?? "")} onChange={(e) => set("signName", e.target.value)} className={inputClass} />
             </FormField>
           )}
-          <FormField label={t("providers.field.templateCode" as any)}>
+          <FormField label={t("providers.field.templateCode")}>
             <input value={String(prov.templateCode ?? "")} onChange={(e) => set("templateCode", e.target.value)} className={monoInputClass} />
           </FormField>
         </>
@@ -1331,27 +1331,27 @@ export default function ProviderEditPage() {
   );
 
   const renderStorageFields = () => (
-    <FormSection title={t("providers.section.storageConfig" as any)}>
+    <FormSection title={t("providers.section.storageConfig")}>
       {renderGuide()}
       <FormField label={t("providers.field.endpoint")}>
-        <input value={String(prov.endpoint ?? "")} onChange={(e) => set("endpoint", e.target.value)} className={inputClass} placeholder={t("help.placeholder.s3Endpoint" as any)} />
+        <input value={String(prov.endpoint ?? "")} onChange={(e) => set("endpoint", e.target.value)} className={inputClass} placeholder={t("help.placeholder.s3Endpoint")} />
       </FormField>
       {type !== "Local File System" && (
-        <FormField label={t("providers.field.intranetEndpoint" as any)}>
+        <FormField label={t("providers.field.intranetEndpoint")}>
           <input value={String(prov.intranetEndpoint ?? "")} onChange={(e) => set("intranetEndpoint", e.target.value)} className={inputClass} />
         </FormField>
       )}
       <FormField label={t("providers.field.bucket")}>
         <input value={String(prov.bucket ?? "")} onChange={(e) => set("bucket", e.target.value)} className={monoInputClass} />
       </FormField>
-      <FormField label={t("providers.field.pathPrefix" as any)}>
+      <FormField label={t("providers.field.pathPrefix")}>
         <input value={String(prov.pathPrefix ?? "")} onChange={(e) => set("pathPrefix", e.target.value)} className={monoInputClass} placeholder="e.g., /uploads" />
       </FormField>
-      <FormField label={t("providers.field.domain")} help={t("help.customDomain" as any)}>
+      <FormField label={t("providers.field.domain")} help={t("help.customDomain")}>
         <input value={String(prov.domain ?? "")} onChange={(e) => set("domain", e.target.value)} className={inputClass} />
       </FormField>
       <FormField label={t("providers.field.region")}>
-        <input value={String(prov.region ?? "")} onChange={(e) => set("region", e.target.value)} className={monoInputClass} placeholder={t("help.placeholder.s3Region" as any)} />
+        <input value={String(prov.region ?? "")} onChange={(e) => set("region", e.target.value)} className={monoInputClass} placeholder={t("help.placeholder.s3Region")} />
       </FormField>
     </FormSection>
   );
@@ -1364,7 +1364,7 @@ export default function ProviderEditPage() {
       if (!res.ok) throw new Error("Failed to fetch");
       const xml = await res.text();
       set("metadata", xml);
-      modal.toast(t("common.saveSuccess" as any));
+      modal.toast(t("common.saveSuccess"));
     } catch (e: any) {
       modal.toast(e?.message || "Failed to fetch metadata", "error");
     } finally { setSamlMetadataLoading(false); }
@@ -1381,9 +1381,9 @@ export default function ProviderEditPage() {
       set("idP", cert);
       set("endpoint", endpoint);
       set("issuerUrl", issuerUrl);
-      modal.toast(t("providers.saml.parseSuccess" as any));
+      modal.toast(t("providers.saml.parseSuccess"));
     } catch {
-      modal.toast(t("providers.saml.parseFailed" as any), "error");
+      modal.toast(t("providers.saml.parseFailed"), "error");
     }
   };
 
@@ -1391,18 +1391,18 @@ export default function ProviderEditPage() {
 
   const renderSamlFields = () => (
     <>
-      <FormSection title={t("providers.section.samlConfig" as any)}>
+      <FormSection title={t("providers.section.samlConfig")}>
         {renderGuide()}
-        <FormField label={t("providers.field.enableSignAuthnRequest" as any)}>
+        <FormField label={t("providers.field.enableSignAuthnRequest")}>
           <Switch checked={!!prov.enableSignAuthnRequest} onChange={(v) => set("enableSignAuthnRequest", v)} />
         </FormField>
-        <FormField label={t("providers.field.emailRegex" as any)}>
+        <FormField label={t("providers.field.emailRegex")}>
           <input value={String(prov.emailRegex ?? "")} onChange={(e) => set("emailRegex", e.target.value)} className={monoInputClass} placeholder="e.g., ^.*@example\\.com$" />
         </FormField>
       </FormSection>
-      <FormSection title={t("providers.section.samlMetadata" as any)}>
+      <FormSection title={t("providers.section.samlMetadata")}>
         {/* Metadata URL fetch */}
-        <FormField label={t("providers.saml.metadataUrl" as any)} span="full">
+        <FormField label={t("providers.saml.metadataUrl")} span="full">
           <div className="flex gap-2">
             <input value={samlMetadataUrl} onChange={(e) => setSamlMetadataUrl(e.target.value)} className={`${inputClass} flex-1`} placeholder="https://idp.example.com/metadata" />
             <button
@@ -1410,43 +1410,43 @@ export default function ProviderEditPage() {
               disabled={samlMetadataLoading || !samlMetadataUrl}
               className="rounded-lg bg-accent px-3 py-2 text-[12px] font-medium text-white hover:bg-accent-hover disabled:opacity-50 transition-colors whitespace-nowrap"
             >
-              {samlMetadataLoading ? t("common.loading" as any) : t("providers.saml.request" as any)}
+              {samlMetadataLoading ? t("common.loading") : t("providers.saml.request")}
             </button>
           </div>
         </FormField>
         {/* Metadata XML */}
-        <FormField label={t("providers.field.metadata" as any)} span="full">
+        <FormField label={t("providers.field.metadata")} span="full">
           <textarea value={String(prov.metadata ?? "")} onChange={(e) => set("metadata", e.target.value)} rows={6} className={`${monoInputClass} text-[11px]`} placeholder="Paste SAML metadata XML here..." />
         </FormField>
         <div className="col-span-2">
           <button onClick={parseSamlMetadata} className="rounded-lg bg-accent px-3 py-1.5 text-[12px] font-medium text-white hover:bg-accent-hover transition-colors">
-            {t("providers.saml.parse" as any)}
+            {t("providers.saml.parse")}
           </button>
         </div>
         {/* Parsed fields */}
         <FormField label={t("providers.field.endpoint")} span="full">
           <input value={String(prov.endpoint ?? "")} onChange={(e) => set("endpoint", e.target.value)} className={inputClass} placeholder="SAML 2.0 Endpoint (HTTP)" />
         </FormField>
-        <FormField label={t("providers.field.idpCert" as any)} span="full">
+        <FormField label={t("providers.field.idpCert")} span="full">
           <input value={String(prov.idP ?? "")} onChange={(e) => set("idP", e.target.value)} className={monoInputClass} />
         </FormField>
-        <FormField label={t("providers.field.issuerUrl" as any)} span="full">
+        <FormField label={t("providers.field.issuerUrl")} span="full">
           <input value={String(prov.issuerUrl ?? "")} onChange={(e) => set("issuerUrl", e.target.value)} className={inputClass} />
         </FormField>
         {/* SP ACS URL (readonly + copy) */}
-        <FormField label={t("providers.saml.spAcsUrl" as any)} span="full">
+        <FormField label={t("providers.saml.spAcsUrl")} span="full">
           <div className="flex gap-2">
             <input value={spAcsUrl} readOnly className={`${inputClass} flex-1 bg-surface-2 cursor-default`} />
-            <button onClick={() => { navigator.clipboard.writeText(spAcsUrl); modal.toast(t("common.copySuccess" as any)); }} className="rounded-lg border border-border p-2 text-text-muted hover:text-accent hover:bg-accent/10 transition-colors">
+            <button onClick={() => { navigator.clipboard.writeText(spAcsUrl); modal.toast(t("common.copySuccess")); }} className="rounded-lg border border-border p-2 text-text-muted hover:text-accent hover:bg-accent/10 transition-colors">
               <Copy size={14} />
             </button>
           </div>
         </FormField>
         {/* SP Entity ID (readonly + copy) */}
-        <FormField label={t("providers.saml.spEntityId" as any)} span="full">
+        <FormField label={t("providers.saml.spEntityId")} span="full">
           <div className="flex gap-2">
             <input value={spAcsUrl} readOnly className={`${inputClass} flex-1 bg-surface-2 cursor-default`} />
-            <button onClick={() => { navigator.clipboard.writeText(spAcsUrl); modal.toast(t("common.copySuccess" as any)); }} className="rounded-lg border border-border p-2 text-text-muted hover:text-accent hover:bg-accent/10 transition-colors">
+            <button onClick={() => { navigator.clipboard.writeText(spAcsUrl); modal.toast(t("common.copySuccess")); }} className="rounded-lg border border-border p-2 text-text-muted hover:text-accent hover:bg-accent/10 transition-colors">
               <Copy size={14} />
             </button>
           </div>
@@ -1456,29 +1456,29 @@ export default function ProviderEditPage() {
   );
 
   const renderPaymentFields = () => (
-    <FormSection title={t("providers.section.paymentConfig" as any)}>
+    <FormSection title={t("providers.section.paymentConfig")}>
       {renderGuide()}
       {/* Dummy — info notice */}
       {type === "Dummy" && (
         <div className="col-span-2 rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-[12px] text-amber-800 whitespace-pre-line leading-relaxed">
-          {t("providers.payment.dummyNotice" as any)}
+          {t("providers.payment.dummyNotice")}
         </div>
       )}
       {/* Cert — Alipay, WeChat Pay */}
       {["Alipay", "WeChat Pay"].includes(type) && (
-        <FormField label={t("providers.field.cert" as any)}>
+        <FormField label={t("providers.field.cert")}>
           <input value={String(prov.cert ?? "")} onChange={(e) => set("cert", e.target.value)} className={monoInputClass} />
         </FormField>
       )}
       {/* Root cert — Alipay only (stored in metadata) */}
       {type === "Alipay" && (
-        <FormField label={t("providers.payment.rootCert" as any)}>
+        <FormField label={t("providers.payment.rootCert")}>
           <input value={String(prov.metadata ?? "")} onChange={(e) => set("metadata", e.target.value)} className={monoInputClass} />
         </FormField>
       )}
       {/* Host — GC, FastSpring */}
       {["GC", "FastSpring"].includes(type) && (
-        <FormField label={t("providers.field.host")} help={t("help.webhookUrl" as any)}>
+        <FormField label={t("providers.field.host")} help={t("help.webhookUrl")}>
           <input value={String(prov.host ?? "")} onChange={(e) => set("host", e.target.value)} className={inputClass} />
         </FormField>
       )}
@@ -1497,7 +1497,7 @@ export default function ProviderEditPage() {
         setCaptchaPreviewOpen(true);
       } else if (captcha.type && captcha.type !== "none") {
         // Third-party captcha — show notice
-        modal.toast(t("providers.captcha.thirdPartyNotice" as any));
+        modal.toast(t("providers.captcha.thirdPartyNotice"));
       }
     } catch (e: any) {
       modal.toast(e?.message || "Failed to load captcha", "error");
@@ -1514,14 +1514,14 @@ export default function ProviderEditPage() {
       const res = await fetch("/api/verify-captcha", { method: "POST", credentials: "include", body: form });
       const data = await res.json();
       if (data.status === "ok" && data.data === true) {
-        modal.toast(t("providers.captcha.verifySuccess" as any));
+        modal.toast(t("providers.captcha.verifySuccess"));
         setCaptchaPreviewOpen(false);
       } else {
-        modal.toast(data.msg || t("providers.captcha.verifyFailed" as any), "error");
+        modal.toast(data.msg || t("providers.captcha.verifyFailed"), "error");
         loadCaptchaPreview(); // Reload on failure
       }
     } catch {
-      modal.toast(t("providers.captcha.verifyFailed" as any), "error");
+      modal.toast(t("providers.captcha.verifyFailed"), "error");
     }
   };
 
@@ -1536,14 +1536,14 @@ export default function ProviderEditPage() {
     return (
       <FormSection>
         {renderGuide()}
-        <FormField label={t("providers.captcha.preview" as any)} help={t("providers.captcha.previewHelp" as any)} span="full">
+        <FormField label={t("providers.captcha.preview")} help={t("providers.captcha.previewHelp")} span="full">
           <div className="space-y-3">
             <button
               onClick={loadCaptchaPreview}
               disabled={isPreviewDisabled()}
               className="rounded-lg bg-accent px-4 py-2 text-[13px] font-medium text-white hover:bg-accent-hover disabled:opacity-50 transition-colors"
             >
-              {t("providers.captcha.preview" as any)}
+              {t("providers.captcha.preview")}
             </button>
             {/* Default captcha preview inline */}
             {captchaPreviewOpen && captchaImg && (
@@ -1555,14 +1555,14 @@ export default function ProviderEditPage() {
                     onClick={loadCaptchaPreview}
                     className="h-[50px] w-[200px] rounded border border-border cursor-pointer object-contain bg-white"
                   />
-                  <p className="text-[11px] text-text-muted">{t("providers.captcha.clickRefresh" as any)}</p>
+                  <p className="text-[11px] text-text-muted">{t("providers.captcha.clickRefresh")}</p>
                 </div>
                 <div className="flex gap-2">
                   <input
                     value={captchaInput}
                     onChange={(e) => setCaptchaInput(e.target.value)}
                     onKeyDown={(e) => { if (e.key === "Enter") verifyCaptchaPreview(); }}
-                    placeholder={t("providers.captcha.inputCode" as any)}
+                    placeholder={t("providers.captcha.inputCode")}
                     maxLength={5}
                     className={`${monoInputClass} w-28 text-center text-lg tracking-widest`}
                   />
@@ -1571,7 +1571,7 @@ export default function ProviderEditPage() {
                     disabled={!/^\d{5}$/.test(captchaInput)}
                     className="rounded-lg bg-accent px-3 py-2 text-[13px] font-medium text-white hover:bg-accent-hover disabled:opacity-50 transition-colors whitespace-nowrap"
                   >
-                    {t("providers.captcha.verify" as any)}
+                    {t("providers.captcha.verify")}
                   </button>
                 </div>
               </div>
@@ -1585,9 +1585,9 @@ export default function ProviderEditPage() {
   // Notification: dynamic receiver label
   const getNotificationReceiverLabel = (): string | null => {
     if (["Telegram", "Pushover", "Pushbullet", "Slack", "Discord", "Line", "Twitter", "Reddit", "Rocket Chat", "Viber"].includes(type))
-      return t("providers.notif.chatId" as any);
+      return t("providers.notif.chatId");
     if (["Custom HTTP", "Webpush", "Matrix"].includes(type))
-      return t("providers.field.endpoint" as any);
+      return t("providers.field.endpoint");
     return null; // Google Chat, DingTalk, Lark, MS Teams, Bark, WeCom, CUCloud — no receiver
   };
 
@@ -1596,7 +1596,7 @@ export default function ProviderEditPage() {
       // Auto-save first — the backend reads provider from DB, not from the request body
       const saveRes = await ProvBackend.updateProvider(owner!, name!, prov as Provider);
       if (saveRes.status !== "ok") {
-        modal.toast(friendlyError(saveRes.msg, t) || t("common.saveFailed" as any), "error");
+        modal.toast(friendlyError(saveRes.msg, t) || t("common.saveFailed"), "error");
         return;
       }
       setSaved(true);
@@ -1612,12 +1612,12 @@ export default function ProviderEditPage() {
       });
       const data = await res.json();
       if (data.status === "ok") {
-        modal.toast(t("providers.notif.sendSuccess" as any));
+        modal.toast(t("providers.notif.sendSuccess"));
       } else {
-        modal.toast(data.msg || t("common.saveFailed" as any), "error");
+        modal.toast(data.msg || t("common.saveFailed"), "error");
       }
     } catch (e: any) {
-      modal.toast(e?.message || t("common.saveFailed" as any), "error");
+      modal.toast(e?.message || t("common.saveFailed"), "error");
     }
   };
 
@@ -1653,15 +1653,15 @@ export default function ProviderEditPage() {
     const showRegionId = type === "CUCloud";
 
     return (
-      <FormSection title={t("providers.section.notificationConfig" as any)}>
+      <FormSection title={t("providers.section.notificationConfig")}>
         {renderGuide()}
         {showRegionId && (
-          <FormField label={t("providers.notif.regionId" as any)}>
+          <FormField label={t("providers.notif.regionId")}>
             <input value={String(prov.regionId ?? "")} onChange={(e) => set("regionId", e.target.value)} className={inputClass} />
           </FormField>
         )}
         {showMethod && (
-          <FormField label={t("providers.field.method" as any)}>
+          <FormField label={t("providers.field.method")}>
             <SimpleSelect
               value={String(prov.method ?? "GET")}
               options={[{ value: "GET", label: "GET" }, { value: "POST", label: "POST" }]}
@@ -1670,12 +1670,12 @@ export default function ProviderEditPage() {
           </FormField>
         )}
         {showParameter && (
-          <FormField label={t("providers.notif.parameter" as any)}>
+          <FormField label={t("providers.notif.parameter")}>
             <input value={String(prov.title ?? "")} onChange={(e) => set("title", e.target.value)} className={inputClass} />
           </FormField>
         )}
         {showMetadata && (
-          <FormField label={t("providers.notif.metadata" as any)} span="full">
+          <FormField label={t("providers.notif.metadata")} span="full">
             <textarea
               rows={4}
               value={String(prov.metadata ?? "")}
@@ -1684,7 +1684,7 @@ export default function ProviderEditPage() {
             />
           </FormField>
         )}
-        <FormField label={t("providers.notif.content" as any)} span="full">
+        <FormField label={t("providers.notif.content")} span="full">
           <textarea
             rows={3}
             value={String(prov.content ?? "")}
@@ -1708,12 +1708,12 @@ export default function ProviderEditPage() {
             onClick={sendTestNotification}
             className="rounded-lg bg-accent px-4 py-2 text-[13px] font-semibold text-white hover:bg-accent-hover transition-colors whitespace-nowrap shrink-0"
           >
-            {t("providers.notif.sendTest" as any)}
+            {t("providers.notif.sendTest")}
           </button>
         </div>
         {isAddMode && (
           <p className="col-span-full text-[12px] text-text-muted">
-            {t("providers.notif.autoSaveHint" as any)}
+            {t("providers.notif.autoSaveHint")}
           </p>
         )}
       </FormSection>
@@ -1721,7 +1721,7 @@ export default function ProviderEditPage() {
   };
 
   const renderMfaFields = () => (
-    <FormSection title={t("providers.section.mfaConfig" as any)}>
+    <FormSection title={t("providers.section.mfaConfig")}>
       <FormField label={t("providers.field.host")}>
         <input value={String(prov.host ?? "")} onChange={(e) => set("host", e.target.value)} className={inputClass} placeholder="RADIUS server host" />
       </FormField>
@@ -1732,15 +1732,15 @@ export default function ProviderEditPage() {
   );
 
   const renderLogFields = () => (
-    <FormSection title={t("providers.section.logConfig" as any)}>
+    <FormSection title={t("providers.section.logConfig")}>
       <FormField label={t("providers.field.host")}>
         <input value={String(prov.host ?? "")} onChange={(e) => set("host", e.target.value)} className={inputClass} />
       </FormField>
       <FormField label={t("providers.field.port")}>
         <input type="number" value={String(prov.port ?? 0)} onChange={(e) => set("port", Number(e.target.value))} className={monoInputClass} />
       </FormField>
-      <FormField label={t("providers.field.state" as any)}>
-        <SimpleSelect value={String(prov.state ?? "Enabled")} options={[{ value: "Enabled", label: t("providers.state.enabled" as any) }, { value: "Disabled", label: t("providers.state.disabled" as any) }]} onChange={(v) => set("state", v)} />
+      <FormField label={t("providers.field.state")}>
+        <SimpleSelect value={String(prov.state ?? "Enabled")} options={[{ value: "Enabled", label: t("providers.state.enabled") }, { value: "Disabled", label: t("providers.state.disabled") }]} onChange={(v) => set("state", v)} />
       </FormField>
     </FormSection>
   );
@@ -1755,8 +1755,8 @@ export default function ProviderEditPage() {
       case "Payment": return renderPaymentFields();
       case "Captcha": return renderCaptchaFields();
       case "Web3": return (
-        <FormSection title={t("providers.section.config" as any)}>
-          <FormField label={t("providers.field.enableSignUp" as any)}>
+        <FormSection title={t("providers.section.config")}>
+          <FormField label={t("providers.field.enableSignUp")}>
             <Switch checked={!!prov.enableSignUp} onChange={(v) => set("enableSignUp", v)} />
           </FormField>
         </FormSection>
@@ -1783,7 +1783,7 @@ export default function ProviderEditPage() {
         <SaveButton onClick={handleSave} saving={saving} saved={saved} label={t("common.save")} />
         <button onClick={handleSaveAndExit} disabled={saving} className="flex items-center gap-1.5 rounded-lg bg-accent px-4 py-2 text-[13px] font-semibold text-white hover:bg-accent-hover disabled:opacity-50 transition-colors">
           {saving ? <div className="h-3.5 w-3.5 rounded-full border-2 border-white/30 border-t-white animate-spin" /> : <LogOut size={14} />}
-          {t("common.saveAndExit" as any)}
+          {t("common.saveAndExit")}
         </button>
       </StickyEditHeader>
 
@@ -1821,7 +1821,7 @@ export default function ProviderEditPage() {
             value={type}
             options={TYPE_BY_CATEGORY[category] ?? []}
             onChange={handleTypeChange}
-            placeholder={t("common.search" as any)}
+            placeholder={t("common.search")}
             isDark={theme === "dark"}
           />
           {PROVIDER_URLS[type] && (
@@ -1832,13 +1832,13 @@ export default function ProviderEditPage() {
               className="inline-flex items-center gap-1 mt-1.5 text-[11px] text-text-muted hover:text-accent transition-colors"
             >
               <ExternalLink size={11} />
-              <span>{t("providers.officialSite" as any)}</span>
+              <span>{t("providers.officialSite")}</span>
               <span className="opacity-50 font-mono truncate max-w-[200px]">{PROVIDER_URLS[type].replace(/^https?:\/\//, "").replace(/\/$/, "")}</span>
             </a>
           )}
         </FormField>
         {showSubType && (
-          <FormField label={t("providers.field.subType" as any)}>
+          <FormField label={t("providers.field.subType")}>
             <SimpleSelect
               value={String(prov.subType ?? "")}
               options={(SUBTYPES[type] ?? []).map((s) => ({ value: s, label: s }))}
@@ -1848,20 +1848,20 @@ export default function ProviderEditPage() {
         )}
         {/* OAuth: Email regex */}
         {category === "OAuth" && (
-          <FormField label={t("providers.field.emailRegex" as any)} help={t("providers.help.emailRegex" as any)}>
+          <FormField label={t("providers.field.emailRegex")} help={t("providers.help.emailRegex")}>
             <input value={String(prov.emailRegex ?? "")} onChange={(e) => set("emailRegex", e.target.value)} className={monoInputClass} placeholder="e.g., ^.*@example\\.com$" />
           </FormField>
         )}
         {/* WeCom-specific: method, scope, use id as name */}
         {type === "WeCom" && (
           <>
-            <FormField label={t("providers.field.method" as any)}>
+            <FormField label={t("providers.field.method")}>
               <SimpleSelect value={String(prov.method ?? "Normal")} options={[{ value: "Normal", label: "Normal" }, { value: "Silent", label: "Silent" }]} onChange={(v) => set("method", v)} />
             </FormField>
-            <FormField label={t("providers.field.scopes" as any)}>
+            <FormField label={t("providers.field.scopes")}>
               <SimpleSelect value={String(prov.scopes ?? "snsapi_userinfo")} options={[{ value: "snsapi_userinfo", label: "snsapi_userinfo" }, { value: "snsapi_privateinfo", label: "snsapi_privateinfo" }]} onChange={(v) => set("scopes", v)} />
             </FormField>
-            <FormField label={t("providers.field.useIdAsName" as any)}>
+            <FormField label={t("providers.field.useIdAsName")}>
               <Switch checked={!!prov.disableSsl} onChange={(v) => set("disableSsl", v)} />
             </FormField>
           </>
@@ -1877,7 +1877,7 @@ export default function ProviderEditPage() {
       {/* Provider URL — after all category fields, hidden for Log */}
       {category !== "Log" && (
         <FormSection>
-          <FormField label={t("providers.field.providerUrl")} help={t("providers.help.providerUrl" as any)} span="full">
+          <FormField label={t("providers.field.providerUrl")} help={t("providers.help.providerUrl")} span="full">
             <div className="flex gap-2">
               <input value={String(prov.providerUrl ?? "")} onChange={(e) => set("providerUrl", e.target.value)} className={`${inputClass} flex-1`} />
               {String(prov.providerUrl ?? "") && (
@@ -2061,8 +2061,8 @@ function LogoPreview({ light, dark, type, t }: { light: string; dark: string; ty
   const darkSrc = dark || light || fallback;
   return (
     <div className="grid grid-cols-2 gap-3">
-      <LogoPreviewTile src={lightSrc} mode="light" label={t("providers.field.customLogoLight" as any)} />
-      <LogoPreviewTile src={darkSrc} mode="dark" label={t("providers.field.customLogoDark" as any)} />
+      <LogoPreviewTile src={lightSrc} mode="light" label={t("providers.field.customLogoLight")} />
+      <LogoPreviewTile src={darkSrc} mode="dark" label={t("providers.field.customLogoDark")} />
     </div>
   );
 }

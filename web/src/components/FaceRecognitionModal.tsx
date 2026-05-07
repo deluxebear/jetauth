@@ -35,7 +35,7 @@ export default function FaceRecognitionModal({ visible, withImage, onOk, onCance
       faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
       faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL),
     ]).then(() => setModelsLoaded(true))
-      .catch(() => { setError(t("faceId.modelLoadFailed" as any)); });
+      .catch(() => { setError(t("faceId.modelLoadFailed")); });
   }, [visible, modelsLoaded]);
 
   // Camera mode: start/stop stream
@@ -86,7 +86,7 @@ export default function FaceRecognitionModal({ visible, withImage, onOk, onCance
       const faces = await faceapi.detectAllFaces(videoRef.current, new faceapi.TinyFaceDetectorOptions())
         .withFaceLandmarks().withFaceDescriptors();
       count++;
-      if (count > 300) { stopCamera(); setError(t("faceId.recognitionFailed" as any)); return; }
+      if (count > 300) { stopCamera(); setError(t("faceId.recognitionFailed")); return; }
       if (faces.length === 1) {
         const face = faces[0];
         setPercent(Math.round(face.detection.score * 100));
@@ -105,10 +105,10 @@ export default function FaceRecognitionModal({ visible, withImage, onOk, onCance
 
   const handleCameraError = (err: DOMException | Error) => {
     if (err instanceof DOMException) {
-      if (err.name === "NotFoundError") setError(t("faceId.noCameraDevice" as any));
-      else if (err.name === "NotAllowedError") setError(t("faceId.cameraPermissionDenied" as any));
-      else if (err.name === "NotReadableError") setError(t("faceId.cameraInUse" as any));
-      else if (err.name === "TypeError") setError(t("faceId.httpsRequired" as any));
+      if (err.name === "NotFoundError") setError(t("faceId.noCameraDevice"));
+      else if (err.name === "NotAllowedError") setError(t("faceId.cameraPermissionDenied"));
+      else if (err.name === "NotReadableError") setError(t("faceId.cameraInUse"));
+      else if (err.name === "TypeError") setError(t("faceId.httpsRequired"));
       else setError(err.message);
     } else {
       setError(err.message);
@@ -146,7 +146,7 @@ export default function FaceRecognitionModal({ visible, withImage, onOk, onCance
     if (bestFace) {
       setCurrentFace(bestFace);
     } else {
-      setError(t("faceId.recognitionFailed" as any));
+      setError(t("faceId.recognitionFailed"));
     }
     setProcessing(false);
   };
@@ -172,7 +172,7 @@ export default function FaceRecognitionModal({ visible, withImage, onOk, onCance
       <div onClick={(e) => e.stopPropagation()} className="bg-surface-1 rounded-xl border border-border shadow-xl w-[360px] max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="px-5 py-3 border-b border-border">
-          <h3 className="text-[14px] font-semibold text-text-primary">{t("faceId.faceRecognition" as any)}</h3>
+          <h3 className="text-[14px] font-semibold text-text-primary">{t("faceId.faceRecognition")}</h3>
         </div>
         {/* Body */}
         <div className="p-5">
@@ -213,7 +213,7 @@ export default function FaceRecognitionModal({ visible, withImage, onOk, onCance
             // Image mode
             <div className="flex flex-col gap-3">
               <label className="flex flex-col items-center gap-2 rounded-lg border-2 border-dashed border-border p-6 cursor-pointer hover:bg-surface-2 transition-colors">
-                <span className="text-[13px] text-text-muted">{t("faceId.clickToUpload" as any)}</span>
+                <span className="text-[13px] text-text-muted">{t("faceId.clickToUpload")}</span>
                 <input type="file" accept="image/*" multiple onChange={handleFileAdd} className="hidden" />
               </label>
 
@@ -232,12 +232,12 @@ export default function FaceRecognitionModal({ visible, withImage, onOk, onCance
               {modelsLoaded && (
                 <button onClick={handleGenerate} disabled={files.length === 0 || processing}
                   className="w-full rounded-lg bg-surface-2 border border-border px-4 py-2 text-[13px] font-medium text-text-primary hover:bg-surface-3 disabled:opacity-50 transition-colors">
-                  {processing ? <span className="inline-flex items-center gap-2"><span className="h-3 w-3 rounded-full border-2 border-accent/30 border-t-accent animate-spin" />{t("faceId.processing" as any)}</span> : t("faceId.generate" as any)}
+                  {processing ? <span className="inline-flex items-center gap-2"><span className="h-3 w-3 rounded-full border-2 border-accent/30 border-t-accent animate-spin" />{t("faceId.processing")}</span> : t("faceId.generate")}
                 </button>
               )}
 
               {currentFace && (
-                <div className="text-[12px] text-success">{t("faceId.faceDetected" as any)}: {files[currentFace.index]?.file.name}</div>
+                <div className="text-[12px] text-success">{t("faceId.faceDetected")}: {files[currentFace.index]?.file.name}</div>
               )}
 
               <div className="flex justify-end gap-2 pt-2">

@@ -131,11 +131,11 @@ export default function Dashboard() {
     const action = record.action || "";
     const method = record.method || "";
 
-    if (action === "login") return { icon: <LogIn size={14} />, label: t("dashboard.activity.login" as any) };
-    if (action === "logout") return { icon: <LogOut size={14} />, label: t("dashboard.activity.logout" as any) };
-    if (method === "POST" && record.requestUri?.includes("/add-")) return { icon: <PlusCircle size={14} />, label: t("dashboard.activity.add" as any) };
-    if (method === "POST" && record.requestUri?.includes("/delete-")) return { icon: <Trash2 size={14} />, label: t("dashboard.activity.delete" as any) };
-    if (method === "POST" && record.requestUri?.includes("/update-")) return { icon: <FilePen size={14} />, label: t("dashboard.activity.update" as any) };
+    if (action === "login") return { icon: <LogIn size={14} />, label: t("dashboard.activity.login") };
+    if (action === "logout") return { icon: <LogOut size={14} />, label: t("dashboard.activity.logout") };
+    if (method === "POST" && record.requestUri?.includes("/add-")) return { icon: <PlusCircle size={14} />, label: t("dashboard.activity.add") };
+    if (method === "POST" && record.requestUri?.includes("/delete-")) return { icon: <Trash2 size={14} />, label: t("dashboard.activity.delete") };
+    if (method === "POST" && record.requestUri?.includes("/update-")) return { icon: <FilePen size={14} />, label: t("dashboard.activity.update") };
     if (method === "POST") return { icon: <Settings size={14} />, label: action || method };
     return { icon: <Globe size={14} />, label: action || `${method} ${record.requestUri || ""}` };
   };
@@ -146,10 +146,10 @@ export default function Dashboard() {
     const now = Date.now();
     const then = new Date(timeStr).getTime();
     const diffSec = Math.floor((now - then) / 1000);
-    if (diffSec < 60) return t("dashboard.activity.justNow" as any);
-    if (diffSec < 3600) return `${Math.floor(diffSec / 60)} ${t("dashboard.activity.minutesAgo" as any)}`;
-    if (diffSec < 86400) return `${Math.floor(diffSec / 3600)} ${t("dashboard.activity.hoursAgo" as any)}`;
-    if (diffSec < 604800) return `${Math.floor(diffSec / 86400)} ${t("dashboard.activity.daysAgo" as any)}`;
+    if (diffSec < 60) return t("dashboard.activity.justNow");
+    if (diffSec < 3600) return `${Math.floor(diffSec / 60)} ${t("dashboard.activity.minutesAgo")}`;
+    if (diffSec < 86400) return `${Math.floor(diffSec / 3600)} ${t("dashboard.activity.hoursAgo")}`;
+    if (diffSec < 604800) return `${Math.floor(diffSec / 86400)} ${t("dashboard.activity.daysAgo")}`;
     return new Date(timeStr).toLocaleDateString();
   };
 

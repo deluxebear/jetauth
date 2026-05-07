@@ -59,7 +59,7 @@ export default function FormEditPage() {
     try {
       const res = await FormBackend.updateForm(form.owner, name!, form);
       if (res.status === "ok") {
-        modal.toast(t("common.saveSuccess" as any));
+        modal.toast(t("common.saveSuccess"));
         setSaved(true);
         setOriginalJson(JSON.stringify(form));
         setIsAddMode(false);
@@ -68,7 +68,7 @@ export default function FormEditPage() {
           navigate(`/forms/${form.name}`, { replace: true });
         }
       } else {
-        modal.toast(friendlyError(res.msg, t) || t("common.saveFailed" as any), "error");
+        modal.toast(friendlyError(res.msg, t) || t("common.saveFailed"), "error");
       }
     } finally {
       setSaving(false);
@@ -79,14 +79,14 @@ export default function FormEditPage() {
     try {
       const res = await FormBackend.updateForm(form.owner, name!, form);
       if (res.status === "ok") {
-        modal.toast(t("common.saveSuccess" as any));
+        modal.toast(t("common.saveSuccess"));
         invalidateList();
         navigate("/forms");
       } else {
-        modal.toast(friendlyError(res.msg, t) || t("common.saveFailed" as any), "error");
+        modal.toast(friendlyError(res.msg, t) || t("common.saveFailed"), "error");
       }
     } catch (e: any) {
-      modal.toast(e?.message || t("common.saveFailed" as any), "error");
+      modal.toast(e?.message || t("common.saveFailed"), "error");
     } finally {
       setSaving(false);
     }
@@ -104,7 +104,7 @@ export default function FormEditPage() {
     modal.showConfirm(t("common.confirmDelete"), async () => {
       const res = await FormBackend.deleteForm(form);
       if (res.status === "ok") { invalidateList(); navigate("/forms"); }
-      else modal.toast(res.msg || t("common.deleteFailed" as any), "error");
+      else modal.toast(res.msg || t("common.deleteFailed"), "error");
     });
   };
 
@@ -118,7 +118,7 @@ export default function FormEditPage() {
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-6 ">
       <StickyEditHeader
-        title={`${isAddMode ? t("common.add") : t("common.edit")} ${t("forms.title" as any)}`}
+        title={`${isAddMode ? t("common.add") : t("common.edit")} ${t("forms.title")}`}
         subtitle={`${form.owner}/${name}`}
         onBack={handleBack}
       >
@@ -126,34 +126,34 @@ export default function FormEditPage() {
                     <SaveButton onClick={handleSave} saving={saving} saved={saved} label={t("common.save")} />
           <button onClick={handleSaveAndExit} disabled={saving} className="flex items-center gap-1.5 rounded-lg bg-accent px-4 py-2 text-[13px] font-semibold text-white hover:bg-accent-hover disabled:opacity-50 transition-colors">
             {saving ? <div className="h-3.5 w-3.5 rounded-full border-2 border-white/30 border-t-white animate-spin" /> : <LogOut size={14} />}
-            {t("common.saveAndExit" as any)}
+            {t("common.saveAndExit")}
           </button>
       </StickyEditHeader>
 
       {showBanner && <UnsavedBanner isAddMode={isAddMode} />}
 
       {/* Basic */}
-      <FormSection title={t("forms.section.basic" as any)}>
+      <FormSection title={t("forms.section.basic")}>
         <FormField label={t("field.name")} required>
           <input value={form.name} disabled className={monoInputClass} />
         </FormField>
-        <FormField label={t("col.displayName" as any)}>
+        <FormField label={t("col.displayName")}>
           <input value={form.displayName} onChange={(e) => set("displayName", e.target.value)} className={inputClass} />
         </FormField>
-        <FormField label={t("col.type" as any)}>
+        <FormField label={t("col.type")}>
           <SimpleSelect value={form.type} options={[
             { value: "", label: "--" },
             ...typeOptions.map((opt) => ({ value: opt.id, label: t(opt.name as any) })),
           ]} onChange={(v) => set("type", v)} />
         </FormField>
-        <FormField label={t("forms.field.tag" as any)}>
+        <FormField label={t("forms.field.tag")}>
           <input value={form.tag ?? ""} onChange={(e) => set("tag", e.target.value)} className={inputClass} />
         </FormField>
       </FormSection>
 
       {/* Form Items (JSON editor) */}
-      <FormSection title={t("forms.field.formItems" as any)}>
-        <FormField label={t("forms.field.formItems" as any)} span="full">
+      <FormSection title={t("forms.field.formItems")}>
+        <FormField label={t("forms.field.formItems")} span="full">
           <textarea
             value={JSON.stringify(form.formItems ?? [], null, 2)}
             onChange={(e) => {

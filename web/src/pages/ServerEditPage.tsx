@@ -97,7 +97,7 @@ export default function ServerEditPage() {
     try {
       const res = await ServerBackend.updateServer(owner!, name!, server);
       if (res.status === "ok") {
-        modal.toast(t("common.saveSuccess" as any));
+        modal.toast(t("common.saveSuccess"));
         setSaved(true);
         setOriginalJson(JSON.stringify(server));
         setIsAddMode(false);
@@ -106,7 +106,7 @@ export default function ServerEditPage() {
           navigate(`/servers/${server.owner}/${server.name}`, { replace: true });
         }
       } else {
-        modal.toast(friendlyError(res.msg, t) || t("common.saveFailed" as any), "error");
+        modal.toast(friendlyError(res.msg, t) || t("common.saveFailed"), "error");
       }
     } catch (e) {
       console.error(e);
@@ -120,14 +120,14 @@ export default function ServerEditPage() {
     try {
       const res = await ServerBackend.updateServer(owner!, name!, server);
       if (res.status === "ok") {
-        modal.toast(t("common.saveSuccess" as any));
+        modal.toast(t("common.saveSuccess"));
         invalidateList();
         navigate("/servers");
       } else {
-        modal.toast(friendlyError(res.msg, t) || t("common.saveFailed" as any), "error");
+        modal.toast(friendlyError(res.msg, t) || t("common.saveFailed"), "error");
       }
     } catch (e: any) {
-      modal.toast(e?.message || t("common.saveFailed" as any), "error");
+      modal.toast(e?.message || t("common.saveFailed"), "error");
     } finally {
       setSaving(false);
     }
@@ -149,7 +149,7 @@ export default function ServerEditPage() {
           invalidateList();
           navigate("/servers");
         } else {
-          modal.toast(res.msg || t("common.deleteFailed" as any), "error");
+          modal.toast(res.msg || t("common.deleteFailed"), "error");
         }
       } catch (e) {
         console.error(e);
@@ -162,10 +162,10 @@ export default function ServerEditPage() {
     try {
       const res = await ServerBackend.syncMcpTool(owner!, name!, server);
       if (res.status === "ok") {
-        modal.toast(t("servers.syncSuccess" as any));
+        modal.toast(t("servers.syncSuccess"));
         invalidate();
       } else {
-        modal.toast(friendlyError(res.msg, t) || t("common.saveFailed" as any), "error");
+        modal.toast(friendlyError(res.msg, t) || t("common.saveFailed"), "error");
       }
     } catch (e) {
       console.error(e);
@@ -178,10 +178,10 @@ export default function ServerEditPage() {
     try {
       const res = await ServerBackend.syncMcpTool(owner!, name!, server, true);
       if (res.status === "ok") {
-        modal.toast(t("servers.clearSuccess" as any));
+        modal.toast(t("servers.clearSuccess"));
         invalidate();
       } else {
-        modal.toast(friendlyError(res.msg, t) || t("common.saveFailed" as any), "error");
+        modal.toast(friendlyError(res.msg, t) || t("common.saveFailed"), "error");
       }
     } catch (e) {
       console.error(e);
@@ -204,7 +204,7 @@ export default function ServerEditPage() {
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
       <StickyEditHeader
-        title={`${isAddMode ? t("common.add") : t("common.edit")} ${t("servers.title" as any)}`}
+        title={`${isAddMode ? t("common.add") : t("common.edit")} ${t("servers.title")}`}
         subtitle={`${owner}/${name}`}
         onBack={handleBack}
       >
@@ -214,21 +214,21 @@ export default function ServerEditPage() {
         <SaveButton onClick={handleSave} saving={saving} saved={saved} label={t("common.save")} />
         <button onClick={handleSaveAndExit} disabled={saving} className="flex items-center gap-1.5 rounded-lg bg-accent px-4 py-2 text-[13px] font-semibold text-white hover:bg-accent-hover disabled:opacity-50 transition-colors">
           {saving ? <div className="h-3.5 w-3.5 rounded-full border-2 border-white/30 border-t-white animate-spin" /> : <LogOut size={14} />}
-          {t("common.saveAndExit" as any)}
+          {t("common.saveAndExit")}
         </button>
       </StickyEditHeader>
 
       {showBanner && <UnsavedBanner isAddMode={isAddMode} />}
 
       {/* Basic Info */}
-      <FormSection title={t("servers.section.basic" as any)}>
-        <FormField label={t("field.owner")} tooltip={t("servers.tooltip.organization" as any)}>
+      <FormSection title={t("servers.section.basic")}>
+        <FormField label={t("field.owner")} tooltip={t("servers.tooltip.organization")}>
           {isAdmin ? (
             <SingleSearchSelect
               value={server.owner}
               options={orgOptions}
               onChange={(v) => handleOwnerChange(v)}
-              placeholder={t("common.search" as any)}
+              placeholder={t("common.search")}
             />
           ) : (
             <input value={server.owner} disabled className={inputClass} />
@@ -243,35 +243,35 @@ export default function ServerEditPage() {
       </FormSection>
 
       {/* Connection */}
-      <FormSection title={t("servers.section.connection" as any)}>
-        <FormField label={t("col.url" as any)} tooltip={t("servers.tooltip.url" as any)}>
+      <FormSection title={t("servers.section.connection")}>
+        <FormField label={t("col.url")} tooltip={t("servers.tooltip.url")}>
           <input value={server.url} onChange={(e) => set("url", e.target.value)} className={monoInputClass} placeholder="https://..." />
         </FormField>
-        <FormField label={t("servers.field.accessToken" as any)} tooltip={t("servers.tooltip.accessToken" as any)}>
+        <FormField label={t("servers.field.accessToken")} tooltip={t("servers.tooltip.accessToken")}>
           <input type="password" value={server.token} onChange={(e) => set("token", e.target.value)} className={monoInputClass} placeholder="***" />
         </FormField>
-        <FormField label={t("col.application" as any)} tooltip={t("servers.tooltip.application" as any)}>
+        <FormField label={t("col.application")} tooltip={t("servers.tooltip.application")}>
           <SingleSearchSelect
             value={server.application}
             options={appOptions}
             onChange={(v) => set("application", v)}
-            placeholder={t("common.search" as any)}
+            placeholder={t("common.search")}
           />
         </FormField>
       </FormSection>
 
       {/* Tools */}
       <FormSection
-        title={t("servers.section.tools" as any)}
+        title={t("servers.section.tools")}
         action={
           !isAddMode ? (
             <div className="flex items-center gap-2">
               <button onClick={handleSyncTools} disabled={syncing} className="flex items-center gap-1.5 rounded-lg bg-accent px-3 py-1.5 text-[12px] font-semibold text-white hover:bg-accent-hover disabled:opacity-50 transition-colors">
                 {syncing ? <div className="h-3 w-3 rounded-full border-2 border-white/30 border-t-white animate-spin" /> : <RefreshCw size={13} />}
-                {t("servers.syncTools" as any)}
+                {t("servers.syncTools")}
               </button>
               <button onClick={handleClearTools} className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-[12px] font-medium text-text-secondary hover:bg-surface-2 transition-colors">
-                <X size={13} /> {t("servers.clearTools" as any)}
+                <X size={13} /> {t("servers.clearTools")}
               </button>
             </div>
           ) : undefined
@@ -284,9 +284,9 @@ export default function ServerEditPage() {
             <table className="w-full text-[13px]">
               <thead>
                 <tr className="border-b border-border bg-surface-1">
-                  <th className="px-3 py-2 text-left font-medium text-text-secondary w-[260px]">{t("col.name" as any)}</th>
-                  <th className="px-3 py-2 text-left font-medium text-text-secondary">{t("col.description" as any)}</th>
-                  <th className="px-3 py-2 text-center font-medium text-text-secondary w-[100px]">{t("servers.field.isAllowed" as any)}</th>
+                  <th className="px-3 py-2 text-left font-medium text-text-secondary w-[260px]">{t("col.name")}</th>
+                  <th className="px-3 py-2 text-left font-medium text-text-secondary">{t("col.description")}</th>
+                  <th className="px-3 py-2 text-center font-medium text-text-secondary w-[100px]">{t("servers.field.isAllowed")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -306,14 +306,14 @@ export default function ServerEditPage() {
       </FormSection>
 
       {/* Base URL */}
-      <FormSection title={t("servers.section.baseUrl" as any)}>
-        <FormField label={t("servers.field.baseUrl" as any)} tooltip={t("servers.tooltip.baseUrl" as any)} span="full">
+      <FormSection title={t("servers.section.baseUrl")}>
+        <FormField label={t("servers.field.baseUrl")} tooltip={t("servers.tooltip.baseUrl")} span="full">
           <div className="flex gap-2">
             <input value={baseUrl} readOnly className={`${monoInputClass} flex-1`} />
             <button
               onClick={handleCopyBaseUrl}
               className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-[12px] font-medium text-text-secondary hover:bg-surface-2 transition-colors shrink-0"
-              title={t("common.copy" as any)}
+              title={t("common.copy")}
             >
               {copied ? <Check size={14} className="text-success" /> : <Copy size={14} />}
             </button>

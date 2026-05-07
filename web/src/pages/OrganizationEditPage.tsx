@@ -166,7 +166,7 @@ export default function OrganizationEditPage() {
         setOrg(orgRes.data as Organization);
         setOriginalJson(JSON.stringify(orgRes.data));
       } else {
-        modal.showError(orgRes.msg || t("orgs.error.loadFailed" as any));
+        modal.showError(orgRes.msg || t("orgs.error.loadFailed"));
         navigate("/organizations");
       }
       if (appRes.status === "ok" && appRes.data) {
@@ -202,15 +202,15 @@ export default function OrganizationEditPage() {
         invalidateList();
         notifyOrgChange();
         if (org.name !== name) navigate(`/organizations/${org.owner}/${org.name}`, { replace: true });
-        modal.toast(t("common.saveSuccess" as any));
+        modal.toast(t("common.saveSuccess"));
         setSaved(true);
         setOriginalJson(JSON.stringify(org));
         setIsAddMode(false);
       } else {
-        modal.toast(friendlyError(res.msg, t) || t("common.saveFailed" as any), "error");
+        modal.toast(friendlyError(res.msg, t) || t("common.saveFailed"), "error");
       }
     } catch (e: any) {
-      modal.toast(e.message || t("common.saveFailed" as any), "error");
+      modal.toast(e.message || t("common.saveFailed"), "error");
     } finally {
       setSaving(false);
     }
@@ -220,14 +220,14 @@ export default function OrganizationEditPage() {
     try {
       const res = await OrgBackend.updateOrganization(owner!, name!, org);
       if (res.status === "ok") {
-        modal.toast(t("common.saveSuccess" as any));
+        modal.toast(t("common.saveSuccess"));
         invalidateList();
         navigate("/organizations");
       } else {
-        modal.toast(friendlyError(res.msg, t) || t("common.saveFailed" as any), "error");
+        modal.toast(friendlyError(res.msg, t) || t("common.saveFailed"), "error");
       }
     } catch (e: any) {
-      modal.toast(e?.message || t("common.saveFailed" as any), "error");
+      modal.toast(e?.message || t("common.saveFailed"), "error");
     } finally {
       setSaving(false);
     }
@@ -245,13 +245,13 @@ export default function OrganizationEditPage() {
   };
 
   const handleDelete = async () => {
-    if (isBuiltIn) { modal.showError(t("orgs.error.cannotDeleteBuiltin" as any)); return; }
+    if (isBuiltIn) { modal.showError(t("orgs.error.cannotDeleteBuiltin")); return; }
     modal.showConfirm(`${t("common.confirmDelete")} [${org.displayName || org.name}]`, async () => {
       try {
         const res = await OrgBackend.deleteOrganization(org);
         if (res.status === "ok") { invalidateList(); notifyOrgChange(); navigate("/organizations"); }
         else { modal.showError(res.msg || "Failed to delete"); }
-      } catch (e: any) { modal.toast(e?.message || t("common.saveFailed" as any), "error"); }
+      } catch (e: any) { modal.toast(e?.message || t("common.saveFailed"), "error"); }
     });
   };
 
@@ -260,7 +260,7 @@ export default function OrganizationEditPage() {
   const navTree: TreeNode[] = [
     {
       key: "all",
-      label: t("navTree.all" as any),
+      label: t("navTree.all"),
       children: navGroupsDef.map((group) => ({
         key: group.key,
         label: t(group.labelKey),
@@ -275,7 +275,7 @@ export default function OrganizationEditPage() {
   const widgetTree: TreeNode[] = [
     {
       key: "all",
-      label: t("widgetTree.all" as any),
+      label: t("widgetTree.all"),
       children: widgetItemsDef.map((w) => ({
         key: w.key,
         label: t(w.labelKey as any),
@@ -286,19 +286,19 @@ export default function OrganizationEditPage() {
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-5 ">
       <StickyEditHeader
-        title={`${isAddMode ? t("common.add") : t("common.edit")} ${t("orgs.title" as any)}`}
+        title={`${isAddMode ? t("common.add") : t("common.edit")} ${t("orgs.title")}`}
         subtitle={`${owner}/${name}`}
         onBack={handleBack}
         tabs={
           <TabBar
             tabs={[
-              { key: "general", label: t("orgs.tab.general" as any), icon: <Settings size={14} /> },
-              { key: "security", label: t("orgs.tab.security" as any), icon: <Shield size={14} /> },
-              { key: "menu", label: t("orgs.tab.menu" as any), icon: <Menu size={14} /> },
-              { key: "theme", label: t("orgs.tab.theme" as any), icon: <Palette size={14} /> },
-              { key: "finance", label: t("orgs.tab.finance" as any), icon: <Wallet size={14} /> },
-              { key: "advanced", label: t("orgs.tab.advanced" as any), icon: <Wrench size={14} /> },
-              ...(isGA ? [{ key: "permissions", label: t("orgs.tab.permissions" as any), icon: <Shield size={14} /> }] : []),
+              { key: "general", label: t("orgs.tab.general"), icon: <Settings size={14} /> },
+              { key: "security", label: t("orgs.tab.security"), icon: <Shield size={14} /> },
+              { key: "menu", label: t("orgs.tab.menu"), icon: <Menu size={14} /> },
+              { key: "theme", label: t("orgs.tab.theme"), icon: <Palette size={14} /> },
+              { key: "finance", label: t("orgs.tab.finance"), icon: <Wallet size={14} /> },
+              { key: "advanced", label: t("orgs.tab.advanced"), icon: <Wrench size={14} /> },
+              ...(isGA ? [{ key: "permissions", label: t("orgs.tab.permissions"), icon: <Shield size={14} /> }] : []),
             ]}
             active={activeTab}
             onChange={setActiveTab}
@@ -314,7 +314,7 @@ export default function OrganizationEditPage() {
                         <SaveButton onClick={handleSave} saving={saving} saved={saved} label={t("common.save")} />
             <button onClick={handleSaveAndExit} disabled={saving} className="flex items-center gap-1.5 rounded-lg bg-accent px-4 py-2 text-[13px] font-semibold text-white hover:bg-accent-hover disabled:opacity-50 transition-colors">
               {saving ? <div className="h-3.5 w-3.5 rounded-full border-2 border-white/30 border-t-white animate-spin" /> : <LogOut size={14} />}
-              {t("common.saveAndExit" as any)}
+              {t("common.saveAndExit")}
             </button>
           </>)}
       </StickyEditHeader>
@@ -325,100 +325,100 @@ export default function OrganizationEditPage() {
       <Tabs activeTab={activeTab} onTabChange={setActiveTab} hideTabBar tabs={[
         {
           key: "general",
-          label: t("orgs.tab.general" as any),
+          label: t("orgs.tab.general"),
           icon: <Settings size={14} />,
           content: (
             <div className="space-y-5">
-              <FormSection title={t("orgs.section.basic" as any)}>
+              <FormSection title={t("orgs.section.basic")}>
                 <FormField label={t("field.name")} required>
                   <input value={org.name} onChange={(e) => set("name", e.target.value)} disabled={isBuiltIn || !isGA} className={monoInputClass} />
                 </FormField>
                 <FormField label={t("field.displayName")}>
                   <input value={org.displayName ?? ""} onChange={(e) => set("displayName", e.target.value)} disabled={!canEditField("displayName")} className={inputClass} />
                 </FormField>
-                <FormField label={t("orgs.field.enableDarkLogo" as any)} help={t("orgs.help.enableDarkLogo" as any)}>
+                <FormField label={t("orgs.field.enableDarkLogo")} help={t("orgs.help.enableDarkLogo")}>
                   <Switch checked={!!org.enableDarkLogo || !!(org as any).logoDark} onChange={(v) => { set("enableDarkLogo", v); if (!v) set("logoDark", ""); }} disabled={!canEditField("logoDark")} />
                 </FormField>
                 <div />
-                <FormField label={t("orgs.field.logo" as any)} span="full">
+                <FormField label={t("orgs.field.logo")} span="full">
                   <ImageUrlInput value={org.logo ?? ""} onChange={(v) => set("logo", v)} owner={org.name ?? ""} tag="org-logo" disabled={!canEditField("logo")} />
                 </FormField>
                 {(!!org.enableDarkLogo || !!(org as any).logoDark) && (
-                  <FormField label={t("orgs.field.logoDark" as any)} span="full">
+                  <FormField label={t("orgs.field.logoDark")} span="full">
                     <ImageUrlInput value={(org as any).logoDark ?? ""} onChange={(v) => set("logoDark", v)} owner={org.name ?? ""} tag="org-logo-dark" disabled={!canEditField("logoDark")} />
                   </FormField>
                 )}
-                <FormField label={t("orgs.field.favicon" as any)}>
+                <FormField label={t("orgs.field.favicon")}>
                   <ImageUrlInput value={org.favicon ?? ""} onChange={(v) => set("favicon", v)} owner={org.name ?? ""} tag="org-favicon" outputWidth={64} outputHeight={64} accept="image/x-icon,image/png,image/svg+xml" disabled={!canEditField("favicon")} />
                 </FormField>
-                <FormField label={t("orgs.field.websiteUrl" as any)}>
+                <FormField label={t("orgs.field.websiteUrl")}>
                   <input value={org.websiteUrl ?? ""} onChange={(e) => set("websiteUrl", e.target.value)} disabled={!canEditField("websiteUrl")} className={inputClass} placeholder="https://example.com" />
                 </FormField>
-                <FormField label={t("orgs.field.defaultAvatar" as any)} help={t("orgs.help.defaultAvatar" as any)} span="full">
+                <FormField label={t("orgs.field.defaultAvatar")} help={t("orgs.help.defaultAvatar")} span="full">
                   <ImageUrlInput value={org.defaultAvatar ?? ""} onChange={(v) => set("defaultAvatar", v)} owner={org.name ?? ""} tag="org-avatar" outputWidth={200} outputHeight={200} previewClass="h-12 w-12 rounded-full border border-border object-cover bg-surface-2" disabled={!canEditField("defaultAvatar")} />
                 </FormField>
                 {isBuiltIn && (
-                  <FormField label={t("orgs.field.hasPrivilegeConsent" as any)} help={t("orgs.field.hasPrivilegeConsent.help" as any)}>
+                  <FormField label={t("orgs.field.hasPrivilegeConsent")} help={t("orgs.field.hasPrivilegeConsent.help")}>
                     <Switch checked={!!(org as any).hasPrivilegeConsent} onChange={(v) => {
-                      modal.showConfirm(t("orgs.confirmPrivilege" as any), () => set("hasPrivilegeConsent", v));
+                      modal.showConfirm(t("orgs.confirmPrivilege"), () => set("hasPrivilegeConsent", v));
                     }} />
                   </FormField>
                 )}
               </FormSection>
 
-              <FormSection title={t("orgs.section.defaults" as any)}>
-                <FormField label={t("orgs.field.defaultApplication" as any)} help={t("orgs.help.defaultApplication" as any)}>
+              <FormSection title={t("orgs.section.defaults")}>
+                <FormField label={t("orgs.field.defaultApplication")} help={t("orgs.help.defaultApplication")}>
                   <div className={!canEditField("defaultApplication") ? "pointer-events-none opacity-60" : ""}>
                     <SearchableSelect
                       value={org.defaultApplication ?? ""}
                       options={applications.map((app) => ({ value: app.name, label: app.displayName || app.name }))}
                       onChange={(v) => set("defaultApplication", v)}
-                      placeholder={t("common.search" as any)}
+                      placeholder={t("common.search")}
                     />
                   </div>
                 </FormField>
-                <FormField label={t("orgs.field.initScore" as any)} help={t("orgs.help.initScore" as any)}>
+                <FormField label={t("orgs.field.initScore")} help={t("orgs.help.initScore")}>
                   <input type="number" value={org.initScore ?? 0} onChange={(e) => set("initScore", Number(e.target.value))} disabled={!canEditField("initScore")} className={monoInputClass} />
                 </FormField>
-                <FormField label={t("orgs.field.userTypes" as any)} span="full">
+                <FormField label={t("orgs.field.userTypes")} span="full">
                   <div className={!canEditField("userTypes") ? "pointer-events-none opacity-60" : ""}>
-                    <TagsEditor tags={(org as any).userTypes ?? []} onChange={(v) => set("userTypes", v)} placeholder={t("orgs.placeholder.userTypes" as any)} />
+                    <TagsEditor tags={(org as any).userTypes ?? []} onChange={(v) => set("userTypes", v)} placeholder={t("orgs.placeholder.userTypes")} />
                   </div>
                 </FormField>
-                <FormField label={t("orgs.field.tags" as any)} span="full">
+                <FormField label={t("orgs.field.tags")} span="full">
                   <div className={!canEditField("tags") ? "pointer-events-none opacity-60" : ""}>
-                    <TagsEditor tags={org.tags ?? []} onChange={(v) => set("tags", v)} placeholder={t("orgs.placeholder.tags" as any)} />
+                    <TagsEditor tags={org.tags ?? []} onChange={(v) => set("tags", v)} placeholder={t("orgs.placeholder.tags")} />
                   </div>
                 </FormField>
-                <FormField label={t("orgs.field.countryCodes" as any)} span="full">
+                <FormField label={t("orgs.field.countryCodes")} span="full">
                   <div className={!canEditField("countryCodes") ? "pointer-events-none opacity-60" : ""}>
                     <CountryCodeSelect selected={org.countryCodes ?? []} onChange={(v) => set("countryCodes", v)} />
                   </div>
                 </FormField>
-                <FormField label={t("orgs.field.languages" as any)} span="full">
+                <FormField label={t("orgs.field.languages")} span="full">
                   <div className={!canEditField("languages") ? "pointer-events-none opacity-60" : ""}>
                     <LanguageSelect selected={org.languages ?? []} onChange={(v) => set("languages", v)} />
                   </div>
                 </FormField>
               </FormSection>
 
-              <FormSection title={t("orgs.section.features" as any)}>
-                <FormField label={t("orgs.field.enableSoftDeletion" as any)} help={t("orgs.help.enableSoftDeletion" as any)}>
+              <FormSection title={t("orgs.section.features")}>
+                <FormField label={t("orgs.field.enableSoftDeletion")} help={t("orgs.help.enableSoftDeletion")}>
                   <Switch checked={!!org.enableSoftDeletion} onChange={(v) => set("enableSoftDeletion", v)} disabled={!canEditField("enableSoftDeletion")} />
                 </FormField>
-                <FormField label={t("orgs.field.isProfilePublic" as any)} help={t("orgs.help.isProfilePublic" as any)}>
+                <FormField label={t("orgs.field.isProfilePublic")} help={t("orgs.help.isProfilePublic")}>
                   <Switch checked={!!org.isProfilePublic} onChange={(v) => set("isProfilePublic", v)} disabled={!canEditField("isProfilePublic")} />
                 </FormField>
-                <FormField label={t("orgs.field.useEmailAsUsername" as any)} help={t("orgs.help.useEmailAsUsername" as any)}>
+                <FormField label={t("orgs.field.useEmailAsUsername")} help={t("orgs.help.useEmailAsUsername")}>
                   <Switch checked={!!org.useEmailAsUsername} onChange={(v) => set("useEmailAsUsername", v)} disabled={!canEditField("useEmailAsUsername")} />
                 </FormField>
-                <FormField label={t("orgs.field.enableTour" as any)} help={t("orgs.help.enableTour" as any)}>
+                <FormField label={t("orgs.field.enableTour")} help={t("orgs.help.enableTour")}>
                   <Switch checked={!!org.enableTour} onChange={(v) => set("enableTour", v)} disabled={!canEditField("enableTour")} />
                 </FormField>
-                <FormField label={t("orgs.field.disableSignin" as any)} help={t("orgs.help.disableSignin" as any)}>
+                <FormField label={t("orgs.field.disableSignin")} help={t("orgs.help.disableSignin")}>
                   <Switch checked={!!org.disableSignin} onChange={(v) => set("disableSignin", v)} disabled={!canEditField("disableSignin")} />
                 </FormField>
-                <FormField label={t("orgs.field.usePermanentAvatar" as any)} help={t("orgs.help.usePermanentAvatar" as any)}>
+                <FormField label={t("orgs.field.usePermanentAvatar")} help={t("orgs.help.usePermanentAvatar")}>
                   <Switch checked={!!org.usePermanentAvatar} onChange={(v) => set("usePermanentAvatar", v)} disabled={!canEditField("usePermanentAvatar")} />
                 </FormField>
               </FormSection>
@@ -427,18 +427,18 @@ export default function OrganizationEditPage() {
         },
         {
           key: "security",
-          label: t("orgs.tab.security" as any),
+          label: t("orgs.tab.security"),
           icon: <Shield size={14} />,
           content: (
             <div className="space-y-5">
-              <FormSection title={t("orgs.section.password" as any)}>
-                <FormField label={t("orgs.field.passwordType" as any)} help={t("orgs.help.passwordType" as any)}>
+              <FormSection title={t("orgs.section.password")}>
+                <FormField label={t("orgs.field.passwordType")} help={t("orgs.help.passwordType")}>
                   <SimpleSelect value={org.passwordType ?? "bcrypt"} options={PASSWORD_TYPES} onChange={(v) => set("passwordType", v)} disabled={!canEditField("passwordType")} />
                 </FormField>
-                <FormField label={t("orgs.field.passwordSalt" as any)} help={t("orgs.help.passwordSalt" as any)}>
+                <FormField label={t("orgs.field.passwordSalt")} help={t("orgs.help.passwordSalt")}>
                   <input value={org.passwordSalt ?? ""} onChange={(e) => set("passwordSalt", e.target.value)} disabled={!canEditField("passwordSalt")} className={monoInputClass} />
                 </FormField>
-                <FormField label={t("orgs.field.passwordOptions" as any)} help={t("orgs.help.passwordOptions" as any)} span="full">
+                <FormField label={t("orgs.field.passwordOptions")} help={t("orgs.help.passwordOptions")} span="full">
                   <div className={!canEditField("passwordOptions") ? "pointer-events-none opacity-60" : ""}>
                     <MultiSelectDropdown
                       selected={org.passwordOptions ?? []}
@@ -448,7 +448,7 @@ export default function OrganizationEditPage() {
                     />
                   </div>
                 </FormField>
-                <FormField label={t("orgs.field.passwordObfuscatorType" as any)} help={t("orgs.help.passwordObfuscatorType" as any)}>
+                <FormField label={t("orgs.field.passwordObfuscatorType")} help={t("orgs.help.passwordObfuscatorType")}>
                   <SimpleSelect value={(org as any).passwordObfuscatorType ?? "Plain"} options={[
                     { value: "Plain", label: "Plain" },
                     { value: "AES", label: "AES" },
@@ -466,40 +466,40 @@ export default function OrganizationEditPage() {
                   }} disabled={!canEditField("passwordObfuscatorType")} />
                 </FormField>
                 {(org as any).passwordObfuscatorType && (org as any).passwordObfuscatorType !== "Plain" && (
-                  <FormField label={t("orgs.field.passwordObfuscatorKey" as any)}>
+                  <FormField label={t("orgs.field.passwordObfuscatorKey")}>
                     <div className="flex gap-2 items-center">
                       <input value={(org as any).passwordObfuscatorKey ?? ""} readOnly className={`${monoInputClass} flex-1 bg-surface-2 cursor-default`} />
                       <button type="button" disabled={!canEditField("passwordObfuscatorKey")} onClick={() => {
                         const len = (org as any).passwordObfuscatorType === "AES" ? 32 : 16;
                         set("passwordObfuscatorKey", Array.from({ length: len }, () => Math.floor(Math.random() * 15 + 1).toString(16)).join(""));
                       }} className="shrink-0 rounded-lg border border-border bg-surface-2 px-3 py-2 text-[12px] font-medium text-text-secondary hover:bg-surface-3 hover:text-text-primary transition-colors">
-                        {t("users.generatePassword" as any)}
+                        {t("users.generatePassword")}
                       </button>
                     </div>
                   </FormField>
                 )}
-                <FormField label={t("orgs.field.passwordExpireDays" as any)} help={t("orgs.field.passwordExpireDays.help" as any)}>
+                <FormField label={t("orgs.field.passwordExpireDays")} help={t("orgs.field.passwordExpireDays.help")}>
                   <input type="number" value={org.passwordExpireDays ?? 0} onChange={(e) => set("passwordExpireDays", Number(e.target.value))} min={0} disabled={!canEditField("passwordExpireDays")} className={monoInputClass} />
                 </FormField>
-                <FormField label={t("orgs.field.masterPassword" as any)} help={t("orgs.help.masterPassword" as any)}>
+                <FormField label={t("orgs.field.masterPassword")} help={t("orgs.help.masterPassword")}>
                   <input value={org.masterPassword ?? ""} onChange={(e) => set("masterPassword", e.target.value)} type="password" disabled={!canEditField("masterPassword")} className={inputClass} placeholder={org.masterPassword === "***" ? "***" : ""} />
                 </FormField>
-                <FormField label={t("orgs.field.defaultPassword" as any)} help={t("orgs.help.defaultPassword" as any)}>
+                <FormField label={t("orgs.field.defaultPassword")} help={t("orgs.help.defaultPassword")}>
                   <input value={org.defaultPassword ?? ""} onChange={(e) => set("defaultPassword", e.target.value)} type="password" disabled={!canEditField("defaultPassword")} className={inputClass} />
                 </FormField>
-                <FormField label={t("orgs.field.masterVerificationCode" as any)} help={t("orgs.help.masterVerificationCode" as any)}>
+                <FormField label={t("orgs.field.masterVerificationCode")} help={t("orgs.help.masterVerificationCode")}>
                   <input value={(org as any).masterVerificationCode ?? ""} onChange={(e) => set("masterVerificationCode", e.target.value)} type="password" disabled={!canEditField("masterVerificationCode")} className={inputClass} placeholder={(org as any).masterVerificationCode === "***" ? "***" : ""} />
                 </FormField>
-                <FormField label={t("orgs.field.ipWhitelist" as any)}>
+                <FormField label={t("orgs.field.ipWhitelist")}>
                   <input value={(org as any).ipWhitelist ?? ""} onChange={(e) => set("ipWhitelist", e.target.value)} disabled={!canEditField("ipWhitelist")} className={inputClass} placeholder="192.168.1.0/24, 10.0.0.1" />
                 </FormField>
               </FormSection>
 
-              <FormSection title={t("orgs.section.mfa" as any)}>
-                <FormField label={t("orgs.field.mfaRemember" as any)} help={t("orgs.help.mfaRememberInHours" as any)}>
+              <FormSection title={t("orgs.section.mfa")}>
+                <FormField label={t("orgs.field.mfaRemember")} help={t("orgs.help.mfaRememberInHours")}>
                   <div className="flex items-center gap-2">
                     <input type="number" value={org.mfaRememberInHours ?? 12} onChange={(e) => set("mfaRememberInHours", Number(e.target.value))} min={0} disabled={!canEditField("mfaRememberDuration")} className={`${monoInputClass} w-32`} />
-                    <span className="text-[12px] text-text-muted">{t("orgs.mfa.hours" as any)}</span>
+                    <span className="text-[12px] text-text-muted">{t("orgs.mfa.hours")}</span>
                   </div>
                 </FormField>
                 <div />
@@ -514,21 +514,21 @@ export default function OrganizationEditPage() {
         },
         {
           key: "menu",
-          label: t("orgs.tab.menu" as any),
+          label: t("orgs.tab.menu"),
           icon: <Menu size={14} />,
           content: (
-            <FormSection title={t("orgs.section.menu" as any)}>
-              <FormField label={t("orgs.field.adminNavItems" as any)} span="full">
+            <FormSection title={t("orgs.section.menu")}>
+              <FormField label={t("orgs.field.adminNavItems")} span="full">
                 <div className={!canEditField("navItems") ? "pointer-events-none opacity-60" : ""}>
                   <TreeCheckbox tree={navTree} checked={(org as any).navItems ?? ["all"]} onChange={(v) => set("navItems", v)} />
                 </div>
               </FormField>
-              <FormField label={t("orgs.field.userNavItems" as any)} span="full">
+              <FormField label={t("orgs.field.userNavItems")} span="full">
                 <div className={!canEditField("userNavItems") ? "pointer-events-none opacity-60" : ""}>
                   <TreeCheckbox tree={navTree} checked={(org as any).userNavItems ?? []} onChange={(v) => set("userNavItems", v)} />
                 </div>
               </FormField>
-              <FormField label={t("orgs.field.widgetItems" as any)} span="full">
+              <FormField label={t("orgs.field.widgetItems")} span="full">
                 <div className={!canEditField("widgetItems") ? "pointer-events-none opacity-60" : ""}>
                   <TreeCheckbox tree={widgetTree} checked={(org as any).widgetItems ?? ["all"]} onChange={(v) => set("widgetItems", v)} />
                 </div>
@@ -538,12 +538,12 @@ export default function OrganizationEditPage() {
         },
         {
           key: "theme",
-          label: t("orgs.tab.theme" as any),
+          label: t("orgs.tab.theme"),
           icon: <Palette size={14} />,
           content: (
             <div className={!canEditField("themeData") ? "pointer-events-none opacity-60" : ""}>
-              <FormSection title={t("orgs.section.theme" as any)}>
-                <FormField label={t("orgs.field.enableCustomTheme" as any)}>
+              <FormSection title={t("orgs.section.theme")}>
+                <FormField label={t("orgs.field.enableCustomTheme")}>
                   <Switch checked={!!(org as any).themeData?.isEnabled} onChange={(v) => set("themeData", { ...((org as any).themeData ?? {}), isEnabled: v })} />
                 </FormField>
               </FormSection>
@@ -551,7 +551,7 @@ export default function OrganizationEditPage() {
               {(org as any).themeData?.isEnabled && (
                 <>
                   {/* Preset cards */}
-                  <FormSection title={t("orgs.section.selectTheme" as any)}>
+                  <FormSection title={t("orgs.section.selectTheme")}>
                     <div className="col-span-2">
                       <div className="flex flex-wrap gap-3">
                         {THEME_PRESETS.map((preset) => (
@@ -573,19 +573,19 @@ export default function OrganizationEditPage() {
                   </FormSection>
 
                   {/* Custom controls */}
-                  <FormSection title={t("orgs.section.customizeTheme" as any)}>
-                    <FormField label={t("orgs.field.lightDarkMode" as any)}>
+                  <FormSection title={t("orgs.section.customizeTheme")}>
+                    <FormField label={t("orgs.field.lightDarkMode")}>
                       <SimpleSelect
                         value={(org as any).themeData?.themeType ?? "light"}
                         options={[
-                          { value: "system", label: t("theme.followSystem" as any) },
+                          { value: "system", label: t("theme.followSystem") },
                           { value: "light", label: "Light" },
                           { value: "dark", label: "Dark" },
                         ]}
                         onChange={(v) => set("themeData", { ...(org as any).themeData, themeType: v })}
                       />
                     </FormField>
-                    <FormField label={t("orgs.field.primaryColor" as any)}>
+                    <FormField label={t("orgs.field.primaryColor")}>
                       <div className="flex gap-2 items-center">
                         <input
                           type="color"
@@ -600,7 +600,7 @@ export default function OrganizationEditPage() {
                         />
                       </div>
                     </FormField>
-                    <FormField label={t("orgs.field.borderRadius" as any)}>
+                    <FormField label={t("orgs.field.borderRadius")}>
                       <input
                         type="number"
                         value={(org as any).themeData?.borderRadius ?? 8}
@@ -610,7 +610,7 @@ export default function OrganizationEditPage() {
                         className={monoInputClass}
                       />
                     </FormField>
-                    <FormField label={t("orgs.field.compactMode" as any)}>
+                    <FormField label={t("orgs.field.compactMode")}>
                       <Switch
                         checked={!!(org as any).themeData?.isCompact}
                         onChange={(v) => set("themeData", { ...(org as any).themeData, isCompact: v })}
@@ -619,7 +619,7 @@ export default function OrganizationEditPage() {
                   </FormSection>
 
                   {/* Live preview */}
-                  <FormSection title={t("orgs.section.themePreview" as any)}>
+                  <FormSection title={t("orgs.section.themePreview")}>
                     <div className="col-span-2">
                       <LoginPreview
                         colorPrimary={(org as any).themeData?.colorPrimary ?? "#0891b2"}
@@ -635,20 +635,20 @@ export default function OrganizationEditPage() {
         },
         {
           key: "finance",
-          label: t("orgs.tab.finance" as any),
+          label: t("orgs.tab.finance"),
           icon: <Wallet size={14} />,
           content: (
-            <FormSection title={t("orgs.section.finance" as any)}>
-              <FormField label={t("orgs.field.balanceCurrency" as any)} help={t("orgs.help.balanceCurrency" as any)}>
+            <FormSection title={t("orgs.section.finance")}>
+              <FormField label={t("orgs.field.balanceCurrency")} help={t("orgs.help.balanceCurrency")}>
                 <CurrencySelect value={org.balanceCurrency ?? "USD"} onChange={(v) => set("balanceCurrency", v)} disabled={!canEditField("balanceCurrency")} />
               </FormField>
-              <FormField label={t("orgs.field.orgBalance" as any)}>
+              <FormField label={t("orgs.field.orgBalance")}>
                 <input type="number" value={(org as any).orgBalance ?? 0} onChange={(e) => set("orgBalance", Number(e.target.value))} disabled={!canEditField("orgBalance")} className={monoInputClass} />
               </FormField>
-              <FormField label={t("orgs.field.userBalance" as any)}>
+              <FormField label={t("orgs.field.userBalance")}>
                 <input type="number" value={(org as any).userBalance ?? 0} disabled className={monoInputClass} />
               </FormField>
-              <FormField label={t("orgs.field.balanceCredit" as any)} help={t("orgs.field.balanceCredit.help" as any)}>
+              <FormField label={t("orgs.field.balanceCredit")} help={t("orgs.field.balanceCredit.help")}>
                 <input type="number" value={(org as any).balanceCredit ?? 0} onChange={(e) => set("balanceCredit", Math.min(0, Number(e.target.value)))} max={0} disabled={!canEditField("balanceCredit")} className={monoInputClass} />
               </FormField>
             </FormSection>
@@ -656,12 +656,12 @@ export default function OrganizationEditPage() {
         },
         {
           key: "advanced",
-          label: t("orgs.tab.advanced" as any),
+          label: t("orgs.tab.advanced"),
           icon: <Wrench size={14} />,
           content: (
             <div className="space-y-5">
-              <FormSection title={t("orgs.section.ldap" as any)}>
-                <FormField label={t("orgs.field.ldapAttributes" as any)} span="full">
+              <FormSection title={t("orgs.section.ldap")}>
+                <FormField label={t("orgs.field.ldapAttributes")} span="full">
                   <div className={!canEditField("ldapAttributes") ? "pointer-events-none opacity-60" : ""}>
                     <MultiSelectDropdown
                       selected={(org as any).ldapAttributes ?? []}
@@ -677,17 +677,17 @@ export default function OrganizationEditPage() {
               </div>
 
               <div className={!isGA ? "pointer-events-none opacity-60" : ""}>
-              <FormSection title={t("orgs.section.kerberos" as any)}>
-                <FormField label={t("orgs.field.kerberosRealm" as any)} help={t("orgs.help.kerberosRealm" as any)}>
+              <FormSection title={t("orgs.section.kerberos")}>
+                <FormField label={t("orgs.field.kerberosRealm")} help={t("orgs.help.kerberosRealm")}>
                   <input value={(org as any).kerberosRealm ?? ""} onChange={(e) => set("kerberosRealm", e.target.value)} className={inputClass} />
                 </FormField>
-                <FormField label={t("orgs.field.kerberosKdcHost" as any)} help={t("orgs.help.kerberosKdcHost" as any)}>
+                <FormField label={t("orgs.field.kerberosKdcHost")} help={t("orgs.help.kerberosKdcHost")}>
                   <input value={(org as any).kerberosKdcHost ?? ""} onChange={(e) => set("kerberosKdcHost", e.target.value)} className={inputClass} />
                 </FormField>
-                <FormField label={t("orgs.field.kerberosServiceName" as any)} help={t("orgs.help.kerberosServiceName" as any)}>
+                <FormField label={t("orgs.field.kerberosServiceName")} help={t("orgs.help.kerberosServiceName")}>
                   <input value={(org as any).kerberosServiceName ?? ""} onChange={(e) => set("kerberosServiceName", e.target.value)} className={inputClass} placeholder="HTTP" />
                 </FormField>
-                <FormField label={t("orgs.field.kerberosKeytab" as any)} help={t("orgs.help.kerberosKeytab" as any)} span="full">
+                <FormField label={t("orgs.field.kerberosKeytab")} help={t("orgs.help.kerberosKeytab")} span="full">
                   <textarea value={(org as any).kerberosKeytab ?? ""} onChange={(e) => set("kerberosKeytab", e.target.value)} rows={4} className={`${monoInputClass} text-[11px]`} />
                 </FormField>
               </FormSection>
@@ -703,11 +703,11 @@ export default function OrganizationEditPage() {
         // Org admin permissions tab — GA only
         ...(isGA ? [{
           key: "permissions",
-          label: t("orgs.tab.permissions" as any),
+          label: t("orgs.tab.permissions"),
           icon: <Shield size={14} />,
           content: (
             <div className="space-y-4">
-              <p className="text-[13px] text-text-muted">{t("orgs.field.orgAdminEditableFields.help" as any)}</p>
+              <p className="text-[13px] text-text-muted">{t("orgs.field.orgAdminEditableFields.help")}</p>
               {ORG_ADMIN_FIELD_GROUPS.map((group) => {
                 const currentFields: string[] = (org as any).orgAdminEditableFields ?? [];
                 const groupKeys = group.fields.map((f) => f.key);
@@ -869,10 +869,10 @@ function TagsEditor({ tags, onChange, placeholder = "Type and press Enter..." }:
 
 function MfaItemsEditor({ items, onChange, t }: { items: { name: string; rule: string }[]; onChange: (items: { name: string; rule: string }[]) => void; t: (key: string) => string }) {
   const MFA_TYPES = [
-    { value: "app", label: t("orgs.mfa.app" as any) },
-    { value: "sms", label: t("orgs.mfa.sms" as any) },
-    { value: "email", label: t("orgs.mfa.email" as any) },
-    { value: "push", label: t("orgs.mfa.push" as any) },
+    { value: "app", label: t("orgs.mfa.app") },
+    { value: "sms", label: t("orgs.mfa.sms") },
+    { value: "email", label: t("orgs.mfa.email") },
+    { value: "push", label: t("orgs.mfa.push") },
   ];
   const MFA_RULES = ["Optional", "Required", "Prompt"];
 
@@ -909,22 +909,22 @@ function MfaItemsEditor({ items, onChange, t }: { items: { name: string; rule: s
   return (
     <div>
       <div className="flex items-center gap-2 mb-2">
-        <span className="text-[12px] font-semibold text-text-secondary">{t("orgs.field.mfaItems" as any)}</span>
+        <span className="text-[12px] font-semibold text-text-secondary">{t("orgs.field.mfaItems")}</span>
         {availableTypes.length > 0 && (
           <button type="button" onClick={addItem} className="rounded-md bg-accent/10 border border-accent/30 px-2 py-0.5 text-[11px] font-semibold text-accent hover:bg-accent/20 transition-colors">
-            + {t("common.add" as any)}
+            + {t("common.add")}
           </button>
         )}
       </div>
       {items.length === 0 ? (
-        <p className="text-[12px] text-text-muted py-4 text-center border border-dashed border-border rounded-lg">{t("common.noData" as any)}</p>
+        <p className="text-[12px] text-text-muted py-4 text-center border border-dashed border-border rounded-lg">{t("common.noData")}</p>
       ) : (
         <table className="w-full text-[12px]">
           <thead>
             <tr className="border-b border-border">
-              <th className="text-left py-1.5 px-2 font-semibold text-text-muted uppercase tracking-wider text-[10px]">{t("common.name" as any)}</th>
-              <th className="text-left py-1.5 px-2 font-semibold text-text-muted uppercase tracking-wider text-[10px]">{t("orgs.mfa.rule" as any)}</th>
-              <th className="text-right py-1.5 px-2 font-semibold text-text-muted uppercase tracking-wider text-[10px] w-24">{t("common.action" as any)}</th>
+              <th className="text-left py-1.5 px-2 font-semibold text-text-muted uppercase tracking-wider text-[10px]">{t("common.name")}</th>
+              <th className="text-left py-1.5 px-2 font-semibold text-text-muted uppercase tracking-wider text-[10px]">{t("orgs.mfa.rule")}</th>
+              <th className="text-right py-1.5 px-2 font-semibold text-text-muted uppercase tracking-wider text-[10px] w-24">{t("common.action")}</th>
             </tr>
           </thead>
           <tbody>
@@ -1205,7 +1205,7 @@ function SearchableSelect({
               </button>
             ))}
             {filtered.length === 0 && (
-              <div className="px-3 py-2 text-[12px] text-text-muted">{t("common.noResults" as any)}</div>
+              <div className="px-3 py-2 text-[12px] text-text-muted">{t("common.noResults")}</div>
             )}
           </div>
         </div>
@@ -1255,7 +1255,7 @@ function LdapServersTable({ ldaps, orgName, onUpdate, t, modal }: {
         autoSync: 0,
       });
       if (res.status === "ok") {
-        modal.toast(t("common.addSuccess" as any) || "Added successfully");
+        modal.toast(t("common.addSuccess") || "Added successfully");
         onUpdate([...ldaps, res.data2 as Ldap]);
       } else {
         modal.toast(res.msg || "Failed to add", "error");
@@ -1271,7 +1271,7 @@ function LdapServersTable({ ldaps, orgName, onUpdate, t, modal }: {
       try {
         const res = await LdapBackend.deleteLdap(ldap);
         if (res.status === "ok") {
-          modal.toast(t("common.deleteSuccess" as any) || "Deleted");
+          modal.toast(t("common.deleteSuccess") || "Deleted");
           onUpdate(ldaps.filter((_, i) => i !== idx));
         } else {
           modal.toast(res.msg || "Failed to delete", "error");
@@ -1285,7 +1285,7 @@ function LdapServersTable({ ldaps, orgName, onUpdate, t, modal }: {
   return (
     <div className="rounded-xl border border-border bg-surface-1 overflow-hidden">
       <div className="px-5 py-3 border-b border-border-subtle bg-surface-2/30 flex items-center justify-between">
-        <h3 className="text-[13px] font-semibold text-text-primary">{t("orgs.field.ldapServers" as any)}</h3>
+        <h3 className="text-[13px] font-semibold text-text-primary">{t("orgs.field.ldapServers")}</h3>
         <button onClick={handleAdd} className="flex items-center gap-1 rounded-lg bg-accent px-2.5 py-1 text-[12px] font-medium text-white hover:bg-accent-hover transition-colors">
           <Plus size={12} /> {t("common.add")}
         </button>
@@ -1297,12 +1297,12 @@ function LdapServersTable({ ldaps, orgName, onUpdate, t, modal }: {
           <table className="w-full text-left">
             <thead>
               <tr className="border-b border-border bg-surface-2/30">
-                <th className="px-4 py-2 text-[11px] font-semibold uppercase tracking-wider text-text-muted">{t("orgs.ldap.serverName" as any)}</th>
-                <th className="px-4 py-2 text-[11px] font-semibold uppercase tracking-wider text-text-muted">{t("orgs.ldap.server" as any)}</th>
-                <th className="px-4 py-2 text-[11px] font-semibold uppercase tracking-wider text-text-muted">{t("orgs.ldap.baseDn" as any)}</th>
-                <th className="px-4 py-2 text-[11px] font-semibold uppercase tracking-wider text-text-muted">{t("orgs.ldap.autoSync" as any)}</th>
-                <th className="px-4 py-2 text-[11px] font-semibold uppercase tracking-wider text-text-muted">{t("orgs.ldap.lastSync" as any)}</th>
-                <th className="px-4 py-2 text-[11px] font-semibold uppercase tracking-wider text-text-muted w-52">{t("common.action" as any)}</th>
+                <th className="px-4 py-2 text-[11px] font-semibold uppercase tracking-wider text-text-muted">{t("orgs.ldap.serverName")}</th>
+                <th className="px-4 py-2 text-[11px] font-semibold uppercase tracking-wider text-text-muted">{t("orgs.ldap.server")}</th>
+                <th className="px-4 py-2 text-[11px] font-semibold uppercase tracking-wider text-text-muted">{t("orgs.ldap.baseDn")}</th>
+                <th className="px-4 py-2 text-[11px] font-semibold uppercase tracking-wider text-text-muted">{t("orgs.ldap.autoSync")}</th>
+                <th className="px-4 py-2 text-[11px] font-semibold uppercase tracking-wider text-text-muted">{t("orgs.ldap.lastSync")}</th>
+                <th className="px-4 py-2 text-[11px] font-semibold uppercase tracking-wider text-text-muted w-52">{t("common.action")}</th>
               </tr>
             </thead>
             <tbody>
@@ -1324,7 +1324,7 @@ function LdapServersTable({ ldaps, orgName, onUpdate, t, modal }: {
                     <div className="flex items-center gap-1.5">
                       <Link to={`/ldap/sync/${ldap.owner}/${ldap.id}`}
                         className="flex items-center gap-1 rounded-lg bg-accent px-3 py-1.5 text-[11px] font-medium text-white hover:bg-accent-hover transition-colors whitespace-nowrap">
-                        <RefreshCw size={11} /> {t("common.sync" as any)}
+                        <RefreshCw size={11} /> {t("common.sync")}
                       </Link>
                       <Link to={`/ldap/${ldap.owner}/${ldap.id}`}
                         className="flex items-center gap-1 rounded-lg border border-border px-3 py-1.5 text-[11px] font-medium text-text-secondary hover:bg-surface-2 transition-colors whitespace-nowrap">
@@ -1379,7 +1379,7 @@ function AccountItemsTable({ items, onChange, t }: {
   return (
     <div className="rounded-xl border border-border bg-surface-1 overflow-hidden">
       <div className="px-5 py-3 border-b border-border-subtle bg-surface-2/30 flex items-center justify-between">
-        <h3 className="text-[13px] font-semibold text-text-primary">{t("orgs.section.accountItems" as any)} ({items.length})</h3>
+        <h3 className="text-[13px] font-semibold text-text-primary">{t("orgs.section.accountItems")} ({items.length})</h3>
         <button onClick={addRow} className="flex items-center gap-1 rounded-lg bg-accent px-2.5 py-1 text-[12px] font-medium text-white hover:bg-accent-hover transition-colors">
           <Plus size={12} /> {t("common.add")}
         </button>
@@ -1391,12 +1391,12 @@ function AccountItemsTable({ items, onChange, t }: {
           <table className="w-full text-left">
             <thead>
               <tr className="border-b border-border bg-surface-2/30">
-                <th className="px-3 py-2 text-[11px] font-semibold uppercase tracking-wider text-text-muted">{t("common.name" as any)}</th>
-                <th className="px-3 py-2 text-[11px] font-semibold uppercase tracking-wider text-text-muted w-16">{t("orgs.account.visible" as any)}</th>
-                <th className="px-3 py-2 text-[11px] font-semibold uppercase tracking-wider text-text-muted w-36">{t("orgs.account.regex" as any)}</th>
-                <th className="px-3 py-2 text-[11px] font-semibold uppercase tracking-wider text-text-muted w-28">{t("orgs.account.viewRule" as any)}</th>
-                <th className="px-3 py-2 text-[11px] font-semibold uppercase tracking-wider text-text-muted w-28">{t("orgs.account.modifyRule" as any)}</th>
-                <th className="px-3 py-2 text-[11px] font-semibold uppercase tracking-wider text-text-muted w-24">{t("common.action" as any)}</th>
+                <th className="px-3 py-2 text-[11px] font-semibold uppercase tracking-wider text-text-muted">{t("common.name")}</th>
+                <th className="px-3 py-2 text-[11px] font-semibold uppercase tracking-wider text-text-muted w-16">{t("orgs.account.visible")}</th>
+                <th className="px-3 py-2 text-[11px] font-semibold uppercase tracking-wider text-text-muted w-36">{t("orgs.account.regex")}</th>
+                <th className="px-3 py-2 text-[11px] font-semibold uppercase tracking-wider text-text-muted w-28">{t("orgs.account.viewRule")}</th>
+                <th className="px-3 py-2 text-[11px] font-semibold uppercase tracking-wider text-text-muted w-28">{t("orgs.account.modifyRule")}</th>
+                <th className="px-3 py-2 text-[11px] font-semibold uppercase tracking-wider text-text-muted w-24">{t("common.action")}</th>
               </tr>
             </thead>
             <tbody>
@@ -1428,9 +1428,9 @@ function AccountItemsTable({ items, onChange, t }: {
                     <td className="px-3 py-1.5">
                       {item.visible ? (
                         <SimpleSelect value={item.viewRule} options={[
-                          { value: "Public", label: t("orgs.rule.Public" as any) },
-                          { value: "Self", label: t("orgs.rule.Self" as any) },
-                          { value: "Admin", label: t("orgs.rule.Admin" as any) },
+                          { value: "Public", label: t("orgs.rule.Public") },
+                          { value: "Self", label: t("orgs.rule.Self") },
+                          { value: "Admin", label: t("orgs.rule.Admin") },
                         ]} onChange={(v) => updateField(idx, "viewRule", v)} compact />
                       ) : null}
                     </td>

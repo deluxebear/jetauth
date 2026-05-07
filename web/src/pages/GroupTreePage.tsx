@@ -101,19 +101,19 @@ export default function GroupTreePage() {
     if (res.status === "ok") {
       navigate(`/groups/${organizationName}/${newGroup.name}`, { state: { mode: "add" } });
     } else {
-      modal.toast(res.msg || t("common.addFailed" as any), "error");
+      modal.toast(res.msg || t("common.addFailed"), "error");
     }
   };
 
   const handleDeleteGroup = (group: Group) => {
     if (group.children?.length > 0) {
-      modal.toast(t("groupTree.cannotDeleteWithChildren" as any), "error");
+      modal.toast(t("groupTree.cannotDeleteWithChildren"), "error");
       return;
     }
     modal.showConfirm(`${t("common.confirmDelete")} [${group.title || group.displayName || group.name}]`, async () => {
       const res = await GroupBackend.deleteGroup({ owner: group.owner || organizationName!, name: group.key || group.name } as Group);
       if (res.status === "ok") {
-        modal.toast(t("common.deleteSuccess" as any));
+        modal.toast(t("common.deleteSuccess"));
         if (selectedGroup === (group.key || group.name)) {
           navigate(`/trees/${organizationName}`);
         }
@@ -121,9 +121,9 @@ export default function GroupTreePage() {
       } else {
         const msg = res.msg || "";
         if (msg.toLowerCase().includes("has users")) {
-          modal.toast(t("groupTree.groupHasUsers" as any), "error");
+          modal.toast(t("groupTree.groupHasUsers"), "error");
         } else {
-          modal.toast(msg || t("common.deleteFailed" as any), "error");
+          modal.toast(msg || t("common.deleteFailed"), "error");
         }
       }
     });
@@ -141,7 +141,7 @@ export default function GroupTreePage() {
   const userColumns: Column<User>[] = [
     {
       key: "name",
-      title: t("col.name" as any),
+      title: t("col.name"),
       width: "120px",
       render: (_, r) => (
         <Link to={`/users/${r.owner}/${r.name}`} className="font-mono font-medium text-accent hover:underline" onClick={(e) => e.stopPropagation()}>
@@ -149,18 +149,18 @@ export default function GroupTreePage() {
         </Link>
       ),
     },
-    { key: "displayName", title: t("col.displayName" as any) },
-    { key: "email", title: t("col.email" as any), render: (_, r) => <span className="text-[12px] text-text-secondary">{r.email || "—"}</span> },
-    { key: "phone", title: t("col.phone" as any), render: (_, r) => <span className="text-[12px] text-text-secondary">{r.phone || "—"}</span> },
+    { key: "displayName", title: t("col.displayName") },
+    { key: "email", title: t("col.email"), render: (_, r) => <span className="text-[12px] text-text-secondary">{r.email || "—"}</span> },
+    { key: "phone", title: t("col.phone"), render: (_, r) => <span className="text-[12px] text-text-secondary">{r.phone || "—"}</span> },
     {
       key: "isAdmin",
-      title: t("col.isAdmin" as any),
+      title: t("col.isAdmin"),
       width: "80px",
       render: (_, r) => <StatusBadge status={r.isAdmin ? "active" : "inactive"} label={r.isAdmin ? "ON" : "OFF"} />,
     },
     {
       key: "isForbidden",
-      title: t("col.isForbidden" as any),
+      title: t("col.isForbidden"),
       width: "80px",
       render: (_, r) => <StatusBadge status={r.isForbidden ? "error" : "inactive"} label={r.isForbidden ? "ON" : "OFF"} />,
     },
@@ -174,7 +174,7 @@ export default function GroupTreePage() {
             <ArrowLeft size={18} />
           </button>
           <div>
-            <h1 className="text-xl font-bold tracking-tight">{t("groupTree.title" as any)}</h1>
+            <h1 className="text-xl font-bold tracking-tight">{t("groupTree.title")}</h1>
             <p className="text-[13px] text-text-muted mt-0.5">{organizationName}</p>
           </div>
         </div>
@@ -184,9 +184,9 @@ export default function GroupTreePage() {
         {/* Left: Tree */}
         <div className="w-[280px] shrink-0 rounded-xl border border-border bg-surface-1 overflow-hidden flex flex-col">
           <div className="px-4 py-3 border-b border-border-subtle bg-surface-2/30 flex items-center justify-between">
-            <span className="text-[13px] font-semibold text-text-primary">{t("groupTree.groups" as any)}</span>
+            <span className="text-[13px] font-semibold text-text-primary">{t("groupTree.groups")}</span>
             <div className="flex items-center gap-1">
-              <button onClick={handleShowAll} className="rounded p-1 text-text-muted hover:text-accent hover:bg-accent/10 transition-colors" title={t("groupTree.showAll" as any)}>
+              <button onClick={handleShowAll} className="rounded p-1 text-text-muted hover:text-accent hover:bg-accent/10 transition-colors" title={t("groupTree.showAll")}>
                 <Eye size={14} />
               </button>
               <button onClick={() => handleAddGroup()} className="rounded p-1 text-text-muted hover:text-accent hover:bg-accent/10 transition-colors" title={t("common.add")}>

@@ -13,7 +13,7 @@ export function PresetPicker({ onPick }: Props) {
 
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <span className="text-[12px] text-text-secondary">{t("providers.httpEmail.preset" as any)}:</span>
+      <span className="text-[12px] text-text-secondary">{t("providers.httpEmail.preset")}:</span>
       {presets.map((p) => (
         <button
           key={p.key}

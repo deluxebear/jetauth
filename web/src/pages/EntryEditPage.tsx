@@ -83,7 +83,7 @@ export default function EntryEditPage() {
     try {
       const res = await EntryBackend.updateEntry(owner!, name!, entry);
       if (res.status === "ok") {
-        modal.toast(t("common.saveSuccess" as any));
+        modal.toast(t("common.saveSuccess"));
         setSaved(true);
         setOriginalJson(JSON.stringify(entry));
         setIsAddMode(false);
@@ -92,7 +92,7 @@ export default function EntryEditPage() {
           navigate(`/entries/${entry.owner}/${entry.name}`, { replace: true });
         }
       } else {
-        modal.toast(friendlyError(res.msg, t) || t("common.saveFailed" as any), "error");
+        modal.toast(friendlyError(res.msg, t) || t("common.saveFailed"), "error");
       }
     } catch (e) {
       console.error(e);
@@ -106,14 +106,14 @@ export default function EntryEditPage() {
     try {
       const res = await EntryBackend.updateEntry(owner!, name!, entry);
       if (res.status === "ok") {
-        modal.toast(t("common.saveSuccess" as any));
+        modal.toast(t("common.saveSuccess"));
         invalidateList();
         navigate("/entries");
       } else {
-        modal.toast(friendlyError(res.msg, t) || t("common.saveFailed" as any), "error");
+        modal.toast(friendlyError(res.msg, t) || t("common.saveFailed"), "error");
       }
     } catch (e: any) {
-      modal.toast(e?.message || t("common.saveFailed" as any), "error");
+      modal.toast(e?.message || t("common.saveFailed"), "error");
     } finally {
       setSaving(false);
     }
@@ -135,7 +135,7 @@ export default function EntryEditPage() {
           invalidateList();
           navigate("/entries");
         } else {
-          modal.toast(res.msg || t("common.deleteFailed" as any), "error");
+          modal.toast(res.msg || t("common.deleteFailed"), "error");
         }
       } catch (e) {
         console.error(e);
@@ -148,7 +148,7 @@ export default function EntryEditPage() {
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
       <StickyEditHeader
-        title={`${isAddMode ? t("common.add") : t("common.edit")} ${t("entries.title" as any)}`}
+        title={`${isAddMode ? t("common.add") : t("common.edit")} ${t("entries.title")}`}
         subtitle={`${owner}/${name}`}
         onBack={handleBack}
       >
@@ -158,21 +158,21 @@ export default function EntryEditPage() {
         <SaveButton onClick={handleSave} saving={saving} saved={saved} label={t("common.save")} />
         <button onClick={handleSaveAndExit} disabled={saving} className="flex items-center gap-1.5 rounded-lg bg-accent px-4 py-2 text-[13px] font-semibold text-white hover:bg-accent-hover disabled:opacity-50 transition-colors">
           {saving ? <div className="h-3.5 w-3.5 rounded-full border-2 border-white/30 border-t-white animate-spin" /> : <LogOut size={14} />}
-          {t("common.saveAndExit" as any)}
+          {t("common.saveAndExit")}
         </button>
       </StickyEditHeader>
 
       {showBanner && <UnsavedBanner isAddMode={isAddMode} />}
 
       {/* Basic Info */}
-      <FormSection title={t("entries.section.basic" as any)}>
+      <FormSection title={t("entries.section.basic")}>
         <FormField label={t("field.owner")}>
           {isAdmin ? (
             <SingleSearchSelect
               value={entry.owner}
               options={orgOptions}
               onChange={(v) => set("owner", v)}
-              placeholder={t("common.search" as any)}
+              placeholder={t("common.search")}
             />
           ) : (
             <input value={entry.owner} disabled className={inputClass} />
@@ -187,29 +187,29 @@ export default function EntryEditPage() {
       </FormSection>
 
       {/* References */}
-      <FormSection title={t("entries.section.references" as any)}>
-        <FormField label={t("col.provider" as any)}>
+      <FormSection title={t("entries.section.references")}>
+        <FormField label={t("col.provider")}>
           {entry.provider ? (
             <Link to={`/providers/${entry.owner}/${entry.provider}`} className="text-accent hover:underline text-[13px]">{entry.provider}</Link>
           ) : (
-            <span className="text-[13px] text-text-muted">{t("common.none" as any)}</span>
+            <span className="text-[13px] text-text-muted">{t("common.none")}</span>
           )}
         </FormField>
-        <FormField label={t("col.application" as any)}>
+        <FormField label={t("col.application")}>
           {entry.application ? (
             <Link to={`/applications/${entry.owner}/${entry.application}`} className="text-accent hover:underline text-[13px]">{entry.application}</Link>
           ) : (
-            <span className="text-[13px] text-text-muted">{t("common.none" as any)}</span>
+            <span className="text-[13px] text-text-muted">{t("common.none")}</span>
           )}
         </FormField>
       </FormSection>
 
       {/* Details */}
-      <FormSection title={t("entries.section.details" as any)}>
-        <FormField label={t("col.type" as any)}>
+      <FormSection title={t("entries.section.details")}>
+        <FormField label={t("col.type")}>
           <input value={entry.type ?? ""} disabled className={inputClass} />
         </FormField>
-        <FormField label={t("entries.field.clientIp" as any)}>
+        <FormField label={t("entries.field.clientIp")}>
           <div className="flex items-center gap-2">
             <input value={entry.clientIp ?? ""} disabled className={`${monoInputClass} flex-1`} />
             {entry.clientIp && (
@@ -218,23 +218,23 @@ export default function EntryEditPage() {
                 target="_blank"
                 rel="noreferrer"
                 className="flex items-center gap-1 rounded-lg border border-border px-2.5 py-2 text-[12px] text-text-secondary hover:bg-surface-2 transition-colors shrink-0"
-                title={t("entries.tooltip.lookupIp" as any)}
+                title={t("entries.tooltip.lookupIp")}
               >
                 <ExternalLink size={13} />
               </a>
             )}
           </div>
         </FormField>
-        <FormField label={t("entries.field.userAgent" as any)} span="full">
+        <FormField label={t("entries.field.userAgent")} span="full">
           <input value={entry.userAgent ?? ""} disabled className={inputClass} />
         </FormField>
       </FormSection>
 
       {/* Message */}
-      <FormSection title={t("entries.field.message" as any)}>
+      <FormSection title={t("entries.field.message")}>
         <div className="col-span-full">
           <pre className="rounded-lg border border-border bg-surface-2 p-4 text-[12px] font-mono text-text-secondary overflow-auto max-h-[500px] whitespace-pre-wrap break-all">
-            {formattedMessage || <span className="text-text-muted">{t("common.none" as any)}</span>}
+            {formattedMessage || <span className="text-text-muted">{t("common.none")}</span>}
           </pre>
         </div>
       </FormSection>
