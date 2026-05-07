@@ -1301,7 +1301,7 @@ const en = {
   "providers.oauth.domain.auth0Hint": "Auth0 tenant domain, without the https:// prefix. E.g. mytenant.us.auth0.com",
   "providers.oauth.domain.oktaHint": "Okta org URL with https://. E.g. https://dev-xxxxxx.okta.com",
   "providers.oauth.domain.adfsHint": "AD FS server https URL. E.g. https://adfs.your-company.com",
-  "providers.oauth.domain.casdoorHint": "Target Casdoor / JetAuth instance root URL with https://. E.g. https://auth.example.com",
+  "providers.oauth.domain.casdoorHint": "Target JetAuth / Casdoor instance root URL with https://. E.g. https://auth.example.com",
   "providers.oauth.domain.azureAdHint": "Azure AD tenant ID or \"common\" (any tenant). E.g. common or xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
   "providers.oauth.domain.azureAdB2CHint": "Azure AD B2C tenant name (without the .onmicrosoft.com suffix). E.g. mytenant",
   "providers.oauth.domain.nextcloudHint": "Full Nextcloud instance URL with https://. E.g. https://nextcloud.example.com",
@@ -2430,6 +2430,10 @@ const en = {
   "serverStore.title": "MCP Store",
   "serverStore.subtitle": "Browse and install online MCP servers",
   "serverStore.searchPlaceholder": "Search server name...",
+  "serverStore.source.online": "Online registry",
+  "serverStore.source.local": "Local fallback",
+  "serverStore.fallback.title": "Couldn't reach the online registry — showing the bundled snapshot",
+  "serverStore.error.upstream": "Online registry request failed",
 
   // Scan Server
   "scanServer.title": "Scan Server",
@@ -2575,6 +2579,19 @@ const en = {
   "sites.placeholder.bizAuthzBypass": "Enter a path and press Enter (e.g. /health)",
   "sites.failMode.closed": "Deny (fail-closed, recommended)",
   "sites.failMode.open": "Allow (fail-open)",
+
+  // Site URL Authorization (BizAuthz) — split into its own section
+  "sites.section.bizAuthz": "URL Authorization",
+  "sites.section.bizAuthzDesc": "Per-request, fine-grained access control by URL and HTTP method, driven by roles and permissions",
+  "sites.bizAuthz.requiresApp": "Bind a JetAuth application in the Access section first — URL-level authorization needs an identity source",
+
+  // Site SSL certificate source (Auto vs Manual)
+  "sites.field.certSource": "Certificate Source",
+  "sites.tooltip.certSource": "Auto: issued and renewed by Let's Encrypt via ACME. Manual: use a certificate you've uploaded.",
+  "sites.certSource.auto": "Auto-issue",
+  "sites.certSource.manual": "Use existing",
+  "sites.certSource.autoHint": "Let's Encrypt will issue the certificate and renew it automatically before expiry — no manual maintenance needed.",
+  "sites.certSource.manualPlaceholder": "Pick a certificate…",
 
   // Subscriptions (missing keys with full prefix)
   "subscriptions.title": "Subscriptions",

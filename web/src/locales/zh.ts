@@ -1382,7 +1382,7 @@ const zh: Record<string, string> = {
   "providers.oauth.domain.auth0Hint": "Auth0 租户域名，不含 https:// 前缀。形如 mytenant.us.auth0.com",
   "providers.oauth.domain.oktaHint": "Okta 组织 URL，包含 https://。形如 https://dev-xxxxxx.okta.com",
   "providers.oauth.domain.adfsHint": "AD FS 服务器的 https URL。形如 https://adfs.your-company.com",
-  "providers.oauth.domain.casdoorHint": "目标 Casdoor / JetAuth 实例根 URL，包含 https://。形如 https://auth.example.com",
+  "providers.oauth.domain.casdoorHint": "目标 JetAuth / Casdoor 实例根 URL，包含 https://。形如 https://auth.example.com",
   "providers.oauth.domain.azureAdHint": "Azure AD 租户 ID 或 \"common\"（允许任意租户）。例：common 或 xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
   "providers.oauth.domain.azureAdB2CHint": "Azure AD B2C 租户名（不含 .onmicrosoft.com 后缀）。形如 mytenant",
   "providers.oauth.domain.nextcloudHint": "Nextcloud 实例的完整 URL，包含 https://。形如 https://nextcloud.example.com",
@@ -2510,6 +2510,10 @@ const zh: Record<string, string> = {
   "serverStore.title": "MCP 商店",
   "serverStore.subtitle": "浏览和安装在线 MCP 服务器",
   "serverStore.searchPlaceholder": "搜索服务器名称...",
+  "serverStore.source.online": "在线注册表",
+  "serverStore.source.local": "本地兜底",
+  "serverStore.fallback.title": "无法连接到在线注册表，正在显示本地缓存",
+  "serverStore.error.upstream": "在线注册表请求失败",
 
   // Scan Server
   "scanServer.title": "扫描服务器",
@@ -2655,6 +2659,19 @@ const zh: Record<string, string> = {
   "sites.placeholder.bizAuthzBypass": "输入路径后按回车（例：/health）",
   "sites.failMode.closed": "拒绝（fail-closed，推荐）",
   "sites.failMode.open": "放行（fail-open）",
+
+  // Site URL Authorization (BizAuthz) — split into its own section
+  "sites.section.bizAuthz": "URL 级授权",
+  "sites.section.bizAuthzDesc": "对每个请求按角色与权限做 URL+方法 级别的细粒度访问控制",
+  "sites.bizAuthz.requiresApp": "请先在「访问控制」分区绑定 JetAuth 应用，URL 级授权依赖应用提供的身份信息",
+
+  // Site SSL certificate source (Auto vs Manual)
+  "sites.field.certSource": "证书来源",
+  "sites.tooltip.certSource": "自动：由 Let's Encrypt 通过 ACME 协议签发并续期；手动：使用已上传的证书。",
+  "sites.certSource.auto": "自动签发",
+  "sites.certSource.manual": "手动选择",
+  "sites.certSource.autoHint": "证书将由 Let's Encrypt 自动签发并到期前续期，无需手动维护。",
+  "sites.certSource.manualPlaceholder": "选择证书…",
 
   // Subscriptions (missing keys with full prefix)
   "subscriptions.title": "订阅管理",

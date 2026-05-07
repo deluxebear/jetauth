@@ -1,7 +1,7 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ArrowLeft, Search, X, ExternalLink, Plus, Globe } from "lucide-react";
+import { ArrowLeft, Search, X, ExternalLink, Plus, Globe, RefreshCw, Cloud, HardDrive, AlertCircle } from "lucide-react";
 import { useTranslation } from "../i18n";
 import { useModal } from "../components/Modal";
 import { useOrganization } from "../OrganizationContext";
@@ -19,25 +19,48 @@ interface NormalizedServer {
   website: string;
 }
 
-function normalizeServers(data: any): NormalizedServer[] {
-  // Extract server array from various response shapes
-  let raw: any[] = [];
-  if (Array.isArray(data?.servers)) raw = data.servers;
-  else if (Array.isArray(data)) raw = data;
-  else if (Array.isArray(data?.data)) raw = data.data;
+// "online" = data fetched live from backend (which proxies mcp.casdoor.org/registry.json).
+// "local"  = baked-in fallback when the backend / network is unreachable.
+type Source = "online" | "local";
+
+function normalizeServers(data: unknown): NormalizedServer[] {
+  // Extract server array from various response shapes — the upstream JSON
+  // schema has changed shape across versions; we accept all of them.
+  type Raw = Record<string, unknown>;
+  let raw: Raw[] = [];
+  const obj = data as Raw | null;
+  if (obj && typeof obj === "object") {
+    if (Array.isArray(obj.servers)) raw = obj.servers as Raw[];
+    else if (Array.isArray(obj.data)) raw = obj.data as Raw[];
+  }
+  if (raw.length === 0 && Array.isArray(data)) raw = data as Raw[];
 
   return raw
-    .map((s: any, i: number) => {
-      const categoriesRaw = [s?.category].filter((c: any) => typeof c === "string" && c.trim() !== "");
+    .map((s, i) => {
+      const name = typeof s.name === "string" ? s.name : "";
+      const description = typeof s.description === "string" ? s.description : "";
+      const id = typeof s.id === "string" ? s.id : `${name || "server"}-${i}`;
+      const category = typeof s.category === "string" && s.category.trim() ? s.category : "";
+      const categoriesRaw = category ? [category] : [];
+      const endpoints = (s.endpoints && typeof s.endpoints === "object")
+        ? (s.endpoints as Record<string, unknown>)
+        : null;
+      const endpoint = (endpoints && typeof endpoints.production === "string" ? endpoints.production : "")
+        || (typeof s.endpoint === "string" ? s.endpoint : "");
+      const maintainer = (s.maintainer && typeof s.maintainer === "object")
+        ? (s.maintainer as Record<string, unknown>)
+        : null;
+      const website = (maintainer && typeof maintainer.website === "string" ? maintainer.website : "")
+        || (typeof s.website === "string" ? s.website : "");
       return {
-        id: s.id ?? `${s.name ?? "server"}-${i}`,
-        name: s.name ?? "",
-        nameText: (s.name ?? "").toLowerCase(),
+        id,
+        name,
+        nameText: name.toLowerCase(),
         categoriesRaw,
-        categoriesLower: categoriesRaw.map((c: string) => c.toLowerCase()),
-        endpoint: s.endpoints?.production ?? s.endpoint ?? "",
-        description: s.description ?? "",
-        website: s?.maintainer?.website ?? s?.website ?? "",
+        categoriesLower: categoriesRaw.map((c) => c.toLowerCase()),
+        endpoint,
+        description,
+        website,
       };
     })
     .filter((s) => s.endpoint.startsWith("http"));
@@ -54,10 +77,45 @@ export default function ServerStorePage() {
   const modal = useModal();
   const { getNewEntityOwner } = useOrganization();
 
-  const servers = useMemo(() => normalizeServers(mcpRegistry), []);
+  // Dynamic source: try the backend (which proxies mcp.casdoor.org/registry.json)
+  // and fall back to the embedded snapshot if it fails. We keep both pieces
+  // of state so the UI can show which source is currently displayed and a
+  // banner when we had to fall back.
+  const [rawData, setRawData] = useState<unknown>(null);
+  const [source, setSource] = useState<Source>("online");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [nameFilter, setNameFilter] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<string[]>([]);
   const [creatingId, setCreatingId] = useState("");
+
+  const loadOnline = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await ServerBackend.getOnlineServers();
+      if (res.status === "ok" && res.data != null) {
+        setRawData(res.data);
+        setSource("online");
+      } else {
+        // Backend reachable but registry fetch failed upstream — fall back
+        // to the embedded snapshot so the page is still usable.
+        setRawData(mcpRegistry);
+        setSource("local");
+        setError(res.msg || t("serverStore.error.upstream"));
+      }
+    } catch (e: unknown) {
+      setRawData(mcpRegistry);
+      setSource("local");
+      setError(e instanceof Error ? e.message : t("serverStore.error.upstream"));
+    } finally {
+      setLoading(false);
+    }
+  }, [t]);
+
+  useEffect(() => { loadOnline(); }, [loadOnline]);
+
+  const servers = useMemo(() => normalizeServers(rawData ?? mcpRegistry), [rawData]);
 
   const categories = useMemo(() => {
     const all = servers.flatMap((s) => s.categoriesRaw);
@@ -106,17 +164,45 @@ export default function ServerStorePage() {
   return (
     <div className="space-y-5">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <div className="flex items-center gap-3 min-w-0">
           <button onClick={() => navigate("/servers")} className="rounded-lg p-1.5 text-text-muted hover:bg-surface-2 transition-colors" title={t("common.back")}>
             <ArrowLeft size={18} />
           </button>
-          <div>
+          <div className="min-w-0">
             <h1 className="text-xl font-bold tracking-tight">{t("serverStore.title")}</h1>
             <p className="text-[13px] text-text-muted mt-0.5">{t("serverStore.subtitle")}</p>
           </div>
         </div>
+        <div className="flex items-center gap-2 shrink-0">
+          {/* Source pill — tells admins whether we're showing the live registry or the bundled fallback. */}
+          <span className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-medium ${source === "online" ? "border-success/30 bg-success/10 text-success" : "border-warning/40 bg-warning/10 text-warning"}`}>
+            {source === "online" ? <Cloud size={12} /> : <HardDrive size={12} />}
+            {source === "online" ? t("serverStore.source.online") : t("serverStore.source.local")}
+          </span>
+          <motion.button
+            whileHover={{ rotate: 180 }}
+            transition={{ duration: 0.3 }}
+            onClick={loadOnline}
+            disabled={loading}
+            className="rounded-lg border border-border p-2 text-text-muted hover:bg-surface-2 transition-colors disabled:opacity-50"
+            title={t("common.refresh")}
+          >
+            <RefreshCw size={15} className={loading ? "animate-spin" : ""} />
+          </motion.button>
+        </div>
       </div>
+
+      {/* Fallback banner — shown only when we had to fall back to local data */}
+      {error && source === "local" && (
+        <div className="flex items-start gap-2 rounded-lg border border-warning/30 bg-warning/5 px-3 py-2.5">
+          <AlertCircle size={14} className="shrink-0 mt-0.5 text-warning" />
+          <div className="text-[12px] text-text-secondary">
+            <p className="font-medium text-text-primary">{t("serverStore.fallback.title")}</p>
+            <p className="text-text-muted mt-0.5">{error}</p>
+          </div>
+        </div>
+      )}
 
       {/* Filters */}
       <div className="flex items-center gap-3 flex-wrap">
@@ -152,7 +238,11 @@ export default function ServerStorePage() {
       </div>
 
       {/* Content */}
-      {filtered.length === 0 ? (
+      {loading && servers.length === 0 ? (
+        <div className="flex items-center justify-center py-16">
+          <div className="h-8 w-8 rounded-full border-2 border-accent/30 border-t-accent animate-spin" />
+        </div>
+      ) : filtered.length === 0 ? (
         <div className="text-center py-16 text-text-muted text-[13px]">{t("common.noData")}</div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">

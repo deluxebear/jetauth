@@ -15,6 +15,7 @@ import SimpleSelect from "../components/SimpleSelect";
 import SingleSearchSelect from "../components/SingleSearchSelect";
 import SaveButton from "../components/SaveButton";
 import UnsavedBanner from "../components/UnsavedBanner";
+import WafEditor from "../components/WafEditor";
 import { useUnsavedWarning } from "../hooks/useUnsavedWarning";
 import { getStoredAccount, isGlobalAdmin } from "../utils/auth";
 
@@ -288,27 +289,32 @@ export default function RuleEditPage() {
 
     switch (rule.type) {
       case "WAF":
+        // Card-style layout (vs the table used by other rule types) — a
+        // ModSecurity SecRule is verbose and benefits from a syntax-highlighted
+        // multi-line editor that the narrow table cell can't accommodate.
         return (
-          <div className="col-span-full overflow-hidden rounded-lg border border-border">
-            <table className="w-full text-[13px]">
-              <thead>
-                <tr className="border-b border-border bg-surface-1">
-                  <th className="px-3 py-2 text-left font-medium text-text-secondary w-[180px]">{t("col.name")}</th>
-                  <th className="px-3 py-2 text-left font-medium text-text-secondary">{t("rules.field.expression")}</th>
-                  <th className="px-3 py-2 text-center font-medium text-text-secondary w-[90px]">{t("common.action")}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {exprs.map((expr, i) => (
-                  <tr key={i} className="border-b border-border last:border-b-0">
-                    <td className="px-3 py-1.5"><input value={expr.name} onChange={(e) => updateExpr(i, "name", e.target.value)} className={`${monoInputClass} w-full`} /></td>
-                    <td className="px-3 py-1.5"><input value={expr.value} onChange={(e) => updateExpr(i, "value", e.target.value)} className={`${monoInputClass} w-full text-[11px]`} placeholder="SecRule ..." /></td>
-                    <td className="px-3 py-1.5"><RowActions index={i} total={exprs.length} onMove={moveExpr} onDelete={removeExpr} /></td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            {exprs.length === 0 && <p className="p-4 text-center text-[13px] text-text-muted">{t("common.noData")}</p>}
+          <div className="col-span-full space-y-3">
+            {exprs.length === 0 && (
+              <p className="rounded-lg border border-border bg-surface-1 p-4 text-center text-[13px] text-text-muted">{t("common.noData")}</p>
+            )}
+            {exprs.map((expr, i) => (
+              <div key={i} className="rounded-lg border border-border bg-surface-1 p-3 space-y-2">
+                <div className="flex items-center gap-2">
+                  <input
+                    value={expr.name}
+                    onChange={(e) => updateExpr(i, "name", e.target.value)}
+                    placeholder={t("col.name")}
+                    className={`${monoInputClass} flex-1`}
+                  />
+                  <RowActions index={i} total={exprs.length} onMove={moveExpr} onDelete={removeExpr} />
+                </div>
+                <WafEditor
+                  value={expr.value}
+                  onChange={(v) => updateExpr(i, "value", v)}
+                  placeholder={`SecRule REQUEST_HEADERS:Content-Type "@rx ..." "id:'1000',phase:1,deny"`}
+                />
+              </div>
+            ))}
           </div>
         );
 

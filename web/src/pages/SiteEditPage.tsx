@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Trash2, LogOut, X, ArrowRight, Users as UsersIcon, Globe, Server,
   Lock, ShieldAlert, KeyRound, ChevronDown, BellOff, ExternalLink,
-  UserCircle2, Route, Boxes, ShieldCheck, Activity, Radio, Wrench,
+  UserCircle2, Route, Boxes, ShieldCheck, Activity, Radio, Wrench, Fingerprint,
 } from "lucide-react";
 import StickyEditHeader from "../components/StickyEditHeader";
 import { FormField, FormSection, inputClass, monoInputClass, Switch } from "../components/FormSection";
@@ -95,6 +95,10 @@ export default function SiteEditPage() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
+  // Cert source is a UI-only toggle: empty sslCert == auto-issue (Let's Encrypt),
+  // non-empty == use the picked cert. We keep it in state so toggling to "Manual"
+  // before picking a cert doesn't snap back to "Auto".
+  const [certMode, setCertMode] = useState<"auto" | "manual">("auto");
   useEffect(() => { if (saved) { const timer = setTimeout(() => setSaved(false), 1500); return () => clearTimeout(timer); } }, [saved]);
   const [originalJson, setOriginalJson] = useState("");
 
@@ -157,7 +161,11 @@ export default function SiteEditPage() {
   });
 
   useEffect(() => {
-    if (entity) { setSite(entity); setOriginalJson(JSON.stringify(entity)); }
+    if (entity) {
+      setSite(entity);
+      setOriginalJson(JSON.stringify(entity));
+      setCertMode(entity.sslCert ? "manual" : "auto");
+    }
   }, [entity]);
 
   const isDirty = !!site && originalJson !== "" && JSON.stringify(site) !== originalJson;
@@ -415,14 +423,38 @@ export default function SiteEditPage() {
         <FormField label={t("sites.field.sslMode")} tooltip={t("sites.tooltip.sslMode")}>
           <SimpleSelect value={site.sslMode} options={SSL_MODE_OPTIONS} onChange={(v) => set("sslMode", v)} />
         </FormField>
-        <FormField label={t("sites.field.sslCert")} tooltip={t("sites.tooltip.sslCert")} help={!site.sslCert ? t("sites.helper.sslCert") : undefined}>
-          <SingleSearchSelect
-            value={site.sslCert ?? ""}
-            options={certOptions}
-            onChange={(v) => set("sslCert", v)}
-            placeholder={t("common.search")}
-          />
-        </FormField>
+        {site.sslMode !== "HTTP" && (
+          <FormField label={t("sites.field.certSource")} span="full" tooltip={t("sites.tooltip.certSource")}>
+            <div className="space-y-2.5">
+              <div className="inline-flex rounded-lg border border-border bg-surface-1 p-0.5">
+                <button
+                  type="button"
+                  onClick={() => { setCertMode("auto"); set("sslCert", ""); }}
+                  className={`px-3 py-1.5 text-[12px] font-medium rounded-md transition-colors ${certMode === "auto" ? "bg-accent text-white shadow-sm" : "text-text-secondary hover:text-text-primary"}`}
+                >
+                  {t("sites.certSource.auto")}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCertMode("manual")}
+                  className={`px-3 py-1.5 text-[12px] font-medium rounded-md transition-colors ${certMode === "manual" ? "bg-accent text-white shadow-sm" : "text-text-secondary hover:text-text-primary"}`}
+                >
+                  {t("sites.certSource.manual")}
+                </button>
+              </div>
+              {certMode === "auto" ? (
+                <p className="text-[12px] text-text-muted">{t("sites.certSource.autoHint")}</p>
+              ) : (
+                <SingleSearchSelect
+                  value={site.sslCert ?? ""}
+                  options={certOptions}
+                  onChange={(v) => set("sslCert", v)}
+                  placeholder={t("sites.certSource.manualPlaceholder")}
+                />
+              )}
+            </div>
+          </FormField>
+        )}
       </FormSection>
 
       {/* ── 3. Upstream ─────────────────────────────────────────── */}
@@ -469,35 +501,6 @@ export default function SiteEditPage() {
           />
         </FormField>
 
-        {/* URL-level authorization sub-panel — only available once an
-            application is bound, since the enforcer needs an identity source. */}
-        {site.casdoorApplication && (
-          <FormField label={t("sites.field.enableBizAuthz")} span="full" tooltip={t("sites.tooltip.enableBizAuthz")} help={t("sites.helper.enableBizAuthz")}>
-            <Switch checked={!!site.enableBizAuthz} onChange={(checked) => set("enableBizAuthz", checked)} />
-          </FormField>
-        )}
-        {site.casdoorApplication && site.enableBizAuthz && (
-          <>
-            <FormField label={t("sites.field.bizAuthzFailMode")} tooltip={t("sites.tooltip.bizAuthzFailMode")}>
-              <SimpleSelect
-                value={site.bizAuthzFailMode || "closed"}
-                options={[
-                  { value: "closed", label: t("sites.failMode.closed") },
-                  { value: "open", label: t("sites.failMode.open") },
-                ]}
-                onChange={(v) => set("bizAuthzFailMode", v)}
-              />
-            </FormField>
-            <FormField label={t("sites.field.bizAuthzBypass")} span="full" tooltip={t("sites.tooltip.bizAuthzBypass")} help={t("sites.helper.bizAuthzBypass")}>
-              <TagListInput
-                values={site.bizAuthzBypass || []}
-                onChange={(v) => set("bizAuthzBypass", v)}
-                placeholder={t("sites.placeholder.bizAuthzBypass")}
-              />
-            </FormField>
-          </>
-        )}
-
         <FormField label={t("sites.field.rules")} span="full" tooltip={t("sites.tooltip.rules")}>
           {ruleOptions.length > 0 ? (
             <div className="space-y-1.5">
@@ -527,6 +530,47 @@ export default function SiteEditPage() {
             <p className="text-[12px] text-text-muted">{t("sites.helper.rulesEmpty")}</p>
           )}
         </FormField>
+      </FormSection>
+
+      {/* ── 5. URL Authorization (BizAuthz) — depends on bound app ─── */}
+      <FormSection
+        title={t("sites.section.bizAuthz")}
+        description={t("sites.section.bizAuthzDesc")}
+        icon={<Fingerprint size={16} />}
+      >
+        {!site.casdoorApplication ? (
+          <div className="col-span-full flex items-start gap-2 rounded-lg border border-info/30 bg-info/5 px-3 py-2.5 text-[12px] text-text-secondary">
+            <KeyRound size={14} className="shrink-0 mt-0.5 text-info" />
+            <span>{t("sites.bizAuthz.requiresApp")}</span>
+          </div>
+        ) : (
+          <>
+            <FormField label={t("sites.field.enableBizAuthz")} span="full" tooltip={t("sites.tooltip.enableBizAuthz")} help={t("sites.helper.enableBizAuthz")}>
+              <Switch checked={!!site.enableBizAuthz} onChange={(checked) => set("enableBizAuthz", checked)} />
+            </FormField>
+            {site.enableBizAuthz && (
+              <>
+                <FormField label={t("sites.field.bizAuthzFailMode")} tooltip={t("sites.tooltip.bizAuthzFailMode")}>
+                  <SimpleSelect
+                    value={site.bizAuthzFailMode || "closed"}
+                    options={[
+                      { value: "closed", label: t("sites.failMode.closed") },
+                      { value: "open", label: t("sites.failMode.open") },
+                    ]}
+                    onChange={(v) => set("bizAuthzFailMode", v)}
+                  />
+                </FormField>
+                <FormField label={t("sites.field.bizAuthzBypass")} span="full" tooltip={t("sites.tooltip.bizAuthzBypass")} help={t("sites.helper.bizAuthzBypass")}>
+                  <TagListInput
+                    values={site.bizAuthzBypass || []}
+                    onChange={(v) => set("bizAuthzBypass", v)}
+                    placeholder={t("sites.placeholder.bizAuthzBypass")}
+                  />
+                </FormField>
+              </>
+            )}
+          </>
+        )}
       </FormSection>
 
       {/* ── 5. Health Monitoring ────────────────────────────────── */}
