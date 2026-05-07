@@ -1061,6 +1061,67 @@ export function getBizReBACStats(appId: string) {
   );
 }
 
+// ── Assertions ──
+
+export interface BizReBACAssertion {
+  id: string;
+  owner: string;
+  appName: string;
+  object: string;
+  relation: string;
+  user: string;
+  expected: boolean;
+  description?: string;
+  createdTime: string;
+  createdBy?: string;
+  lastActual?: boolean;
+  lastRunTime?: string;
+}
+
+export interface BizAssertionRunResult {
+  id: string;
+  object: string;
+  relation: string;
+  user: string;
+  expected: boolean;
+  actual: boolean;
+  pass: boolean;
+  error?: string;
+}
+
+export function listBizAssertions(appId: string) {
+  return request<BizReBACAssertion[]>(
+    "GET",
+    `/api/biz-list-assertions?appId=${encodeURIComponent(appId)}`,
+  );
+}
+
+export function addBizAssertion(
+  appId: string,
+  body: { object: string; relation: string; user: string; expected: boolean; description?: string },
+) {
+  return request<BizReBACAssertion>(
+    "POST",
+    `/api/biz-add-assertion?appId=${encodeURIComponent(appId)}`,
+    body,
+  );
+}
+
+export function deleteBizAssertion(appId: string, id: string) {
+  const params = new URLSearchParams({ appId, id });
+  return request<{ id: string }>(
+    "POST",
+    `/api/biz-delete-assertion?${params.toString()}`,
+  );
+}
+
+export function runBizAssertions(appId: string) {
+  return request<BizAssertionRunResult[]>(
+    "POST",
+    `/api/biz-run-assertions?appId=${encodeURIComponent(appId)}`,
+  );
+}
+
 // ── Helpers ──
 
 /** Parse policy_definition fields from model text. Returns field names like ["sub", "obj", "act"] */
