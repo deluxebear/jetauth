@@ -281,6 +281,8 @@ func ActivateBizAuthorizationModel(owner, appName, modelId string) error {
 	if _, err := SetBizAppConfigAuthorizationModelId(owner, appName, modelId); err != nil {
 		return fmt.Errorf("advance current model pointer: %w", err)
 	}
+	// Active model id changed — drop cached stats so Overview shows new activeModelId.
+	InvalidateReBACStatsCache(owner, appName)
 	return nil
 }
 
@@ -333,6 +335,10 @@ func SaveAuthorizationModel(owner, appName, dsl, createdBy, description string) 
 	// pre-advance snapshot is no longer safe to serve. Flush the entire
 	// store's cache entries (spec §6.6 "schema 切换时整 store flush").
 	flushBizTuplesetCacheForStore(BuildStoreId(owner, appName))
+
+	// Model count + activeModelId changed — drop cached stats so Overview
+	// reflects the new model without waiting for the 30s TTL to expire.
+	InvalidateReBACStatsCache(owner, appName)
 
 	return &SaveAuthorizationModelResult{
 		Outcome:              SaveOutcomeAdvanced,

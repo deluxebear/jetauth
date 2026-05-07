@@ -211,6 +211,14 @@ func (c *ApiController) BizGetReBACStats() {
 		c.ResponseError(err.Error())
 		return
 	}
+
+	storeId := object.BuildStoreId(owner, appName)
+	userId := c.GetSessionUsername()
+	if !object.AcquireBizReBACStatsToken(storeId, userId) {
+		rebacRateLimited(c, "biz-rebac-stats")
+		return
+	}
+
 	stats, err := object.GetReBACStats(owner, appName)
 	if err != nil {
 		c.ResponseError(err.Error())

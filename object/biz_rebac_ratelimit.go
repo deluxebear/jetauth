@@ -172,10 +172,14 @@ func (r *reBACRateLimiter) evictOldestLocked() {
 // limiting" — the handler falls through.
 var bizListRateLimiter *reBACRateLimiter
 
-// InitBizReBACRateLimiter constructs the process-wide limiter using
+// InitBizReBACRateLimiter constructs the process-wide limiters using
 // configured (or default) rps + burst values. Called from main.go.
 // Replaces any prior instance (Close is called so the GC goroutine
 // exits) to make repeated init calls from tests safe.
+//
+// Two limiters are initialised:
+//   - bizListRateLimiter: list-objects / list-users (rps / burst).
+//   - bizStatsRateLimiter: biz-rebac-stats (5 rps / 10 burst, fixed).
 func InitBizReBACRateLimiter(rps float64, burst int) {
 	if rps <= 0 {
 		rps = 20
@@ -187,6 +191,13 @@ func InitBizReBACRateLimiter(rps float64, burst int) {
 		bizListRateLimiter.Close()
 	}
 	bizListRateLimiter = newReBACRateLimiter(rate.Limit(rps), burst)
+
+	if bizStatsRateLimiter != nil {
+		bizStatsRateLimiter.Close()
+	}
+	const rebacStatsRPS = 5
+	const rebacStatsBurst = 10
+	bizStatsRateLimiter = newReBACRateLimiter(rate.Limit(rebacStatsRPS), rebacStatsBurst)
 }
 
 // AllowBizReBACListObjects returns false if the caller is rate-limited.
@@ -197,4 +208,24 @@ func AllowBizReBACListObjects(storeId, user string) bool {
 		return true
 	}
 	return bizListRateLimiter.Allow(storeId, user)
+}
+
+// bizStatsRateLimiter gates GET /api/biz-rebac-stats with a higher
+// sustained rate than the list endpoints — the admin UI's fan-out
+// (N open tabs polling the same app) is more tolerant than an
+// automated list-objects pipeline. 5 rps / 10 burst keeps a
+// rogue script from amplifying into hundreds of SQL round-trips
+// while giving a human with several tabs open comfortable headroom.
+//
+// Initialised alongside bizListRateLimiter by InitBizReBACRateLimiter.
+// A nil value (test / stripped-down binary) admits every request.
+var bizStatsRateLimiter *reBACRateLimiter
+
+// AcquireBizReBACStatsToken returns true when the (storeId, user)
+// pair is within the stats rate-limit budget.
+func AcquireBizReBACStatsToken(storeId, user string) bool {
+	if bizStatsRateLimiter == nil {
+		return true
+	}
+	return bizStatsRateLimiter.Allow(storeId, user)
 }

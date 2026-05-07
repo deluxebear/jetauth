@@ -351,6 +351,22 @@ func WriteBizTuples(writes []*BizTuple, deletes []*BizTuple) (written int64, del
 	for _, t := range touched {
 		invalidateBizTuplesetCacheKey(t.storeId, t.object, t.relation)
 	}
+
+	// Drop the stats snapshot so the admin Overview reflects the new
+	// tuple counts without waiting for the 30s TTL to expire.
+	appsSeen := map[string]struct{ owner, appName string }{}
+	for _, w := range writes {
+		key := w.Owner + "/" + w.AppName
+		appsSeen[key] = struct{ owner, appName string }{w.Owner, w.AppName}
+	}
+	for _, d := range deletes {
+		key := d.Owner + "/" + d.AppName
+		appsSeen[key] = struct{ owner, appName string }{d.Owner, d.AppName}
+	}
+	for _, a := range appsSeen {
+		InvalidateReBACStatsCache(a.owner, a.appName)
+	}
+
 	return written, deleted, nil
 }
 

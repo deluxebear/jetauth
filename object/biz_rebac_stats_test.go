@@ -12,6 +12,7 @@ package object
 
 import (
 	"testing"
+	"time"
 
 	"github.com/deluxebear/jetauth/util"
 )
@@ -73,5 +74,46 @@ func TestGetReBACStats_ShapesAndCounts(t *testing.T) {
 		if w.Op != "write" {
 			t.Errorf("recent[%d].Op = %q, want \"write\"", i, w.Op)
 		}
+	}
+}
+
+func TestStatsCache_HitWithinTTL(t *testing.T) {
+	fixedNow := time.Date(2026, 5, 7, 12, 0, 0, 0, time.UTC)
+	c := newStatsCache(func() time.Time { return fixedNow }, 30*time.Second)
+	snap := &ReBACStats{TupleCount: 42}
+	c.Set("admin", "drive_prod", snap)
+	if got := c.Get("admin", "drive_prod"); got == nil || got.TupleCount != 42 {
+		t.Fatalf("Get within TTL = %v, want %v", got, snap)
+	}
+}
+
+func TestStatsCache_ExpiresPastTTL(t *testing.T) {
+	clock := time.Date(2026, 5, 7, 12, 0, 0, 0, time.UTC)
+	c := newStatsCache(func() time.Time { return clock }, 30*time.Second)
+	c.Set("admin", "drive_prod", &ReBACStats{TupleCount: 42})
+	clock = clock.Add(31 * time.Second)
+	if got := c.Get("admin", "drive_prod"); got != nil {
+		t.Fatalf("Get past TTL = %v, want nil", got)
+	}
+}
+
+func TestStatsCache_InvalidateDropsEntry(t *testing.T) {
+	c := newStatsCache(time.Now, 30*time.Second)
+	c.Set("admin", "drive_prod", &ReBACStats{TupleCount: 42})
+	c.Invalidate("admin", "drive_prod")
+	if got := c.Get("admin", "drive_prod"); got != nil {
+		t.Fatalf("Get after invalidate = %v, want nil", got)
+	}
+}
+
+func TestStatsCache_PerStoreIsolation(t *testing.T) {
+	c := newStatsCache(time.Now, 30*time.Second)
+	c.Set("admin", "drive_prod", &ReBACStats{TupleCount: 1})
+	c.Set("admin", "drive_dev", &ReBACStats{TupleCount: 2})
+	if got := c.Get("admin", "drive_prod"); got == nil || got.TupleCount != 1 {
+		t.Fatalf("drive_prod = %v", got)
+	}
+	if got := c.Get("admin", "drive_dev"); got == nil || got.TupleCount != 2 {
+		t.Fatalf("drive_dev = %v", got)
 	}
 }

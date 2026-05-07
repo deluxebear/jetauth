@@ -10,6 +10,7 @@ package object
 
 import (
 	"fmt"
+	"sync"
 	"time"
 )
 
@@ -45,12 +46,81 @@ type ReBACRecentWrite struct {
 	At       string `json:"at"`
 }
 
+// statsCache maintains a per-store snapshot of GetReBACStats output
+// with a 30s TTL. Resets on process restart. The cache is read-through:
+// callers always see a fresh-or-fresh-enough snapshot, never a stale one
+// past the TTL. Concurrency is coarse-grained (one mutex over the whole
+// map) — fine for an admin endpoint with low fan-out.
+type statsCache struct {
+	mu      sync.Mutex
+	now     func() time.Time
+	entries map[string]statsCacheEntry
+	ttl     time.Duration
+}
+
+type statsCacheEntry struct {
+	snapshot *ReBACStats
+	expires  time.Time
+}
+
+func newStatsCache(now func() time.Time, ttl time.Duration) *statsCache {
+	return &statsCache{now: now, entries: map[string]statsCacheEntry{}, ttl: ttl}
+}
+
+// Get returns a cached snapshot if fresh, nil otherwise. The cache key is
+// owner+"/"+appName.
+func (c *statsCache) Get(owner, appName string) *ReBACStats {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	e, ok := c.entries[owner+"/"+appName]
+	if !ok || c.now().After(e.expires) {
+		return nil
+	}
+	return e.snapshot
+}
+
+func (c *statsCache) Set(owner, appName string, s *ReBACStats) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.entries[owner+"/"+appName] = statsCacheEntry{
+		snapshot: s,
+		expires:  c.now().Add(c.ttl),
+	}
+}
+
+// Invalidate drops the cache entry for one app. Call this from any path
+// that mutates tuples or models so the Overview reflects writes within
+// the same admin session — without it, an admin who writes a tuple sees
+// stale counts for up to 30s.
+func (c *statsCache) Invalidate(owner, appName string) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	delete(c.entries, owner+"/"+appName)
+}
+
+var statsCacheSingleton = newStatsCache(time.Now, 30*time.Second)
+
+// InvalidateReBACStatsCache is the exported wrapper called by tuple/model
+// write paths to drop the cache so admin reads aren't stale within the
+// same browser session.
+func InvalidateReBACStatsCache(owner, appName string) {
+	statsCacheSingleton.Invalidate(owner, appName)
+}
+
 // GetReBACStats aggregates the admin Overview snapshot for one app. Each
 // component is one bounded query; the result is small enough to JSON-encode
 // without paging. Recent writes are limited to 8 rows, type distribution
 // has no hard cap (a schema with 100 types is unusual; the largest store
 // in production has <20).
+//
+// Results are cached for 30s per (owner, appName) to cap SQL fan-out when
+// multiple admin tabs poll the same app concurrently. Write paths call
+// InvalidateReBACStatsCache to drop stale entries after mutations.
 func GetReBACStats(owner, appName string) (*ReBACStats, error) {
+	if cached := statsCacheSingleton.Get(owner, appName); cached != nil {
+		return cached, nil
+	}
+
 	storeId := BuildStoreId(owner, appName)
 
 	tupleCount, err := CountBizTuples(owner, appName)
@@ -127,7 +197,7 @@ func GetReBACStats(owner, appName string) (*ReBACStats, error) {
 		activeModelId = cfg.CurrentAuthorizationModelId
 	}
 
-	return &ReBACStats{
+	result := &ReBACStats{
 		TupleCount:       tupleCount,
 		TodayDelta:       todayDelta,
 		CheckQpsLastHour: GetBizReBACCheckLastHour(storeId),
@@ -136,5 +206,7 @@ func GetReBACStats(owner, appName string) (*ReBACStats, error) {
 		LastUpdated:      lastUpdated,
 		TypeDistribution: typeDist,
 		RecentWrites:     recentWrites,
-	}, nil
+	}
+	statsCacheSingleton.Set(owner, appName, result)
+	return result, nil
 }
