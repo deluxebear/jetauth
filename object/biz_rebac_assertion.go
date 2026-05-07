@@ -31,9 +31,9 @@ type BizReBACAssertion struct {
 	Id          string `xorm:"varchar(40) pk" json:"id"`
 	Owner       string `xorm:"varchar(100) notnull index(idx_assert_store)" json:"owner"`
 	AppName     string `xorm:"varchar(100) notnull index(idx_assert_store)" json:"appName"`
-	Object      string `xorm:"varchar(255) notnull" json:"object"`
+	Object      string `xorm:"varchar(200) notnull" json:"object"`
 	Relation    string `xorm:"varchar(100) notnull" json:"relation"`
-	User        string `xorm:"varchar(255) notnull" json:"user"`
+	User        string `xorm:"varchar(200) notnull" json:"user"`
 	Expected    bool   `xorm:"notnull" json:"expected"`
 	Description string `xorm:"varchar(500)" json:"description,omitempty"`
 	CreatedTime string `xorm:"varchar(100)" json:"createdTime"`
@@ -43,7 +43,7 @@ type BizReBACAssertion struct {
 	// truth for the bulk runner (which always re-checks); the columns
 	// exist so the list UI can show the most recent verdict without
 	// running every time.
-	LastActual  *bool  `xorm:"" json:"lastActual,omitempty"`
+	LastActual  *bool  `xorm:"null" json:"lastActual,omitempty"`
 	LastRunTime string `xorm:"varchar(100)" json:"lastRunTime,omitempty"`
 }
 
