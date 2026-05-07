@@ -1,11 +1,16 @@
 import { useMemo } from "react";
 import type { BizExpandNode } from "../backend/BizBackend";
+import { useTranslation } from "../i18n";
 
 interface Props {
   /** Root of the BizExpand response. May be undefined (e.g. before a Check runs). */
   root?: BizExpandNode;
   /** The user being checked — rendered as the leftmost node. */
   highlightUser?: string;
+  /** When known, the 1-indexed rule that resolved this Check.
+   *  iter-1 just passes 1 when allowed and omits when denied — full
+   *  rule-index inference is out of scope. */
+  matchedRule?: number;
   /** Optional className for the outer container. */
   className?: string;
 }
@@ -88,7 +93,8 @@ function nodeBox(layer: number, row: number) {
   };
 }
 
-export default function BizDecisionPathGraph({ root, highlightUser, className }: Props) {
+export default function BizDecisionPathGraph({ root, highlightUser, matchedRule, className }: Props) {
+  const { t } = useTranslation();
   const { nodes, edges } = useMemo(() => layout(root, highlightUser), [root, highlightUser]);
 
   if (nodes.length === 0) {
@@ -110,6 +116,22 @@ export default function BizDecisionPathGraph({ root, highlightUser, className }:
 
   return (
     <div className={`rounded-xl border border-border bg-surface-1 p-4 overflow-auto ${className ?? ""}`}>
+      {nodes.length > 0 && (
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-[13px] font-semibold text-text-primary">
+            {t("rebac.tester.decisionPath" as any)}
+          </h3>
+          <span className="text-[12px] text-text-muted">
+            {(t("rebac.tester.hops" as any) as string).replace("{n}", String(maxLayer))}
+            {matchedRule !== undefined && (
+              <>
+                {" · "}
+                {(t("rebac.tester.ruleMatched" as any) as string).replace("{rule}", String(matchedRule))}
+              </>
+            )}
+          </span>
+        </div>
+      )}
       <svg
         width={width}
         height={height}

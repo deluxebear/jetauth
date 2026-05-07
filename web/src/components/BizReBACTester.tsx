@@ -7,9 +7,14 @@ import type {
   BizCheckRequest,
   BizCheckResponse,
   BizExpandNode,
+  BizListObjectsRequest,
+  BizListObjectsResult,
+  BizListUsersRequest,
+  BizListUsersResult,
   BizTupleKey,
 } from "../backend/BizBackend";
 import BizDecisionPathGraph from "./BizDecisionPathGraph";
+import TupleChip from "./TupleChip";
 
 // BizReBACTester — Task 8. Admin-facing playground for the /biz-check
 // and /biz-expand endpoints. Matches spec §8.2 "Tester page":
@@ -36,12 +41,15 @@ interface HistoryEntry {
   resolution: string;
 }
 
+type TesterOperation = "check" | "list-objects" | "list-users";
+
 interface CheckFormState {
   user: string;
   object: string;
   relation: string;
   contextualTuplesJson: string;
   contextJson: string;
+  userFilter?: string;
 }
 
 const HISTORY_KEY_PREFIX = "rebac-tester-history:";
@@ -114,9 +122,12 @@ export default function BizReBACTester({ appId, initialRequest }: Props) {
     contextualTuplesJson: "",
     contextJson: "",
   });
+  const [operation, setOperation] = useState<TesterOperation>("check");
   const [running, setRunning] = useState(false);
   const [elapsedMs, setElapsedMs] = useState<number | null>(null);
-  const [result, setResult] = useState<BizCheckResponse | null>(null);
+  const [checkResult, setCheckResult] = useState<BizCheckResponse | null>(null);
+  const [listObjectsResult, setListObjectsResult] = useState<BizListObjectsResult | null>(null);
+  const [listUsersResult, setListUsersResult] = useState<BizListUsersResult | null>(null);
   const [expand, setExpand] = useState<BizExpandNode | null>(null);
   const [history, setHistory] = useState<HistoryEntry[]>(() =>
     loadHistory(appId),
@@ -133,12 +144,15 @@ export default function BizReBACTester({ appId, initialRequest }: Props) {
     setCases(loadCases(appId));
   }, [appId]);
 
-  const formValid = useMemo(
-    () => form.user.trim() && form.object.trim() && form.relation.trim(),
-    [form.user, form.object, form.relation],
-  );
+  const formValid = useMemo(() => {
+    if (operation === "list-users") {
+      // user field is hidden — only object + relation required
+      return form.object.trim() && form.relation.trim();
+    }
+    return form.user.trim() && form.object.trim() && form.relation.trim();
+  }, [operation, form.user, form.object, form.relation]);
 
-  const runCheck = useCallback(async () => {
+  const runOperation = useCallback(async () => {
     if (!formValid) return;
     // Parse the optional JSON textareas first — surface parse errors
     // before we ship a request.
@@ -191,68 +205,106 @@ export default function BizReBACTester({ appId, initialRequest }: Props) {
       return;
     }
 
-    const req: BizCheckRequest = {
-      appId,
-      tupleKey: {
-        object: form.object.trim(),
-        relation: form.relation.trim(),
-        user: form.user.trim(),
-      },
-      contextualTuples: contextualTuples.length > 0 ? contextualTuples : undefined,
-      context,
-    };
-
     const t0 = performance.now();
     setRunning(true);
     setExpand(null);
     setElapsedMs(null);
+    setCheckResult(null);
+    setListObjectsResult(null);
+    setListUsersResult(null);
     try {
-      const res = await BizBackend.bizCheck(req);
-      setElapsedMs(performance.now() - t0);
-      if (res.status !== "ok" || !res.data) {
-        modal.toast(res.msg || t("rebac.common.error"), "error");
-        setResult(null);
-        return;
-      }
-      setResult(res.data);
-      // Fire-and-forget expand. It's a read-only tree; any error
-      // leaves the rest of the tester functional.
-      void BizBackend.bizExpand(appId, req.tupleKey.object, req.tupleKey.relation)
-        .then((expandRes) => {
-          if (expandRes.status === "ok" && expandRes.data) {
-            setExpand(expandRes.data.root);
-          }
-        })
-        .catch(() => {
-          /* non-fatal */
+      if (operation === "check") {
+        const req: BizCheckRequest = {
+          appId,
+          tupleKey: {
+            object: form.object.trim(),
+            relation: form.relation.trim(),
+            user: form.user.trim(),
+          },
+          contextualTuples: contextualTuples.length > 0 ? contextualTuples : undefined,
+          context,
+        };
+        const res = await BizBackend.bizCheck(req);
+        setElapsedMs(performance.now() - t0);
+        if (res.status !== "ok" || !res.data) {
+          modal.toast(res.msg || t("rebac.common.error"), "error");
+          return;
+        }
+        setCheckResult(res.data);
+        // Fire-and-forget expand. It's a read-only tree; any error
+        // leaves the rest of the tester functional.
+        void BizBackend.bizExpand(appId, req.tupleKey.object, req.tupleKey.relation)
+          .then((expandRes) => {
+            if (expandRes.status === "ok" && expandRes.data) {
+              setExpand(expandRes.data.root);
+            }
+          })
+          .catch(() => {
+            /* non-fatal */
+          });
+        // Record history. Functional setState so rapid consecutive Runs
+        // don't clobber each other by capturing the same `history`
+        // snapshot in two closures (review R4).
+        const entry: HistoryEntry = {
+          at: Date.now(),
+          request: form,
+          allowed: !!res.data.allowed,
+          resolution: res.data.resolution || "",
+        };
+        setHistory((prev) => {
+          const next = [entry, ...prev].slice(0, HISTORY_LIMIT);
+          saveHistory(appId, next);
+          return next;
         });
-      // Record history. Functional setState so rapid consecutive Runs
-      // don't clobber each other by capturing the same `history`
-      // snapshot in two closures (review R4).
-      const entry: HistoryEntry = {
-        at: Date.now(),
-        request: form,
-        allowed: !!res.data.allowed,
-        resolution: res.data.resolution || "",
-      };
-      setHistory((prev) => {
-        const next = [entry, ...prev].slice(0, HISTORY_LIMIT);
-        saveHistory(appId, next);
-        return next;
-      });
+      } else if (operation === "list-objects") {
+        const req: BizListObjectsRequest = {
+          appId,
+          objectType: form.object.trim(),
+          relation: form.relation.trim(),
+          user: form.user.trim(),
+          contextualTuples: contextualTuples.length > 0 ? contextualTuples : undefined,
+          context,
+          pageSize: 50,
+        };
+        const res = await BizBackend.bizListObjects(req);
+        setElapsedMs(performance.now() - t0);
+        if (res.status !== "ok" || !res.data) {
+          modal.toast(res.msg || t("rebac.common.error"), "error");
+          return;
+        }
+        setListObjectsResult(res.data);
+      } else {
+        // list-users
+        const req: BizListUsersRequest = {
+          appId,
+          object: form.object.trim(),
+          relation: form.relation.trim(),
+          userFilter: form.userFilter?.trim() || undefined,
+          contextualTuples: contextualTuples.length > 0 ? contextualTuples : undefined,
+          context,
+          pageSize: 50,
+        };
+        const res = await BizBackend.bizListUsers(req);
+        setElapsedMs(performance.now() - t0);
+        if (res.status !== "ok" || !res.data) {
+          modal.toast(res.msg || t("rebac.common.error"), "error");
+          return;
+        }
+        setListUsersResult(res.data);
+      }
     } catch (err) {
       modal.toast(err instanceof Error ? err.message : String(err), "error");
     } finally {
       setRunning(false);
     }
-  }, [appId, form, formValid, modal, t]);
+  }, [appId, form, formValid, operation, modal, t]);
 
-  // Keep a ref to the latest runCheck so the prefill effect below can
-  // invoke the freshest closure without adding runCheck to its dep array.
-  const runCheckRef = useRef(runCheck);
+  // Keep a ref to the latest runOperation so the prefill effect below can
+  // invoke the freshest closure without adding runOperation to its dep array.
+  const runCheckRef = useRef(runOperation);
   useEffect(() => {
-    runCheckRef.current = runCheck;
-  }, [runCheck]);
+    runCheckRef.current = runOperation;
+  }, [runOperation]);
 
   // Prefill handshake from the Browser tab's "Why?" button. We read the
   // prop, patch the form, and schedule a Check on the next tick so
@@ -482,21 +534,45 @@ export default function BizReBACTester({ appId, initialRequest }: Props) {
       {/* 3-column grid: collapses to single column below lg */}
       <div className="grid grid-cols-1 lg:grid-cols-[320px_1fr_360px] gap-4 items-start">
 
-        {/* LEFT COLUMN: form + run button + elapsed footer */}
+        {/* LEFT COLUMN: operation pills + form + run button + elapsed footer */}
         <div className="flex flex-col gap-3">
+          {/* Operation mode pills */}
+          <div className="flex items-center gap-1 p-1 rounded-md bg-surface-2 self-start">
+            {(["check", "list-objects", "list-users"] as const).map((op) => (
+              <button
+                key={op}
+                type="button"
+                onClick={() => setOperation(op)}
+                className={`px-3 py-1 rounded text-[12px] font-mono transition-colors ${
+                  operation === op
+                    ? "bg-surface-1 text-text-primary shadow-sm"
+                    : "text-text-muted hover:text-text-primary"
+                }`}
+              >
+                {op}
+              </button>
+            ))}
+          </div>
+
           <div className="grid grid-cols-1 gap-2">
+            {operation !== "list-users" && (
+              <LabeledInput
+                label={t("rebac.tuples.columns.user")}
+                value={form.user}
+                onChange={(v) => setForm((f) => ({ ...f, user: v }))}
+                placeholder="user:alice"
+                mono
+              />
+            )}
             <LabeledInput
-              label={t("rebac.tuples.columns.user")}
-              value={form.user}
-              onChange={(v) => setForm((f) => ({ ...f, user: v }))}
-              placeholder="user:alice"
-              mono
-            />
-            <LabeledInput
-              label={t("rebac.tuples.columns.object")}
+              label={
+                operation === "list-objects"
+                  ? t("rebac.tester.objectType" as any)
+                  : t("rebac.tester.object" as any)
+              }
               value={form.object}
               onChange={(v) => setForm((f) => ({ ...f, object: v }))}
-              placeholder="document:d1"
+              placeholder={operation === "list-objects" ? "document" : "document:d1"}
               mono
             />
             <LabeledInput
@@ -506,6 +582,15 @@ export default function BizReBACTester({ appId, initialRequest }: Props) {
               placeholder="viewer"
               mono
             />
+            {operation === "list-users" && (
+              <LabeledInput
+                label={t("rebac.tester.userFilter" as any)}
+                value={form.userFilter ?? ""}
+                onChange={(v) => setForm((f) => ({ ...f, userFilter: v }))}
+                placeholder="user (optional)"
+                mono
+              />
+            )}
           </div>
 
           <details className="rounded-lg border border-border bg-surface-1">
@@ -531,7 +616,7 @@ export default function BizReBACTester({ appId, initialRequest }: Props) {
           <button
             type="button"
             className="inline-flex items-center justify-center gap-1.5 w-full px-4 py-2 rounded-lg text-[13px] font-medium bg-accent text-white hover:bg-accent-hover disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
-            onClick={() => void runCheck()}
+            onClick={() => void runOperation()}
             disabled={!formValid || running}
           >
             <Play className="w-3.5 h-3.5" />
@@ -548,50 +633,70 @@ export default function BizReBACTester({ appId, initialRequest }: Props) {
 
         {/* CENTER COLUMN: result banner + expand explanation tree */}
         <div className="flex flex-col gap-3">
-          {result ? (
-            <div
-              role="status"
-              aria-live="polite"
-              className="rounded-lg border border-border bg-surface-1 p-4 flex flex-col gap-2"
-            >
-              <div className="flex items-center gap-2">
-                {result.allowed ? (
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-success/10 text-success text-[13px] font-medium">
-                    <CheckCircle2 className="w-4 h-4" />
-                    {t("rebac.tester.allowed")}
-                  </span>
-                ) : (
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-danger/10 text-danger text-[13px] font-medium">
-                    <XCircle className="w-4 h-4" />
-                    {t("rebac.tester.denied")}
-                  </span>
-                )}
-                {result.resolution && (
-                  <span className="text-[11px] text-text-muted font-mono">
-                    {result.resolution}
-                  </span>
+          {operation === "check" && (
+            checkResult ? (
+              <div
+                role="status"
+                aria-live="polite"
+                className="rounded-lg border border-border bg-surface-1 p-4 flex flex-col gap-2"
+              >
+                <div className="flex items-center gap-2">
+                  {checkResult.allowed ? (
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-success/10 text-success text-[13px] font-medium">
+                      <CheckCircle2 className="w-4 h-4" />
+                      {t("rebac.tester.allowed")}
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-danger/10 text-danger text-[13px] font-medium">
+                      <XCircle className="w-4 h-4" />
+                      {t("rebac.tester.denied")}
+                    </span>
+                  )}
+                  {checkResult.resolution && (
+                    <span className="text-[11px] text-text-muted font-mono">
+                      {checkResult.resolution}
+                    </span>
+                  )}
+                </div>
+                {expand && (
+                  <div className="mt-2">
+                    <p className="text-[12px] text-text-muted mb-1">
+                      {t("rebac.tester.expand")}
+                    </p>
+                    <ExpandTree node={expand} />
+                  </div>
                 )}
               </div>
-              {expand && (
-                <div className="mt-2">
-                  <p className="text-[12px] text-text-muted mb-1">
-                    {t("rebac.tester.expand")}
-                  </p>
-                  <ExpandTree node={expand} />
-                </div>
-              )}
-            </div>
-          ) : (
-            <div className="rounded-lg border border-border/40 bg-surface-1/50 p-6 flex items-center justify-center min-h-[120px]">
-              <p className="text-[13px] text-text-muted">
-                {running ? "…" : t("rebac.tester.check")}
-              </p>
-            </div>
+            ) : (
+              <div className="rounded-lg border border-border/40 bg-surface-1/50 p-6 flex items-center justify-center min-h-[120px]">
+                <p className="text-[13px] text-text-muted">
+                  {running ? "…" : t("rebac.tester.check")}
+                </p>
+              </div>
+            )
+          )}
+          {operation === "list-objects" && listObjectsResult && (
+            <ListObjectsResultPanel result={listObjectsResult} t={t} />
+          )}
+          {operation === "list-users" && listUsersResult && (
+            <ListUsersResultPanel result={listUsersResult} t={t} />
           )}
         </div>
 
-        {/* RIGHT COLUMN: decision-path graph */}
-        <BizDecisionPathGraph root={expand ?? undefined} highlightUser={form.user} />
+        {/* RIGHT COLUMN: decision-path graph (Check only) */}
+        {operation === "check" ? (
+          <BizDecisionPathGraph
+            root={expand ?? undefined}
+            highlightUser={form.user}
+            matchedRule={checkResult?.allowed ? 1 : undefined}
+          />
+        ) : (
+          <div className="rounded-xl border border-border bg-surface-1 p-4">
+            <p className="text-[12px] text-text-muted text-center py-8">
+              {t("rebac.tester.graphCheckOnly" as any)}
+            </p>
+          </div>
+        )}
       </div>
 
       {/* History + Cases — below the 3-column area */}
@@ -646,6 +751,72 @@ export default function BizReBACTester({ appId, initialRequest }: Props) {
           </div>
           {view === "history" ? renderHistoryList() : renderCasesList()}
         </div>
+      )}
+    </div>
+  );
+}
+
+// ── List result panels ──────────────────────────────────────────────
+
+function ListObjectsResultPanel({
+  result,
+  t,
+}: {
+  result: BizListObjectsResult;
+  t: ReturnType<typeof useTranslation>["t"];
+}) {
+  return (
+    <div className="rounded-xl border border-border bg-surface-1 p-4">
+      <h3 className="text-[13px] font-semibold mb-2">
+        {result.objects.length} {t("rebac.tester.matchingObjects" as any)}
+      </h3>
+      {result.objects.length === 0 ? (
+        <p className="text-[12px] text-text-muted">{t("rebac.tester.noResults" as any)}</p>
+      ) : (
+        <ul className="flex flex-col gap-1.5">
+          {result.objects.map((obj) => (
+            <li key={obj}>
+              <TupleChip kind="object" value={obj} />
+            </li>
+          ))}
+        </ul>
+      )}
+      {result.continuationToken && (
+        <p className="text-[11px] text-text-muted mt-2">
+          {t("rebac.tester.moreResultsAvailable" as any)}
+        </p>
+      )}
+    </div>
+  );
+}
+
+function ListUsersResultPanel({
+  result,
+  t,
+}: {
+  result: BizListUsersResult;
+  t: ReturnType<typeof useTranslation>["t"];
+}) {
+  return (
+    <div className="rounded-xl border border-border bg-surface-1 p-4">
+      <h3 className="text-[13px] font-semibold mb-2">
+        {result.users.length} {t("rebac.tester.matchingUsers" as any)}
+      </h3>
+      {result.users.length === 0 ? (
+        <p className="text-[12px] text-text-muted">{t("rebac.tester.noResults" as any)}</p>
+      ) : (
+        <ul className="flex flex-col gap-1.5">
+          {result.users.map((user) => (
+            <li key={user}>
+              <TupleChip kind="user" value={user} />
+            </li>
+          ))}
+        </ul>
+      )}
+      {result.continuationToken && (
+        <p className="text-[11px] text-text-muted mt-2">
+          {t("rebac.tester.moreResultsAvailable" as any)}
+        </p>
       )}
     </div>
   );

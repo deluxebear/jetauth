@@ -23,7 +23,10 @@ describe("ReBAC a11y smoke", () => {
 
   it("Tester run button has an accessible name and visible focus ring class", () => {
     render(<BizReBACTester appId="o/a" />);
-    const runBtn = screen.getByRole("button", { name: /check|测试|验证|run/i });
+    // Use the i18n key pattern — the run button renders the "rebac.tester.run" key
+    // which in tests (mocked i18n) returns the key string itself, containing "run".
+    // We narrow the selector by excluding the operation-pill "check" button.
+    const runBtn = screen.getByRole("button", { name: /tester\.run|execute|执行/i });
     expect(runBtn.className).toMatch(/focus-visible:ring-2/);
   });
 });

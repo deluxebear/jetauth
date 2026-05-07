@@ -3694,6 +3694,17 @@ const zh: Record<string, string> = {
   "rebac.tester.runAll": "全部重跑",
   "rebac.tester.runAllResultSuffix": "用例通过",
   "rebac.tester.deleteCase": "删除用例",
+  "rebac.tester.object": "OBJECT",
+  "rebac.tester.objectType": "OBJECT TYPE",
+  "rebac.tester.userFilter": "USER 过滤(可选)",
+  "rebac.tester.matchingObjects": "个匹配的 object",
+  "rebac.tester.matchingUsers": "个匹配的 user",
+  "rebac.tester.noResults": "暂无结果",
+  "rebac.tester.moreResultsAvailable": "还有更多结果 — 缩小条件查看完整列表",
+  "rebac.tester.graphCheckOnly": "决策路径图仅在 Check 操作时显示",
+  "rebac.tester.decisionPath": "决策路径",
+  "rebac.tester.hops": "{n} 跳",
+  "rebac.tester.ruleMatched": "命中第 {rule} 条规则",
 
   // Integration
   "rebac.integration.lang.go": "Go",

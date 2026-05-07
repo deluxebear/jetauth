@@ -1,7 +1,11 @@
 import { render, screen } from "@testing-library/react";
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import BizDecisionPathGraph from "../BizDecisionPathGraph";
 import type { BizExpandNode } from "../../backend/BizBackend";
+
+vi.mock("../../i18n", () => ({
+  useTranslation: () => ({ t: (k: string) => k }),
+}));
 
 describe("BizDecisionPathGraph", () => {
   it("renders a placeholder when root is undefined", () => {
@@ -49,5 +53,16 @@ describe("BizDecisionPathGraph", () => {
     expect(screen.queryByText("organization:very-long-organization-name")).toBeNull();
     // Truncated form is "first 16 chars + …" = "organization:ver…"
     expect(screen.getByText(/^organization:ver…$/)).toBeInTheDocument();
+  });
+
+  it("shows hop count when nodes are present", () => {
+    const root: BizExpandNode = {
+      kind: "userset",
+      computed: { object: "document:r", relation: "viewer" },
+      children: [{ kind: "computed", computed: { object: "folder:f", relation: "editor" }, children: [] }],
+    };
+    render(<BizDecisionPathGraph root={root} highlightUser="user:carol" matchedRule={1} />);
+    expect(screen.getByText(/hops|跳/)).toBeInTheDocument();
+    expect(screen.getByText(/rule|规则/)).toBeInTheDocument();
   });
 });

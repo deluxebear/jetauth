@@ -3704,6 +3704,17 @@ const en = {
   "rebac.tester.runAll": "Run all",
   "rebac.tester.runAllResultSuffix": "cases passed",
   "rebac.tester.deleteCase": "Delete case",
+  "rebac.tester.object": "Object",
+  "rebac.tester.objectType": "Object type",
+  "rebac.tester.userFilter": "User filter (optional)",
+  "rebac.tester.matchingObjects": "matching objects",
+  "rebac.tester.matchingUsers": "matching users",
+  "rebac.tester.noResults": "No results",
+  "rebac.tester.moreResultsAvailable": "More results available — refine the query for full coverage",
+  "rebac.tester.graphCheckOnly": "Decision-path graph is shown for Check operations",
+  "rebac.tester.decisionPath": "Decision path",
+  "rebac.tester.hops": "{n} hops",
+  "rebac.tester.ruleMatched": "rule {rule} matched",
 
   // Integration
   "rebac.integration.lang.go": "Go",
