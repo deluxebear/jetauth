@@ -1,6 +1,7 @@
 import { ExternalLink, MoreHorizontal, Plus, RotateCcw } from "lucide-react";
 import type { BizAuthorizationModel } from "../backend/BizBackend";
 import { useTranslation } from "../i18n";
+import { fmtRelative } from "../utils/format";
 
 interface Props {
   /** Authorization model versions, newest first (matches the API response order). */
@@ -21,21 +22,6 @@ function shortId(id: string): string {
   if (!id) return "";
   if (id.length <= 12) return id;
   return id.slice(0, 5) + "…" + id.slice(-5);
-}
-
-function fmtRelative(iso?: string): string {
-  if (!iso) return "—";
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return iso;
-  const diffMs = Date.now() - d.getTime();
-  const diffMin = Math.round(diffMs / 60_000);
-  if (diffMin < 1) return "just now";
-  if (diffMin < 60) return `${diffMin} min ago`;
-  const diffHr = Math.round(diffMin / 60);
-  if (diffHr < 24) return `${diffHr} h ago`;
-  const diffDay = Math.round(diffHr / 24);
-  if (diffDay < 30) return `${diffDay} d ago`;
-  return d.toLocaleDateString();
 }
 
 export default function BizSchemaVersionList({
