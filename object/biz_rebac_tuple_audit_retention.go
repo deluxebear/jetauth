@@ -26,18 +26,22 @@ const AuditRetentionDays = 90
 // so the worst case is one DELETE WHERE at_time < cutoff per hour.
 // Errors are logged and the loop continues — a transient DB blip
 // shouldn't kill audit retention forever.
+//
+// The loop sleeps before the first purge so package init() fires while
+// ormer is still nil — without the sleep, the first iteration races
+// the rest of bootup and dereferences a nil engine.
 func startTupleAuditRetentionLoop() {
 	util.SafeGoroutine(func() {
 		ticker := time.NewTicker(1 * time.Hour)
 		defer ticker.Stop()
 		for {
+			<-ticker.C
 			cutoff := time.Now().AddDate(0, 0, -AuditRetentionDays).Format(time.RFC3339)
 			if affected, err := PurgeTupleAuditOlderThan(cutoff); err != nil {
 				logs.Error("rebac audit retention purge failed: %v", err)
 			} else if affected > 0 {
 				logs.Info("rebac audit retention purge: %d rows dropped", affected)
 			}
-			<-ticker.C
 		}
 	})
 }
