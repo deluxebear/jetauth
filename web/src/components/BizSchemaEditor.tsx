@@ -85,6 +85,13 @@ interface Props {
    *  still allows DSL edits (the "Publish new" action saves them as a new
    *  version), but the "Rollback" action targets this specific id. */
   modelId?: string;
+  /** "view" (default): the user is inspecting an existing version; the
+   *  detail header shows that version's number + description + (if it is
+   *  the active model) the "已激活" badge. "new": the user is drafting a
+   *  new version on top of the active model; the header replaces the
+   *  version chrome with a "新建版本草稿" label so it doesn't pretend the
+   *  draft is the live model. */
+  mode?: "view" | "new";
   /** Called after a successful Publish-new or Rollback so the host page
    *  can refresh its version list + navigate to the new active version. */
   onPublishNew?: (newModelId: string) => void;
@@ -92,7 +99,7 @@ interface Props {
   onBack?: () => void;
 }
 
-export default function BizSchemaEditor({ appId, modelId, onPublishNew, onBack }: Props) {
+export default function BizSchemaEditor({ appId, modelId, mode = "view", onPublishNew, onBack }: Props) {
   const { t } = useTranslation();
   const modal = useModal();
 
@@ -519,19 +526,25 @@ export default function BizSchemaEditor({ appId, modelId, onPublishNew, onBack }
             )}
             <div className="flex items-center gap-2 flex-wrap">
               <h2 className="text-[18px] font-bold text-text-primary">
-                v{Math.max(1, totalVersions - versionIndexFromNewest)}
-                {meta.description ? ` · ${meta.description}` : ""}
+                {mode === "new"
+                  ? t("rebac.schema.newDraftTitle" as any)
+                  : `v${Math.max(1, totalVersions - versionIndexFromNewest)}${meta.description ? ` · ${meta.description}` : ""}`}
               </h2>
-              {meta.id === activeModelId && (
+              {mode === "view" && meta.id === activeModelId && (
                 <span className="px-2 py-0.5 text-[11px] rounded-full bg-accent/15 text-accent">
                   {t("rebac.schema.activeBadge" as any)}
                 </span>
               )}
+              {mode === "new" && (
+                <span className="px-2 py-0.5 text-[11px] rounded-full bg-amber-500/15 text-amber-700 dark:text-amber-300">
+                  {t("rebac.schema.draftBadge" as any)}
+                </span>
+              )}
             </div>
             <p className="text-[12px] text-text-muted mt-1 font-mono">
-              {meta.id.slice(0, 5)}…{meta.id.slice(-5)}
-              {meta.createdTime && ` · ${meta.createdTime}`}
-              {meta.createdBy && ` · ${t("rebac.schema.publishedBy" as any)} ${meta.createdBy}`}
+              {mode === "new"
+                ? t("rebac.schema.newDraftHint" as any)
+                : `${meta.id.slice(0, 5)}…${meta.id.slice(-5)}${meta.createdTime ? ` · ${meta.createdTime}` : ""}${meta.createdBy ? ` · ${t("rebac.schema.publishedBy" as any)} ${meta.createdBy}` : ""}`}
             </p>
           </div>
           <div className="flex items-center gap-2 shrink-0">
@@ -542,7 +555,7 @@ export default function BizSchemaEditor({ appId, modelId, onPublishNew, onBack }
             >
               {t("rebac.schema.validate" as any)}
             </button>
-            {meta.id !== activeModelId && (
+            {mode === "view" && meta.id !== activeModelId && (
               <button
                 type="button"
                 onClick={() => handleRollback()}

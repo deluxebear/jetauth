@@ -2335,6 +2335,7 @@ function RebacSchemaTab({
     <BizSchemaEditor
       appId={appId}
       modelId={modelIdParam === "__new__" ? undefined : modelIdParam}
+      mode={modelIdParam === "__new__" ? "new" : "view"}
       onPublishNew={(newModelId) => {
         // Reload the list and navigate to the freshly-active version.
         setReloadKey((k) => k + 1);
