@@ -19,10 +19,13 @@ export default defineConfig({
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
   reporter: process.env.CI ? "github" : "list",
+  globalSetup: "./playwright.global-setup.ts",
+  globalTeardown: "./playwright.global-teardown.ts",
   use: {
     baseURL: process.env.PLAYWRIGHT_BASE_URL ?? "http://localhost:7001",
     trace: "on-first-retry",
     screenshot: "only-on-failure",
+    storageState: "playwright/.auth/admin.json",
   },
   projects: [
     { name: "chromium", use: { ...devices["Desktop Chrome"] } },

@@ -10,36 +10,12 @@ import { expect, test } from "@playwright/test";
  *   4. Tuples (mockup ④) — facet chips + table render
  *   5. Check tester (mockup ⑤) — 3-column layout renders
  *
- * Requires a logged-in admin session on a ReBAC-mode application. The
- * spec is gated behind two env vars so CI without a seeded fixture
- * doesn't fail:
- *   PLAYWRIGHT_REBAC_APP   — owner/appName of a ReBAC-mode app, e.g. admin/drive_prod
- *   PLAYWRIGHT_ADMIN_AUTH  — when set, assumes the calling browser is
- *                            already authenticated (e.g. via cookie
- *                            injected in playwright.config.ts).
- *
- * Local run:
- *   1. make run                          # backend on :8000
- *   2. cd web && npm run dev             # frontend on :7001
- *   3. Seed a ReBAC app via the admin UI or `web/scripts/rebac-e2e-smoke.sh`.
- *   4. Log in as admin in your browser, copy the session cookie into a
- *      .env, then:
- *      PLAYWRIGHT_REBAC_APP=admin/drive_prod \
- *      PLAYWRIGHT_ADMIN_AUTH=1 \
- *        npm run e2e -- rebac-admin-flow
- *
- * Iteration 2 should replace the env-flag gate with a Playwright
- * `globalSetup` that provisions the fixture deterministically.
+ * globalSetup seeds the fixture; just `npm run e2e` to run.
  */
 
 const REBAC_APP = process.env.PLAYWRIGHT_REBAC_APP;
-const HAS_AUTH = !!process.env.PLAYWRIGHT_ADMIN_AUTH;
 
 test.describe("ReBAC admin iter-1 happy path", () => {
-  test.skip(
-    !REBAC_APP || !HAS_AUTH,
-    "PLAYWRIGHT_REBAC_APP + PLAYWRIGHT_ADMIN_AUTH must be set; see header comment.",
-  );
 
   test("overview → model list → detail → tuples → tester", async ({ page }) => {
     const [, appName] = (REBAC_APP as string).split("/");
