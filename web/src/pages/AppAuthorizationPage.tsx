@@ -2268,6 +2268,7 @@ function RebacSchemaTab({
 }) {
   const [searchParams, setSearchParams] = useSearchParams();
   const modelIdParam = searchParams.get("modelId");
+  const isNewMode = searchParams.get("mode") === "new";
   const [versions, setVersions] = useState<BizAuthorizationModel[]>([]);
   const [reloadKey, setReloadKey] = useState(0);
   const [loadingList, setLoadingList] = useState(true);
@@ -2290,15 +2291,36 @@ function RebacSchemaTab({
     };
   }, [appId, reloadKey]);
 
-  const setModelId = (id: string | null) => {
+  const goToList = () => {
     setSearchParams(
       (prev) => {
         const next = new URLSearchParams(prev);
-        if (id === null) {
-          next.delete("modelId");
-        } else {
-          next.set("modelId", id);
-        }
+        next.delete("modelId");
+        next.delete("mode");
+        return next;
+      },
+      { replace: true },
+    );
+  };
+
+  const goToVersion = (id: string) => {
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        next.set("modelId", id);
+        next.delete("mode");
+        return next;
+      },
+      { replace: true },
+    );
+  };
+
+  const goToNew = () => {
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        next.delete("modelId");
+        next.set("mode", "new");
         return next;
       },
       { replace: true },
@@ -2320,8 +2342,8 @@ function RebacSchemaTab({
     }
   };
 
-  // List view: no modelId in URL.
-  if (!modelIdParam) {
+  // List view: no modelId and not in new mode.
+  if (!modelIdParam && !isNewMode) {
     if (loadingList) {
       return (
         <div className="rounded-lg border border-border bg-surface-1 p-6 text-center text-[13px] text-text-muted">
@@ -2333,27 +2355,27 @@ function RebacSchemaTab({
       <BizSchemaVersionList
         versions={versions}
         activeId={config?.currentAuthorizationModelId}
-        onSelect={(id) => setModelId(id)}
+        onSelect={(id) => goToVersion(id)}
         onRollback={(id) => void handleRollback(id)}
-        onCreateNew={() => setModelId("__new__")}
+        onCreateNew={() => goToNew()}
         onExportDsl={() => void handleExportDsl()}
       />
     );
   }
 
-  // Detail view. modelId="__new__" → editor loads the active model and
+  // Detail view. ?mode=new → editor loads the active model and
   // the user publishes a new version on top.
   return (
     <BizSchemaEditor
       appId={appId}
-      modelId={modelIdParam === "__new__" ? undefined : modelIdParam}
-      mode={modelIdParam === "__new__" ? "new" : "view"}
+      modelId={modelIdParam ?? undefined}
+      mode={isNewMode ? "new" : "view"}
       onPublishNew={(newModelId) => {
         // Reload the list and navigate to the freshly-active version.
         setReloadKey((k) => k + 1);
-        setModelId(newModelId);
+        goToVersion(newModelId);
       }}
-      onBack={() => setModelId(null)}
+      onBack={() => goToList()}
     />
   );
 }
