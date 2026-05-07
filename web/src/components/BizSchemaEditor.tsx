@@ -26,6 +26,7 @@ import BizSchemaDslEditor from "./BizSchemaDslEditor";
 import BizSchemaChangePlan from "./BizSchemaChangePlan";
 import BizSchemaVisualEditor from "./BizSchemaVisualEditor";
 import BizSchemaTypeGraph from "./BizSchemaTypeGraph";
+import BizSchemaEditorHeader from "./BizSchemaEditorHeader";
 import {
   emptyAST,
   findIncompleteRelations,
@@ -517,67 +518,17 @@ export default function BizSchemaEditor({ appId, modelId, mode = "view", onPubli
   return (
     <div className="flex flex-col gap-3">
       {meta && (
-        <div className="flex items-start justify-between gap-3 flex-wrap">
-          <div>
-            {onBack && (
-              <button
-                type="button"
-                onClick={onBack}
-                className="text-[12px] text-text-muted hover:text-accent mb-2 flex items-center gap-1"
-              >
-                ← {t("rebac.schema.back")}
-              </button>
-            )}
-            <div className="flex items-center gap-2 flex-wrap">
-              <h2 className="text-[18px] font-bold text-text-primary">
-                {mode === "new"
-                  ? t("rebac.schema.newDraftTitle")
-                  : `v${Math.max(1, totalVersions - versionIndexFromNewest)}${meta.description ? ` · ${meta.description}` : ""}`}
-              </h2>
-              {mode === "view" && meta.id === activeModelId && (
-                <span className="px-2 py-0.5 text-[11px] rounded-full bg-accent/15 text-accent">
-                  {t("rebac.schema.activeBadge")}
-                </span>
-              )}
-              {mode === "new" && (
-                <span className="px-2 py-0.5 text-[11px] rounded-full bg-amber-500/15 text-amber-700 dark:text-amber-300">
-                  {t("rebac.schema.draftBadge")}
-                </span>
-              )}
-            </div>
-            <p className="text-[12px] text-text-muted mt-1 font-mono">
-              {mode === "new"
-                ? t("rebac.schema.newDraftHint")
-                : `${meta.id.slice(0, 5)}…${meta.id.slice(-5)}${meta.createdTime ? ` · ${meta.createdTime}` : ""}${meta.createdBy ? ` · ${t("rebac.schema.publishedBy")} ${meta.createdBy}` : ""}`}
-            </p>
-          </div>
-          <div className="flex items-center gap-2 shrink-0">
-            <button
-              type="button"
-              onClick={() => void handleValidate()}
-              className="px-3 py-1.5 rounded-md border border-border text-[13px] flex items-center gap-2 hover:bg-surface-2"
-            >
-              {t("rebac.schema.validate")}
-            </button>
-            {mode === "view" && meta.id !== activeModelId && (
-              <button
-                type="button"
-                onClick={() => handleRollback()}
-                className="px-3 py-1.5 rounded-md border border-border text-[13px] hover:bg-surface-2"
-              >
-                {t("rebac.schema.rollback")}
-              </button>
-            )}
-            <button
-              type="button"
-              onClick={() => void handlePublishNew()}
-              disabled={saving}
-              className="px-3 py-1.5 rounded-md bg-accent text-white text-[13px] flex items-center gap-2 hover:bg-accent/90 disabled:opacity-50"
-            >
-              + {t("rebac.schema.publishNew")}
-            </button>
-          </div>
-        </div>
+        <BizSchemaEditorHeader
+          meta={meta}
+          mode={mode}
+          isActive={meta.id === activeModelId}
+          versionLabel={`v${Math.max(1, totalVersions - versionIndexFromNewest)}`}
+          saving={saving}
+          onBack={onBack}
+          onValidate={() => void handleValidate()}
+          onRollback={() => handleRollback()}
+          onPublishNew={() => void handlePublishNew()}
+        />
       )}
 
       <div className="flex items-end justify-between flex-wrap gap-2 border-b border-border">
