@@ -305,6 +305,7 @@ func InitAPI() {
 	web.Router("/api/biz-add-assertion", &controllers.ApiController{}, "POST:BizAddAssertion")
 	web.Router("/api/biz-delete-assertion", &controllers.ApiController{}, "POST:BizDeleteAssertion")
 	web.Router("/api/biz-run-assertions", &controllers.ApiController{}, "POST:BizRunAssertions")
+	web.Router("/api/biz-list-tuple-audit", &controllers.ApiController{}, "GET:BizListTupleAudit")
 	web.Router("/api/biz-list-objects", &controllers.ApiController{}, "POST:BizListObjects")
 	web.Router("/api/biz-list-users", &controllers.ApiController{}, "POST:BizListUsers")
 	web.Router("/api/biz-expand", &controllers.ApiController{}, "GET:BizExpand")
