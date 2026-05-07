@@ -100,3 +100,28 @@ func TestRunAssertion_PassAndFail(t *testing.T) {
 		t.Errorf("bob expected fail, got %+v", failResult)
 	}
 }
+
+func TestRunAssertion_EngineError(t *testing.T) {
+	if ormer == nil {
+		t.Skip("ormer not initialised (test needs DB)")
+	}
+	// Assertion against a (owner, appName) with no AppConfig / no model — the
+	// engine should error out, RunAssertion should populate .Error and leave
+	// .Pass == false rather than panicking.
+	a := &BizReBACAssertion{
+		Id:       util.GenerateUUID(),
+		Owner:    "rebac-it-noexist-" + util.GenerateUUID()[:8],
+		AppName:  "missing_app",
+		Object:   "document:d1",
+		Relation: "viewer",
+		User:     "user:alice",
+		Expected: true,
+	}
+	res := RunAssertion(a)
+	if res.Error == "" {
+		t.Errorf("expected engine error, got empty Error field; res=%+v", res)
+	}
+	if res.Pass {
+		t.Errorf("expected Pass=false on engine error, got true")
+	}
+}

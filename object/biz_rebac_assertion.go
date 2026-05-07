@@ -139,7 +139,10 @@ func RunAssertion(a *BizReBACAssertion) AssertionRunResult {
 
 	// Update last-run columns. Best-effort — a failure here doesn't
 	// invalidate the assertion result, just the cached label.
-	a.LastActual = &out.Actual
+	// Copy out.Actual into a local so LastActual doesn't alias the
+	// stack-allocated AssertionRunResult that the caller receives by value.
+	actual := out.Actual
+	a.LastActual = &actual
 	a.LastRunTime = util.GetCurrentTime()
 	_, _ = ormer.Engine.ID(a.Id).Cols("last_actual", "last_run_time").Update(a)
 
