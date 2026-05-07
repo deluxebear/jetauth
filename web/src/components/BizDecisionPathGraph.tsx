@@ -1,6 +1,10 @@
 import { useMemo } from "react";
 import type { BizExpandNode } from "../backend/BizBackend";
 import { useTranslation } from "../i18n";
+// Re-exported for parity with TupleChip — the graph nodes don't
+// currently per-type-color (SVG uses fill-* not bg-*), but the import
+// keeps both visualizations pulling from the same palette source.
+import { KIND_COLORS } from "../styles/tupleColors";
 
 interface Props {
   /** Root of the BizExpand response. May be undefined (e.g. before a Check runs). */
