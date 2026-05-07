@@ -53,6 +53,14 @@ describe("BizReBACOverview (populated)", () => {
       },
     } as any);
 
+    vi.mocked(BizBackend.listBizAssertions).mockResolvedValue({
+      status: "ok",
+      data: [
+        { id: "a1", lastActual: true,  expected: true,  owner: "admin", appName: "drive_prod", object: "document:r1", relation: "viewer", user: "user:alice", createdTime: new Date().toISOString() },
+        { id: "a2", lastActual: false, expected: true,  owner: "admin", appName: "drive_prod", object: "document:r1", relation: "viewer", user: "user:bob",   createdTime: new Date().toISOString() },
+      ],
+    } as any);
+
     render(<BizReBACOverview appId="admin/drive_prod" />);
     await waitFor(() => {
       expect(screen.getAllByText(/482,910/).length).toBeGreaterThanOrEqual(1);
@@ -65,5 +73,6 @@ describe("BizReBACOverview (populated)", () => {
     // Type distribution card present
     expect(screen.getByText("document")).toBeInTheDocument();
     expect(screen.getByText("folder")).toBeInTheDocument();
+    expect(screen.getByText("1/2")).toBeInTheDocument();
   });
 });

@@ -38,6 +38,7 @@ export default function BizReBACOverview({ appId, onJumpTab }: Props) {
   const [loading, setLoading] = useState(true);
   const [reloadKey, setReloadKey] = useState(0);
   const [applying, setApplying] = useState(false);
+  const [assertionStats, setAssertionStats] = useState<{ total: number; passed: number } | null>(null);
   const modal = useModal();
 
   // Suppress unused warnings — kept for potential future stat tiles
@@ -49,8 +50,9 @@ export default function BizReBACOverview({ appId, onJumpTab }: Props) {
     Promise.all([
       BizBackend.getBizReBACStats(appId),
       BizBackend.getBizAuthorizationModel(appId),
+      BizBackend.listBizAssertions(appId),
     ])
-      .then(([statsRes, modelRes]) => {
+      .then(([statsRes, modelRes, assertRes]) => {
         if (cancelled) return;
         const haveSchema = modelRes.status === "ok" && !!modelRes.data?.schemaJson;
         setHasSchema(haveSchema);
@@ -67,6 +69,16 @@ export default function BizReBACOverview({ appId, onJumpTab }: Props) {
           }
         }
         setStats(statsRes.status === "ok" ? statsRes.data ?? null : null);
+        if (assertRes.status === "ok" && Array.isArray(assertRes.data)) {
+          const list = assertRes.data;
+          // Only count assertions that have been run at least once.
+          // Unrun assertions don't carry a verdict yet.
+          const runList = list.filter((a) => a.lastActual !== undefined);
+          const passed = runList.filter((a) => a.lastActual === a.expected).length;
+          setAssertionStats({ total: runList.length, passed });
+        } else {
+          setAssertionStats({ total: 0, passed: 0 });
+        }
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -206,9 +218,16 @@ export default function BizReBACOverview({ appId, onJumpTab }: Props) {
         <HeroStatCard
           icon={<ShieldCheck className="w-4 h-4" />}
           label={t("rebac.overview.assertionPass" as any)}
-          value="—"
-          hint={t("rebac.overview.iter2Soon" as any)}
-          muted
+          value={assertionStats && assertionStats.total > 0
+            ? `${assertionStats.passed}/${assertionStats.total}`
+            : "—"}
+          hint={
+            assertionStats && assertionStats.total > 0
+              ? `${assertionStats.total - assertionStats.passed} ${t("rebac.overview.assertionsFailed" as any)}`
+              : t("rebac.overview.assertionsEmpty" as any)
+          }
+          muted={!assertionStats || assertionStats.total === 0}
+          onClick={onJumpTab ? () => onJumpTab("assertions" as any) : undefined}
         />
       </div>
 
@@ -255,15 +274,24 @@ function HeroStatCard({
   value,
   hint,
   muted,
+  onClick,
 }: {
   icon: React.ReactNode;
   label: string;
   value: string | number;
   hint?: string;
   muted?: boolean;
+  onClick?: () => void;
 }) {
+  const clickable = onClick !== undefined;
   return (
-    <div className={`rounded-xl border border-border bg-surface-1 p-4 flex flex-col gap-1 ${muted ? "opacity-60" : ""}`}>
+    <div
+      role={clickable ? "button" : undefined}
+      tabIndex={clickable ? 0 : undefined}
+      onClick={onClick}
+      onKeyDown={clickable ? (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onClick(); } } : undefined}
+      className={`rounded-xl border border-border bg-surface-1 p-4 flex flex-col gap-1 ${muted ? "opacity-60" : ""} ${clickable ? "cursor-pointer hover:border-accent transition-colors" : ""}`}
+    >
       <div className="flex items-center gap-2 text-text-muted text-[11px] font-semibold uppercase tracking-wide">
         {icon}
         {label}
