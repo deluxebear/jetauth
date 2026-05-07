@@ -3,7 +3,7 @@ import { useQuery, useQueryClient, keepPreviousData } from "@tanstack/react-quer
 import { bizKeys } from "../backend/bizQueryKeys";
 import { useParams, useNavigate, useSearchParams, Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ArrowLeft, Plus, Play, Copy, Check, X, RefreshCw, RotateCcw, Pencil, Trash2, LayoutDashboard, Crown, ShieldCheck, FlaskConical, Code, Target, Eye } from "lucide-react";
+import { ArrowLeft, Plus, Play, Copy, Check, X, RefreshCw, RotateCcw, Pencil, Trash2, LayoutDashboard, Crown, ShieldCheck, FlaskConical, Code, Target, Eye, CheckCircle2 } from "lucide-react";
 import DataTable, { type Column, useTablePrefs, ColumnsMenu } from "../components/DataTable";
 import BizAppResourceTab from "../components/BizAppResourceTab";
 import BizSchemaEditor from "../components/BizSchemaEditor";
@@ -11,6 +11,7 @@ import BizSchemaVersionList from "../components/BizSchemaVersionList";
 import BizTupleManager from "../components/BizTupleManager";
 import BizReBACTester from "../components/BizReBACTester";
 import BizReBACBrowser from "../components/BizReBACBrowser";
+import BizAssertionList from "../components/BizAssertionList";
 import BizIntegrationTab from "../components/BizIntegrationTab";
 import BizReBACOverview from "../components/BizReBACOverview";
 import { useTranslation } from "../i18n";
@@ -34,7 +35,8 @@ type TabKey =
   | "schema"
   | "tuples"
   | "browser"
-  | "tester";
+  | "tester"
+  | "assertions";
 
 // Shared helper for RolesTab + PermissionsTab: turns a bulk-delete API
 // response into the appropriate toast (all-success / all-failed / partial).
@@ -65,7 +67,7 @@ function showBulkDeleteToast(
 }
 
 const CASBIN_TABS: TabKey[] = ["overview", "roles", "permissions", "resources", "test", "integration"];
-const REBAC_TABS: TabKey[] = ["overview", "schema", "tuples", "browser", "tester", "integration"];
+const REBAC_TABS: TabKey[] = ["overview", "schema", "tuples", "browser", "tester", "assertions", "integration"];
 
 // Local relative-time helper — mirrors the one in AuthorizationPage. Kept
 // here to avoid a cross-page import cycle; both functions are short.
@@ -238,6 +240,7 @@ export default function AppAuthorizationPage() {
     { key: "tuples", label: t("rebac.tab.tuples"), icon: <Target size={14} /> },
     { key: "browser", label: t("rebac.tab.browser"), icon: <Eye size={14} /> },
     { key: "tester", label: t("rebac.tab.tester"), icon: <FlaskConical size={14} /> },
+    { key: "assertions", label: t("rebac.tab.assertions"), icon: <CheckCircle2 size={14} /> },
     { key: "integration", label: t("rebac.tab.integration"), icon: <Code size={14} /> },
   ];
   const tabs = isReBAC ? rebacTabs : casbinTabs;
@@ -360,6 +363,9 @@ export default function AppAuthorizationPage() {
         )}
         {isReBAC && activeTab === "tester" && (
           <RebacTesterTab appId={appId} t={t} initialRequest={testerPrefill ?? undefined} />
+        )}
+        {isReBAC && activeTab === "assertions" && (
+          <BizAssertionList appId={appId} />
         )}
         {isReBAC && activeTab === "integration" && (
           <RebacIntegrationTab appId={appId} t={t} />
