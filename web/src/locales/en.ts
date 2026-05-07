@@ -3719,6 +3719,13 @@ const en = {
   "rebac.tester.decisionPath": "Decision path",
   "rebac.tester.hops": "{n} hops",
   "rebac.tester.ruleMatched": "rule {rule} matched",
+  "rebac.tester.section.input": "Input",
+  "rebac.tester.section.result": "Result",
+  "rebac.tester.section.graph": "Decision path",
+  "rebac.tester.has": "has",
+  "rebac.tester.lacks": "does not have",
+  "rebac.tester.on": "on",
+  "rebac.tester.whyAllowed": "Why allowed?",
 
   // Integration
   "rebac.integration.lang.go": "Go",

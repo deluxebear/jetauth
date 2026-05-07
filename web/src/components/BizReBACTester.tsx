@@ -14,9 +14,11 @@ import type {
   BizTupleKey,
 } from "../backend/BizBackend";
 import BizDecisionPathGraph from "./BizDecisionPathGraph";
+import BizExplanationTree from "./BizExplanationTree";
 import TupleChip from "./TupleChip";
 import BizTesterHistorySidebar from "./BizTesterHistorySidebar";
 import type { HistoryEntry as SidebarHistoryEntry, CaseEntry as SidebarCaseEntry } from "./BizTesterHistorySidebar";
+import { explainExpand } from "../utils/explain";
 
 // BizReBACTester — Task 8. Admin-facing playground for the /biz-check
 // and /biz-expand endpoints. Matches spec §8.2 "Tester page":
@@ -113,9 +115,28 @@ function saveHistory(appId: string, entries: HistoryEntry[]) {
   }
 }
 
+// ── Helpers ──────────────────────────────────────────────────────────
+
+function truncateModelId(id: string): string {
+  if (id.length <= 10) return id;
+  return `${id.slice(0, 4)}…${id.slice(-3)}`;
+}
+
+function countHops(node: BizExpandNode, depth = 0): number {
+  const childDepths: number[] = [];
+  if (node.children) {
+    for (const c of node.children) childDepths.push(countHops(c, depth + 1));
+  }
+  if (node.base) childDepths.push(countHops(node.base, depth + 1));
+  if (node.subtract) childDepths.push(countHops(node.subtract, depth + 1));
+  return childDepths.length > 0 ? Math.max(...childDepths) : depth;
+}
+
 export default function BizReBACTester({ appId, initialRequest }: Props) {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const modal = useModal();
+
+  const [currentModelId, setCurrentModelId] = useState<string | null>(null);
 
   const [form, setForm] = useState<CheckFormState>({
     user: "",
@@ -142,6 +163,20 @@ export default function BizReBACTester({ appId, initialRequest }: Props) {
 
   useEffect(() => {
     setCases(loadCases(appId));
+  }, [appId]);
+
+  // Fetch the active authorization model id once on mount / appId change
+  // so we can display it in the result panel header chip.
+  useEffect(() => {
+    void BizBackend.getBizAuthorizationModel(appId)
+      .then((res) => {
+        if (res.status === "ok" && res.data?.id) {
+          setCurrentModelId(res.data.id);
+        }
+      })
+      .catch(() => {
+        // Non-fatal — chip just stays hidden.
+      });
   }, [appId]);
 
   const formValid = useMemo(() => {
@@ -437,7 +472,14 @@ export default function BizReBACTester({ appId, initialRequest }: Props) {
       <div className="grid grid-cols-1 lg:grid-cols-[320px_1fr_360px] gap-4 items-start">
 
         {/* LEFT COLUMN: operation pills + form + run button + elapsed footer */}
-        <div className="flex flex-col gap-3">
+        <div className="rounded-xl border border-border bg-surface-1 p-4 flex flex-col gap-3">
+          {/* Section header */}
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-[11px] text-text-muted uppercase tracking-wider font-semibold">
+              {t("rebac.tester.section.input")}
+            </span>
+          </div>
+
           {/* Operation mode pills */}
           <div className="flex items-center gap-1 p-1 rounded-md bg-surface-2 self-start">
             {(["check", "list-objects", "list-users"] as const).map((op) => (
@@ -495,7 +537,7 @@ export default function BizReBACTester({ appId, initialRequest }: Props) {
             )}
           </div>
 
-          <details className="rounded-lg border border-border bg-surface-1">
+          <details className="rounded-lg border border-border bg-surface-2">
             <summary className="px-3 py-2 text-[12px] text-text-muted cursor-pointer select-none">
               {t("rebac.tester.contextualTuples")} + {t("rebac.tester.context")}
             </summary>
@@ -533,44 +575,77 @@ export default function BizReBACTester({ appId, initialRequest }: Props) {
           )}
         </div>
 
-        {/* CENTER COLUMN: result banner + expand explanation tree */}
-        <div className="flex flex-col gap-3">
+        {/* CENTER COLUMN: result banner + NL explanation tree */}
+        <div className="rounded-xl border border-border bg-surface-1 p-4 flex flex-col gap-3">
+          {/* Section header */}
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-[11px] text-text-muted uppercase tracking-wider font-semibold">
+              {t("rebac.tester.section.result")}
+            </span>
+            {currentModelId && (
+              <span className="text-[11px] text-text-muted font-mono">
+                model · {truncateModelId(currentModelId)}
+              </span>
+            )}
+          </div>
+
           {operation === "check" && (
             checkResult ? (
               <div
                 role="status"
                 aria-live="polite"
-                className="rounded-lg border border-border bg-surface-1 p-4 flex flex-col gap-2"
+                className="flex flex-col gap-3"
               >
-                <div className="flex items-center gap-2">
-                  {checkResult.allowed ? (
-                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-success/10 text-success text-[13px] font-medium">
-                      <CheckCircle2 className="w-4 h-4" />
-                      {t("rebac.tester.allowed")}
-                    </span>
-                  ) : (
-                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-danger/10 text-danger text-[13px] font-medium">
-                      <XCircle className="w-4 h-4" />
-                      {t("rebac.tester.denied")}
-                    </span>
-                  )}
-                  {checkResult.resolution && (
-                    <span className="text-[11px] text-text-muted font-mono">
-                      {checkResult.resolution}
-                    </span>
-                  )}
-                </div>
-                {expand && (
-                  <div className="mt-2">
-                    <p className="text-[12px] text-text-muted mb-1">
-                      {t("rebac.tester.expand")}
+                {/* Big result banner */}
+                <div className="flex items-start gap-3">
+                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${
+                    checkResult.allowed ? "bg-success/10" : "bg-danger/10"
+                  }`}>
+                    {checkResult.allowed
+                      ? <CheckCircle2 className="w-6 h-6 text-success" />
+                      : <XCircle className="w-6 h-6 text-danger" />}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className={`text-[28px] font-bold leading-none ${
+                      checkResult.allowed ? "text-success" : "text-danger"
+                    }`}>
+                      {checkResult.allowed ? "ALLOWED" : "DENIED"}
+                    </h3>
+                    <p className="text-[13px] mt-2 text-text-secondary">
+                      <span className="font-mono">{form.user}</span>
+                      {" "}
+                      {checkResult.allowed ? t("rebac.tester.has") : t("rebac.tester.lacks")}
+                      {" "}
+                      <span className="font-mono">{form.relation}</span>
+                      {" "}{t("rebac.tester.on")}{" "}
+                      <span className="font-mono">{form.object}</span>
                     </p>
-                    <ExpandTree node={expand} />
+                    {checkResult.resolution && (
+                      <p className="text-[11px] text-text-muted font-mono mt-1">
+                        {checkResult.resolution}
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                {/* NL explanation tree — shown only when allowed and expand tree is available */}
+                {checkResult.allowed && expand && (
+                  <div className="mt-1 pt-4 border-t border-border">
+                    <h4 className="text-[12px] font-semibold text-text-muted uppercase tracking-wider mb-3">
+                      {t("rebac.tester.whyAllowed")}
+                    </h4>
+                    <BizExplanationTree
+                      steps={explainExpand(expand, {
+                        user: form.user,
+                        relation: form.relation,
+                        object: form.object,
+                      }, locale === "zh" ? "zh" : "en")}
+                    />
                   </div>
                 )}
               </div>
             ) : (
-              <div className="rounded-lg border border-border/40 bg-surface-1/50 p-6 flex items-center justify-center min-h-[120px]">
+              <div className="rounded-lg border border-border/40 bg-surface-2/50 p-6 flex items-center justify-center min-h-[120px]">
                 <p className="text-[13px] text-text-muted">
                   {running ? "…" : t("rebac.tester.check")}
                 </p>
@@ -583,22 +658,43 @@ export default function BizReBACTester({ appId, initialRequest }: Props) {
           {operation === "list-users" && listUsersResult && (
             <ListUsersResultPanel result={listUsersResult} t={t} />
           )}
+          {(operation === "list-objects" || operation === "list-users") && !listObjectsResult && !listUsersResult && (
+            <div className="rounded-lg border border-border/40 bg-surface-2/50 p-6 flex items-center justify-center min-h-[120px]">
+              <p className="text-[13px] text-text-muted">
+                {running ? "…" : t("rebac.tester.check")}
+              </p>
+            </div>
+          )}
         </div>
 
         {/* RIGHT COLUMN: decision-path graph (Check only) */}
-        {operation === "check" ? (
-          <BizDecisionPathGraph
-            root={expand ?? undefined}
-            highlightUser={form.user}
-            matchedRule={checkResult?.allowed ? 1 : undefined}
-          />
-        ) : (
-          <div className="rounded-xl border border-border bg-surface-1 p-4">
+        <div className="rounded-xl border border-border bg-surface-1 p-4 flex flex-col gap-3">
+          {/* Section header */}
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-[11px] text-text-muted uppercase tracking-wider font-semibold">
+              {t("rebac.tester.section.graph")}
+            </span>
+            {operation === "check" && expand && (
+              <span className="text-[11px] text-text-muted">
+                {countHops(expand)}{" "}{t("rebac.tester.hops").replace("{n}", "").trim()}
+                {checkResult?.allowed && ` · ${t("rebac.tester.matchedRule")} 1`}
+              </span>
+            )}
+          </div>
+
+          {operation === "check" ? (
+            <BizDecisionPathGraph
+              root={expand ?? undefined}
+              highlightUser={form.user}
+              matchedRule={checkResult?.allowed ? 1 : undefined}
+              className="border-0 bg-transparent p-0 shadow-none"
+            />
+          ) : (
             <p className="text-[12px] text-text-muted text-center py-8">
               {t("rebac.tester.graphCheckOnly")}
             </p>
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
       {/* History + Cases — below the 3-column area */}

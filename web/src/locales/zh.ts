@@ -3709,6 +3709,13 @@ const zh: Record<string, string> = {
   "rebac.tester.decisionPath": "决策路径",
   "rebac.tester.hops": "{n} 跳",
   "rebac.tester.ruleMatched": "命中第 {rule} 条规则",
+  "rebac.tester.section.input": "输入",
+  "rebac.tester.section.result": "结果",
+  "rebac.tester.section.graph": "决策路径",
+  "rebac.tester.has": "拥有",
+  "rebac.tester.lacks": "不拥有",
+  "rebac.tester.on": "对",
+  "rebac.tester.whyAllowed": "解释 — 为什么允许?",
 
   // Integration
   "rebac.integration.lang.go": "Go",

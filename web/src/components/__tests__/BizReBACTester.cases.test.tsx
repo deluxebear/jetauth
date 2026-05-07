@@ -24,6 +24,11 @@ describe("BizReBACTester cases", () => {
   beforeEach(() => {
     localStorage.clear();
     vi.clearAllMocks();
+    // getBizAuthorizationModel is called on mount for the model chip; provide a silent mock.
+    vi.mocked(BizBackend.getBizAuthorizationModel).mockResolvedValue({
+      status: "ok",
+      data: { id: "01J9XXXX", owner: "o", appName: "a", schemaDsl: "", schemaJson: "", schemaHash: "", createdTime: "", createdBy: "" },
+    } as any);
   });
 
   it("shows cases tab with count when cases exist in localStorage", () => {
