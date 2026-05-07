@@ -688,6 +688,7 @@ export default function BizReBACTester({ appId, initialRequest }: Props) {
               highlightUser={form.user}
               matchedRule={checkResult?.allowed ? 1 : undefined}
               className="border-0 bg-transparent p-0 shadow-none"
+              hideHeader
             />
           ) : (
             <p className="text-[12px] text-text-muted text-center py-8">

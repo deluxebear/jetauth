@@ -17,6 +17,9 @@ interface Props {
   matchedRule?: number;
   /** Optional className for the outer container. */
   className?: string;
+  /** Hide the internal title + hops chip when the parent renders its own
+   *  section header (avoids visual duplication on the polished tester). */
+  hideHeader?: boolean;
 }
 
 interface Layered {
@@ -97,7 +100,7 @@ function nodeBox(layer: number, row: number) {
   };
 }
 
-export default function BizDecisionPathGraph({ root, highlightUser, matchedRule, className }: Props) {
+export default function BizDecisionPathGraph({ root, highlightUser, matchedRule, className, hideHeader }: Props) {
   const { t } = useTranslation();
   const { nodes, edges } = useMemo(() => layout(root, highlightUser), [root, highlightUser]);
 
@@ -120,7 +123,7 @@ export default function BizDecisionPathGraph({ root, highlightUser, matchedRule,
 
   return (
     <div className={`rounded-xl border border-border bg-surface-1 p-4 overflow-auto ${className ?? ""}`}>
-      {nodes.length > 0 && (
+      {nodes.length > 0 && !hideHeader && (
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-[13px] font-semibold text-text-primary">
             {t("rebac.tester.decisionPath")}
