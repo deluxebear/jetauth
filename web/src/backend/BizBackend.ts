@@ -1122,6 +1122,43 @@ export function runBizAssertions(appId: string) {
   );
 }
 
+// ── Audit ──
+
+export type BizAuditOp = "write" | "delete";
+
+export interface BizTupleAuditEvent {
+  id: number;
+  owner: string;
+  appName: string;
+  op: BizAuditOp;
+  object: string;
+  relation: string;
+  user: string;
+  actorUser?: string;
+  atTime: string;
+}
+
+export interface BizListTupleAuditResult {
+  events: BizTupleAuditEvent[];
+  offset: number;
+  limit: number;
+}
+
+export function listBizTupleAudit(
+  appId: string,
+  filter: { op?: BizAuditOp } = {},
+  page: { offset?: number; limit?: number } = {},
+) {
+  const params = new URLSearchParams({ appId });
+  if (filter.op) params.set("op", filter.op);
+  if (page.offset != null) params.set("offset", String(page.offset));
+  if (page.limit != null) params.set("limit", String(page.limit));
+  return request<BizListTupleAuditResult>(
+    "GET",
+    `/api/biz-list-tuple-audit?${params.toString()}`,
+  );
+}
+
 // ── Helpers ──
 
 /** Parse policy_definition fields from model text. Returns field names like ["sub", "obj", "act"] */
