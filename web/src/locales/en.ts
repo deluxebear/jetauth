@@ -3486,6 +3486,7 @@ const en = {
   "rebac.tab.browser": "Browse",
   "rebac.tab.tester": "Tester",
   "rebac.tab.assertions": "Assertions",
+  "rebac.tab.audit": "Audit",
   "rebac.tab.integration": "Integration",
 
   // Overview
@@ -3750,6 +3751,11 @@ const en = {
   "rebac.assertions.total": "Total",
   "rebac.assertions.passed": "Passed",
   "rebac.assertions.failed": "Failed",
+
+  "rebac.audit.title": "Audit",
+  "rebac.audit.subtitle": "Every Tuple write/delete · 90-day retention",
+  "rebac.audit.exportCsv": "Export CSV",
+  "rebac.audit.empty": "No audit events yet",
 
   "rebac.browser.byUser": "By User",
   "rebac.browser.byObject": "By Object",

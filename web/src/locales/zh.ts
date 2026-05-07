@@ -3476,6 +3476,7 @@ const zh: Record<string, string> = {
   "rebac.tab.browser": "浏览",
   "rebac.tab.tester": "测试",
   "rebac.tab.assertions": "断言",
+  "rebac.tab.audit": "审计",
   "rebac.tab.integration": "集成",
 
   // Overview
@@ -3740,6 +3741,11 @@ const zh: Record<string, string> = {
   "rebac.assertions.total": "总数",
   "rebac.assertions.passed": "通过",
   "rebac.assertions.failed": "失败",
+
+  "rebac.audit.title": "审计",
+  "rebac.audit.subtitle": "记录每一次 Tuple 写入/删除 · 保留 90 天",
+  "rebac.audit.exportCsv": "导出 CSV",
+  "rebac.audit.empty": "暂无审计记录",
 
   "rebac.browser.byUser": "按用户浏览",
   "rebac.browser.byObject": "按对象浏览",
