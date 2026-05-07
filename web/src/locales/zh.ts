@@ -3475,6 +3475,7 @@ const zh: Record<string, string> = {
   "rebac.tab.tuples": "关系元组",
   "rebac.tab.browser": "浏览",
   "rebac.tab.tester": "测试",
+  "rebac.tab.assertions": "断言",
   "rebac.tab.integration": "集成",
 
   // Overview
@@ -3502,6 +3503,8 @@ const zh: Record<string, string> = {
   "rebac.overview.checkQpsHint": "近 1 小时平均",
   "rebac.overview.assertionPass": "断言通过率",
   "rebac.overview.iter2Soon": "第二期上线",
+  "rebac.overview.assertionsFailed": "个失败",
+  "rebac.overview.assertionsEmpty": "暂无断言",
   "rebac.overview.published": "发布",
 
   // Scenario templates
@@ -3717,8 +3720,27 @@ const zh: Record<string, string> = {
   "rebac.common.save": "保存",
   "rebac.common.cancel": "取消",
   "rebac.common.confirm": "确认",
+  "rebac.common.delete": "删除",
   "rebac.common.loading": "加载中...",
   "rebac.common.error": "错误",
+
+  // Assertions
+  "rebac.assertions.title": "断言",
+  "rebac.assertions.subtitle": "为模型固化测试用例 · 每次发布会自动跑一遍",
+  "rebac.assertions.tabLabel": "断言",
+  "rebac.assertions.runAll": "运行全部",
+  "rebac.assertions.addAction": "添加断言",
+  "rebac.assertions.addTitle": "添加断言",
+  "rebac.assertions.expectedAllow": "预期:允许",
+  "rebac.assertions.descriptionLabel": "备注(可选)",
+  "rebac.assertions.allFieldsRequired": "user / relation / object 都必填",
+  "rebac.assertions.saved": "已保存",
+  "rebac.assertions.confirmDelete": "删除这条断言?",
+  "rebac.assertions.empty": "暂无断言",
+  "rebac.assertions.total": "总数",
+  "rebac.assertions.passed": "通过",
+  "rebac.assertions.failed": "失败",
+
   "rebac.browser.byUser": "按用户浏览",
   "rebac.browser.byObject": "按对象浏览",
   "rebac.browser.objectType": "对象类型",

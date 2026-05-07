@@ -49,7 +49,7 @@ func TestRunAssertion_PassAndFail(t *testing.T) {
 
 	if _, err := SaveAuthorizationModel(owner, appName,
 		"model\n  schema 1.1\n\ntype user\n\ntype document\n  relations\n    define viewer: [user]\n",
-		"test"); err != nil {
+		"test", ""); err != nil {
 		t.Fatal(err)
 	}
 	storeId := BuildStoreId(owner, appName)

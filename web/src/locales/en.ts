@@ -3485,6 +3485,7 @@ const en = {
   "rebac.tab.tuples": "Tuples",
   "rebac.tab.browser": "Browse",
   "rebac.tab.tester": "Tester",
+  "rebac.tab.assertions": "Assertions",
   "rebac.tab.integration": "Integration",
 
   // Overview
@@ -3512,6 +3513,8 @@ const en = {
   "rebac.overview.checkQpsHint": "Last 1h average",
   "rebac.overview.assertionPass": "Assertion pass-rate",
   "rebac.overview.iter2Soon": "Available in iteration 2",
+  "rebac.overview.assertionsFailed": "failing",
+  "rebac.overview.assertionsEmpty": "No assertions yet",
   "rebac.overview.published": "published",
 
   // Scenario templates
@@ -3727,8 +3730,27 @@ const en = {
   "rebac.common.save": "Save",
   "rebac.common.cancel": "Cancel",
   "rebac.common.confirm": "Confirm",
+  "rebac.common.delete": "Delete",
   "rebac.common.loading": "Loading...",
   "rebac.common.error": "Error",
+
+  // Assertions
+  "rebac.assertions.title": "Assertions",
+  "rebac.assertions.subtitle": "Frozen test cases that auto-run on each schema publish",
+  "rebac.assertions.tabLabel": "Assertions",
+  "rebac.assertions.runAll": "Run all",
+  "rebac.assertions.addAction": "Add assertion",
+  "rebac.assertions.addTitle": "Add assertion",
+  "rebac.assertions.expectedAllow": "Expected: allow",
+  "rebac.assertions.descriptionLabel": "Description (optional)",
+  "rebac.assertions.allFieldsRequired": "User, relation, object are all required",
+  "rebac.assertions.saved": "Saved",
+  "rebac.assertions.confirmDelete": "Delete this assertion?",
+  "rebac.assertions.empty": "No assertions yet",
+  "rebac.assertions.total": "Total",
+  "rebac.assertions.passed": "Passed",
+  "rebac.assertions.failed": "Failed",
+
   "rebac.browser.byUser": "By User",
   "rebac.browser.byObject": "By Object",
   "rebac.browser.objectType": "Object type",
