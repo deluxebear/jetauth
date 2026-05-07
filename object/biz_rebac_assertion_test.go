@@ -38,3 +38,65 @@ func TestBizReBACAssertion_RoundTrip(t *testing.T) {
 		t.Fatalf("got %+v", got)
 	}
 }
+
+func TestRunAssertion_PassAndFail(t *testing.T) {
+	if ormer == nil {
+		t.Skip("ormer not initialised (test needs DB)")
+	}
+	owner := "rebac-it-" + util.GenerateUUID()[:8]
+	appName := "drive_assertion_run"
+	seedRebacAppConfigForTest(t, owner, appName)
+
+	if _, err := SaveAuthorizationModel(owner, appName,
+		"model\n  schema 1.1\n\ntype user\n\ntype document\n  relations\n    define viewer: [user]\n",
+		"test"); err != nil {
+		t.Fatal(err)
+	}
+	storeId := BuildStoreId(owner, appName)
+	if _, err := AddBizTuples([]*BizTuple{{
+		StoreId: storeId, Owner: owner, AppName: appName,
+		Object: "document:d1", Relation: "viewer", User: "user:alice",
+	}}); err != nil {
+		t.Fatal(err)
+	}
+
+	pass := &BizReBACAssertion{
+		Owner: owner, AppName: appName,
+		Object: "document:d1", Relation: "viewer", User: "user:alice",
+		Expected: true,
+	}
+	fail := &BizReBACAssertion{
+		Owner: owner, AppName: appName,
+		Object: "document:d1", Relation: "viewer", User: "user:bob",
+		Expected: true, // bob isn't viewer — should report Pass=false
+	}
+	if _, err := AddBizReBACAssertion(pass); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := AddBizReBACAssertion(fail); err != nil {
+		t.Fatal(err)
+	}
+
+	results, err := RunAssertionsForApp(owner, appName)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(results) != 2 {
+		t.Fatalf("got %d results", len(results))
+	}
+	var passResult, failResult AssertionRunResult
+	for _, r := range results {
+		if r.User == "user:alice" {
+			passResult = r
+		}
+		if r.User == "user:bob" {
+			failResult = r
+		}
+	}
+	if !passResult.Pass {
+		t.Errorf("alice expected pass, got %+v", passResult)
+	}
+	if failResult.Pass {
+		t.Errorf("bob expected fail, got %+v", failResult)
+	}
+}

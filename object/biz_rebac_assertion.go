@@ -98,3 +98,66 @@ func DeleteBizReBACAssertion(owner, appName, id string) error {
 	_, err = ormer.Engine.ID(id).Delete(&BizReBACAssertion{})
 	return err
 }
+
+// AssertionRunResult is one row of the bulk-run output. Pass=true when
+// actual matches expected. Error is set if the engine itself failed
+// (cycle, schema mismatch, etc.) — those are reported separately so the
+// admin UI can show "X passed, Y failed, Z errored".
+type AssertionRunResult struct {
+	Id       string `json:"id"`
+	Object   string `json:"object"`
+	Relation string `json:"relation"`
+	User     string `json:"user"`
+	Expected bool   `json:"expected"`
+	Actual   bool   `json:"actual"`
+	Pass     bool   `json:"pass"`
+	Error    string `json:"error,omitempty"`
+}
+
+// RunAssertion executes one assertion via the internal ReBACCheck engine
+// (no HTTP round-trip). Updates the LastActual/LastRunTime columns on the
+// row so the list UI can display the most recent verdict.
+func RunAssertion(a *BizReBACAssertion) AssertionRunResult {
+	storeId := BuildStoreId(a.Owner, a.AppName)
+	req := &CheckRequest{
+		StoreId: storeId,
+		TupleKey: TupleKey{
+			Object: a.Object, Relation: a.Relation, User: a.User,
+		},
+	}
+	res, err := ReBACCheck(req)
+	out := AssertionRunResult{
+		Id: a.Id, Object: a.Object, Relation: a.Relation,
+		User: a.User, Expected: a.Expected,
+	}
+	if err != nil {
+		out.Error = err.Error()
+		return out
+	}
+	out.Actual = res.Allowed
+	out.Pass = (out.Actual == out.Expected)
+
+	// Update last-run columns. Best-effort — a failure here doesn't
+	// invalidate the assertion result, just the cached label.
+	a.LastActual = &out.Actual
+	a.LastRunTime = util.GetCurrentTime()
+	_, _ = ormer.Engine.ID(a.Id).Cols("last_actual", "last_run_time").Update(a)
+
+	return out
+}
+
+// RunAssertionsForApp executes every assertion for (owner, appName)
+// sequentially and returns the result list. Sequential is fine — admin
+// pages have ≤50 assertions in practice; parallelisation would
+// complicate cycle-detection state across goroutines.
+func RunAssertionsForApp(owner, appName string) ([]AssertionRunResult, error) {
+	list, err := ListBizReBACAssertions(owner, appName)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]AssertionRunResult, 0, len(list))
+	for _, a := range list {
+		out = append(out, RunAssertion(a))
+	}
+	return out, nil
+}
