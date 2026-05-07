@@ -1,22 +1,43 @@
+import { useState, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { RefreshCw, Trash2, Pencil } from "lucide-react";
+import { RefreshCw, Trash2, Pencil, GitBranch } from "lucide-react";
 import DataTable, { type Column, useTablePrefs, ColumnsMenu } from "../components/DataTable";
 import { BulkDeleteBar } from "../components/BulkDeleteBar";
+import EntryFilterBar from "../components/EntryFilterBar";
 import { useBulkDelete } from "../hooks/useBulkDelete";
 import { useTranslation } from "../i18n";
 import { useModal } from "../components/Modal";
 import { useEntityList } from "../hooks/useEntityList";
+import { useOrganization } from "../OrganizationContext";
 import * as EntryBackend from "../backend/EntryBackend";
-import type { Entry } from "../backend/EntryBackend";
+import type { Entry, EntryAdvancedFilter } from "../backend/EntryBackend";
 
 export default function EntryListPage() {
   const { t } = useTranslation();
   const modal = useModal();
+  const { getRequestOwner } = useOrganization();
+  const owner = getRequestOwner();
+
+  // Advanced filter state lives here so the bar can drive both the fetch
+  // and the cache key. Empty fields are omitted to keep the URL compact
+  // and to let the backend short-circuit to the un-filtered hot path.
+  const [filter, setFilter] = useState<EntryAdvancedFilter>({});
+
+  // Wrap getEntries so the advanced filter rides along on every fetch.
+  // useEntityList passes its own params (owner/p/pageSize/sort/field/value);
+  // we merge the filter on top, and surface it in extraKeys so React Query
+  // refetches when filter content changes.
+  const fetchEntries = useCallback(
+    (params: Parameters<typeof EntryBackend.getEntries>[0]) =>
+      EntryBackend.getEntries({ ...params, ...filter }),
+    [filter],
+  );
 
   const list = useEntityList<Entry>({
     queryKey: "entries",
-    fetchFn: EntryBackend.getEntries,
+    fetchFn: fetchEntries,
+    extraKeys: [filter],
   });
   const prefs = useTablePrefs({ persistKey: "list:entries" });
   const bulkDelete = useBulkDelete<Entry>(EntryBackend.deleteEntry, list.refetch);
@@ -69,9 +90,19 @@ export default function EntryListPage() {
       ) : null,
     },
     {
-      key: "__actions", fixed: "right" as const, title: t("common.action"), width: "120px",
+      key: "__actions", fixed: "right" as const, title: t("common.action"), width: "150px",
       render: (_, r) => (
         <div className="flex items-center gap-1">
+          {r.type === "session" && (
+            <Link
+              to={`/entries/${r.owner}/${r.name}/graph`}
+              className="rounded p-1.5 text-text-muted hover:text-accent hover:bg-accent/10 transition-colors"
+              title={t("entries.action.viewSessionGraph")}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <GitBranch size={14} />
+            </Link>
+          )}
           <Link to={`/entries/${r.owner}/${r.name}`} className="rounded p-1.5 text-text-muted hover:text-warning hover:bg-warning/10 transition-colors" title={t("common.edit")} onClick={(e) => e.stopPropagation()}><Pencil size={14} /></Link>
           <button onClick={(e) => handleDelete(r, e)} className="rounded p-1.5 text-text-muted hover:text-danger hover:bg-danger/10 transition-colors" title={t("common.delete")}><Trash2 size={14} /></button>
         </div>
@@ -91,6 +122,7 @@ export default function EntryListPage() {
           <ColumnsMenu columns={columns} hidden={prefs.hidden} onToggle={prefs.toggleHidden} onResetWidths={prefs.resetWidths} />
         </div>
       </div>
+      <EntryFilterBar owner={owner} value={filter} onChange={setFilter} />
       <DataTable
         columns={columns}
         data={list.items}

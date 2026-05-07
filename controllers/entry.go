@@ -16,11 +16,35 @@ package controllers
 
 import (
 	"encoding/json"
+	"strings"
 
 	"github.com/beego/beego/v2/server/web/pagination"
 	"github.com/deluxebear/jetauth/object"
 	"github.com/deluxebear/jetauth/util"
 )
+
+// parseEntryFilter pulls the structured filter parameters off the request
+// query string. Empty params are dropped so the resulting filter is empty
+// when the caller passes nothing — preserving the legacy un-filtered code
+// path. Comma-separated lists ("trace,session") are split for `types`.
+func parseEntryFilter(c *ApiController) object.EntryFilter {
+	rawTypes := strings.TrimSpace(c.Ctx.Input.Query("types"))
+	var types []string
+	if rawTypes != "" {
+		for _, t := range strings.Split(rawTypes, ",") {
+			if t = strings.TrimSpace(t); t != "" {
+				types = append(types, t)
+			}
+		}
+	}
+	return object.EntryFilter{
+		Types:       types,
+		Provider:    strings.TrimSpace(c.Ctx.Input.Query("provider")),
+		Application: strings.TrimSpace(c.Ctx.Input.Query("application")),
+		StartTime:   strings.TrimSpace(c.Ctx.Input.Query("startTime")),
+		EndTime:     strings.TrimSpace(c.Ctx.Input.Query("endTime")),
+	}
+}
 
 // EntryListResponse represents the response for entry list APIs
 type EntryListResponse struct {
@@ -68,14 +92,18 @@ func (c *ApiController) GetEntries() {
 	}
 
 	limitInt := util.ParseInt(limit)
-	count, err := object.GetEntryCount(owner, field, value)
+	filter := parseEntryFilter(c)
+
+	// Count uses the same filter so paginator matches what we'll actually
+	// return — otherwise totalPages would lie.
+	count, err := object.GetEntryCountFiltered(owner, field, value, filter)
 	if err != nil {
 		c.ResponseError(err.Error())
 		return
 	}
 
 	paginator := pagination.SetPaginator(c.Ctx, limitInt, count)
-	entries, err := object.GetPaginationEntries(owner, paginator.Offset(), limitInt, field, value, sortField, sortOrder)
+	entries, err := object.GetPaginationEntriesFiltered(owner, paginator.Offset(), limitInt, field, value, sortField, sortOrder, filter)
 	if err != nil {
 		c.ResponseError(err.Error())
 		return

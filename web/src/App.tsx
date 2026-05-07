@@ -62,6 +62,7 @@ import ServerEditPage from "./pages/ServerEditPage";
 import ServerStorePage from "./pages/ServerStorePage";
 import EntryListPage from "./pages/EntryListPage";
 import EntryEditPage from "./pages/EntryEditPage";
+import SessionGraphPage from "./pages/SessionGraphPage";
 import SiteListPage from "./pages/SiteListPage";
 import SiteEditPage from "./pages/SiteEditPage";
 import RuleListPage from "./pages/RuleListPage";
@@ -572,6 +573,7 @@ export default function App() {
         <Route path="/authorization/:owner/:appName/permissions/new" element={<BizPermissionEditPage />} />
         <Route path="/authorization/:owner/:appName/permissions/:name" element={<BizPermissionEditPage />} />
         {entityRoutes}
+        <Route path="/entries/:owner/:name/graph" element={<SessionGraphPage />} />
         <Route path="/server-store" element={<ServerStorePage />} />
         <Route path="/product-store" element={<ProductStorePage />} />
         <Route path="/products/:owner/:name/buy" element={<ProductBuyPage />} />

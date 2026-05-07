@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate, useLocation, Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Trash2, LogOut, ExternalLink } from "lucide-react";
+import { Trash2, LogOut, ExternalLink, GitBranch } from "lucide-react";
 import StickyEditHeader from "../components/StickyEditHeader";
 import { FormField, FormSection, inputClass, monoInputClass } from "../components/FormSection";
 import { useTranslation } from "../i18n";
@@ -14,16 +14,9 @@ import { friendlyError } from "../utils/errorHelper";
 import SingleSearchSelect from "../components/SingleSearchSelect";
 import SaveButton from "../components/SaveButton";
 import UnsavedBanner from "../components/UnsavedBanner";
+import EntryMessageViewer from "../components/EntryMessageViewer";
 import { useUnsavedWarning } from "../hooks/useUnsavedWarning";
 import { getStoredAccount, isGlobalAdmin } from "../utils/auth";
-
-function tryFormatJson(str: string): string {
-  try {
-    return JSON.stringify(JSON.parse(str), null, 2);
-  } catch {
-    return str;
-  }
-}
 
 export default function EntryEditPage() {
   const { owner, name } = useParams<{ owner: string; name: string }>();
@@ -143,8 +136,6 @@ export default function EntryEditPage() {
     });
   };
 
-  const formattedMessage = entry.message ? tryFormatJson(entry.message) : "";
-
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
       <StickyEditHeader
@@ -152,6 +143,15 @@ export default function EntryEditPage() {
         subtitle={`${owner}/${name}`}
         onBack={handleBack}
       >
+        {entry.type === "session" && (
+          <button
+            onClick={() => navigate(`/entries/${entry.owner}/${entry.name}/graph`)}
+            className="flex items-center gap-1.5 rounded-lg border border-accent/30 px-3 py-2 text-[13px] font-medium text-accent hover:bg-accent/10 transition-colors"
+            title={t("entries.action.viewSessionGraph")}
+          >
+            <GitBranch size={14} /> {t("entries.action.viewSessionGraph")}
+          </button>
+        )}
         <button onClick={handleDelete} className="flex items-center gap-1.5 rounded-lg border border-danger/30 px-3 py-2 text-[13px] font-medium text-danger hover:bg-danger/10 transition-colors">
           <Trash2 size={14} /> {t("common.delete")}
         </button>
@@ -230,12 +230,10 @@ export default function EntryEditPage() {
         </FormField>
       </FormSection>
 
-      {/* Message */}
+      {/* Message — dispatched per-type. trace → span waterfall, others → JSON. */}
       <FormSection title={t("entries.field.message")}>
         <div className="col-span-full">
-          <pre className="rounded-lg border border-border bg-surface-2 p-4 text-[12px] font-mono text-text-secondary overflow-auto max-h-[500px] whitespace-pre-wrap break-all">
-            {formattedMessage || <span className="text-text-muted">{t("common.none")}</span>}
-          </pre>
+          <EntryMessageViewer type={entry.type ?? ""} message={entry.message ?? ""} />
         </div>
       </FormSection>
     </motion.div>
