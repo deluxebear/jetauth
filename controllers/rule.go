@@ -22,6 +22,7 @@ import (
 
 	"github.com/beego/beego/v2/server/web/pagination"
 	"github.com/deluxebear/jetauth/object"
+	ruleengine "github.com/deluxebear/jetauth/rule"
 	"github.com/deluxebear/jetauth/util"
 	"github.com/hsluoyz/modsecurity-go/seclang/parser"
 )
@@ -158,7 +159,14 @@ func (c *ApiController) UpdateRule() {
 		return
 	}
 
-	c.Data["json"] = wrapActionResponse(object.UpdateRule(id, &rule))
+	affected, err := object.UpdateRule(id, &rule)
+	if affected {
+		// Old expressions string may still be cached in the WAF engine map;
+		// drop everything so we don't leak compiled Coraza instances over
+		// rule edits.
+		ruleengine.InvalidateWafCache()
+	}
+	c.Data["json"] = wrapActionResponse(affected, err)
 	c.ServeJSON()
 }
 
@@ -177,7 +185,11 @@ func (c *ApiController) DeleteRule() {
 		return
 	}
 
-	c.Data["json"] = wrapActionResponse(object.DeleteRule(&rule))
+	affected, err := object.DeleteRule(&rule)
+	if affected {
+		ruleengine.InvalidateWafCache()
+	}
+	c.Data["json"] = wrapActionResponse(affected, err)
 	c.ServeJSON()
 }
 

@@ -17,11 +17,13 @@ package service
 import (
 	"crypto/tls"
 	"fmt"
+	"io"
 	"net"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -94,6 +96,30 @@ func forwardHandler(targetUrl string, writer http.ResponseWriter, request *http.
 	}
 
 	proxy.ModifyResponse = func(resp *http.Response) error {
+		// Phase:3/4 WAF: let the session inspect upstream headers + body.
+		// If a response-phase rule denies, replace the upstream payload
+		// with a block notice before passing it back to the client.
+		if session := rule.GetWafSession(request.Context()); session != nil {
+			if wafResult, err := session.InspectResponse(resp); err == nil && wafResult != nil {
+				switch wafResult.Action {
+				case "Block", "Drop":
+					body := fmt.Sprintf("%sed by CasWAF: %s\n", wafResult.Action, wafResult.Reason)
+					resp.StatusCode = wafResult.StatusCode
+					resp.Body = io.NopCloser(strings.NewReader(body))
+					resp.ContentLength = int64(len(body))
+					// Drop upstream headers — they may reference the
+					// content we just discarded (Content-Encoding,
+					// Content-Length, ETag, Set-Cookie, …). Re-add
+					// only what the synthetic body needs.
+					resp.Header = http.Header{
+						"Content-Type":   []string{"text/plain; charset=utf-8"},
+						"Content-Length": []string{strconv.Itoa(len(body))},
+					}
+					return nil
+				}
+			}
+		}
+
 		// Add Secure flag to all Set-Cookie headers in HTTPS responses
 		if request.TLS != nil {
 			// Add HSTS header for HTTPS responses if not already set by backend
@@ -302,6 +328,15 @@ func handleRequest(w http.ResponseWriter, r *http.Request) {
 		nextHandle(w, r)
 		return
 	}
+
+	// Attach a WAF session so any Coraza transaction created during request
+	// evaluation stays alive long enough to also run phase:3/4 in
+	// ModifyResponse, and phase:5 logging at the very end. Close runs even
+	// on early-return paths (Block/Drop), which is what we want — phase:5
+	// is supposed to fire regardless of whether the request was forwarded.
+	wafCtx, wafSession := rule.WithWafSession(r.Context())
+	r = r.WithContext(wafCtx)
+	defer wafSession.Close()
 
 	result, err := rule.CheckRules(site.Rules, r)
 	if err != nil {
