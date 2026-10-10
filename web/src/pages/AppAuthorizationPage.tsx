@@ -704,6 +704,15 @@ function OverviewTab({ config, roles, permissions, allowCount, denyCount, onRefr
   );
 }
 
+// DataTable column key -> server sortField. Derived columns (member/permission/
+// grantee counts) are not sortable server-side and are intentionally absent.
+const ROLE_SORT_FIELDS: Record<string, string> = {
+  role: "name", scopeKind: "scopeKind", isEnabled: "isEnabled", updatedTime: "updatedTime",
+};
+const PERMISSION_SORT_FIELDS: Record<string, string> = {
+  permission: "name", effect: "effect", state: "state", isEnabled: "isEnabled", updatedTime: "updatedTime",
+};
+
 // ═══════ ROLES TAB ═══════
 // After the id-based refactor, role rows no longer carry embedded user/sub-role arrays
 // (those live in biz_role_member and biz_role_inheritance). Table includes
@@ -775,21 +784,34 @@ function RolesTab({ roles, onRefresh, appOwner, appName, t, modal, navigate }: {
   const appScopeCount = roles.filter((r) => r.scopeKind === "app").length;
   const orgScopeCount = roles.filter((r) => r.scopeKind === "org").length;
 
-  const filteredRoles = useMemo(() => {
-    const q = nameFilter.trim().toLowerCase();
-    return roles.filter((r) => {
-      if (scopeSel.size > 0 && !scopeSel.has(r.scopeKind as "app" | "org")) return false;
-      if (statusSel === "enabled" && !r.isEnabled) return false;
-      if (statusSel === "disabled" && r.isEnabled) return false;
-      if (q) {
-        // Match either displayName or raw name so admins searching by either
-        // convention find what they expect.
-        const hay = `${r.displayName || ""} ${r.name || ""}`.toLowerCase();
-        if (!hay.includes(q)) return false;
-      }
-      return true;
-    });
-  }, [roles, scopeSel, statusSel, nameFilter]);
+  // Server-side pagination: the table only ever holds one page. `roles` (the
+  // full list) is still used above for the scope chip counts and header total.
+  const scopeParam = scopeSel.size === 1 ? ([...scopeSel][0] as "app" | "org") : undefined;
+  const serverSortField = ROLE_SORT_FIELDS[tablePrefs.sort.field];
+  // Any filter/sort/page-size change restarts at page 1 (page is keyed to the filter set).
+  const filterKey = [nameFilter, scopeParam, statusSel, tablePrefs.pageSize, tablePrefs.sort.field, tablePrefs.sort.order].join("|");
+  const [pageState, setPageState] = useState({ key: "", page: 1 });
+  const page = pageState.key === filterKey ? pageState.page : 1;
+  const setPage = (p: number) => setPageState({ key: filterKey, page: p });
+  const pagedQuery = useQuery({
+    queryKey: [...bizKeys.roles(appOwner, appName), "page", page, tablePrefs.pageSize, nameFilter.trim(), scopeParam ?? "", statusSel, serverSortField ?? "", tablePrefs.sort.order],
+    placeholderData: keepPreviousData,
+    queryFn: async () => {
+      const res = await BizBackend.getBizRolesPaged(appOwner, appName, {
+        page,
+        pageSize: tablePrefs.pageSize,
+        field: nameFilter.trim() ? "name" : undefined,
+        value: nameFilter.trim() || undefined,
+        sortField: serverSortField,
+        sortOrder: serverSortField ? tablePrefs.sort.order : "",
+        scopeKind: scopeParam,
+        isEnabled: statusSel === "all" ? undefined : statusSel === "enabled" ? "true" : "false",
+      });
+      return res.status === "ok" ? res : { ...res, data: [] as BizRole[], total: 0 };
+    },
+  });
+  const filteredRoles = pagedQuery.data?.data ?? [];
+  const pagedTotal = pagedQuery.data?.total ?? 0;
 
   const toggleScope = (s: "app" | "org") => {
     setScopeSel((prev) => {
@@ -839,9 +861,7 @@ function RolesTab({ roles, onRefresh, appOwner, appName, t, modal, navigate }: {
     {
       key: "memberCount",
       title: t("authz.roles.col.members") || "成员",
-      sortable: true,
       width: "90px",
-      sortFn: (a, b) => (a.memberCount || 0) - (b.memberCount || 0),
       render: (_, r) => (
         <button
           onClick={(e) => { e.stopPropagation(); navigate(`${editUrl(r.name)}#members`); }}
@@ -857,9 +877,7 @@ function RolesTab({ roles, onRefresh, appOwner, appName, t, modal, navigate }: {
     {
       key: "permissionCount",
       title: t("authz.roles.col.permissions") || "权限",
-      sortable: true,
       width: "90px",
-      sortFn: (a, b) => (a.permissionCount || 0) - (b.permissionCount || 0),
       render: (_, r) => (
         <button
           onClick={(e) => { e.stopPropagation(); navigate(`${editUrl(r.name)}#permissions`); }}
@@ -1005,9 +1023,11 @@ function RolesTab({ roles, onRefresh, appOwner, appName, t, modal, navigate }: {
         data={filteredRoles}
         rowKey={(r) => r.name}
         emptyText={t("common.noData")}
+        loading={pagedQuery.isFetching && !pagedQuery.data}
         selectable
-        clientSort
-        clientPagination
+        page={page}
+        total={pagedTotal}
+        onPageChange={setPage}
         pageSize={tablePrefs.pageSize}
         onPageSizeChange={tablePrefs.setPageSize}
         sort={tablePrefs.sort}
@@ -1122,20 +1142,34 @@ function PermissionsTab({ permissions, onRefresh, appOwner, appName, supportsDen
   const allowCount = permissions.filter((p) => p.effect === "Allow").length;
   const denyCount = permissions.filter((p) => p.effect === "Deny").length;
 
-  const filteredPermissions = useMemo(() => {
-    const q = nameFilter.trim().toLowerCase();
-    return permissions.filter((p) => {
-      if (effectSel.size > 0 && !effectSel.has(p.effect)) return false;
-      if (stateSel !== "all" && (p.state || "Approved") !== stateSel) return false;
-      if (statusSel === "enabled" && !p.isEnabled) return false;
-      if (statusSel === "disabled" && p.isEnabled) return false;
-      if (q) {
-        const hay = `${p.displayName || ""} ${p.name || ""}`.toLowerCase();
-        if (!hay.includes(q)) return false;
-      }
-      return true;
-    });
-  }, [permissions, effectSel, stateSel, statusSel, nameFilter]);
+  // Server-side pagination (see RolesTab). `permissions` (full list) only
+  // feeds the Allow/Deny chip counts and header total.
+  const effectParam = effectSel.size === 1 ? ([...effectSel][0] as "Allow" | "Deny") : undefined;
+  const serverSortField = PERMISSION_SORT_FIELDS[tablePrefs.sort.field];
+  const filterKey = [nameFilter, effectParam, stateSel, statusSel, tablePrefs.pageSize, tablePrefs.sort.field, tablePrefs.sort.order].join("|");
+  const [pageState, setPageState] = useState({ key: "", page: 1 });
+  const page = pageState.key === filterKey ? pageState.page : 1;
+  const setPage = (p: number) => setPageState({ key: filterKey, page: p });
+  const pagedQuery = useQuery({
+    queryKey: [...bizKeys.permissions(appOwner, appName), "page", page, tablePrefs.pageSize, nameFilter.trim(), effectParam ?? "", stateSel, statusSel, serverSortField ?? "", tablePrefs.sort.order],
+    placeholderData: keepPreviousData,
+    queryFn: async () => {
+      const res = await BizBackend.getBizPermissionsPaged(appOwner, appName, {
+        page,
+        pageSize: tablePrefs.pageSize,
+        field: nameFilter.trim() ? "name" : undefined,
+        value: nameFilter.trim() || undefined,
+        sortField: serverSortField,
+        sortOrder: serverSortField ? tablePrefs.sort.order : "",
+        effect: effectParam,
+        state: stateSel === "all" ? undefined : stateSel,
+        isEnabled: statusSel === "all" ? undefined : statusSel === "enabled" ? "true" : "false",
+      });
+      return res.status === "ok" ? res : { ...res, data: [] as BizPermission[], total: 0 };
+    },
+  });
+  const filteredPermissions = pagedQuery.data?.data ?? [];
+  const pagedTotal = pagedQuery.data?.total ?? 0;
 
   const toggleEffect = (e: "Allow" | "Deny") => {
     setEffectSel((prev) => {
@@ -1216,9 +1250,7 @@ function PermissionsTab({ permissions, onRefresh, appOwner, appName, supportsDen
     {
       key: "granteeCount",
       title: t("authz.perms.col.grantees") || "授权对象",
-      sortable: true,
       width: "100px",
-      sortFn: (a, b) => (a.granteeCount || 0) - (b.granteeCount || 0),
       render: (_, p) => (
         <button
           onClick={(e) => { e.stopPropagation(); navigate(`${editUrl(p.name)}#grantees`); }}
@@ -1365,9 +1397,11 @@ function PermissionsTab({ permissions, onRefresh, appOwner, appName, supportsDen
         data={filteredPermissions}
         rowKey={(p) => p.name}
         emptyText={t("common.noData")}
+        loading={pagedQuery.isFetching && !pagedQuery.data}
         selectable
-        clientSort
-        clientPagination
+        page={page}
+        total={pagedTotal}
+        onPageChange={setPage}
         pageSize={tablePrefs.pageSize}
         onPageSizeChange={tablePrefs.setPageSize}
         sort={tablePrefs.sort}

@@ -13,6 +13,7 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/beego/beego/v2/core/utils/pagination"
 	"github.com/deluxebear/jetauth/object"
 	"github.com/deluxebear/jetauth/util"
 )
@@ -58,6 +59,32 @@ func (c *ApiController) parseIdQuery(name string) (int64, bool) {
 		return 0, false
 	}
 	return id, true
+}
+
+// parseBizPageQuery reads the standard p/pageSize/field/value/sortField/sortOrder
+// list parameters. paged is false (return everything, legacy behaviour) unless
+// both p and pageSize are present and pageSize is positive.
+func (c *ApiController) parseBizPageQuery() (limit int, q object.BizListQuery, paged bool) {
+	page := c.Ctx.Input.Query("p")
+	rawLimit := c.Ctx.Input.Query("pageSize")
+	if page == "" || rawLimit == "" {
+		return 0, q, false
+	}
+	limit = util.ParseInt(rawLimit)
+	if limit <= 0 {
+		return 0, q, false
+	}
+	q = object.BizListQuery{
+		Field:     c.Ctx.Input.Query("field"),
+		Value:     c.Ctx.Input.Query("value"),
+		SortField: c.Ctx.Input.Query("sortField"),
+		SortOrder: c.Ctx.Input.Query("sortOrder"),
+		ScopeKind: c.Ctx.Input.Query("scopeKind"),
+		Effect:    c.Ctx.Input.Query("effect"),
+		State:     c.Ctx.Input.Query("state"),
+		IsEnabled: c.Ctx.Input.Query("isEnabled"),
+	}
+	return limit, q, true
 }
 
 // ── Response types (kept for OpenAPI annotations) ──
@@ -415,11 +442,35 @@ func (c *ApiController) DeleteBizAppConfig() {
 //
 // @Param   organization  query    string  true   "The organization"
 // @Param   appName       query    string  false  "The app name (” for org-scope only)"
+// @Param   p             query    string  false  "Page number (1-based); with pageSize enables server pagination, total is returned in data2"
+// @Param   pageSize      query    string  false  "Page size; omit to return all roles"
+// @Param   field         query    string  false  "Search field (name, displayName, description, scopeKind, appName)"
+// @Param   value         query    string  false  "Search value (substring match)"
+// @Param   sortField     query    string  false  "Sort field"
+// @Param   sortOrder     query    string  false  "ascend or descend"
+// @Param   scopeKind     query    string  false  "Filter: app or org"
+// @Param   isEnabled     query    string  false  "Filter: true or false"
 // @Success 200 {object} BizRoleListResponse "The Response object"
 // @Router /biz-get-roles [get]
 func (c *ApiController) GetBizRoles() {
 	org := c.Ctx.Input.Query("organization")
 	appName := c.Ctx.Input.Query("appName")
+
+	if limit, q, paged := c.parseBizPageQuery(); paged {
+		count, err := object.GetBizRoleCount(org, appName, q)
+		if err != nil {
+			c.ResponseError(err.Error())
+			return
+		}
+		paginator := pagination.NewPaginator(c.Ctx.Request, limit, count)
+		roles, err := object.GetPaginationBizRoles(org, appName, paginator.Offset(), limit, q)
+		if err != nil {
+			c.ResponseError(err.Error())
+			return
+		}
+		c.ResponseOk(roles, paginator.Nums())
+		return
+	}
 
 	roles, err := object.GetBizRoles(org, appName)
 	if err != nil {
@@ -836,11 +887,36 @@ func (c *ApiController) RemoveRoleInheritance() {
 // @Tags Business Permission API
 // @Param   organization  query  string  true  "The organization (permission owner)"
 // @Param   appName       query  string  true  "The app name"
+// @Param   p             query  string  false  "Page number (1-based); with pageSize enables server pagination, total is returned in data2"
+// @Param   pageSize      query  string  false  "Page size; omit to return all permissions"
+// @Param   field         query  string  false  "Search field (name, displayName, description, effect, state)"
+// @Param   value         query  string  false  "Search value (substring match)"
+// @Param   sortField     query  string  false  "Sort field"
+// @Param   sortOrder     query  string  false  "ascend or descend"
+// @Param   effect        query  string  false  "Filter: Allow or Deny"
+// @Param   state         query  string  false  "Filter: Approved, Pending or Rejected"
+// @Param   isEnabled     query  string  false  "Filter: true or false"
 // @Success 200 {object} BizPermissionListResponse "The Response object"
 // @Router /biz-get-permissions [get]
 func (c *ApiController) GetBizPermissions() {
 	org := c.Ctx.Input.Query("organization")
 	appName := c.Ctx.Input.Query("appName")
+
+	if limit, q, paged := c.parseBizPageQuery(); paged {
+		count, err := object.GetBizPermissionCount(org, appName, q)
+		if err != nil {
+			c.ResponseError(err.Error())
+			return
+		}
+		paginator := pagination.NewPaginator(c.Ctx.Request, limit, count)
+		perms, err := object.GetPaginationBizPermissions(org, appName, paginator.Offset(), limit, q)
+		if err != nil {
+			c.ResponseError(err.Error())
+			return
+		}
+		c.ResponseOk(perms, paginator.Nums())
+		return
+	}
 
 	perms, err := object.GetBizPermissions(org, appName)
 	if err != nil {

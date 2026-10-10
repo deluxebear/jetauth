@@ -157,6 +157,51 @@ export function getBizRoles(organization: string, appName: string) {
   );
 }
 
+// Server-side pagination / search / sort for biz list endpoints. Without
+// `page` + `pageSize` the endpoints return everything (legacy behaviour).
+export interface BizListParams {
+  page: number;
+  pageSize: number;
+  field?: string;
+  value?: string;
+  sortField?: string;
+  sortOrder?: "ascend" | "descend" | "";
+  isEnabled?: "true" | "false";
+  scopeKind?: "app" | "org"; // roles only
+  effect?: "Allow" | "Deny"; // permissions only
+  state?: "Approved" | "Pending" | "Rejected"; // permissions only
+}
+
+export interface BizPagedResult<T> {
+  status: "ok" | "error";
+  msg: string;
+  data: T[];
+  total: number;
+}
+
+function bizListQuery(p: BizListParams): string {
+  const q = new URLSearchParams();
+  q.set("p", String(p.page));
+  q.set("pageSize", String(p.pageSize));
+  for (const k of ["field", "value", "sortField", "sortOrder", "isEnabled", "scopeKind", "effect", "state"] as const) {
+    const v = p[k];
+    if (v !== undefined && v !== "") q.set(k, v);
+  }
+  return q.toString();
+}
+
+export async function getBizRolesPaged(
+  organization: string,
+  appName: string,
+  params: BizListParams,
+): Promise<BizPagedResult<BizRole>> {
+  const res = await request<BizRole[]>(
+    "GET",
+    `/api/biz-get-roles?organization=${encodeURIComponent(organization)}&appName=${encodeURIComponent(appName)}&${bizListQuery(params)}`,
+  );
+  return { status: res.status, msg: res.msg, data: res.data ?? [], total: Number(res.data2 ?? 0) };
+}
+
 export function getBizRole(id: number) {
   return request<BizRole>("GET", `/api/biz-get-role?id=${id}`);
 }
@@ -423,6 +468,18 @@ export function getBizPermissions(organization: string, appName: string) {
     "GET",
     `/api/biz-get-permissions?organization=${encodeURIComponent(organization)}&appName=${encodeURIComponent(appName)}`,
   );
+}
+
+export async function getBizPermissionsPaged(
+  organization: string,
+  appName: string,
+  params: BizListParams,
+): Promise<BizPagedResult<BizPermission>> {
+  const res = await request<BizPermission[]>(
+    "GET",
+    `/api/biz-get-permissions?organization=${encodeURIComponent(organization)}&appName=${encodeURIComponent(appName)}&${bizListQuery(params)}`,
+  );
+  return { status: res.status, msg: res.msg, data: res.data ?? [], total: Number(res.data2 ?? 0) };
 }
 
 export function getBizPermission(id: number) {
