@@ -14,6 +14,7 @@ import BizReBACBrowser from "../components/BizReBACBrowser";
 import BizAssertionList from "../components/BizAssertionList";
 import BizAuditList from "../components/BizAuditList";
 import BizModelTextEditor from "../components/BizModelTextEditor";
+import BizSdkTemplates from "../components/BizSdkTemplates";
 import BizIntegrationTab from "../components/BizIntegrationTab";
 import BizReBACOverview from "../components/BizReBACOverview";
 import { useTranslation } from "../i18n";
@@ -2198,6 +2199,14 @@ const allowed = await bizEnforce(userId, "/orders", "DELETE");
           </div>
         </div>
       )}
+
+      {/* Full SDK templates (local enforcer cache + periodic refresh) */}
+      <BizSdkTemplates
+        endpoint={endpoint}
+        appId={appId}
+        displayName={config.displayName || config.appName}
+        onCopied={() => modal.toast(t("authz.integration.copySuccess"), "success")}
+      />
 
       {/* Backend SDK */}
       <div>
