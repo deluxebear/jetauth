@@ -20,6 +20,7 @@ import SimpleSelect from "../components/SimpleSelect";
 import SaveButton from "../components/SaveButton";
 import UnsavedBanner from "../components/UnsavedBanner";
 import { useUnsavedWarning } from "../hooks/useUnsavedWarning";
+import { errorMessage, type AddModeLocationState } from "../types/lint-pages-am";
 
 export default function GroupEditPage() {
   const { owner, name } = useParams<{ owner: string; name: string }>();
@@ -28,7 +29,7 @@ export default function GroupEditPage() {
   // `/groups/:owner/new` = deferred-create draft — no /api/add-group call
   // until Save. Prior behavior pre-created `group_abc123` on every click.
   const isNew = name === "new";
-  const [isAddMode, setIsAddMode] = useState(isNew || (location.state as any)?.mode === "add");
+  const [isAddMode, setIsAddMode] = useState(isNew || (location.state as AddModeLocationState | null)?.mode === "add");
   const { t } = useTranslation();
   const modal = useModal();
   const { isGlobalAdmin } = useOrganization();
@@ -114,7 +115,7 @@ export default function GroupEditPage() {
         setGroupUsers(users);
         setUserTotal(total);
       }
-    } catch (e: any) { modal.toast(e?.message || t("common.saveFailed"), "error"); }
+    } catch (e) { modal.toast(errorMessage(e) || t("common.saveFailed"), "error"); }
     finally { setUserLoading(false); }
   }, [owner, name, userPage, isNew]);
 
@@ -159,8 +160,8 @@ export default function GroupEditPage() {
       if (isNew || group.name !== name) {
         navigate(`/groups/${group.owner}/${group.name}`, { replace: true });
       }
-    } catch (e: any) {
-      modal.toast(e.message || t("common.saveFailed"), "error");
+    } catch (e) {
+      modal.toast(errorMessage(e) || t("common.saveFailed"), "error");
     } finally {
       setSaving(false);
     }
@@ -180,8 +181,8 @@ export default function GroupEditPage() {
       setOriginalJson(JSON.stringify(nextDraft));
       setIsAddMode(true);
       if (!isNew) navigate(`/groups/${owner}/new`, { replace: true, state: { mode: "add" } });
-    } catch (e: any) {
-      modal.toast(e?.message || t("common.saveFailed"), "error");
+    } catch (e) {
+      modal.toast(errorMessage(e) || t("common.saveFailed"), "error");
     } finally {
       setSaving(false);
     }
@@ -195,8 +196,8 @@ export default function GroupEditPage() {
       modal.toast(t("common.saveSuccess"));
       invalidateList();
       navigate("/groups");
-    } catch (e: any) {
-      modal.toast(e?.message || t("common.saveFailed"), "error");
+    } catch (e) {
+      modal.toast(errorMessage(e) || t("common.saveFailed"), "error");
     } finally {
       setSaving(false);
     }
@@ -233,8 +234,8 @@ export default function GroupEditPage() {
       } else {
         modal.showError(res.msg || "Failed to delete");
       }
-    } catch (e: any) {
-      modal.toast(e?.message || t("common.saveFailed"), "error");
+    } catch (e) {
+      modal.toast(errorMessage(e) || t("common.saveFailed"), "error");
     }
     });
   };

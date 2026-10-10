@@ -5,6 +5,7 @@ import QRCode from "qrcode";
 import { useTranslation } from "../i18n";
 import { useTheme } from "../theme";
 import { postForm } from "../api/client";
+import { errorMessage } from "../types/lint-pages-am";
 
 interface MfaSetupProps {
   mfaType: string;
@@ -104,8 +105,8 @@ export default function MfaSetup({
       } else {
         setError(res.msg || "MFA initiation failed");
       }
-    } catch (e: any) {
-      setError(e.message || "Network error");
+    } catch (e) {
+      setError(errorMessage(e) || "Network error");
     } finally {
       setLoading(false);
     }
@@ -126,8 +127,8 @@ export default function MfaSetup({
       });
       setCodeSent(true);
       setCountdown(60);
-    } catch (e: any) {
-      setError(e.message || "Failed to send code");
+    } catch (e) {
+      setError(errorMessage(e) || "Failed to send code");
     }
   };
 
@@ -149,8 +150,8 @@ export default function MfaSetup({
       } else {
         setError(res.msg || "Verification failed");
       }
-    } catch (e: any) {
-      setError(e.message || "Network error");
+    } catch (e) {
+      setError(errorMessage(e) || "Network error");
     } finally {
       setLoading(false);
     }
@@ -177,8 +178,8 @@ export default function MfaSetup({
       } else {
         setError(res.msg || "Failed to enable MFA");
       }
-    } catch (e: any) {
-      setError(e.message || "Network error");
+    } catch (e) {
+      setError(errorMessage(e) || "Network error");
     } finally {
       setLoading(false);
     }

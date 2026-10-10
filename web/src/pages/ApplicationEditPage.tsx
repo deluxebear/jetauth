@@ -38,6 +38,7 @@ import SigninProvidersSubtable from "./ApplicationEditPage/SigninProvidersSubtab
 import ColorPicker from "../components/ColorPicker";
 import CollapsibleCard from "../components/CollapsibleCard";
 import SectionNavRail from "../components/SectionNavRail";
+import { errorMessage, type AddModeLocationState } from "../types/lint-pages-am";
 const CssEditor = lazy(() => import("../components/CssEditor"));
 const CssEditorFallback = () => (
   <div className="rounded-lg border border-border bg-surface-2 h-[140px] animate-pulse" />
@@ -200,7 +201,7 @@ export default function ApplicationEditPage() {
   const isNew = !name || name === "new";
   const navigate = useNavigate();
   const location = useLocation();
-  const [isAddMode, setIsAddMode] = useState((location.state as any)?.mode === "add");
+  const [isAddMode, setIsAddMode] = useState((location.state as AddModeLocationState | null)?.mode === "add");
   const { t, locale } = useTranslation();
   const modal = useModal();
   const { orgOptions, isGlobalAdmin } = useOrganization();
@@ -310,7 +311,7 @@ export default function ApplicationEditPage() {
         setApp(application);
         setOriginalJson(JSON.stringify(application));
       }
-    } catch (e: any) { modal.toast(e?.message || t("common.saveFailed"), "error"); }
+    } catch (e) { modal.toast(errorMessage(e) || t("common.saveFailed"), "error"); }
     finally { setLoading(false); }
   }, [name, isNew]);
 
@@ -412,7 +413,7 @@ export default function ApplicationEditPage() {
       } else {
         modal.toast(friendlyError(res.msg, t) || t("common.saveFailed"), "error");
       }
-    } catch (e: any) { modal.toast(e?.message || t("common.saveFailed"), "error"); }
+    } catch (e) { modal.toast(errorMessage(e) || t("common.saveFailed"), "error"); }
     finally { setSaving(false); }
   };
 
@@ -430,8 +431,8 @@ export default function ApplicationEditPage() {
       } else {
         modal.toast(friendlyError(res.msg, t) || t("common.saveFailed"), "error");
       }
-    } catch (e: any) {
-      modal.toast(e?.message || t("common.saveFailed"), "error");
+    } catch (e) {
+      modal.toast(errorMessage(e) || t("common.saveFailed"), "error");
     } finally {
       setSaving(false);
     }
@@ -455,8 +456,8 @@ export default function ApplicationEditPage() {
         } else {
           modal.toast(res.msg || t("common.deleteFailed"), "error");
         }
-      } catch (e: any) {
-        modal.toast(e?.message || t("common.deleteFailed"), "error");
+      } catch (e) {
+        modal.toast(errorMessage(e) || t("common.deleteFailed"), "error");
       }
     });
   };
@@ -1156,13 +1157,13 @@ export default function ApplicationEditPage() {
         const usedNames = ((app.signinItems as any[]) ?? []).filter((it: any) => !it.isCustom && it.name !== row.name).map((it: any) => it.name);
         const available = SIGNIN_ITEM_NAMES.filter((n) => !usedNames.includes(n));
         const i18nMeta = SIGNIN_ITEM_I18N[String(row.name)];
-        const tooltip = i18nMeta ? t(i18nMeta.desc as any) : undefined;
+        const tooltip = i18nMeta ? t(i18nMeta.desc) : undefined;
         return (
           <div className="flex items-center gap-1.5 min-w-0">
             <div className="flex-1 min-w-0">
               <SimpleSelect
                 value={String(row.name ?? "")}
-                options={available.map((n) => ({ value: n, label: SIGNIN_ITEM_I18N[n] ? t(SIGNIN_ITEM_I18N[n].label as any) : n }))}
+                options={available.map((n) => ({ value: n, label: SIGNIN_ITEM_I18N[n] ? t(SIGNIN_ITEM_I18N[n].label) : n }))}
                 onChange={(v) => onChange("name", v)}
               />
             </div>
@@ -1218,13 +1219,13 @@ export default function ApplicationEditPage() {
         const usedNames = ((app.forgetItems as any[]) ?? []).filter((it: any) => !it.isCustom && it.name !== row.name).map((it: any) => it.name);
         const available = FORGET_ITEM_NAMES.filter((n) => !usedNames.includes(n));
         const i18nMeta = FORGET_ITEM_I18N[String(row.name)];
-        const tooltip = i18nMeta ? t(i18nMeta.desc as any) : undefined;
+        const tooltip = i18nMeta ? t(i18nMeta.desc) : undefined;
         return (
           <div className="flex items-center gap-1.5 min-w-0">
             <div className="flex-1 min-w-0">
               <SimpleSelect
                 value={String(row.name ?? "")}
-                options={available.map((n) => ({ value: n, label: FORGET_ITEM_I18N[n] ? t(FORGET_ITEM_I18N[n].label as any) : n }))}
+                options={available.map((n) => ({ value: n, label: FORGET_ITEM_I18N[n] ? t(FORGET_ITEM_I18N[n].label) : n }))}
                 onChange={(v) => onChange("name", v)}
               />
             </div>

@@ -19,6 +19,7 @@ import SaveButton from "../components/SaveButton";
 import UnsavedBanner from "../components/UnsavedBanner";
 import { useUnsavedWarning } from "../hooks/useUnsavedWarning";
 import { getStoredAccount, isGlobalAdmin } from "../utils/auth";
+import { errorMessage, type AddModeLocationState } from "../types/lint-pages-am";
 
 const TYPE_VALUES = ["Organization", "Application", "User", "General"] as const;
 const STATE_VALUES = ["Active", "Inactive"] as const;
@@ -39,7 +40,7 @@ export default function KeyEditPage() {
   const { owner, name } = useParams<{ owner: string; name: string }>();
   const navigate = useNavigate();
   const location = useLocation();
-  const [isAddMode, setIsAddMode] = useState((location.state as any)?.mode === "add");
+  const [isAddMode, setIsAddMode] = useState((location.state as AddModeLocationState | null)?.mode === "add");
   const { t } = useTranslation();
   const modal = useModal();
   const [key, setKey] = useState<Key | null>(null);
@@ -87,7 +88,7 @@ export default function KeyEditPage() {
       });
   }, [key?.organization]);
 
-  const { entity, loading, invalidate: _invalidate, invalidateList } = useEntityEdit<Key>({
+  const { entity, loading, invalidateList } = useEntityEdit<Key>({
     queryKey: "key",
     owner,
     name,
@@ -146,8 +147,8 @@ export default function KeyEditPage() {
       } else {
         modal.toast(friendlyError(res.msg, t) || t("common.saveFailed"), "error");
       }
-    } catch (e: any) {
-      modal.toast(e?.message || t("common.saveFailed"), "error");
+    } catch (e) {
+      modal.toast(errorMessage(e) || t("common.saveFailed"), "error");
     } finally {
       setSaving(false);
     }
@@ -212,7 +213,7 @@ export default function KeyEditPage() {
           <input value={key.displayName} onChange={(e) => set("displayName", e.target.value)} className={inputClass} />
         </FormField>
         <FormField label={t("field.type")} tooltip={t("keys.tooltip.type")}>
-          <SimpleSelect value={key.type} options={TYPE_VALUES.map((o) => ({ value: o, label: t(TYPE_LABEL_KEYS[o] as any) }))} onChange={(v) => { set("type", v); if (v !== "Application") set("application", ""); if (v !== "User") set("user", ""); }} />
+          <SimpleSelect value={key.type} options={TYPE_VALUES.map((o) => ({ value: o, label: t(TYPE_LABEL_KEYS[o]) }))} onChange={(v) => { set("type", v); if (v !== "Application") set("application", ""); if (v !== "User") set("user", ""); }} />
         </FormField>
         {key.type === "Application" && (
           <FormField label={t("col.application")} tooltip={t("keys.tooltip.application")}>
@@ -265,7 +266,7 @@ export default function KeyEditPage() {
           <input type="datetime-local" value={key.expireTime ? key.expireTime.slice(0, 16) : ""} onChange={(e) => set("expireTime", e.target.value ? new Date(e.target.value).toISOString() : "")} className={inputClass} />
         </FormField>
         <FormField label={t("field.state")} tooltip={t("keys.tooltip.state")}>
-          <SimpleSelect value={key.state} options={STATE_VALUES.map((o) => ({ value: o, label: t(STATE_LABEL_KEYS[o] as any) }))} onChange={(v) => set("state", v)} />
+          <SimpleSelect value={key.state} options={STATE_VALUES.map((o) => ({ value: o, label: t(STATE_LABEL_KEYS[o]) }))} onChange={(v) => set("state", v)} />
         </FormField>
       </FormSection>
     </motion.div>

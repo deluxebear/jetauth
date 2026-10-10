@@ -17,6 +17,7 @@ import UnsavedBanner from "../components/UnsavedBanner";
 import { useUnsavedWarning } from "../hooks/useUnsavedWarning";
 import { getStoredAccount, isGlobalAdmin } from "../utils/auth";
 import StickyEditHeader from "../components/StickyEditHeader";
+import { errorMessage, type AddModeLocationState } from "../types/lint-pages-am";
 
 const SCOPE_OPTIONS = [{ id: "JWT", name: "JWT" }];
 const TYPE_OPTIONS = [
@@ -57,7 +58,7 @@ export default function CertEditPage() {
   const { owner, name } = useParams<{ owner: string; name: string }>();
   const navigate = useNavigate();
   const location = useLocation();
-  const [isAddMode, setIsAddMode] = useState((location.state as any)?.mode === "add");
+  const [isAddMode, setIsAddMode] = useState((location.state as AddModeLocationState | null)?.mode === "add");
   const { t } = useTranslation();
   const modal = useModal();
   const [cert, setCert] = useState<Cert | null>(null);
@@ -83,7 +84,7 @@ export default function CertEditPage() {
     });
   }, [isAdmin]);
 
-  const { entity, loading, invalidate: _invalidate, invalidateList } = useEntityEdit<Cert>({
+  const { entity, loading, invalidateList } = useEntityEdit<Cert>({
     queryKey: "cert",
     owner,
     name,
@@ -173,8 +174,8 @@ export default function CertEditPage() {
       } else {
         modal.toast(friendlyError(res.msg, t) || t("common.saveFailed"), "error");
       }
-    } catch (e: any) {
-      modal.toast(e?.message || t("common.saveFailed"), "error");
+    } catch (e) {
+      modal.toast(errorMessage(e) || t("common.saveFailed"), "error");
     } finally {
       setSaving(false);
     }

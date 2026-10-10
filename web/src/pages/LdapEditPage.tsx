@@ -14,6 +14,7 @@ import type { Ldap } from "../backend/LdapBackend";
 import SaveButton from "../components/SaveButton";
 import UnsavedBanner from "../components/UnsavedBanner";
 import { useUnsavedWarning } from "../hooks/useUnsavedWarning";
+import { errorMessage } from "../types/lint-pages-am";
 
 const FILTER_FIELDS = ["uid", "mail", "mobile", "sAMAccountName"];
 const PASSWORD_TYPES = ["Plain", "SSHA", "MD5"];
@@ -95,8 +96,8 @@ export default function LdapEditPage() {
       } else {
         modal.toast(friendlyError(res.msg, t) || t("common.saveFailed"), "error");
       }
-    } catch (e: any) {
-      modal.toast(e.message || t("common.saveFailed"), "error");
+    } catch (e) {
+      modal.toast(errorMessage(e) || t("common.saveFailed"), "error");
     } finally {
       setSaving(false);
     }
@@ -112,8 +113,8 @@ export default function LdapEditPage() {
       } else {
         modal.toast(friendlyError(res.msg, t) || t("common.saveFailed"), "error");
       }
-    } catch (e: any) {
-      modal.toast(e.message || t("common.saveFailed"), "error");
+    } catch (e) {
+      modal.toast(errorMessage(e) || t("common.saveFailed"), "error");
     } finally {
       setSaving(false);
     }

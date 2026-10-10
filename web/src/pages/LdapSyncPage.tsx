@@ -6,6 +6,7 @@ import { useTranslation } from "../i18n";
 import { useModal } from "../components/Modal";
 import * as LdapBackend from "../backend/LdapBackend";
 import type { LdapUser, Ldap } from "../backend/LdapBackend";
+import { errorMessage } from "../types/lint-pages-am";
 
 export default function LdapSyncPage() {
   const { owner, id } = useParams<{ owner: string; id: string }>();
@@ -36,8 +37,8 @@ export default function LdapSyncPage() {
       } else {
         modal.toast(usersRes.msg || t("ldap.sync.fetchFailed"), "error");
       }
-    } catch (e: any) {
-      modal.toast(e.message || "Failed to fetch LDAP users", "error");
+    } catch (e) {
+      modal.toast(errorMessage(e) || "Failed to fetch LDAP users", "error");
     } finally {
       setLoading(false);
     }
@@ -91,8 +92,8 @@ export default function LdapSyncPage() {
           } else {
             modal.toast(res.msg || t("ldap.sync.syncFailed"), "error");
           }
-        } catch (e: any) {
-          modal.toast(e.message || t("ldap.sync.syncFailed"), "error");
+        } catch (e) {
+          modal.toast(errorMessage(e) || t("ldap.sync.syncFailed"), "error");
         } finally {
           setSyncing(false);
         }

@@ -17,6 +17,7 @@ import { friendlyError } from "../utils/errorHelper";
 import SaveButton from "../components/SaveButton";
 import UnsavedBanner from "../components/UnsavedBanner";
 import { useUnsavedWarning } from "../hooks/useUnsavedWarning";
+import { errorMessage, type AddModeLocationState } from "../types/lint-pages-am";
 
 // ---------------------------------------------------------------------------
 // Obfuscation helpers
@@ -150,7 +151,7 @@ export default function InvitationEditPage() {
   // `/invitations/:owner/new` = deferred-create draft. No /api/add-invitation
   // call until Save, matching the users + groups flow.
   const isNew = name === "new";
-  const [isAddMode, setIsAddMode] = useState(isNew || (location.state as any)?.mode === "add");
+  const [isAddMode, setIsAddMode] = useState(isNew || (location.state as AddModeLocationState | null)?.mode === "add");
   const { t } = useTranslation();
   const modal = useModal();
   const queryClient = useQueryClient();
@@ -310,8 +311,8 @@ export default function InvitationEditPage() {
       if (isNew || inv.name !== name) {
         navigate(`/invitations/${inv.owner}/${inv.name}`, { replace: true });
       }
-    } catch (e: any) {
-      modal.toast(e.message || t("common.saveFailed"), "error");
+    } catch (e) {
+      modal.toast(errorMessage(e) || t("common.saveFailed"), "error");
     } finally {
       setSaving(false);
     }
@@ -335,8 +336,8 @@ export default function InvitationEditPage() {
       setCharSet("alphanumeric");
       setIsAddMode(true);
       if (!isNew) navigate(`/invitations/${owner}/new`, { replace: true, state: { mode: "add" } });
-    } catch (e: any) {
-      modal.toast(e?.message || t("common.saveFailed"), "error");
+    } catch (e) {
+      modal.toast(errorMessage(e) || t("common.saveFailed"), "error");
     } finally {
       setSaving(false);
     }
@@ -350,8 +351,8 @@ export default function InvitationEditPage() {
       modal.toast(t("common.saveSuccess"));
       invalidateList();
       navigate("/invitations");
-    } catch (e: any) {
-      modal.toast(e?.message || t("common.saveFailed"), "error");
+    } catch (e) {
+      modal.toast(errorMessage(e) || t("common.saveFailed"), "error");
     } finally {
       setSaving(false);
     }
@@ -427,8 +428,8 @@ export default function InvitationEditPage() {
         } else {
           modal.toast(res.msg || t("common.sendFailed"), "error");
         }
-      } catch (e: any) {
-        modal.toast(e.message || t("common.sendFailed"), "error");
+      } catch (e) {
+        modal.toast(errorMessage(e) || t("common.sendFailed"), "error");
       } finally {
         setSending(false);
       }

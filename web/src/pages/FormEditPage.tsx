@@ -14,12 +14,13 @@ import SimpleSelect from "../components/SimpleSelect";
 import SaveButton from "../components/SaveButton";
 import UnsavedBanner from "../components/UnsavedBanner";
 import { useUnsavedWarning } from "../hooks/useUnsavedWarning";
+import { errorMessage, type AddModeLocationState } from "../types/lint-pages-am";
 
 export default function FormEditPage() {
   const { owner, name } = useParams<{ owner: string; name: string }>();
   const navigate = useNavigate();
   const location = useLocation();
-  const [isAddMode, setIsAddMode] = useState((location.state as any)?.mode === "add");
+  const [isAddMode, setIsAddMode] = useState((location.state as AddModeLocationState | null)?.mode === "add");
   const { t } = useTranslation();
   const modal = useModal();
   const [form, setForm] = useState<Form | null>(null);
@@ -28,7 +29,7 @@ export default function FormEditPage() {
   useEffect(() => { if (saved) { const t = setTimeout(() => setSaved(false), 1500); return () => clearTimeout(t); } }, [saved]);
   const [originalJson, setOriginalJson] = useState("");
 
-  const { entity, loading, invalidate: _invalidate, invalidateList } = useEntityEdit<Form>({
+  const { entity, loading, invalidateList } = useEntityEdit<Form>({
     queryKey: "form",
     owner: owner,
     name: name,
@@ -85,8 +86,8 @@ export default function FormEditPage() {
       } else {
         modal.toast(friendlyError(res.msg, t) || t("common.saveFailed"), "error");
       }
-    } catch (e: any) {
-      modal.toast(e?.message || t("common.saveFailed"), "error");
+    } catch (e) {
+      modal.toast(errorMessage(e) || t("common.saveFailed"), "error");
     } finally {
       setSaving(false);
     }
@@ -143,7 +144,7 @@ export default function FormEditPage() {
         <FormField label={t("col.type")}>
           <SimpleSelect value={form.type} options={[
             { value: "", label: "--" },
-            ...typeOptions.map((opt) => ({ value: opt.id, label: t(opt.name as any) })),
+            ...typeOptions.map((opt) => ({ value: opt.id, label: t(opt.name) })),
           ]} onChange={(v) => set("type", v)} />
         </FormField>
         <FormField label={t("forms.field.tag")}>

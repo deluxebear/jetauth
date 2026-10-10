@@ -17,12 +17,13 @@ import UnsavedBanner from "../components/UnsavedBanner";
 import EntryMessageViewer from "../components/EntryMessageViewer";
 import { useUnsavedWarning } from "../hooks/useUnsavedWarning";
 import { getStoredAccount, isGlobalAdmin } from "../utils/auth";
+import { errorMessage, type AddModeLocationState } from "../types/lint-pages-am";
 
 export default function EntryEditPage() {
   const { owner, name } = useParams<{ owner: string; name: string }>();
   const navigate = useNavigate();
   const location = useLocation();
-  const [isAddMode, setIsAddMode] = useState((location.state as any)?.mode === "add");
+  const [isAddMode, setIsAddMode] = useState((location.state as AddModeLocationState | null)?.mode === "add");
   const { t } = useTranslation();
   const modal = useModal();
   const [entry, setEntry] = useState<Entry | null>(null);
@@ -45,7 +46,7 @@ export default function EntryEditPage() {
     }).catch(() => {});
   }, [isAdmin]);
 
-  const { entity, loading, invalidate: _invalidate, invalidateList } = useEntityEdit<Entry>({
+  const { entity, loading, invalidateList } = useEntityEdit<Entry>({
     queryKey: "entry",
     owner,
     name,
@@ -105,8 +106,8 @@ export default function EntryEditPage() {
       } else {
         modal.toast(friendlyError(res.msg, t) || t("common.saveFailed"), "error");
       }
-    } catch (e: any) {
-      modal.toast(e?.message || t("common.saveFailed"), "error");
+    } catch (e) {
+      modal.toast(errorMessage(e) || t("common.saveFailed"), "error");
     } finally {
       setSaving(false);
     }

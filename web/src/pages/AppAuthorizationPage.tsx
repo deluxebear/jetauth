@@ -24,6 +24,7 @@ import * as BizBackend from "../backend/BizBackend";
 import type { BizAppConfig, BizRole, BizPermission, PoliciesExport, BizAuthorizationModel } from "../backend/BizBackend";
 import { pickAppIcon } from "../utils/appIcon";
 import { downloadFile } from "../utils/download";
+import { errorMessage } from "../types/lint-pages-am";
 
 // Casbin-lane tabs are unchanged. ReBAC-lane tabs are rendered only when
 // the app's modelType is "rebac" (spec §8.2). Since "overview" and
@@ -49,7 +50,7 @@ type TabKey =
 // concrete reason (e.g. "inherited by role X") without hunting.
 function showBulkDeleteToast(
   modal: { toast: (msg: string, type?: "success" | "error" | "info") => void },
-  t: (k: any) => string,
+  t: (k: string) => string,
   res: { status: string; msg?: string; data?: { succeeded: number; failed: number; results: { ok: boolean; error?: string }[] } | null },
 ) {
   if (res.status !== "ok" || !res.data) {
@@ -76,7 +77,7 @@ const REBAC_TABS: TabKey[] = ["overview", "schema", "tuples", "browser", "tester
 
 // Local relative-time helper — mirrors the one in AuthorizationPage. Kept
 // here to avoid a cross-page import cycle; both functions are short.
-function formatRelativeTimeLocal(iso: string, t: (k: any) => string): string {
+function formatRelativeTimeLocal(iso: string, t: (k: string) => string): string {
   if (!iso) return "";
   const ts = new Date(iso).getTime();
   if (Number.isNaN(ts)) return iso;
@@ -211,8 +212,8 @@ export default function AppAuthorizationPage() {
       } else {
         modal.toast(res.msg || t("common.error"), "error");
       }
-    } catch (e: any) {
-      modal.toast(e?.message || t("common.error"), "error");
+    } catch (e) {
+      modal.toast(errorMessage(e) || t("common.error"), "error");
     } finally {
       setSyncing(false);
     }
@@ -473,7 +474,7 @@ function OverviewTab({ config, roles, permissions, allowCount, denyCount, onRefr
   allowCount: number; denyCount: number;
   onRefresh: () => void;
   onJumpTab: (tab: TabKey) => void;
-  t: (key: any) => string; modal: any;
+  t: (key: string) => string; modal: any;
 }) {
   const [editingModel, setEditingModel] = useState(false);
   const [modelDraft, setModelDraft] = useState(config.modelText);
@@ -747,7 +748,7 @@ const PERMISSION_SORT_FIELDS: Record<string, string> = {
 function RolesTab({ roles, onRefresh, appOwner, appName, t, modal, navigate }: {
   roles: BizRole[]; permissions: BizPermission[]; onRefresh: () => void;
   appOwner: string; appName: string;
-  t: (key: any) => string; modal: any; navigate: any;
+  t: (key: string) => string; modal: any; navigate: any;
 }) {
   // Cross-column filters stay OUTSIDE the DataTable — scope is multi-select
   // and status is a radio, neither of which fits the per-column FilterPopover.
@@ -1111,7 +1112,7 @@ function PermissionsTab({ permissions, onRefresh, appOwner, appName, supportsDen
   permissions: BizPermission[]; onRefresh: () => void;
   appOwner: string; appName: string;
   supportsDeny: boolean;
-  t: (key: any) => string; modal: any; navigate: any;
+  t: (key: string) => string; modal: any; navigate: any;
 }) {
   const [effectSel, setEffectSel] = useState<Set<"Allow" | "Deny">>(new Set());
   const [stateSel, setStateSel] = useState<"all" | "Approved" | "Pending" | "Rejected">("all");
@@ -1304,7 +1305,7 @@ function PermissionsTab({ permissions, onRefresh, appOwner, appName, supportsDen
         };
         return (
           <span className={`inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold ${styles[state] || "bg-surface-2 text-text-muted"}`}>
-            {t(`authz.perms.state.${state}` as any) || state}
+            {t(`authz.perms.state.${state}`) || state}
           </span>
         );
       },
@@ -1386,7 +1387,7 @@ function PermissionsTab({ permissions, onRefresh, appOwner, appName, supportsDen
                   stateSel === s ? "bg-accent/15 text-accent" : "bg-surface-2 text-text-muted hover:text-text-secondary"
                 }`}
               >
-                {s === "all" ? (t("bizRole.filter.all") || "全部") : (t(`authz.perms.state.${s}` as any) || s)}
+                {s === "all" ? (t("bizRole.filter.all") || "全部") : (t(`authz.perms.state.${s}`) || s)}
               </button>
             ))}
           </div>
@@ -1512,7 +1513,7 @@ function saveTestHistory(owner: string, appName: string, entries: TestHistoryEnt
 function TestTab({ appOwner, appName, config, roles, permissions, t }: {
   appOwner: string; appName: string;
   config: BizAppConfig | null; roles: BizRole[]; permissions: BizPermission[];
-  t: (key: any) => string;
+  t: (key: string) => string;
 }) {
   const [sub, setSub] = useState("");
   const [obj, setObj] = useState("");
@@ -1594,9 +1595,9 @@ function TestTab({ appOwner, appName, config, roles, permissions, t }: {
         setResult(null);
         setError(res.msg || "Error");
       }
-    } catch (e: any) {
+    } catch (e) {
       setResult(null);
-      setError(e?.message || "Error");
+      setError(errorMessage(e) || "Error");
     } finally {
       setTesting(false);
     }
@@ -1790,7 +1791,7 @@ function SubjectPicker({ value, onChange, owner, roleCandidates, placeholder, in
   roleCandidates: SubjectCandidate[];
   placeholder: string;
   inputCls: string;
-  t: (key: any) => string;
+  t: (key: string) => string;
 }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState(value);
@@ -1958,7 +1959,7 @@ function SuggestPicker({ value, onChange, suggestions, placeholder, inputCls, t 
   suggestions: string[];
   placeholder: string;
   inputCls: string;
-  t: (key: any) => string;
+  t: (key: string) => string;
 }) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -2024,7 +2025,7 @@ function TestResultPanel({ result, error, testing, t }: {
   result: BizBackend.EnforceTraceResult | null;
   error: string | null;
   testing: boolean;
-  t: (key: any) => string;
+  t: (key: string) => string;
 }) {
   return (
     <div
@@ -2111,7 +2112,7 @@ function TestResultPanel({ result, error, testing, t }: {
 }
 
 // ═══════ INTEGRATION TAB ═══════
-function IntegrationTab({ config, t, modal }: { config: BizAppConfig; t: (key: any) => string; modal: any }) {
+function IntegrationTab({ config, t, modal }: { config: BizAppConfig; t: (key: string) => string; modal: any }) {
   const [copied, setCopied] = useState<string | null>(null);
   const [policies, setPolicies] = useState<PoliciesExport | null>(null);
   const [loadingPolicies, setLoadingPolicies] = useState(false);
@@ -2125,8 +2126,8 @@ function IntegrationTab({ config, t, modal }: { config: BizAppConfig; t: (key: a
       if (res.status === "ok" && res.data) {
         setPolicies(res.data);
       }
-    } catch (e: any) {
-      modal.toast(e?.message || t("common.error"), "error");
+    } catch (e) {
+      modal.toast(errorMessage(e) || t("common.error"), "error");
     } finally {
       setLoadingPolicies(false);
     }
@@ -2331,7 +2332,7 @@ function RebacOverviewTab({
   onJumpTab,
 }: {
   appId: string;
-  t: (k: any) => string;
+  t: (k: string) => string;
   onJumpTab: (tab: "schema" | "tuples" | "tester") => void;
 }) {
   return <BizReBACOverview appId={appId} onJumpTab={onJumpTab} />;
@@ -2344,7 +2345,7 @@ function RebacSchemaTab({
 }: {
   appId: string;
   config?: { currentAuthorizationModelId?: string } | undefined;
-  t: (k: any) => string;
+  t: (k: string) => string;
 }) {
   const [searchParams, setSearchParams] = useSearchParams();
   const modelIdParam = searchParams.get("modelId");
@@ -2460,14 +2461,14 @@ function RebacSchemaTab({
   );
 }
 
-function RebacTuplesTab({ appId, t: _t }: { appId: string; t: (k: any) => string }) {
+function RebacTuplesTab({ appId, t: _t }: { appId: string; t: (k: string) => string }) {
   return <BizTupleManager appId={appId} />;
 }
 
-function RebacTesterTab({ appId, t: _t, initialRequest }: { appId: string; t: (k: any) => string; initialRequest?: { object: string; relation: string; user: string } }) {
+function RebacTesterTab({ appId, t: _t, initialRequest }: { appId: string; t: (k: string) => string; initialRequest?: { object: string; relation: string; user: string } }) {
   return <BizReBACTester appId={appId} initialRequest={initialRequest} />;
 }
 
-function RebacIntegrationTab({ appId, t: _t }: { appId: string; t: (k: any) => string }) {
+function RebacIntegrationTab({ appId, t: _t }: { appId: string; t: (k: string) => string }) {
   return <BizIntegrationTab appId={appId} />;
 }

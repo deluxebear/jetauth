@@ -11,6 +11,7 @@ import type { BizAppConfig } from "../backend/BizBackend";
 import { DEFAULT_RBAC_MODEL, MODEL_PRESETS } from "../backend/BizBackend";
 import type { Application } from "../backend/ApplicationBackend";
 import { pickAppIcon } from "../utils/appIcon";
+import { errorMessage } from "../types/lint-pages-am";
 
 interface BizAppCardData {
   config: BizAppConfig;
@@ -21,7 +22,7 @@ interface BizAppCardData {
 
 // Relative time in Chinese-friendly short form. No dep on day.js for a
 // page-local helper — the math is trivial and keeps the bundle small.
-function formatRelativeTime(iso: string, t: (k: any) => string): string {
+function formatRelativeTime(iso: string, t: (k: string) => string): string {
   if (!iso) return t("common.unknown") || "—";
   const ts = new Date(iso).getTime();
   if (Number.isNaN(ts)) return iso;
@@ -232,8 +233,8 @@ function AppCard({ data, index, onRefresh }: {
       } else {
         modal.toast(res.msg || t("common.error"), "error");
       }
-    } catch (e: any) {
-      modal.toast(e?.message || t("common.error"), "error");
+    } catch (e) {
+      modal.toast(errorMessage(e) || t("common.error"), "error");
     } finally {
       setSyncing(false);
     }
@@ -445,8 +446,8 @@ function QuickCreateWizard({ open, onClose, onCreated, existingAppNames }: {
       modal.toast(t("authz.wizard.bizSuccess"));
       onCreated();
       navigate(`/authorization/${orgName}/${selectedApp.name}`);
-    } catch (e: any) {
-      modal.toast(e.message || t("common.saveFailed"), "error");
+    } catch (e) {
+      modal.toast(errorMessage(e) || t("common.saveFailed"), "error");
       setCreating(false);
     }
   };
@@ -671,7 +672,7 @@ function QuickCreateWizard({ open, onClose, onCreated, existingAppNames }: {
                         }`}
                       >
                         <div className="flex items-center gap-2 mb-1">
-                          <span className="text-[13px] font-semibold text-text-primary">{t(preset.labelKey as any)}</span>
+                          <span className="text-[13px] font-semibold text-text-primary">{t(preset.labelKey)}</span>
                           <span className={`inline-block rounded-full px-2 py-0.5 text-[9px] font-bold tracking-wide ${
                             preset.recommended ? "bg-accent/15 text-accent" : "bg-surface-3 text-text-muted"
                           }`}>
@@ -688,9 +689,9 @@ function QuickCreateWizard({ open, onClose, onCreated, existingAppNames }: {
                             </div>
                           )}
                         </div>
-                        <p className="text-[12px] text-text-secondary leading-relaxed">{t(preset.descKey as any)}</p>
+                        <p className="text-[12px] text-text-secondary leading-relaxed">{t(preset.descKey)}</p>
                         <p className="text-[11px] text-text-muted mt-1">
-                          {t("authz.preset.scenario")}{t(preset.scenarioKey as any)}
+                          {t("authz.preset.scenario")}{t(preset.scenarioKey)}
                         </p>
                       </button>
                     ))}

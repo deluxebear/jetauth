@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { ShieldCheck, ArrowRight } from "lucide-react";
 import { useTranslation } from "../i18n";
 import { useTheme } from "../theme";
+import { errorMessage } from "../types/lint-pages-am";
 
 interface MfaProps {
   enabled: boolean;
@@ -81,8 +82,8 @@ export default function MfaVerify({ mfaProps, loginForm, themeData, orgBranding,
       } else {
         setError(res.msg || "Verification failed");
       }
-    } catch (e: any) {
-      setError(e.message || "Network error");
+    } catch (e) {
+      setError(errorMessage(e) || "Network error");
     } finally {
       setLoading(false);
     }

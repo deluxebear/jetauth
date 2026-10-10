@@ -194,7 +194,7 @@ export default function Dashboard() {
               )}
             </div>
             <div className="flex items-center justify-between mt-1">
-              <span className="text-[12px] text-text-muted">{t(s.labelKey as any)}</span>
+              <span className="text-[12px] text-text-muted">{t(s.labelKey)}</span>
             </div>
           </motion.div>
         ))}
