@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"time"
 
 	"github.com/deluxebear/jetauth/util"
@@ -388,6 +389,13 @@ func (p *LarkSyncerProvider) larkUserToOriginalUser(larkUser *LarkUser) *Origina
 		}
 	}
 
+	// Departments are the Lark equivalent of groups (the root department "0" is not a group)
+	for _, deptId := range larkUser.DepartmentIds {
+		if deptId != "" && deptId != "0" {
+			user.Groups = append(user.Groups, deptId)
+		}
+	}
+
 	// Set gender
 	switch larkUser.Gender {
 	case 1:
@@ -416,14 +424,146 @@ func (p *LarkSyncerProvider) larkUserToOriginalUser(larkUser *LarkUser) *Origina
 	return user
 }
 
-// GetOriginalGroups retrieves all groups from Lark (not implemented yet)
-func (p *LarkSyncerProvider) GetOriginalGroups() ([]*OriginalGroup, error) {
-	// TODO: Implement Lark group sync
-	return []*OriginalGroup{}, nil
+type larkDepartment struct {
+	DepartmentId     string `json:"department_id"`
+	OpenDepartmentId string `json:"open_department_id"`
+	Name             string `json:"name"`
+	LeaderUserId     string `json:"leader_user_id"`
 }
 
-// GetOriginalUserGroups retrieves the group IDs that a user belongs to (not implemented yet)
+type larkDepartmentDetailListResp struct {
+	Code int    `json:"code"`
+	Msg  string `json:"msg"`
+	Data struct {
+		Items     []*larkDepartment `json:"items"`
+		HasMore   bool              `json:"has_more"`
+		PageToken string            `json:"page_token"`
+	} `json:"data"`
+}
+
+// getLarkDepartmentDetails lists every department below the root with its name. Ids are requested as
+// open_department_id, the same id space as LarkUser.DepartmentIds returned by the user APIs.
+func (p *LarkSyncerProvider) getLarkDepartmentDetails(accessToken string) ([]*larkDepartment, error) {
+	domain := p.getLarkDomain()
+	depts := []*larkDepartment{}
+	pageToken := ""
+
+	for {
+		apiUrl := fmt.Sprintf("%s/open-apis/contact/v3/departments?parent_department_id=0&fetch_child=true&department_id_type=open_department_id&page_size=50", domain)
+		if pageToken != "" {
+			apiUrl += "&page_token=" + url.QueryEscape(pageToken)
+		}
+
+		data, err := p.getWithAuth(apiUrl, accessToken)
+		if err != nil {
+			return nil, err
+		}
+
+		var resp larkDepartmentDetailListResp
+		err = json.Unmarshal(data, &resp)
+		if err != nil {
+			return nil, err
+		}
+
+		if resp.Code != 0 {
+			return nil, fmt.Errorf("failed to get departments: code=%d, msg=%s", resp.Code, resp.Msg)
+		}
+
+		depts = append(depts, resp.Data.Items...)
+
+		if !resp.Data.HasMore || resp.Data.PageToken == "" {
+			break
+		}
+		pageToken = resp.Data.PageToken
+	}
+
+	return depts, nil
+}
+
+// larkGroupName returns the id used as the JetAuth group name of a Lark department.
+func larkGroupName(dept *larkDepartment) string {
+	if dept.OpenDepartmentId != "" {
+		return dept.OpenDepartmentId
+	}
+	return dept.DepartmentId
+}
+
+// GetOriginalGroups retrieves all groups (departments) from Lark. The open department id is the
+// unique group name and the department name is the display name. The root department "0" is not a group.
+func (p *LarkSyncerProvider) GetOriginalGroups() ([]*OriginalGroup, error) {
+	accessToken, err := p.getLarkAccessToken()
+	if err != nil {
+		return nil, err
+	}
+
+	depts, err := p.getLarkDepartmentDetails(accessToken)
+	if err != nil {
+		return nil, err
+	}
+
+	originalGroups := []*OriginalGroup{}
+	for _, dept := range depts {
+		name := larkGroupName(dept)
+		if name == "" || name == "0" {
+			continue
+		}
+
+		displayName := dept.Name
+		if displayName == "" {
+			displayName = name
+		}
+
+		originalGroups = append(originalGroups, &OriginalGroup{
+			Id:          name,
+			Name:        name,
+			DisplayName: displayName,
+			Type:        "Virtual",
+			Manager:     dept.LeaderUserId,
+		})
+	}
+
+	return originalGroups, nil
+}
+
+// GetOriginalUserGroups retrieves the ids (group names) of the departments a user belongs to.
+// userId is the Lark user_id.
 func (p *LarkSyncerProvider) GetOriginalUserGroups(userId string) ([]string, error) {
-	// TODO: Implement Lark user group membership sync
-	return []string{}, nil
+	accessToken, err := p.getLarkAccessToken()
+	if err != nil {
+		return nil, err
+	}
+
+	apiUrl := fmt.Sprintf("%s/open-apis/contact/v3/users/%s?user_id_type=user_id&department_id_type=open_department_id",
+		p.getLarkDomain(), url.PathEscape(userId))
+	data, err := p.getWithAuth(apiUrl, accessToken)
+	if err != nil {
+		return nil, err
+	}
+
+	var resp struct {
+		Code int    `json:"code"`
+		Msg  string `json:"msg"`
+		Data struct {
+			User *LarkUser `json:"user"`
+		} `json:"data"`
+	}
+	err = json.Unmarshal(data, &resp)
+	if err != nil {
+		return nil, err
+	}
+
+	if resp.Code != 0 {
+		return nil, fmt.Errorf("failed to get user %s: code=%d, msg=%s", userId, resp.Code, resp.Msg)
+	}
+
+	groupIds := []string{}
+	if resp.Data.User != nil {
+		for _, id := range resp.Data.User.DepartmentIds {
+			if id != "" && id != "0" {
+				groupIds = append(groupIds, id)
+			}
+		}
+	}
+
+	return groupIds, nil
 }

@@ -97,8 +97,8 @@ type WecomUserListResp struct {
 }
 
 type WecomDeptListResp struct {
-	Errcode    int    `json:"errcode"`
-	Errmsg     string `json:"errmsg"`
+	Errcode    int                `json:"errcode"`
+	Errmsg     string             `json:"errmsg"`
 	Department []*WecomDepartment `json:"department"`
 }
 
