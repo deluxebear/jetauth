@@ -3311,6 +3311,18 @@ const en = {
   "bizRole.properties.addEntry": "Add entry",
   "bizRole.properties.empty": "No custom properties",
   "bizRole.properties.parseError": "Invalid JSON — cannot parse",
+  "bizRole.dataScope.title": "Data scope",
+  "bizRole.dataScope.hint": "Business systems read this to filter data. When a user has several roles, the most permissive scope wins.",
+  "bizRole.dataScope.invalidJson": "Properties JSON is invalid; fix it in JSON mode first.",
+  "bizRole.dataScope.unset": "Not set",
+  "bizRole.dataScope.all": "All data",
+  "bizRole.dataScope.org": "Whole organization",
+  "bizRole.dataScope.deptAndChildren": "Department and sub-departments",
+  "bizRole.dataScope.dept": "Own department",
+  "bizRole.dataScope.self": "Own data only",
+  "bizRole.dataScope.custom": "Custom",
+  "bizRole.dataScope.values": "Custom scope values",
+  "bizRole.dataScope.valuesPlaceholder": "One value per line, e.g. department ids",
 
   // Biz Role - Members
   "bizRole.member.sectionTitle": "Members",

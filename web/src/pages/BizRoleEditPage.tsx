@@ -21,6 +21,7 @@ import UnsavedBanner from "../components/UnsavedBanner";
 import { FormField, FormSection, inputClass, monoInputClass, Switch } from "../components/FormSection";
 import { TabBar } from "../components/Tabs";
 import DangerZone from "../components/DangerZone";
+import BizRoleDataScopeEditor from "../components/BizRoleDataScopeEditor";
 import BizRoleMemberTable from "../components/BizRoleMemberTable";
 import BizRoleInheritancePicker from "../components/BizRoleInheritancePicker";
 import BizRolePermissionBinder from "../components/BizRolePermissionBinder";
@@ -924,7 +925,17 @@ function PropertiesEditor({
         </div>
       }
     >
-      <div className="col-span-2">
+      <div className="col-span-2 space-y-4">
+        <BizRoleDataScopeEditor
+          value={value}
+          onChange={(raw) => {
+            onChangeRaw(raw);
+            try {
+              const obj = raw ? JSON.parse(raw) : {};
+              setEntries(Object.entries(obj).map(([k, v]) => ({ key: k, value: typeof v === "string" ? v : JSON.stringify(v) })));
+            } catch { /* keep entries */ }
+          }}
+        />
         {mode === "visual" ? (
           <div className="space-y-2">
             {entries.length === 0 ? (

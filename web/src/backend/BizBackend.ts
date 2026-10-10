@@ -110,6 +110,17 @@ export interface UserPermissionSummary {
   allowedResources: string[];
   allowedActions: string[];
   properties: Record<string, unknown>;
+  dataScope?: BizEffectiveDataScope;
+}
+
+export type BizDataScopeType = "all" | "org" | "dept_and_children" | "dept" | "self" | "custom" | "none";
+
+/** Merged (most-permissive-wins) data scope of a user in an app. */
+export interface BizEffectiveDataScope {
+  type: BizDataScopeType;
+  values: string[];
+  resources?: Record<string, BizEffectiveDataScope>;
+  sources: string[];
 }
 
 // ── BizAppConfig CRUD ──
@@ -525,6 +536,10 @@ export function bizGetUserRoles(appId: string, userId: string) {
 
 export function bizGetUserPermissions(appId: string, userId: string) {
   return request<UserPermissionSummary>("GET", `/api/biz-get-user-permissions?appId=${encodeURIComponent(appId)}&userId=${encodeURIComponent(userId)}`);
+}
+
+export function bizGetUserDataScope(appId: string, userId: string) {
+  return request<BizEffectiveDataScope>("GET", `/api/biz-get-user-data-scope?appId=${encodeURIComponent(appId)}&userId=${encodeURIComponent(userId)}`);
 }
 
 // ── Sync Policies ──

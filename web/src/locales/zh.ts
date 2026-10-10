@@ -3381,6 +3381,18 @@ const zh: Record<string, string> = {
   "bizRole.properties.addEntry": "添加条目",
   "bizRole.properties.empty": "暂无自定义属性",
   "bizRole.properties.parseError": "JSON 格式错误,无法解析",
+  "bizRole.dataScope.title": "数据范围",
+  "bizRole.dataScope.hint": "业务系统读取该值来过滤数据。用户拥有多个角色时,取最宽松的范围。",
+  "bizRole.dataScope.invalidJson": "属性 JSON 无效,请先在 JSON 模式中修正。",
+  "bizRole.dataScope.unset": "未设置",
+  "bizRole.dataScope.all": "全部数据",
+  "bizRole.dataScope.org": "本组织",
+  "bizRole.dataScope.deptAndChildren": "本部门及下级部门",
+  "bizRole.dataScope.dept": "本部门",
+  "bizRole.dataScope.self": "仅本人数据",
+  "bizRole.dataScope.custom": "自定义",
+  "bizRole.dataScope.values": "自定义范围值",
+  "bizRole.dataScope.valuesPlaceholder": "每行一个值,例如部门 ID",
 
   // Biz Role - Members
   "bizRole.member.sectionTitle": "成员",
