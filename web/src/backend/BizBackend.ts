@@ -605,6 +605,50 @@ export function bizSyncPolicies(appId: string) {
   return request<SyncStats>("POST", `/api/biz-sync-policies?appId=${encodeURIComponent(appId)}`);
 }
 
+// ── Migrate from platform Permission ──
+
+export interface BizMigrationIssue {
+  kind: "unmappable" | "invalid" | "conflict";
+  entity: "role" | "permission" | "inheritance";
+  name: string;
+  field?: string;
+  message: string;
+}
+
+export interface BizMigrationCounts {
+  total: number;
+  create: number;
+  update: number;
+  skip: number;
+  failed: number;
+}
+
+export interface BizMigrationReport {
+  appId: string;
+  sourceOrganization: string;
+  onConflict: "skip" | "overwrite";
+  dryRun: boolean;
+  roles: BizMigrationCounts;
+  permissions: BizMigrationCounts;
+  memberAdds: number;
+  granteeAdds: number;
+  inheritanceAdds: number;
+  issues: BizMigrationIssue[] | null;
+  applied: boolean;
+  synced: boolean;
+  policyCount: number;
+  syncError?: string;
+}
+
+export function migrateBizFromPermission(
+  appId: string,
+  opts: { dryRun: boolean; onConflict: "skip" | "overwrite"; sourceOrganization?: string },
+) {
+  const q = new URLSearchParams({ appId, dryRun: String(opts.dryRun), onConflict: opts.onConflict });
+  if (opts.sourceOrganization) q.set("sourceOrganization", opts.sourceOrganization);
+  return request<BizMigrationReport>("POST", `/api/biz-migrate-from-permission?${q.toString()}`);
+}
+
 // ── Factory Functions ──
 
 export const DEFAULT_RBAC_MODEL = `[request_definition]

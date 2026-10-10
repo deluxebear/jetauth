@@ -6,6 +6,7 @@ import { motion } from "framer-motion";
 import { ArrowLeft, Plus, Play, Copy, Check, X, RefreshCw, RotateCcw, Pencil, Trash2, LayoutDashboard, Crown, ShieldCheck, FlaskConical, Code, Target, Eye, CheckCircle2, History } from "lucide-react";
 import DataTable, { type Column, useTablePrefs, ColumnsMenu } from "../components/DataTable";
 import BizAppResourceTab from "../components/BizAppResourceTab";
+import BizMigrateDialog from "../components/BizMigrateDialog";
 import BizSchemaEditor from "../components/BizSchemaEditor";
 import BizSchemaVersionList from "../components/BizSchemaVersionList";
 import BizTupleManager from "../components/BizTupleManager";
@@ -198,6 +199,7 @@ export default function AppAuthorizationPage() {
   }, [queryClient, owner, appName]);
 
   const [syncing, setSyncing] = useState(false);
+  const [migrateOpen, setMigrateOpen] = useState(false);
   const handleSyncPolicies = async () => {
     if (!owner || !appName) return;
     setSyncing(true);
@@ -252,6 +254,22 @@ export default function AppAuthorizationPage() {
 
   return (
     <div className="space-y-0">
+      {migrateOpen && !isReBAC && (
+        <BizMigrateDialog
+          appId={appId}
+          onClose={() => setMigrateOpen(false)}
+          onImported={(report) => {
+            setMigrateOpen(false);
+            modal.toast(
+              report.syncError
+                ? `${t("bizMigrate.syncFailed")}: ${report.syncError}`
+                : `${t("bizMigrate.success")} — ${report.roles.create + report.roles.update} ${t("bizMigrate.roles")}, ${report.permissions.create + report.permissions.update} ${t("bizMigrate.permissions")}`,
+              report.syncError ? "error" : "success",
+            );
+            refreshData();
+          }}
+        />
+      )}
       {/* Sticky Header */}
       <div className="sticky top-0 z-30 -mx-6 -mt-6 px-6 bg-surface-0/80 backdrop-blur-md border-b border-border-subtle">
         <div className="flex items-center justify-between py-3">
@@ -294,6 +312,14 @@ export default function AppAuthorizationPage() {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            {!isReBAC && (
+              <button
+                onClick={() => setMigrateOpen(true)}
+                className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-[12px] font-medium text-text-secondary hover:bg-surface-2 transition-colors"
+              >
+                {t("bizMigrate.button")}
+              </button>
+            )}
             <button
               onClick={handleSyncPolicies}
               disabled={syncing}
