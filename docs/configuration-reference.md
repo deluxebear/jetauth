@@ -53,13 +53,17 @@ web.AppConfig.String(key)  ─── 命中 ────▶ 用 app.conf 的值
 | `redisEndpoint`             | `""`（用内存 session）                   | string  | ✅             |
 | `bizPolicyCacheEnabled`     | `false`                                  | bool    | ✅             |
 | `bizPolicyWatcherEnabled`   | `false`                                  | bool    | ✅             |
+| `bizPolicyWatcherAddr` / `Password` / `DB` / `Channel` | 回退 `redisEndpoint` / 空 / `0` / `/jetauth/biz-policy-update` | string | ➕ |
 | `bizEnforcerCacheMaxEntries` | `0`（不限制）                           | int     | ➕             |
 | `bizEnforcerCacheIdleTtlSeconds` | `0`（关闭）                         | int     | ➕             |
 | `bizReBACCacheL3Enabled`    | `false`                                  | bool    | ✅             |
+| `bizReBACCacheL3Addr` / `Password` / `DB` / `KeyPrefix` / `Channel` | 回退 `redisEndpoint` / 空 / `0` / `jetauth:rebac:` / `jetauth:rebac:invalidations` | string | ➕ |
+| `rebacListObjectsRPS` / `rebacListObjectsBurst` | `20` / `40` | int | ✅ |
 | `permissionEnforcerCacheEnabled` | `false`                             | bool    | ➕             |
 | `permissionEnforcerCacheSize` | `1000`                                 | int     | ➕             |
 | `permissionEnforcerCacheTtlSeconds` | `60`                             | int     | ➕             |
 | `permissionEnforcerWatcherEnabled` | `false`                           | bool    | ➕             |
+| `permissionEnforcerWatcherAddr` / `Password` / `DB` / `Channel` | 回退 `redisEndpoint` / 空 / `0` / `jetauth:permission-enforcer:invalidations` | string | ➕ |
 | `origin`                    | `""`（回调用当前请求 host）              | string  | ✅             |
 | `originFrontend`            | `""`                                     | string  | ✅             |
 | `authState`                 | `jetauth`                                | string  | ✅             |
@@ -209,7 +213,7 @@ web.AppConfig.String(key)  ─── 命中 ────▶ 用 app.conf 的值
 - **前置条件**：`redisEndpoint` 非空才真正生效。
 - **用途**：把 Casbin 策略/模型缓存到 Redis，SDK 通过 `/api/biz-get-policies`
   拉取时走 Redis；进程内 `sync.Map` 缓存仍在。**多实例部署时进程内缓存陈旧
-  问题请配合 `bizPolicyWatcherEnabled` 解决。
+  问题请配合 `bizPolicyWatcherEnabled` 解决**。
 
 ### `bizPolicyWatcherEnabled` — 业务授权策略跨实例失效通知
 - **默认**：`false`
@@ -217,7 +221,13 @@ web.AppConfig.String(key)  ─── 命中 ────▶ 用 app.conf 的值
   Enforcer 缓存并在下次访问时重建（`object/biz_policy_watcher.go`）。
 - **地址**：`bizPolicyWatcherAddr`，为空时回退到 `redisEndpoint`；可选
   `bizPolicyWatcherPassword` / `bizPolicyWatcherDB` / `bizPolicyWatcherChannel`
-  （默认 `/jetauth/biz-policy-update`）。Redis 不可用时自动退化为单实例行为。
+  （默认 `/jetauth/biz-policy-update`）。Redis 不可用时自动退化为单实例行为
+  （启动日志出现 `biz policy watcher: ... staying local-only` 警告）。
+- **与缓存的关系**：独立于 `bizPolicyCacheEnabled`；`SyncAppPolicies` 与
+  `ClearBizEnforcerCache` 都会发布 `{owner, appName}`。
+- 另外，策略同步完成后（与本开关无关）会触发 `biz-policy-changed` Webhook 事件，
+  并在 `biz_policy_changelog` 记录版本变更（`GET /api/biz-watch-policies`、
+  `GET /api/biz-get-policy-version`），保留最近 1000 个版本。
 
 ### `bizEnforcerCacheMaxEntries` / `bizEnforcerCacheIdleTtlSeconds` — 业务 Enforcer 本地缓存上限
 
