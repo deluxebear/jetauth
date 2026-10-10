@@ -49,7 +49,8 @@ function makeItem(
   name: string,
   type: string,
   required = true,
-  label?: string
+  label?: string,
+  step = 0
 ) {
   return {
     name,
@@ -63,6 +64,7 @@ function makeItem(
     options: [] as string[],
     regex: "",
     rule: "",
+    step,
   };
 }
 
@@ -194,18 +196,18 @@ describe("SignupPage", () => {
   });
 
   it("advances to next step when schema has multiple steps", async () => {
-    // 8 required items → autoSplitThreshold=6 → split into 2 steps (4 each)
+    // Auto-split is disabled by default; steps are opted into via explicit `step` (4 items each)
     const multiStepApp: AuthApplication = {
       ...mockApp,
       signupItems: [
-        makeItem("Email", "email"),
-        makeItem("Password", "password"),
-        makeItem("Confirm password", "confirm-password"),
-        makeItem("First name", "text"),
-        makeItem("Last name", "text"),
-        makeItem("Phone", "phone"),
-        makeItem("Affiliation", "text"),
-        makeItem("Agreement", "agreement", true, "I agree to the {terms}"),
+        makeItem("Email", "email", true, undefined, 1),
+        makeItem("Password", "password", true, undefined, 1),
+        makeItem("Confirm password", "confirm-password", true, undefined, 1),
+        makeItem("First name", "text", true, undefined, 1),
+        makeItem("Last name", "text", true, undefined, 2),
+        makeItem("Phone", "phone", true, undefined, 2),
+        makeItem("Affiliation", "text", true, undefined, 2),
+        makeItem("Agreement", "agreement", true, "I agree to the {terms}", 2),
       ],
     };
 
@@ -245,14 +247,14 @@ describe("SignupPage", () => {
     const multiStepApp: AuthApplication = {
       ...mockApp,
       signupItems: [
-        makeItem("Email", "email"),
-        makeItem("Password", "password"),
-        makeItem("Confirm password", "confirm-password"),
-        makeItem("First name", "text"),
-        makeItem("Last name", "text"),
-        makeItem("Phone", "phone"),
-        makeItem("Affiliation", "text"),
-        makeItem("Agreement", "agreement", true, "I agree to the {terms}"),
+        makeItem("Email", "email", true, undefined, 1),
+        makeItem("Password", "password", true, undefined, 1),
+        makeItem("Confirm password", "confirm-password", true, undefined, 1),
+        makeItem("First name", "text", true, undefined, 1),
+        makeItem("Last name", "text", true, undefined, 2),
+        makeItem("Phone", "phone", true, undefined, 2),
+        makeItem("Affiliation", "text", true, undefined, 2),
+        makeItem("Agreement", "agreement", true, "I agree to the {terms}", 2),
       ],
     };
 
