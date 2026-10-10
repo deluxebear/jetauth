@@ -78,6 +78,7 @@ func main() {
 	object.InitDb()
 	object.InitCustomHttpEmailMigration()
 	object.InitBizReBACCache()
+	object.InitPermissionEnforcerCache()
 	object.InitBizReBACRateLimiter(
 		rebacListObjectsRPS(),
 		rebacListObjectsBurst(),

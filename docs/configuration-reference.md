@@ -53,6 +53,10 @@ web.AppConfig.String(key)  ─── 命中 ────▶ 用 app.conf 的值
 | `redisEndpoint`             | `""`（用内存 session）                   | string  | ✅             |
 | `bizPolicyCacheEnabled`     | `false`                                  | bool    | ✅             |
 | `bizReBACCacheL3Enabled`    | `false`                                  | bool    | ✅             |
+| `permissionEnforcerCacheEnabled` | `false`                             | bool    | ➕             |
+| `permissionEnforcerCacheSize` | `1000`                                 | int     | ➕             |
+| `permissionEnforcerCacheTtlSeconds` | `60`                             | int     | ➕             |
+| `permissionEnforcerWatcherEnabled` | `false`                           | bool    | ➕             |
 | `origin`                    | `""`（回调用当前请求 host）              | string  | ✅             |
 | `originFrontend`            | `""`                                     | string  | ✅             |
 | `authState`                 | `jetauth`                                | string  | ✅             |
@@ -215,6 +219,44 @@ ReBAC uses only the in-process L2 cache (`InMemoryBizReBACCache`). When on, requ
 writes are mirrored to Redis, and invalidations are broadcast to all instances via a
 `jetauth:rebac:invalidations` pub/sub channel so that a tuple write on instance A
 immediately flushes the matching L2 entry on instance B. CP-8 C6.
+
+### `permissionEnforcerCacheEnabled` — 平台权限 Enforcer 内存缓存
+
+**Type:** bool
+**Default:** false
+
+Caches the Casbin enforcers that the platform permission system (`Permission`
+objects, `/api/enforce`, `/api/batch-enforce`, API / application permission
+checks) otherwise rebuilds on every request (model + p rules + role tree = 3-5
+DB queries each). Does not affect the business `biz_*` subsystem.
+
+- `permissionEnforcerCacheSize` (default `1000`): max cached enforcers, LRU eviction.
+- `permissionEnforcerCacheTtlSeconds` (default `60`): hard upper bound on staleness.
+- **Invalidation** is automatic: writes to Role, Permission, Model and Adapter
+  rows through the ORM (add / update / delete, role membership, user rename or
+  delete rewriting `role.users`) and permission-rule writes drop the affected
+  entries (by permission id or organization, or everything when the write does
+  not identify one row). Group membership does not need invalidation because
+  enforcers read only `role.users` / `role.roles`.
+- Changes made behind JetAuth's back (manual SQL) are only picked up after the TTL.
+- Multi-instance: without the watcher below, another instance sees a change
+  after at most the TTL. Keep it off, or enable the watcher, if that window is
+  not acceptable.
+- Metrics: `permission_enforcer_cache_hits_total`, `_misses_total`,
+  `_evictions_total{reason}`, `_invalidations_total{scope,source}`, `permission_enforcer_cache_entries`.
+
+### `permissionEnforcerWatcherEnabled` — 跨实例失效广播（Redis pub/sub）
+
+**Type:** bool
+**Default:** false
+
+Requires `permissionEnforcerCacheEnabled=true` and a Redis address
+(`permissionEnforcerWatcherAddr`, falling back to `redisEndpoint`; optional
+`permissionEnforcerWatcherPassword`, `permissionEnforcerWatcherDB`,
+`permissionEnforcerWatcherChannel`, default `jetauth:permission-enforcer:invalidations`).
+Every invalidation is published; peers drop the same entries immediately. On a
+Redis outage the instance flushes its cache and again after recovery, and falls
+back to TTL expiry. If Redis is unreachable at boot the watcher is skipped with a warning.
 
 ---
 
