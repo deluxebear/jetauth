@@ -647,6 +647,9 @@ func parseAndValidateSubjectToken(subjectToken string, requestingClientId string
 		if err != nil {
 			return "", "", "", &TokenError{Error: InvalidGrant, ErrorDescription: fmt.Sprintf("invalid subject_token: %s", err.Error())}, nil
 		}
+		if tokenErr := rejectRevokedSubjectToken(subjectToken); tokenErr != nil {
+			return "", "", "", tokenErr, nil
+		}
 		return standardClaims.Owner, standardClaims.Name, standardClaims.Scope, nil, nil
 	}
 
@@ -670,7 +673,21 @@ func parseAndValidateSubjectToken(subjectToken string, requestingClientId string
 		}
 	}
 
+	if tokenErr := rejectRevokedSubjectToken(subjectToken); tokenErr != nil {
+		return "", "", "", tokenErr, nil
+	}
+
 	return claims.Owner, claims.Name, claims.Scope, nil, nil
+}
+
+// rejectRevokedSubjectToken fails the exchange when the stored token record behind
+// the subject_token has been revoked (RFC 7009) or invalidated by logout.
+func rejectRevokedSubjectToken(subjectToken string) *TokenError {
+	stored, err := GetTokenByAccessToken(subjectToken)
+	if err == nil && IsTokenRevoked(stored) {
+		return &TokenError{Error: InvalidGrant, ErrorDescription: "subject_token has been revoked"}
+	}
+	return nil
 }
 
 // createGuestUserToken creates a new guest user and returns a token for them.

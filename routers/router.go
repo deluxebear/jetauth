@@ -441,6 +441,7 @@ func InitAPI() {
 	web.Router("/api/login/oauth/access_token", &controllers.ApiController{}, "POST:GetOAuthToken")
 	web.Router("/api/login/oauth/refresh_token", &controllers.ApiController{}, "POST:RefreshToken")
 	web.Router("/api/login/oauth/introspect", &controllers.ApiController{}, "POST:IntrospectToken")
+	web.Router("/api/login/oauth/revoke", &controllers.ApiController{}, "POST:RevokeToken")
 	web.Router("/api/oauth/register", &controllers.ApiController{}, "POST:DynamicClientRegister")
 
 	web.Router("/api/get-records", &controllers.ApiController{}, "GET:GetRecords")

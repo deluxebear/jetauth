@@ -154,6 +154,14 @@ func (c *McpController) GetClaimsFromToken() *object.Claims {
 		return nil
 	}
 
+	// reject revoked (RFC 7009 / logout) and naturally expired access tokens
+	if object.IsTokenRevoked(token) {
+		return nil
+	}
+	if isExpired, _ := util.IsTokenExpired(token.CreatedTime, token.ExpiresIn); isExpired {
+		return nil
+	}
+
 	application, err := object.GetApplication(token.Application)
 	if err != nil || application == nil {
 		return nil

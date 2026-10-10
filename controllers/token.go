@@ -481,14 +481,8 @@ func (c *ApiController) IntrospectToken() {
 			c.ResponseTokenError(object.InvalidRequest, err.Error())
 			return
 		}
-		if token == nil || token.ExpiresIn <= 0 {
+		if token == nil || object.IsTokenRevoked(token) {
 			respondWithInactiveToken()
-			return
-		}
-
-		if token.ExpiresIn <= 0 {
-			c.Data["json"] = &object.IntrospectionResponse{Active: false}
-			c.ServeJSON()
 			return
 		}
 	}
@@ -498,9 +492,9 @@ func (c *ApiController) IntrospectToken() {
 	if application.TokenFormat == "JWT-Standard" {
 		jwtToken, err := object.ParseStandardJwtTokenByApplication(tokenValue, application)
 		if err != nil {
-			// and token revoked case. but we not implement
-			// TODO: 2022-03-03 add token revoked check, when we implemented the Token Revocation(rfc7009) Specs.
-			// refs: https://tools.ietf.org/html/rfc7009
+			// Signature, expiry or format failure. Revoked tokens (RFC 7009) are still
+			// well-formed JWTs, so revocation is enforced by the stored-token check
+			// (object.IsTokenRevoked) that runs before and after this parse.
 			respondWithInactiveToken()
 			return
 		}
@@ -522,9 +516,9 @@ func (c *ApiController) IntrospectToken() {
 	} else {
 		jwtToken, err := object.ParseJwtTokenByApplication(tokenValue, application)
 		if err != nil {
-			// and token revoked case. but we not implement
-			// TODO: 2022-03-03 add token revoked check, when we implemented the Token Revocation(rfc7009) Specs.
-			// refs: https://tools.ietf.org/html/rfc7009
+			// Signature, expiry or format failure. Revoked tokens (RFC 7009) are still
+			// well-formed JWTs, so revocation is enforced by the stored-token check
+			// (object.IsTokenRevoked) that runs before and after this parse.
 			respondWithInactiveToken()
 			return
 		}
@@ -558,7 +552,7 @@ func (c *ApiController) IntrospectToken() {
 			c.ResponseTokenError(object.InvalidRequest, err.Error())
 			return
 		}
-		if token == nil || token.ExpiresIn <= 0 {
+		if token == nil || object.IsTokenRevoked(token) {
 			respondWithInactiveToken()
 			return
 		}
@@ -586,4 +580,41 @@ func (c *ApiController) IntrospectToken() {
 
 	c.Data["json"] = introspectionResponse
 	c.ServeJSON()
+}
+
+// RevokeToken
+// @Summary RevokeToken
+// @Tags Login API
+// @Description OAuth 2.0 Token Revocation endpoint (RFC 7009). The client authenticates the same way as
+// on the introspection endpoint (HTTP Basic, client_id/client_secret, or RFC 7523 client assertion).
+// The response is always HTTP 200 with an empty body once the client is authenticated, whether or not the
+// token existed, was already revoked or was issued to another client. Revoking an access token or a refresh
+// token invalidates both, since they share one stored token record.
+//
+// @Param token formData string true "the access_token or refresh_token to revoke"
+// @Param token_type_hint formData string false "access_token or refresh_token; unknown hints are ignored"
+// @Success 200 {string} string "Token revoked or unknown (empty body)"
+// @Success 401 {object} object.TokenError "Client authentication failed"
+// @Router /login/oauth/revoke [post]
+func (c *ApiController) RevokeToken() {
+	ok, application, _, _, err := c.ValidateOAuth(false)
+	if err != nil || !ok {
+		return
+	}
+
+	tokenValue := c.Ctx.Input.Query("token")
+	tokenTypeHint := c.Ctx.Input.Query("token_type_hint")
+	if tokenValue == "" {
+		c.ResponseTokenError(object.InvalidRequest, "token is required")
+		return
+	}
+
+	_, err = object.RevokeToken(tokenValue, tokenTypeHint, application)
+	if err != nil {
+		c.ResponseTokenError(object.EndpointError, err.Error())
+		return
+	}
+
+	c.Ctx.Output.SetStatus(200)
+	c.Ctx.Output.Body([]byte{})
 }

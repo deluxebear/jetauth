@@ -64,6 +64,11 @@ func AutoSigninFilter(ctx *context.Context) {
 			return
 		}
 
+		if object.IsTokenRevoked(token) {
+			responseError(ctx, "Access token has been revoked")
+			return
+		}
+
 		isExpired, expireTime := util.IsTokenExpired(token.CreatedTime, token.ExpiresIn)
 		if isExpired {
 			responseError(ctx, fmt.Sprintf("Access token has expired, expireTime = %s", expireTime))
