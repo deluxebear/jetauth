@@ -31,6 +31,11 @@ export interface Syncer {
   table: string;
   tableColumns: TableColumn[];
   affiliationTable: string;
+  groupTable?: string;
+  groupTableColumns?: TableColumn[];
+  groupMembershipTable?: string;
+  groupMembershipUserColumn?: string;
+  groupMembershipGroupColumn?: string;
   avatarBaseUrl: string;
   errorText: string;
   syncInterval: number;

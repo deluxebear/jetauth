@@ -9,7 +9,7 @@ import { useModal } from "../components/Modal";
 import { useEntityEdit } from "../hooks/useEntityEdit";
 import { useOrganization } from "../OrganizationContext";
 import * as SyncerBackend from "../backend/SyncerBackend";
-import type { Syncer } from "../backend/SyncerBackend";
+import type { Syncer, TableColumn } from "../backend/SyncerBackend";
 import { friendlyError } from "../utils/errorHelper";
 import SimpleSelect from "../components/SimpleSelect";
 import SaveButton from "../components/SaveButton";
@@ -31,6 +31,31 @@ const NO_HOST_TYPES = ["WeCom", "DingTalk", "Lark"];
 const NO_USER_TYPES = ["Google Workspace"];
 const NO_DB_TYPES = ["WeCom", "Azure AD", "Google Workspace", "DingTalk", "Lark", "Okta", "SCIM", "AWS IAM"];
 const NO_TABLE_TYPES = ["WeCom", "Azure AD", "Google Workspace", "DingTalk", "Lark", "Okta", "SCIM", "AWS IAM"];
+
+const GROUP_COLUMN_EXAMPLE: TableColumn[] = [
+  { name: "id", type: "string", casdoorName: "Id", values: [] },
+  { name: "name", type: "string", casdoorName: "Name", values: [] },
+  { name: "title", type: "string", casdoorName: "DisplayName", values: [] },
+];
+
+/** JSON editor that keeps the raw text while typing and only commits valid JSON arrays. */
+function JsonColumnsEditor({ value, onChange }: { value: TableColumn[]; onChange: (v: TableColumn[]) => void }) {
+  const [text, setText] = useState(() => JSON.stringify(value, null, 2));
+  return (
+    <textarea
+      value={text}
+      onChange={(e) => {
+        setText(e.target.value);
+        try {
+          const parsed = JSON.parse(e.target.value);
+          if (Array.isArray(parsed)) onChange(parsed);
+        } catch { /* keep typing; invalid JSON is not committed */ }
+      }}
+      rows={6}
+      className={`${monoInputClass} text-[11px]`}
+    />
+  );
+}
 
 export default function SyncerEditPage() {
   const { owner, name } = useParams<{ owner: string; name: string }>();
@@ -176,7 +201,7 @@ export default function SyncerEditPage() {
           <input value={syncer.name} onChange={(e) => set("name", e.target.value)} className={monoInputClass} />
         </FormField>
         <FormField label={t("col.type")}>
-          <SimpleSelect value={syncer.type} options={SYNCER_TYPES.map((tp) => ({ value: tp, label: tp }))} onChange={(v) => set("type", v)} />
+          <SimpleSelect value={syncer.type} options={SYNCER_TYPES.map((tp) => ({ value: tp, label: tp }))} onChange={(v) => { set("type", v); if (v === "Active Directory") set("sslMode", "verify-full"); }} />
         </FormField>
         {!isNonDb && (
           <FormField label={t("syncers.field.databaseType")}>
@@ -189,6 +214,18 @@ export default function SyncerEditPage() {
           </FormField>
         )}
       </FormSection>
+
+      {syncer.type === "Active Directory" && (
+        <FormSection title={t("syncers.section.connection")}>
+          <FormField label={t("syncers.field.adTlsVerify")} span="full">
+            <SimpleSelect value={syncer.sslMode ?? ""} options={[
+              { value: "", label: t("syncers.adTlsVerify.legacy") },
+              { value: "verify-ca", label: t("syncers.adTlsVerify.verifyCa") },
+              { value: "verify-full", label: t("syncers.adTlsVerify.verifyFull") },
+            ]} onChange={(v) => set("sslMode", v)} />
+          </FormField>
+        </FormSection>
+      )}
 
       {/* Connection */}
       <FormSection title={t("syncers.section.connection")}>
@@ -276,6 +313,27 @@ export default function SyncerEditPage() {
           />
         </FormField>
       </FormSection>
+
+      {/* Group sync (generic Database syncer only; opt-in) */}
+      {syncer.type === "Database" && (
+        <FormSection title={t("syncers.section.groupSync")}>
+          <FormField label={t("syncers.field.groupTable")}>
+            <input value={syncer.groupTable ?? ""} onChange={(e) => set("groupTable", e.target.value)} className={inputClass} />
+          </FormField>
+          <FormField label={t("syncers.field.groupMembershipTable")}>
+            <input value={syncer.groupMembershipTable ?? ""} onChange={(e) => set("groupMembershipTable", e.target.value)} className={inputClass} />
+          </FormField>
+          <FormField label={t("syncers.field.groupMembershipUserColumn")}>
+            <input value={syncer.groupMembershipUserColumn ?? ""} onChange={(e) => set("groupMembershipUserColumn", e.target.value)} className={inputClass} />
+          </FormField>
+          <FormField label={t("syncers.field.groupMembershipGroupColumn")}>
+            <input value={syncer.groupMembershipGroupColumn ?? ""} onChange={(e) => set("groupMembershipGroupColumn", e.target.value)} className={inputClass} />
+          </FormField>
+          <FormField label={t("syncers.field.groupTableColumns")} span="full">
+            <JsonColumnsEditor value={syncer.groupTableColumns?.length ? syncer.groupTableColumns : GROUP_COLUMN_EXAMPLE} onChange={(v) => set("groupTableColumns", v)} />
+          </FormField>
+        </FormSection>
+      )}
 
       {/* Sync Settings */}
       <FormSection title={t("syncers.section.syncSettings")}>
