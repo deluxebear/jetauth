@@ -122,8 +122,11 @@ export function getBizAppConfig(id: string) {
   return request<BizAppConfig>("GET", `/api/biz-get-app-config?id=${encodeURIComponent(id)}`);
 }
 
-export function addBizAppConfig(config: BizAppConfig) {
-  return request("POST", "/api/biz-add-app-config", config);
+export function addBizAppConfig(config: BizAppConfig, opts?: { initDefaults?: boolean }) {
+  // initDefaults (Casbin mode only): also seed an `admin` role plus a
+  // full-access permission granted to it.
+  const qs = opts?.initDefaults ? "?initDefaults=true" : "";
+  return request("POST", `/api/biz-add-app-config${qs}`, config);
 }
 
 export function updateBizAppConfig(id: string, config: BizAppConfig) {

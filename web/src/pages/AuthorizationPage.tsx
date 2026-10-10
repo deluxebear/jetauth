@@ -373,6 +373,7 @@ function QuickCreateWizard({ open, onClose, onCreated, existingAppNames }: {
 
   // Step 3 (casbin only): Policy table name
   const [policyTable, setPolicyTable] = useState("");
+  const [createDefaults, setCreateDefaults] = useState(true);
 
   const orgName = getNewEntityOwner();
 
@@ -385,6 +386,7 @@ function QuickCreateWizard({ open, onClose, onCreated, existingAppNames }: {
     setModelText(DEFAULT_RBAC_MODEL);
     setShowCustomEditor(false);
     setPolicyTable("");
+    setCreateDefaults(true);
     setCreating(false);
 
     // Load applications — use org-specific endpoint when a specific org is selected
@@ -433,7 +435,7 @@ function QuickCreateWizard({ open, onClose, onCreated, existingAppNames }: {
         isEnabled: true,
       };
 
-      const res = await BizBackend.addBizAppConfig(config);
+      const res = await BizBackend.addBizAppConfig(config, { initDefaults: modelType === "casbin" && createDefaults });
       if (res.status !== "ok") {
         modal.toast(res.msg || t("common.addFailed"), "error");
         setCreating(false);
@@ -725,6 +727,19 @@ function QuickCreateWizard({ open, onClose, onCreated, existingAppNames }: {
                       {t("authz.wizard.policyTableHint")}
                     </p>
                   </div>
+
+                  <label className="flex items-start gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={createDefaults}
+                      onChange={(e) => setCreateDefaults(e.target.checked)}
+                      className="mt-0.5 accent-accent"
+                    />
+                    <span>
+                      <span className="block text-[12px] font-semibold text-text-primary">{t("authz.wizard.createDefaults")}</span>
+                      <span className="block text-[11px] text-text-muted">{t("authz.wizard.createDefaultsHint")}</span>
+                    </span>
+                  </label>
 
                   {/* Summary */}
                   <div className="rounded-lg bg-surface-2 border border-border-subtle p-3">

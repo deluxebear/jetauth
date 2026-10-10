@@ -3143,6 +3143,8 @@ const zh: Record<string, string> = {
   "authz.wizard.modelText": "Casbin 模型",
   "authz.wizard.policyTableName": "策略表名",
   "authz.wizard.policyTableHint": "根据应用名自动生成，必须是合法的 SQL 表名",
+  "authz.wizard.createDefaults": "同时创建默认 admin 角色和完全访问权限",
+  "authz.wizard.createDefaultsHint": "创建 \"admin\" 角色和授予该角色的 \"admin_full_access\" 权限（所有资源与操作）。仅 Casbin 模式，之后可随时删除。",
   "authz.wizard.bizCreate": "创建配置",
   "authz.wizard.bizSuccess": "授权配置创建成功",
 

@@ -3072,6 +3072,8 @@ const en = {
   "authz.wizard.modelText": "Casbin Model",
   "authz.wizard.policyTableName": "Policy Table Name",
   "authz.wizard.policyTableHint": "Auto-generated from app name, must be a valid SQL table name",
+  "authz.wizard.createDefaults": "Create default admin role and full-access permission",
+  "authz.wizard.createDefaultsHint": "Creates an \"admin\" role and an \"admin_full_access\" permission (all resources and actions) granted to it. Casbin mode only; you can remove them later.",
   "authz.wizard.bizCreate": "Create Config",
   "authz.wizard.bizSuccess": "Authorization config created successfully",
 
