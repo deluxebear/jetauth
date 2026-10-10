@@ -21,10 +21,14 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"strconv"
 	"time"
 
 	"github.com/deluxebear/jetauth/util"
 )
+
+// wecomBaseUrl is the WeCom API base URL; a variable so tests can point it at a mock server.
+var wecomBaseUrl = "https://qyapi.weixin.qq.com"
 
 // WecomSyncerProvider implements SyncerProvider for WeCom (WeChat Work) API-based syncers
 type WecomSyncerProvider struct {
@@ -95,14 +99,25 @@ type WecomUserListResp struct {
 type WecomDeptListResp struct {
 	Errcode    int    `json:"errcode"`
 	Errmsg     string `json:"errmsg"`
-	Department []struct {
-		Id int `json:"id"`
-	} `json:"department"`
+	Department []*WecomDepartment `json:"department"`
+}
+
+type WecomDepartment struct {
+	Id       int    `json:"id"`
+	Name     string `json:"name"`
+	NameEn   string `json:"name_en"`
+	ParentId int    `json:"parentid"`
+}
+
+type WecomUserGetResp struct {
+	Errcode    int    `json:"errcode"`
+	Errmsg     string `json:"errmsg"`
+	Department []int  `json:"department"`
 }
 
 // getWecomAccessToken gets access token from WeCom API
 func (p *WecomSyncerProvider) getWecomAccessToken() (string, error) {
-	apiUrl := fmt.Sprintf("https://qyapi.weixin.qq.com/cgi-bin/gettoken?corpid=%s&corpsecret=%s",
+	apiUrl := fmt.Sprintf(wecomBaseUrl+"/cgi-bin/gettoken?corpid=%s&corpsecret=%s",
 		url.QueryEscape(p.Syncer.User), url.QueryEscape(p.Syncer.Password))
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
@@ -141,7 +156,22 @@ func (p *WecomSyncerProvider) getWecomAccessToken() (string, error) {
 
 // getWecomDepartments gets all department IDs from WeCom API
 func (p *WecomSyncerProvider) getWecomDepartments(accessToken string) ([]int, error) {
-	apiUrl := fmt.Sprintf("https://qyapi.weixin.qq.com/cgi-bin/department/list?access_token=%s",
+	depts, err := p.getWecomDepartmentList(accessToken)
+	if err != nil {
+		return nil, err
+	}
+
+	deptIds := []int{}
+	for _, dept := range depts {
+		deptIds = append(deptIds, dept.Id)
+	}
+
+	return deptIds, nil
+}
+
+// getWecomDepartmentList gets all departments (id, name, parent) from WeCom API
+func (p *WecomSyncerProvider) getWecomDepartmentList(accessToken string) ([]*WecomDepartment, error) {
+	apiUrl := fmt.Sprintf(wecomBaseUrl+"/cgi-bin/department/list?access_token=%s",
 		url.QueryEscape(accessToken))
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
@@ -175,17 +205,12 @@ func (p *WecomSyncerProvider) getWecomDepartments(accessToken string) ([]int, er
 			deptResp.Errcode, deptResp.Errmsg)
 	}
 
-	deptIds := []int{}
-	for _, dept := range deptResp.Department {
-		deptIds = append(deptIds, dept.Id)
-	}
-
-	return deptIds, nil
+	return deptResp.Department, nil
 }
 
 // getWecomUsersFromDept gets users from a specific department
 func (p *WecomSyncerProvider) getWecomUsersFromDept(accessToken string, deptId int) ([]*WecomUser, error) {
-	apiUrl := fmt.Sprintf("https://qyapi.weixin.qq.com/cgi-bin/user/list?access_token=%s&department_id=%d",
+	apiUrl := fmt.Sprintf(wecomBaseUrl+"/cgi-bin/user/list?access_token=%s&department_id=%d",
 		url.QueryEscape(accessToken), deptId)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
@@ -278,6 +303,11 @@ func (p *WecomSyncerProvider) wecomUserToOriginalUser(wecomUser *WecomUser) *Ori
 		Wecom:       wecomUser.UserId, // Link WeCom provider account
 	}
 
+	// Departments are the WeCom equivalent of groups; the department id is the group name
+	for _, deptId := range wecomUser.Department {
+		user.Groups = append(user.Groups, strconv.Itoa(deptId))
+	}
+
 	// Set gender
 	switch wecomUser.Gender {
 	case "1":
@@ -305,14 +335,66 @@ func (p *WecomSyncerProvider) wecomUserToOriginalUser(wecomUser *WecomUser) *Ori
 	return user
 }
 
-// GetOriginalGroups retrieves all groups from WeCom (not implemented yet)
+// GetOriginalGroups retrieves all groups (departments) from WeCom. The department id is the
+// unique group name and the department name is the display name.
 func (p *WecomSyncerProvider) GetOriginalGroups() ([]*OriginalGroup, error) {
-	// TODO: Implement WeCom group sync
-	return []*OriginalGroup{}, nil
+	accessToken, err := p.getWecomAccessToken()
+	if err != nil {
+		return nil, err
+	}
+
+	depts, err := p.getWecomDepartmentList(accessToken)
+	if err != nil {
+		return nil, err
+	}
+
+	originalGroups := []*OriginalGroup{}
+	for _, dept := range depts {
+		idStr := strconv.Itoa(dept.Id)
+		displayName := dept.Name
+		if displayName == "" {
+			displayName = idStr
+		}
+
+		originalGroups = append(originalGroups, &OriginalGroup{
+			Id:          idStr,
+			Name:        idStr,
+			DisplayName: displayName,
+			Type:        "Virtual",
+		})
+	}
+
+	return originalGroups, nil
 }
 
-// GetOriginalUserGroups retrieves the group IDs that a user belongs to (not implemented yet)
+// GetOriginalUserGroups retrieves the ids (group names) of the departments a user belongs to.
 func (p *WecomSyncerProvider) GetOriginalUserGroups(userId string) ([]string, error) {
-	// TODO: Implement WeCom user group membership sync
-	return []string{}, nil
+	accessToken, err := p.getWecomAccessToken()
+	if err != nil {
+		return nil, err
+	}
+
+	apiUrl := fmt.Sprintf("%s/cgi-bin/user/get?access_token=%s&userid=%s",
+		wecomBaseUrl, url.QueryEscape(accessToken), url.QueryEscape(userId))
+	data, _, err := syncerHttpGet(apiUrl, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	var resp WecomUserGetResp
+	err = json.Unmarshal(data, &resp)
+	if err != nil {
+		return nil, err
+	}
+
+	if resp.Errcode != 0 {
+		return nil, fmt.Errorf("failed to get user %s: errcode=%d, errmsg=%s", userId, resp.Errcode, resp.Errmsg)
+	}
+
+	groupIds := []string{}
+	for _, deptId := range resp.Department {
+		groupIds = append(groupIds, strconv.Itoa(deptId))
+	}
+
+	return groupIds, nil
 }
