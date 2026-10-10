@@ -21,6 +21,7 @@ export interface Permission {
   approver: string;
   approveTime: string;
   state: string;
+  rejectReason?: string;
   [key: string]: unknown;
 }
 
@@ -34,6 +35,50 @@ export function getPermissions(params: {
   sortOrder?: string;
 }) {
   return request<Permission[]>("GET", `/api/get-permissions?${paginationQuery(params)}`);
+}
+
+export type PermissionState = "Pending" | "Approved" | "Rejected";
+
+export interface PermissionApprovalLog {
+  id: number;
+  owner: string;
+  permissionName: string;
+  createdTime: string;
+  operator: string;
+  fromState: string;
+  toState: string;
+  reason: string;
+}
+
+/** Pending approval queue: permissions of the owner whose state is Pending. */
+export function getPendingPermissions(params: {
+  owner: string;
+  p?: number;
+  pageSize?: number;
+  sortField?: string;
+  sortOrder?: string;
+}) {
+  return getPermissions({ ...params, field: "state", value: "Pending" });
+}
+
+/** Permissions submitted by the signed-in user. */
+export function getPermissionsBySubmitter() {
+  return request<Permission[]>("GET", "/api/get-permissions-by-submitter");
+}
+
+export function approvePermission(owner: string, name: string) {
+  return request("POST", `/api/approve-permission?id=${owner}/${encodeURIComponent(name)}`);
+}
+
+export function rejectPermission(owner: string, name: string, reason: string) {
+  return request("POST", `/api/reject-permission?id=${owner}/${encodeURIComponent(name)}`, { reason });
+}
+
+export function getPermissionApprovalLogs(owner: string, name: string) {
+  return request<PermissionApprovalLog[]>(
+    "GET",
+    `/api/get-permission-approval-logs?id=${owner}/${encodeURIComponent(name)}`
+  );
 }
 
 export function getPermission(owner: string, name: string) {
@@ -115,5 +160,6 @@ export function newPermission(owner: string): Permission {
     approver: "",
     approveTime: "",
     state: "Approved",
+    rejectReason: "",
   };
 }

@@ -5,6 +5,7 @@ import DataTable, { type Column, useTablePrefs, ColumnsMenu } from "../component
 import { BulkDeleteBar } from "../components/BulkDeleteBar";
 import { useBulkDelete } from "../hooks/useBulkDelete";
 import StatusBadge from "../components/StatusBadge";
+import PermissionStateBadge from "../components/PermissionStateBadge";
 import { useTranslation } from "../i18n";
 import { useModal } from "../components/Modal";
 import { useEntityList } from "../hooks/useEntityList";
@@ -121,11 +122,7 @@ export default function PermissionListPage() {
     },
     {
       key: "state", title: t("permissions.field.state"), sortable: true, width: "120px",
-      render: (_, r) => {
-        if (r.state === "Approved") return <span className="inline-block rounded-full px-2 py-0.5 text-[11px] font-medium bg-success/15 text-success">{t("permissions.stateApproved")}</span>;
-        if (r.state === "Pending") return <span className="inline-block rounded-full px-2 py-0.5 text-[11px] font-medium bg-danger/15 text-danger">{t("permissions.statePending")}</span>;
-        return <span className="text-text-muted text-[12px]">{"\u2014"}</span>;
-      },
+      render: (_, r) => <PermissionStateBadge state={r.state} />,
     },
     {
       key: "__actions", fixed: "right" as const, title: t("common.action"), width: "110px",

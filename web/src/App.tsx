@@ -47,6 +47,7 @@ import BizPermissionEditPage from "./pages/BizPermissionEditPage";
 import RoleListPage from "./pages/RoleListPage";
 import RoleEditPage from "./pages/RoleEditPage";
 import PermissionListPage from "./pages/PermissionListPage";
+import PermissionApprovalsPage from "./pages/PermissionApprovalsPage";
 import PermissionEditPage from "./pages/PermissionEditPage";
 import ModelListPage from "./pages/ModelListPage";
 import ModelEditPage from "./pages/ModelEditPage";
@@ -584,6 +585,7 @@ export default function App() {
         <Route path="/trees/:organizationName" element={<GroupTreePage />} />
         <Route path="/ldap/sync/:owner/:id" element={<LdapSyncPage />} />
         <Route path="/ldap/:owner/:id" element={<LdapEditPage />} />
+        <Route path="/permission-approvals" element={<PermissionApprovalsPage />} />
         <Route path="/sysinfo" element={isGlobalAdmin(user) ? <SystemInfoPage /> : <Navigate to="/" replace />} />
         <Route path="/swagger" element={isGlobalAdmin(user) ? <SwaggerPage /> : <Navigate to="/" replace />} />
         <Route path="/login/saml/authorize/:organizationName/:applicationName" element={<SamlAuthorizePage />} />

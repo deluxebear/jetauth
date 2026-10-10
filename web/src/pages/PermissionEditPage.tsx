@@ -23,7 +23,8 @@ import { friendlyError } from "../utils/errorHelper";
 import SaveButton from "../components/SaveButton";
 import UnsavedBanner from "../components/UnsavedBanner";
 import { useUnsavedWarning } from "../hooks/useUnsavedWarning";
-import { getStoredAccount, isGlobalAdmin } from "../utils/auth";
+import PermissionStateBadge from "../components/PermissionStateBadge";
+import { canApprovePermission, getStoredAccount, isGlobalAdmin } from "../utils/auth";
 
 const RESOURCE_TYPE_OPTIONS = [
   { value: "Application", label: "Application" },
@@ -35,11 +36,6 @@ const RESOURCE_TYPE_OPTIONS = [
 const EFFECT_OPTIONS = [
   { value: "Allow", label: "Allow" },
   { value: "Deny", label: "Deny" },
-];
-
-const STATE_OPTIONS = [
-  { value: "Approved", label: "Approved" },
-  { value: "Pending", label: "Pending" },
 ];
 
 export default function PermissionEditPage() {
@@ -125,6 +121,16 @@ export default function PermissionEditPage() {
     });
   }, [permission?.owner]);
 
+  const [logs, setLogs] = useState<PermissionBackend.PermissionApprovalLog[]>([]);
+  const [logTick, setLogTick] = useState(0);
+  const [actionBusy, setActionBusy] = useState(false);
+  useEffect(() => {
+    if (isAddMode || !owner || !name) return;
+    PermissionBackend.getPermissionApprovalLogs(owner, name).then((res) => {
+      if (res.status === "ok" && Array.isArray(res.data)) setLogs(res.data);
+    }).catch(() => {});
+  }, [owner, name, isAddMode, logTick]);
+
   const { entity, loading, invalidate: _invalidate, invalidateList } = useEntityEdit<Permission>({
     queryKey: "permission",
     owner,
@@ -150,6 +156,55 @@ export default function PermissionEditPage() {
   const set = (key: string, val: unknown) => {
     setPermission((prev) => prev ? { ...prev, [key]: val } : prev);
   };
+
+  const canApprove = canApprovePermission(account, permission.owner);
+  const isSubmitter = !!account && !!permission.submitter && permission.submitter === account.name;
+
+  // Runs an approval action, then merges only the server-owned approval fields
+  // so unsaved edits to the rest of the form survive.
+  const runStateAction = async (call: () => Promise<{ status: string; msg: string }>, okKey: Parameters<typeof t>[0]) => {
+    setActionBusy(true);
+    try {
+      const res = await call();
+      if (res.status !== "ok") {
+        modal.toast(friendlyError(res.msg, t) || t("permissions.stateChangeFailed"), "error");
+        return;
+      }
+      const fresh = await PermissionBackend.getPermission(permission.owner, permission.name);
+      if (fresh.status === "ok" && fresh.data) {
+        const f = fresh.data;
+        const merge = (p: Permission): Permission => ({ ...p, state: f.state, approver: f.approver, approveTime: f.approveTime, rejectReason: f.rejectReason ?? "" });
+        setPermission((prev) => (prev ? merge(prev) : prev));
+        try { setOriginalJson(JSON.stringify(merge(JSON.parse(originalJson)))); } catch { /* keep */ }
+      }
+      modal.toast(t(okKey));
+      invalidateList();
+      setLogTick((n) => n + 1);
+    } finally {
+      setActionBusy(false);
+    }
+  };
+
+  const handleApprove = () => runStateAction(() => PermissionBackend.approvePermission(permission.owner, permission.name), "permissions.approveSuccess");
+  const handleReject = async () => {
+    const reason = await modal.prompt({
+      title: t("permissions.rejectTitle"),
+      message: `${permission.owner}/${permission.name}`,
+      placeholder: t("permissions.rejectReasonPlaceholder"),
+      maxLength: 500,
+      confirmLabel: t("permissions.reject"),
+    });
+    if (reason === null) return;
+    if (!reason.trim()) { modal.toast(t("permissions.rejectReasonRequired"), "error"); return; }
+    await runStateAction(() => PermissionBackend.rejectPermission(permission.owner, permission.name, reason.trim()), "permissions.rejectSuccess");
+  };
+  // Revoke and resubmit both move the permission back to Pending through the update endpoint,
+  // which enforces the state machine server-side.
+  const moveToPending = (okKey: string) => runStateAction(async () => {
+    const latest = await PermissionBackend.getPermission(permission.owner, permission.name);
+    if (latest.status !== "ok" || !latest.data) return { status: "error", msg: latest.msg };
+    return PermissionBackend.updatePermission(permission.owner, permission.name, { ...latest.data, state: "Pending" });
+  }, okKey);
 
   const handleSave = async () => {
     setSaving(true);
@@ -320,17 +375,43 @@ export default function PermissionEditPage() {
           <input value={permission.approveTime ? new Date(permission.approveTime).toLocaleString() : "\u2014"} disabled className={inputClass} />
         </FormField>
         <FormField label={t("permissions.field.state")} tooltip={t("permissions.tooltip.state")}>
-          <SimpleSelect value={permission.state} options={STATE_OPTIONS.map((o) => ({ value: o.value, label: t(`permissions.state${o.label}` as any) }))} onChange={(v) => {
-            if (v === "Approved") {
-              set("approver", account?.name || "");
-              set("approveTime", new Date().toISOString());
-            } else {
-              set("approver", "");
-              set("approveTime", "");
-            }
-            set("state", v);
-          }} />
+          <div className="flex flex-wrap items-center gap-2">
+            <PermissionStateBadge state={permission.state} />
+            {!isAddMode && permission.state === "Pending" && (
+              <>
+                <button type="button" onClick={handleApprove} disabled={!canApprove || actionBusy} title={canApprove ? undefined : t("permissions.adminOnly")} className="rounded px-2 py-1 text-[12px] font-medium text-success hover:bg-success/10 transition-colors disabled:opacity-30 disabled:cursor-not-allowed">{t("permissions.approve")}</button>
+                <button type="button" onClick={handleReject} disabled={!canApprove || actionBusy} title={canApprove ? undefined : t("permissions.adminOnly")} className="rounded px-2 py-1 text-[12px] font-medium text-danger hover:bg-danger/10 transition-colors disabled:opacity-30 disabled:cursor-not-allowed">{t("permissions.reject")}</button>
+              </>
+            )}
+            {!isAddMode && permission.state === "Approved" && canApprove && (
+              <button type="button" onClick={() => moveToPending("permissions.revokeSuccess")} disabled={actionBusy} className="rounded px-2 py-1 text-[12px] font-medium text-warning hover:bg-warning/10 transition-colors disabled:opacity-30">{t("permissions.revoke")}</button>
+            )}
+            {!isAddMode && permission.state === "Rejected" && (canApprove || isSubmitter) && (
+              <button type="button" onClick={() => moveToPending("permissions.resubmitSuccess")} disabled={actionBusy} className="rounded px-2 py-1 text-[12px] font-medium text-accent hover:bg-accent/10 transition-colors disabled:opacity-30">{t("permissions.resubmit")}</button>
+            )}
+          </div>
+          <p className="mt-1 text-[12px] text-text-muted">{t("permissions.stateChangeHint")}</p>
         </FormField>
+        {permission.state === "Rejected" && (
+          <FormField label={t("permissions.field.rejectReason")} span="full">
+            <p className="text-[13px] text-danger whitespace-pre-wrap">{permission.rejectReason || "—"}</p>
+          </FormField>
+        )}
+        {!isAddMode && (
+          <FormField label={t("permissions.approvalHistory")} span="full">
+            {logs.length === 0 ? (
+              <p className="text-[12px] text-text-muted">{t("permissions.approvalHistoryEmpty")}</p>
+            ) : (
+              <ul className="space-y-1 text-[12px] text-text-secondary">
+                {logs.map((l) => (
+                  <li key={l.id} className="font-mono">
+                    {new Date(l.createdTime).toLocaleString()} · {l.operator} · {l.fromState || "—"} → {l.toState}{l.reason ? ` · ${l.reason}` : ""}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </FormField>
+        )}
       </FormSection>
     </motion.div>
   );

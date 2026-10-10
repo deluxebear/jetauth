@@ -57,6 +57,7 @@ export const navGroups: NavGroupDef[] = [
     items: [
       { to: "/roles", labelKey: "nav.roles", iconName: "Crown" },
       { to: "/permissions", labelKey: "nav.permissions", iconName: "ShieldCheck" },
+      { to: "/permission-approvals", labelKey: "nav.permissionApprovals" as TranslationKeys, iconName: "BadgeCheck" },
       { to: "/models", labelKey: "nav.models", iconName: "Blocks" },
       { to: "/adapters", labelKey: "nav.adapters", iconName: "Cable" },
       { to: "/enforcers", labelKey: "nav.enforcers", iconName: "Gavel" },
