@@ -47,6 +47,9 @@ type Permission struct {
 	Approver    string `xorm:"varchar(100)" json:"approver"`
 	ApproveTime string `xorm:"varchar(100)" json:"approveTime"`
 	State       string `xorm:"varchar(100)" json:"state"`
+
+	// RejectReason is set when State is Rejected; cleared on any other state.
+	RejectReason string `xorm:"varchar(500) null" json:"rejectReason"`
 }
 
 const builtInMaxFields = 6 // Casdoor built-in adapter, use V5 to filter permission, so has 6 max field

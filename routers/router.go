@@ -205,6 +205,9 @@ func InitAPI() {
 	web.Router("/api/update-permission", &controllers.ApiController{}, "POST:UpdatePermission")
 	web.Router("/api/add-permission", &controllers.ApiController{}, "POST:AddPermission")
 	web.Router("/api/delete-permission", &controllers.ApiController{}, "POST:DeletePermission")
+	web.Router("/api/approve-permission", &controllers.ApiController{}, "POST:ApprovePermission")
+	web.Router("/api/reject-permission", &controllers.ApiController{}, "POST:RejectPermission")
+	web.Router("/api/get-permission-approval-logs", &controllers.ApiController{}, "GET:GetPermissionApprovalLogs")
 	web.Router("/api/upload-permissions", &controllers.ApiController{}, "POST:UploadPermissions")
 
 	web.Router("/api/get-models", &controllers.ApiController{}, "GET:GetModels")
