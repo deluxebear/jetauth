@@ -19,7 +19,6 @@ import (
 	"strings"
 
 	"github.com/casbin/casbin/v3"
-	"github.com/casbin/casbin/v3/config"
 	"github.com/casbin/casbin/v3/model"
 	xormadapter "github.com/deluxebear/jetauth/adapters/xormadapter"
 	"github.com/deluxebear/jetauth/conf"
@@ -91,6 +90,7 @@ func buildPermissionEnforcer(p *Permission, permissionIDs ...string) (*casbin.En
 		return nil, deps, err
 	}
 
+	// The permission id always lives on the reserved column (v5).
 	policyFilterV5 := []string{p.GetId()}
 	if len(permissionIDs) != 0 {
 		policyFilterV5 = permissionIDs
@@ -175,28 +175,18 @@ func (p *Permission) getEnforcerModel() (model.Model, error) {
 	return GetBuiltInModel(permissionModel.ModelText)
 }
 
+// getPolicies generates the p rows of a permission using the layout of the
+// permission's model. If the model cannot be resolved the legacy layout is used.
 func getPolicies(permission *Permission) [][]string {
-	var policies [][]string
+	return permissionPolicyLayoutForPermission(permission).buildRows(permission)
+}
 
-	permissionId := permission.GetId()
-	domainExist := len(permission.Domains) > 0
-
-	usersAndRoles := append(permission.Users, permission.Roles...)
-	for _, userOrRole := range usersAndRoles {
-		for _, resource := range permission.Resources {
-			for _, action := range permission.Actions {
-				if domainExist {
-					for _, domain := range permission.Domains {
-						policies = append(policies, []string{userOrRole, domain, resource, action, strings.ToLower(permission.Effect), permissionId})
-					}
-				} else {
-					policies = append(policies, []string{userOrRole, resource, action, strings.ToLower(permission.Effect), "", permissionId})
-				}
-			}
-		}
+func permissionPolicyLayoutForPermission(permission *Permission) *permissionPolicyLayout {
+	m, err := permission.getEnforcerModel()
+	if err != nil {
+		return newPermissionPolicyLayout(nil)
 	}
-
-	return policies
+	return permissionPolicyLayoutFromModel(m)
 }
 
 type permissionRoleResolver struct {
@@ -423,9 +413,10 @@ func removePolicies(permission *Permission) error {
 		return err
 	}
 
-	policies := getPolicies(permission)
-
-	_, err = enforcer.RemovePolicies(policies)
+	// Remove by the reserved permission id column rather than by regenerated
+	// rows: it works for every model layout, also for rows written by an older
+	// layout (or an older version of the permission), and never leaves orphans.
+	_, err = enforcer.RemoveFilteredPolicy(permissionIDColumn, permission.GetId())
 	return err
 }
 
@@ -492,9 +483,10 @@ func getEnforcers(userId string) ([]*casbin.Enforcer, error) {
 // ptypes, matching Casbin v2's positional behavior. Casbin v3's GetAllObjects/GetAllActions
 // key off literal field names ("obj"/"act"), which regresses models whose fields are renamed
 // (e.g. `p = sub, resource, action`). Reading by column index preserves the v2 contract.
-func getPolicyFieldValuesByColumn(enforcers []*casbin.Enforcer, col int) ([]string, error) {
+func getPolicyFieldValuesByColumn(enforcers []*casbin.Enforcer, role string) ([]string, error) {
 	res := []string{}
 	for _, enforcer := range enforcers {
+		col := permissionPolicyLayoutFromModel(enforcer.GetModel()).valueColumn(role)
 		seen := map[string]bool{}
 		for ptype := range enforcer.GetModel()["p"] {
 			policies, err := enforcer.GetNamedPolicy(ptype)
@@ -517,7 +509,7 @@ func GetAllObjects(userId string) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	return getPolicyFieldValuesByColumn(enforcers, 1)
+	return getPolicyFieldValuesByColumn(enforcers, "obj")
 }
 
 func GetAllActions(userId string) ([]string, error) {
@@ -525,7 +517,7 @@ func GetAllActions(userId string) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	return getPolicyFieldValuesByColumn(enforcers, 2)
+	return getPolicyFieldValuesByColumn(enforcers, "act")
 }
 
 func GetAllRoles(userId string) ([]string, error) {
@@ -559,31 +551,11 @@ e = some(where (p.eft == allow))
 m = g(r.sub, p.sub) && r.obj == p.obj && r.act == p.act`
 		return model.NewModelFromString(modelText)
 	} else {
-		cfg, err := config.NewConfigFromText(modelText)
+		// Validates the shape and pads to the adapter width with the
+		// permission id on the reserved column.
+		policyDefinition, err := parsePermissionPolicyDefinition(modelText)
 		if err != nil {
 			return nil, err
-		}
-
-		// load [policy_definition]
-		policyDefinition := strings.Split(cfg.String("policy_definition::p"), ",")
-
-		fieldsNum := len(policyDefinition)
-		if fieldsNum > builtInMaxFields {
-			return nil, fmt.Errorf("the maximum policy_definition field number cannot exceed %d, got %d", builtInMaxFields, fieldsNum)
-		}
-
-		// filled empty field with "" and V5 with "permissionId"
-		if fieldsNum == builtInMaxFields {
-			sixthField := strings.TrimSpace(policyDefinition[builtInMaxFields-1])
-			if sixthField != "permissionId" {
-				return nil, fmt.Errorf("when adding policies with permissions, the sixth field of policy_definition must be permissionId, got %s", policyDefinition[builtInMaxFields-1])
-			}
-		} else {
-			needFill := builtInMaxFields - fieldsNum
-			for i := 0; i < needFill-1; i++ {
-				policyDefinition = append(policyDefinition, "")
-			}
-			policyDefinition = append(policyDefinition, "permissionId")
 		}
 
 		m, err := model.NewModelFromString(modelText)

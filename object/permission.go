@@ -52,8 +52,6 @@ type Permission struct {
 	RejectReason string `xorm:"varchar(500) null" json:"rejectReason"`
 }
 
-const builtInMaxFields = 6 // Casdoor built-in adapter, use V5 to filter permission, so has 6 max field
-
 func GetPermissionCount(owner, field, value string) (int64, error) {
 	session := GetSession(owner, -1, -1, field, value, "", "")
 	return session.Count(&Permission{})
