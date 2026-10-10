@@ -13,6 +13,7 @@ import BizReBACTester from "../components/BizReBACTester";
 import BizReBACBrowser from "../components/BizReBACBrowser";
 import BizAssertionList from "../components/BizAssertionList";
 import BizAuditList from "../components/BizAuditList";
+import BizModelTextEditor from "../components/BizModelTextEditor";
 import BizIntegrationTab from "../components/BizIntegrationTab";
 import BizReBACOverview from "../components/BizReBACOverview";
 import { useTranslation } from "../i18n";
@@ -479,7 +480,7 @@ function OverviewTab({ config, roles, permissions, allowCount, denyCount, onRefr
         setEditingModel(false);
         onRefresh();
       } else {
-        modal.toast(res.msg || t("common.saveFailed"), "error");
+        modal.toast(res.msg ? `${t("authz.overview.modelSaveInvalid")}: ${res.msg}` : t("common.saveFailed"), "error");
       }
     } finally {
       setSavingConfig(false);
@@ -660,13 +661,7 @@ function OverviewTab({ config, roles, permissions, allowCount, denyCount, onRefr
               )}
             </div>
             {editingModel ? (
-              <textarea
-                value={modelDraft}
-                onChange={(e) => setModelDraft(e.target.value)}
-                rows={14}
-                spellCheck={false}
-                className="w-full rounded-lg border border-accent bg-surface-2 px-4 py-3 text-[12px] font-mono leading-relaxed text-text-primary outline-none resize-y focus:ring-1 focus:ring-accent/30"
-              />
+              <BizModelTextEditor value={modelDraft} onChange={setModelDraft} />
             ) : (() => {
               const lineCount = config.modelText ? config.modelText.split("\n").length : 0;
               const collapsible = lineCount > 4;

@@ -327,6 +327,7 @@ func (c *ApiController) GetBizAppConfig() {
 // @Tags Business Permission API
 // @Description Create a new business permission app config
 // @Param   body    body   object.BizAppConfig  true  "The details of the config"
+// @Param   initDefaults query bool false "Casbin mode only: also create a default admin role and full-access permission"
 // @Success 200 {object} ActionResponse "Action result"
 // @Router /biz-add-app-config [post]
 func (c *ApiController) AddBizAppConfig() {
@@ -337,7 +338,16 @@ func (c *ApiController) AddBizAppConfig() {
 		return
 	}
 
-	c.Data["json"] = c.wrapBizActionResponse(object.AddBizAppConfig(&config))
+	affected, err := object.AddBizAppConfig(&config)
+	if err == nil && affected && c.Ctx.Input.Query("initDefaults") == "true" {
+		// Config row exists at this point; a seeding failure is reported but
+		// does not roll the config back (admin can add role/permission by hand).
+		if initErr := object.InitBizAppDefaults(&config); initErr != nil {
+			c.ResponseError(fmt.Sprintf("app config created, but default role/permission failed: %s", initErr.Error()))
+			return
+		}
+	}
+	c.Data["json"] = c.wrapBizActionResponse(affected, err)
 	c.ServeJSON()
 }
 

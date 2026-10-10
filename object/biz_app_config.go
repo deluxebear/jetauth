@@ -9,6 +9,8 @@
 package object
 
 import (
+	"fmt"
+	"strings"
 	"sync"
 
 	"github.com/casbin/casbin/v3"
@@ -150,8 +152,95 @@ func GetBizAppConfig(id string) (*BizAppConfig, error) {
 	return getBizAppConfig(owner, name)
 }
 
+// ValidateBizModelText performs a lightweight parse check of a Casbin model
+// text: it must parse, build an enforcer, and expose a policy shape the biz
+// permission engine can populate. ReBAC apps do not use ModelText, so the
+// check is skipped for them and for empty text.
+func ValidateBizModelText(modelType, modelText string) error {
+	if modelType == ModelTypeReBAC || strings.TrimSpace(modelText) == "" {
+		return nil
+	}
+	m, err := model.NewModelFromString(modelText)
+	if err != nil {
+		return fmt.Errorf("invalid Casbin model: %w", err)
+	}
+	e, err := casbin.NewEnforcer(m)
+	if err != nil {
+		return fmt.Errorf("invalid Casbin model: %w", err)
+	}
+	if err := validateBizPermissionModel(e); err != nil {
+		return fmt.Errorf("invalid Casbin model: %w", err)
+	}
+	return nil
+}
+
+// DefaultAdminRoleName / DefaultAdminPermissionName name the objects created
+// by InitBizAppDefaults.
+const (
+	DefaultAdminRoleName       = "admin"
+	DefaultAdminPermissionName = "admin_full_access"
+)
+
+// InitBizAppDefaults seeds a freshly created Casbin-mode app with an `admin`
+// role and a permission granting that role every resource and action. It is
+// idempotent-ish: an existing role/permission with the same name is reused.
+// ReBAC apps are skipped.
+func InitBizAppDefaults(config *BizAppConfig) error {
+	if config.ModelType == ModelTypeReBAC {
+		return nil
+	}
+	role, err := GetBizRoleByName(config.Owner, config.AppName, DefaultAdminRoleName)
+	if err != nil {
+		return err
+	}
+	if role == nil {
+		role = &BizRole{
+			Organization: config.Owner,
+			AppName:      config.AppName,
+			Name:         DefaultAdminRoleName,
+			ScopeKind:    BizRoleScopeApp,
+			DisplayName:  "Administrator",
+			IsEnabled:    true,
+		}
+		if _, err = AddBizRole(role); err != nil {
+			return err
+		}
+	}
+
+	perm, err := GetBizPermission(config.Owner, config.AppName, DefaultAdminPermissionName)
+	if err != nil {
+		return err
+	}
+	if perm == nil {
+		perm = &BizPermission{
+			Owner:       config.Owner,
+			AppName:     config.AppName,
+			Name:        DefaultAdminPermissionName,
+			DisplayName: "Admin full access",
+			Resources:   []string{".*"},
+			Actions:     []string{".*"},
+			Effect:      EffectAllow,
+			IsEnabled:   true,
+			State:       "Approved",
+		}
+		if _, err = AddBizPermission(perm); err != nil {
+			return err
+		}
+	}
+
+	_, err = AddBizPermissionGrantee(&BizPermissionGrantee{
+		PermissionId: perm.Id,
+		SubjectType:  BizPermGranteeRole,
+		SubjectId:    DefaultAdminRoleName,
+	}, "system")
+	return err
+}
+
 func AddBizAppConfig(config *BizAppConfig) (bool, error) {
 	if err := ValidatePolicyTable(config.PolicyTable); err != nil {
+		return false, err
+	}
+	if err := ValidateBizModelText(config.ModelType, config.ModelText); err != nil {
 		return false, err
 	}
 
@@ -169,6 +258,9 @@ func UpdateBizAppConfig(id string, config *BizAppConfig) (bool, error) {
 	}
 
 	if err := ValidatePolicyTable(config.PolicyTable); err != nil {
+		return false, err
+	}
+	if err := ValidateBizModelText(config.ModelType, config.ModelText); err != nil {
 		return false, err
 	}
 

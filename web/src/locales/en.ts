@@ -2964,6 +2964,8 @@ const en = {
   "authz.overview.modelWarning.enforceFail": "All enforce calls may return DENY until permissions are reconfigured to match the new model",
   "authz.overview.modelWarning.recommendation": "Recommendation: After changing the model, check each permission rule and reconfigure its policy fields to match the new definition.",
   "authz.overview.modelWarning.syncConfirm": "Saving will trigger a policy resync. All cached enforcers will be refreshed. Continue?",
+  "authz.overview.modelLint.missing": "Model is missing required sections",
+  "authz.overview.modelSaveInvalid": "Model rejected",
   "authz.roles.add": "New Role",
   "authz.roles.col.name": "Role Name",
   "authz.roles.col.users": "Users",

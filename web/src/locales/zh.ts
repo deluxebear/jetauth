@@ -3040,6 +3040,8 @@ const zh: Record<string, string> = {
   "authz.overview.modelWarning.enforceFail": "在重新配置权限规则之前，所有 enforce 调用可能返回拒绝",
   "authz.overview.modelWarning.recommendation": "建议：修改模型后，请逐一检查每条权限规则，确保其策略字段与新模型定义匹配。",
   "authz.overview.modelWarning.syncConfirm": "保存后将触发策略重新同步，所有缓存的执行器将被刷新。是否继续？",
+  "authz.overview.modelLint.missing": "模型缺少必需的段落",
+  "authz.overview.modelSaveInvalid": "模型校验未通过",
   "authz.roles.add": "新建角色",
   "authz.roles.col.name": "角色名",
   "authz.roles.col.users": "用户数",
