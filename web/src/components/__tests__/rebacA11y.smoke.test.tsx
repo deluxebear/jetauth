@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import BizReBACTester from "../BizReBACTester";
 import * as BizBackend from "../../backend/BizBackend";
@@ -14,6 +14,15 @@ vi.mock("../../i18n", () => ({
 }));
 
 describe("ReBAC a11y smoke", () => {
+  beforeEach(() => {
+    // Tester loads the active schema id on mount; the automock returns undefined.
+    vi.mocked(BizBackend.getBizAuthorizationModel).mockResolvedValue({
+      status: "ok",
+      msg: "",
+      data: null,
+    } as unknown as Awaited<ReturnType<typeof BizBackend.getBizAuthorizationModel>>);
+  });
+
   it("Tester history-toggle button has an accessible name", () => {
     vi.mocked(BizBackend.bizCheck).mockResolvedValue({ status: "ok" } as ApiResponse<BizCheckResponse>);
     render(<BizReBACTester appId="o/a" />);
