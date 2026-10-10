@@ -15,7 +15,7 @@
 package object
 
 import (
-	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -147,6 +147,29 @@ type SCIMListResponse struct {
 	Resources    []*SCIMUser `json:"Resources"`
 }
 
+// SCIMGroupMember represents a member reference of a SCIM group
+type SCIMGroupMember struct {
+	Value   string `json:"value"`
+	Display string `json:"display"`
+	Type    string `json:"type"`
+}
+
+// SCIMGroup represents a SCIM 2.0 group resource
+type SCIMGroup struct {
+	ID          string             `json:"id"`
+	ExternalID  string             `json:"externalId"`
+	DisplayName string             `json:"displayName"`
+	Members     []*SCIMGroupMember `json:"members"`
+}
+
+// SCIMGroupListResponse represents a SCIM group list response
+type SCIMGroupListResponse struct {
+	TotalResults int          `json:"totalResults"`
+	ItemsPerPage int          `json:"itemsPerPage"`
+	StartIndex   int          `json:"startIndex"`
+	Resources    []*SCIMGroup `json:"Resources"`
+}
+
 // buildSCIMEndpoint builds the SCIM API endpoint URL
 func (p *SCIMSyncerProvider) buildSCIMEndpoint() string {
 	// syncer.Host should be the SCIM server URL (e.g., https://example.com/scim/v2)
@@ -156,30 +179,15 @@ func (p *SCIMSyncerProvider) buildSCIMEndpoint() string {
 
 // createSCIMRequest creates an HTTP request with proper authentication
 func (p *SCIMSyncerProvider) createSCIMRequest(method, url string, body io.Reader) (*http.Request, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
-
-	req, err := http.NewRequestWithContext(ctx, method, url, body)
+	// The request deliberately carries no cancellable context: the caller's http.Client
+	// enforces the timeout (cancelling a context here would abort the request before it is sent).
+	req, err := http.NewRequest(method, url, body)
 	if err != nil {
 		return nil, err
 	}
 
-	// Set SCIM headers
-	req.Header.Set("Content-Type", "application/scim+json")
-	req.Header.Set("Accept", "application/scim+json")
-
-	// Add authentication
-	// syncer.User should be the authentication token or username
-	// syncer.Password should be the password or API key
-	if p.Syncer.User != "" && p.Syncer.Password != "" {
-		// Try Basic Auth
-		req.SetBasicAuth(p.Syncer.User, p.Syncer.Password)
-	} else if p.Syncer.Password != "" {
-		// Try Bearer token (assuming password field contains the token)
-		req.Header.Set("Authorization", "Bearer "+p.Syncer.Password)
-	} else if p.Syncer.User != "" {
-		// Try Bearer token (assuming user field contains the token)
-		req.Header.Set("Authorization", "Bearer "+p.Syncer.User)
+	for k, v := range p.scimAuthHeaders() {
+		req.Header.Set(k, v)
 	}
 
 	return req, nil
@@ -235,9 +243,20 @@ func (p *SCIMSyncerProvider) getSCIMUsers() ([]*OriginalUser, error) {
 	}
 
 	// Convert SCIM users to Casdoor OriginalUser
+	userGroupsMap, groupsErr := p.buildSCIMUserGroupsMap()
+	if groupsErr != nil {
+		// Servers without a /Groups endpoint must not break user sync
+		fmt.Printf("Warning: failed to fetch SCIM groups: %v. Group membership will not be synced.\n", groupsErr)
+	}
+
 	originalUsers := []*OriginalUser{}
 	for _, scimUser := range allUsers {
 		originalUser := p.scimUserToOriginalUser(scimUser)
+		if groupsErr != nil {
+			originalUser.Groups = nil
+		} else if groups, ok := userGroupsMap[scimUser.ID]; ok {
+			originalUser.Groups = groups
+		}
 		originalUsers = append(originalUsers, originalUser)
 	}
 
@@ -336,14 +355,123 @@ func (p *SCIMSyncerProvider) scimUserToOriginalUser(scimUser *SCIMUser) *Origina
 	return user
 }
 
-// GetOriginalGroups retrieves all groups from SCIM (not implemented yet)
-func (p *SCIMSyncerProvider) GetOriginalGroups() ([]*OriginalGroup, error) {
-	// TODO: Implement SCIM group sync
-	return []*OriginalGroup{}, nil
+// scimAuthHeaders returns the SCIM content-negotiation and authentication headers.
+func (p *SCIMSyncerProvider) scimAuthHeaders() map[string]string {
+	headers := map[string]string{
+		"Content-Type": "application/scim+json",
+		"Accept":       "application/scim+json",
+	}
+
+	// syncer.User should be the authentication token or username
+	// syncer.Password should be the password or API key
+	if p.Syncer.User != "" && p.Syncer.Password != "" {
+		// Basic Auth
+		headers["Authorization"] = "Basic " + base64.StdEncoding.EncodeToString([]byte(p.Syncer.User+":"+p.Syncer.Password))
+	} else if p.Syncer.Password != "" {
+		// Bearer token (the password field contains the token)
+		headers["Authorization"] = "Bearer " + p.Syncer.Password
+	} else if p.Syncer.User != "" {
+		// Bearer token (the user field contains the token)
+		headers["Authorization"] = "Bearer " + p.Syncer.User
+	}
+
+	return headers
 }
 
-// GetOriginalUserGroups retrieves the group IDs that a user belongs to (not implemented yet)
+// getSCIMGroups retrieves all groups (including their member references) from the SCIM /Groups endpoint.
+func (p *SCIMSyncerProvider) getSCIMGroups() ([]*SCIMGroup, error) {
+	host := strings.TrimSuffix(p.Syncer.Host, "/")
+	headers := p.scimAuthHeaders()
+
+	allGroups := []*SCIMGroup{}
+	startIndex := 1
+	count := 100
+
+	for {
+		endpoint := fmt.Sprintf("%s/Groups?startIndex=%d&count=%d", host, startIndex, count)
+		body, _, err := syncerHttpGet(endpoint, headers)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get groups: %w", err)
+		}
+
+		var listResp SCIMGroupListResponse
+		err = json.Unmarshal(body, &listResp)
+		if err != nil {
+			return nil, err
+		}
+
+		allGroups = append(allGroups, listResp.Resources...)
+
+		// Stop when everything was fetched, or the server returned an empty page (avoids endless loops)
+		if len(listResp.Resources) == 0 || len(allGroups) >= listResp.TotalResults {
+			break
+		}
+
+		startIndex += len(listResp.Resources)
+	}
+
+	return allGroups, nil
+}
+
+// buildSCIMUserGroupsMap builds user id -> group ids from the member lists of the SCIM groups.
+func (p *SCIMSyncerProvider) buildSCIMUserGroupsMap() (map[string][]string, error) {
+	groups, err := p.getSCIMGroups()
+	if err != nil {
+		return nil, err
+	}
+
+	res := map[string][]string{}
+	for _, group := range groups {
+		for _, member := range group.Members {
+			// Nested groups are not flattened: only user members are mapped
+			if member.Type != "" && !strings.EqualFold(member.Type, "User") {
+				continue
+			}
+			addUserToGroupMap(res, member.Value, group.ID)
+		}
+	}
+
+	return res, nil
+}
+
+// GetOriginalGroups retrieves all groups from the SCIM server. The SCIM group id is used as the
+// unique group name because displayName is not required to be unique.
+func (p *SCIMSyncerProvider) GetOriginalGroups() ([]*OriginalGroup, error) {
+	groups, err := p.getSCIMGroups()
+	if err != nil {
+		return nil, err
+	}
+
+	originalGroups := []*OriginalGroup{}
+	for _, group := range groups {
+		displayName := group.DisplayName
+		if displayName == "" {
+			displayName = group.ID
+		}
+
+		originalGroups = append(originalGroups, &OriginalGroup{
+			Id:          group.ID,
+			Name:        group.ID,
+			DisplayName: displayName,
+			Type:        "Virtual",
+		})
+	}
+
+	return originalGroups, nil
+}
+
+// GetOriginalUserGroups retrieves the ids (group names) of the groups a user belongs to.
+// Many SCIM servers do not support filtering on members.value, so the group list is scanned.
 func (p *SCIMSyncerProvider) GetOriginalUserGroups(userId string) ([]string, error) {
-	// TODO: Implement SCIM user group membership sync
-	return []string{}, nil
+	userGroupsMap, err := p.buildSCIMUserGroupsMap()
+	if err != nil {
+		return nil, err
+	}
+
+	groupIds := userGroupsMap[userId]
+	if groupIds == nil {
+		groupIds = []string{}
+	}
+
+	return groupIds, nil
 }
