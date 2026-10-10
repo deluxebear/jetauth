@@ -23,6 +23,7 @@ const EVENT_OPTIONS = [
   "add-application", "update-application", "delete-application",
   "add-organization", "update-organization", "delete-organization",
   "add-provider", "update-provider", "delete-provider",
+  "biz-policy-changed",
 ];
 const OBJECT_FIELD_OPTIONS = ["All", "owner", "name", "createdTime", "updatedTime", "deletedTime", "id", "displayName"];
 

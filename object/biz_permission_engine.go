@@ -41,23 +41,25 @@ type SyncStats struct {
 }
 
 // recordBizPolicyChange appends the changelog entry for a finished sync and
-// returns the app's new policy version (0 on failure; failures are logged and
-// never fail the sync itself).
-func recordBizPolicyChange(owner, appName string, hint *bizChangeHint, c bizSyncCtx, policies, grouping [][]string) int64 {
+// returns the app's new policy version and the recorded change kind (version
+// is 0 on failure; failures are logged and never fail the sync itself).
+func recordBizPolicyChange(owner, appName string, hint *bizChangeHint, c bizSyncCtx, policies, grouping [][]string) (int64, string) {
 	var (
 		version int64
 		err     error
+		kind    = BizChangeFullRebuild
 	)
 	if ptype, rules, ok := resolveBizHint(hint, c, policies, grouping); ok {
+		kind = BizChangeAdd
 		version, err = appendChangelog(owner, appName, BizChangeAdd, ptype, rules)
 	} else {
 		version, err = appendChangelog(owner, appName, BizChangeFullRebuild, "", nil)
 	}
 	if err != nil {
 		logs.Warning("biz policy changelog append failed for %s/%s: %v", owner, appName, err)
-		return 0
+		return 0, kind
 	}
-	return version
+	return version, kind
 }
 
 // syncBizPolicies is a helper that wraps SyncAppPolicies with error logging.
@@ -190,7 +192,7 @@ func syncAppPolicies(owner, appName string, hint *bizChangeHint) (*SyncStats, er
 	// 10. Record the change (policy_version++ and changelog rows) AFTER the
 	// enforcer/cache are fresh, so a watcher woken by the new version always
 	// reads up-to-date policies.
-	version := recordBizPolicyChange(owner, appName, hint,
+	version, changeKind := recordBizPolicyChange(owner, appName, hint,
 		bizSyncCtx{hasEft: hasEft, honorsDeny: honorsDeny, hasRoleDef: hasRoleDef},
 		policies, groupingPolicies)
 
@@ -199,6 +201,9 @@ func syncAppPolicies(owner, appName string, hint *bizChangeHint) (*SyncStats, er
 	// bizPolicyWatcherEnabled).
 	publishBizPolicyUpdate(owner, appName, version)
 	notifyBizPolicyWatchers(owner, appName)
+
+	// 12. Webhook so business systems can refresh their local caches.
+	fireBizPolicyChangedWebhook(owner, appName, version, changeKind, len(policies), len(groupingPolicies))
 
 	return &SyncStats{
 		PolicyCount: len(policies),
