@@ -263,6 +263,8 @@ type BizUserRolesResponse struct {
 	Status string   `json:"status" example:"ok"`
 	Msg    string   `json:"msg" example:""`
 	Data   []string `json:"data"`
+	// Data2 maps role name to its custom properties and typed dataScope (additive).
+	Data2 map[string]object.BizRolePropertiesView `json:"data2"`
 }
 
 // BizUserPermissionsResponse represents the response for biz user permissions APIs
@@ -274,7 +276,16 @@ type BizUserPermissionsResponse struct {
 		AllowedResources []string               `json:"allowedResources"`
 		AllowedActions   []string               `json:"allowedActions"`
 		Properties       map[string]interface{} `json:"properties"`
+		// DataScope is the merged (most-permissive-wins) data scope of the user.
+		DataScope object.BizEffectiveDataScope `json:"dataScope"`
 	} `json:"data"`
+}
+
+// BizUserDataScopeResponse represents the response for the biz user data scope API
+type BizUserDataScopeResponse struct {
+	Status string                       `json:"status" example:"ok"`
+	Msg    string                       `json:"msg" example:""`
+	Data   object.BizEffectiveDataScope `json:"data"`
 }
 
 // BizSyncStatsResponse represents the response for biz sync policies APIs
@@ -1481,7 +1492,51 @@ func (c *ApiController) BizGetUserRoles() {
 		return
 	}
 
-	c.ResponseOk(roles)
+	roleProps, err := object.BizGetUserRoleProperties(owner, appName, userId)
+	if err != nil {
+		c.ResponseError(err.Error())
+		return
+	}
+
+	// data stays the plain role-name list (backward compatible); data2 is additive.
+	c.ResponseOk(roles, roleProps)
+}
+
+// BizGetUserDataScope
+// @Summary Get the effective data scope of a user in business app
+// @Tags Business Permission API
+// @Description Merge the dataScope declared on all of the user's enabled roles. Rule: most permissive wins (self < dept < dept_and_children < org < all); custom values are unioned. Type "none" means no role declares a data scope.
+// @Param   appId     query    string  true  "The app id (owner/appName)"
+// @Param   userId    query    string  true  "The user id (org/username)"
+// @Success 200 {object} BizUserDataScopeResponse "The effective data scope"
+// @Router /biz-get-user-data-scope [get]
+func (c *ApiController) BizGetUserDataScope() {
+	appId := c.Ctx.Input.Query("appId")
+	userId := c.Ctx.Input.Query("userId")
+
+	owner, appName, err := util.GetOwnerAndNameFromIdWithError(appId)
+	if err != nil {
+		c.ResponseError(err.Error())
+		return
+	}
+
+	config, cfgErr := object.GetBizAppConfig(appId)
+	if cfgErr != nil {
+		c.ResponseError(cfgErr.Error())
+		return
+	}
+	if config != nil && config.ModelType == object.ModelTypeReBAC {
+		writeNotSupportedInReBAC(c.Ctx.ResponseWriter, "/api/biz-list-objects")
+		return
+	}
+
+	scope, err := object.BizGetUserEffectiveDataScope(owner, appName, userId)
+	if err != nil {
+		c.ResponseError(err.Error())
+		return
+	}
+
+	c.ResponseOk(scope)
 }
 
 // ── User Permission Summary ──

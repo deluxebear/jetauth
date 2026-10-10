@@ -338,3 +338,29 @@ func BizGetUserEffectiveDataScope(owner, appName, userId string) (BizEffectiveDa
 	}
 	return MergeBizDataScopes(names, scopes), nil
 }
+
+// BizRolePropertiesView is the consumer-facing view of one role's properties.
+type BizRolePropertiesView struct {
+	Properties map[string]interface{} `json:"properties"`
+	DataScope  *BizDataScope          `json:"dataScope"`
+}
+
+// BizGetUserRoleProperties returns role name -> properties for the user's
+// enabled roles in an app. Roles without properties map to an empty object.
+func BizGetUserRoleProperties(owner, appName, userId string) (map[string]BizRolePropertiesView, error) {
+	roles, err := bizGetUserRoleObjects(owner, appName, userId)
+	if err != nil {
+		return nil, err
+	}
+	out := make(map[string]BizRolePropertiesView, len(roles))
+	for _, r := range roles {
+		props := map[string]interface{}{}
+		if r.Properties != "" {
+			if err := json.Unmarshal([]byte(r.Properties), &props); err != nil || props == nil {
+				props = map[string]interface{}{}
+			}
+		}
+		out[r.Name] = BizRolePropertiesView{Properties: props, DataScope: GetBizRoleDataScope(r)}
+	}
+	return out, nil
+}

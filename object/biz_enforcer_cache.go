@@ -382,10 +382,16 @@ func BizGetUserPermissionSummary(owner, appName, userId string) (map[string]inte
 		allowedActions = append(allowedActions, act)
 	}
 
+	dataScope, err := BizGetUserEffectiveDataScope(owner, appName, userId)
+	if err != nil {
+		return nil, err
+	}
+
 	return map[string]interface{}{
 		"roles":            roles,
 		"allowedResources": allowedResources,
 		"allowedActions":   allowedActions,
 		"properties":       properties,
+		"dataScope":        dataScope,
 	}, nil
 }

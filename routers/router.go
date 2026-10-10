@@ -294,6 +294,7 @@ func InitAPI() {
 	web.Router("/api/biz-get-policy-version", &controllers.ApiController{}, "GET:BizGetPolicyVersion")
 	web.Router("/api/biz-get-user-roles", &controllers.ApiController{}, "GET:BizGetUserRoles")
 	web.Router("/api/biz-get-user-permissions", &controllers.ApiController{}, "GET:BizGetUserPermissions")
+	web.Router("/api/biz-get-user-data-scope", &controllers.ApiController{}, "GET:BizGetUserDataScope")
 
 	// ReBAC Authorization Model routes (spec §7.1).
 	web.Router("/api/biz-write-authorization-model", &controllers.ApiController{}, "POST:BizWriteAuthorizationModel")
