@@ -532,7 +532,11 @@ func generateJwtToken(application *Application, user *User, provider string, sig
 		User:      user,
 		TokenType: "access-token",
 		Nonce:     nonce,
-		// FIXME: A workaround for custom claim by reusing `tag` in user info
+		// Kept for backward compatibility: the top-level "tag" claim has always carried
+		// user.Tag so downstream apps can read a custom value, and it shadows the embedded
+		// User.Tag field. New custom claims should use the application's TokenFields /
+		// TokenAttributes (see getClaimsCustom) instead of reusing tag. Removing this
+		// line would change the shape of every issued JWT.
 		Tag:          user.Tag,
 		Scope:        scope,
 		Azp:          application.ClientId,
