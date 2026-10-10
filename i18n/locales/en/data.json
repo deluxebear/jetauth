@@ -143,8 +143,8 @@
     "adding a new user to the 'built-in' organization is currently disabled. Please note: all users in the 'built-in' organization are global administrators. If you still wish to create a user for the 'built-in' organization, go to the organization's settings page and enable the 'Has privilege consent' option.": "adding a new user to the 'built-in' organization is currently disabled. Please note: all users in the 'built-in' organization are global administrators. If you still wish to create a user for the 'built-in' organization, go to the organization's settings page and enable the 'Has privilege consent' option."
   },
   "permission": {
-    "Permission must have at least one action": "Permission must have at least one action",
-    "Permission must have at least one resource": "Permission must have at least one resource",
+    "Permission requires at least one action": "Permission requires at least one action",
+    "Permission requires at least one resource": "Permission requires at least one resource",
     "Permission must have at least one user or role": "Permission must have at least one user or role",
     "The model of the permission has no domain-aware role definition (g = _, _, _), so domains must be empty": "The model of the permission has no domain-aware role definition (g = _, _, _), so domains must be empty",
     "The permission: \"%s\" doesn't exist": "The permission: \"%s\" doesn't exist"

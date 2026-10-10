@@ -143,8 +143,8 @@
     "adding a new user to the 'built-in' organization is currently disabled. Please note: all users in the 'built-in' organization are global administrators in Casdoor. Refer to the docs: https://casdoor.org/docs/basic/core-concepts#how-does-casdoor-manage-itself. If you still wish to create a user for the 'built-in' organization, go to the organization's settings page and enable the 'Has privilege consent' option.": "La adición de un nuevo usuario a la organización 'integrada' está actualmente deshabilitada. Tenga en cuenta: todos los usuarios de la organización 'integrada' son administradores globales en Casdoor. Consulte los docs: https://casdoor.org/docs/basic/core-concepts#how  -does-casdoor-manage-itself. Si todavía desea crear un usuario para la organización 'integrada', vaya a la página de configuración de la organización y habilite la opción 'Tiene consentimiento de privilegios'."
   },
   "permission": {
-    "Permission must have at least one action": "Permission must have at least one action",
-    "Permission must have at least one resource": "Permission must have at least one resource",
+    "Permission requires at least one action": "Permission requires at least one action",
+    "Permission requires at least one resource": "Permission requires at least one resource",
     "Permission must have at least one user or role": "Permission must have at least one user or role",
     "The model of the permission has no domain-aware role definition (g = _, _, _), so domains must be empty": "The model of the permission has no domain-aware role definition (g = _, _, _), so domains must be empty",
     "The permission: \"%s\" doesn't exist": "El permiso: \"%s\" no existe"

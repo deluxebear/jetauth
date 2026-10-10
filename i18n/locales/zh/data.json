@@ -143,8 +143,8 @@
     "adding a new user to the 'built-in' organization is currently disabled. Please note: all users in the 'built-in' organization are global administrators. If you still wish to create a user for the 'built-in' organization, go to the organization's settings page and enable the 'Has privilege consent' option.": "目前，向'built-in'组织添加新用户的功能已禁用。请注意：'built-in'组织中的所有用户均为全局管理员。如果您仍希望为built-in组织创建用户，请转到该组织的设置页面并启用「特权同意」选项。"
   },
   "permission": {
-    "Permission must have at least one action": "权限必须至少包含一个操作",
-    "Permission must have at least one resource": "权限必须至少包含一个资源",
+    "Permission requires at least one action": "权限必须至少包含一个操作",
+    "Permission requires at least one resource": "权限必须至少包含一个资源",
     "Permission must have at least one user or role": "权限必须至少包含一个用户或角色",
     "The model of the permission has no domain-aware role definition (g = _, _, _), so domains must be empty": "该权限所选模型没有支持域的角色定义 (g = _, _, _)，因此域必须为空",
     "The permission: \"%s\" doesn't exist": "权限: \"%s\" 不存在"

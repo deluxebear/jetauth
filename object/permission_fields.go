@@ -15,7 +15,6 @@
 package object
 
 import (
-	"sort"
 	"strings"
 
 	"github.com/casbin/casbin/v3/model"
@@ -25,8 +24,8 @@ import (
 // the backend locale files; controllers translate them with c.T.
 const (
 	PermissionErrNoSubject = "Permission must have at least one user or role"
-	PermissionErrNoRes     = "Permission must have at least one resource"
-	PermissionErrNoAction  = "Permission must have at least one action"
+	PermissionErrNoRes     = "Permission requires at least one resource"
+	PermissionErrNoAction  = "Permission requires at least one action"
 	PermissionErrDomains   = "The model of the permission has no domain-aware role definition (g = _, _, _), so domains must be empty"
 )
 
@@ -98,22 +97,6 @@ func ValidatePermissionFields(p, old *Permission) error {
 	}
 	checkDomains := old == nil || p.Model != old.Model || !sameStringSet(p.Domains, old.Domains)
 	return validatePermissionFieldValues(p, support, checkDomains)
-}
-
-func sameStringSet(a, b []string) bool {
-	if len(a) != len(b) {
-		return false
-	}
-	x := append([]string(nil), a...)
-	y := append([]string(nil), b...)
-	sort.Strings(x)
-	sort.Strings(y)
-	for i := range x {
-		if x[i] != y[i] {
-			return false
-		}
-	}
-	return true
 }
 
 // permissionPolicyFieldsChanged reports whether any field that affects the
