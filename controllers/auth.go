@@ -1007,12 +1007,13 @@ func (c *ApiController) Login() {
 				}
 
 				if user == nil {
-					if !application.EnableSignUp {
+					denial := checkIdpAutoSignup(application, providerItem)
+					if denial == idpSignupDeniedByApplication {
 						c.ResponseError(fmt.Sprintf(c.T("auth:The account for provider: %s and username: %s (%s) does not exist and is not allowed to sign up as new account, please contact your IT support"), provider.Type, userInfo.Username, userInfo.DisplayName))
 						return
 					}
 
-					if !providerItem.CanSignUp {
+					if denial == idpSignupDeniedByProvider {
 						c.ResponseError(fmt.Sprintf(c.T("auth:The account for provider: %s and username: %s (%s) does not exist and is not allowed to sign up as new account via %s, please use another way to sign up"), provider.Type, userInfo.Username, userInfo.DisplayName, provider.Type))
 						return
 					}
@@ -1141,10 +1142,10 @@ func (c *ApiController) Login() {
 
 				c.Ctx.Input.SetParam("recordUserId", user.GetId())
 				c.Ctx.Input.SetParam("recordSignup", "true")
-			} else if provider.Category == "SAML" {
-				// TODO: since we get the user info from SAML response, we can try to create the user
-				resp = &Response{Status: "error", Msg: fmt.Sprintf(c.T("general:The user: %s doesn't exist"), util.GetId(application.Organization, userInfo.Id))}
 			}
+			// SAML assertions are provisioned by the branch above (the same checks as OAuth
+			// and Web3: application EnableSignUp, provider CanSignUp, invitation code, default
+			// group); no separate SAML branch is needed.
 			// resp = &Response{Status: "ok", Msg: "", Data: res}
 		} else { // authForm.Method != "signup"
 			userId := c.GetSessionUsername()
@@ -1620,4 +1621,25 @@ func (c *ApiController) DeviceAuth() {
 
 	c.Data["json"] = object.GetDeviceAuthResponse(deviceCode, userCode, c.Ctx.Request.Host)
 	c.ServeJSON()
+}
+
+type idpSignupDenial int
+
+const (
+	idpSignupAllowed idpSignupDenial = iota
+	idpSignupDeniedByApplication
+	idpSignupDeniedByProvider
+)
+
+// checkIdpAutoSignup decides whether a user that is unknown locally may be created
+// from a third-party identity (OAuth, Web3 or SAML assertion). Both the application
+// and the provider item must explicitly allow sign-up; otherwise nothing is created.
+func checkIdpAutoSignup(application *object.Application, providerItem *object.ProviderItem) idpSignupDenial {
+	if application == nil || !application.EnableSignUp {
+		return idpSignupDeniedByApplication
+	}
+	if providerItem == nil || !providerItem.CanSignUp {
+		return idpSignupDeniedByProvider
+	}
+	return idpSignupAllowed
 }
