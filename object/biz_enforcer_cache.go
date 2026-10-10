@@ -152,6 +152,7 @@ func ClearBizEnforcerCache(owner, appName string) {
 	key := util.GetId(owner, appName)
 	bizEnforcerCache.Delete(key)
 	bizPolicyCacheClear(owner, appName)
+	publishBizPolicyUpdate(owner, appName, 0)
 }
 
 // BizEnforce checks if the request is allowed for the given app.

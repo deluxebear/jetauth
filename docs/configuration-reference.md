@@ -52,6 +52,7 @@ web.AppConfig.String(key)  ─── 命中 ────▶ 用 app.conf 的值
 | `ldapsCertId`               | `""`                                     | string  | ✅             |
 | `redisEndpoint`             | `""`（用内存 session）                   | string  | ✅             |
 | `bizPolicyCacheEnabled`     | `false`                                  | bool    | ✅             |
+| `bizPolicyWatcherEnabled`   | `false`                                  | bool    | ✅             |
 | `bizReBACCacheL3Enabled`    | `false`                                  | bool    | ✅             |
 | `permissionEnforcerCacheEnabled` | `false`                             | bool    | ➕             |
 | `permissionEnforcerCacheSize` | `1000`                                 | int     | ➕             |
@@ -206,7 +207,15 @@ web.AppConfig.String(key)  ─── 命中 ────▶ 用 app.conf 的值
 - **前置条件**：`redisEndpoint` 非空才真正生效。
 - **用途**：把 Casbin 策略/模型缓存到 Redis，SDK 通过 `/api/biz-get-policies`
   拉取时走 Redis；进程内 `sync.Map` 缓存仍在。**多实例部署时进程内缓存陈旧
-  问题尚未解决**，详见 `TODO.md` *Redis 缓存 — 多实例部署支持*。
+  问题请配合 `bizPolicyWatcherEnabled` 解决。
+
+### `bizPolicyWatcherEnabled` — 业务授权策略跨实例失效通知
+- **默认**：`false`
+- **用途**：多实例部署时，通过 Redis pub/sub 广播策略变更，其它实例丢弃本地
+  Enforcer 缓存并在下次访问时重建（`object/biz_policy_watcher.go`）。
+- **地址**：`bizPolicyWatcherAddr`，为空时回退到 `redisEndpoint`；可选
+  `bizPolicyWatcherPassword` / `bizPolicyWatcherDB` / `bizPolicyWatcherChannel`
+  （默认 `/jetauth/biz-policy-update`）。Redis 不可用时自动退化为单实例行为。
 
 ### `bizReBACCacheL3Enabled` — 启用 ReBAC tupleset Redis 缓存（L3 层）
 

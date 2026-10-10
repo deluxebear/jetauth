@@ -160,6 +160,10 @@ func SyncAppPolicies(owner, appName string) (*SyncStats, error) {
 		UpdatedTime:      bumpBizAppConfigUpdatedTime(owner, appName),
 	})
 
+	// 10. Tell the other instances to drop their stale local enforcer
+	// (no-op unless bizPolicyWatcherEnabled).
+	publishBizPolicyUpdate(owner, appName, 0)
+
 	return &SyncStats{
 		PolicyCount: len(policies),
 		RoleCount:   len(roles),
