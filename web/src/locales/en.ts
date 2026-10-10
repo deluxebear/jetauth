@@ -3056,6 +3056,10 @@ const en = {
   "authz.roles.col.displayName": "Display Name",
   // User permission overview
   "authz.userPerms.tab": "Permission Overview",
+  "authz.userBizPerms.tab": "Application Permissions",
+  "authz.userBizPerms.noApps": "No application authorization configs in this organization",
+  "authz.userBizPerms.rebacNotSupported": "Not supported: this app uses ReBAC, which has no role/permission summary. Use the app's relationship browser instead.",
+  "authz.userBizPerms.loadFailed": "Failed to load permissions",
   "authz.userPerms.noRole": "No roles",
   "authz.userPerms.noPermission": "No permissions",
   "authz.userPerms.allowedActions": "Allowed Actions",
