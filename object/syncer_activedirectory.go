@@ -16,6 +16,8 @@ package object
 
 import (
 	"crypto/tls"
+	"crypto/x509"
+	"encoding/hex"
 	"fmt"
 	"strings"
 	"unicode/utf8"
@@ -115,6 +117,39 @@ func (p *ActiveDirectorySyncerProvider) Close() error {
 	return nil
 }
 
+// getTlsConfig builds the TLS configuration for LDAPS connections from Syncer.SslMode:
+//
+//	"verify-full"  verify the certificate chain and the host name
+//	"verify-ca"    verify the certificate chain only (host name is not checked)
+//	anything else  ("", "require", "disable") encrypt without verifying the server certificate;
+//	               this is the behaviour before the option existed and is kept for existing syncers
+func (p *ActiveDirectorySyncerProvider) getTlsConfig(host string) *tls.Config {
+	switch strings.ToLower(p.Syncer.SslMode) {
+	case "verify-full":
+		return &tls.Config{ServerName: host, MinVersion: tls.VersionTLS12}
+	case "verify-ca":
+		return &tls.Config{
+			MinVersion: tls.VersionTLS12,
+			// The default verification also checks the host name, so it is replaced by
+			// a manual chain verification.
+			InsecureSkipVerify: true,
+			VerifyConnection: func(cs tls.ConnectionState) error {
+				if len(cs.PeerCertificates) == 0 {
+					return fmt.Errorf("no server certificate presented")
+				}
+				opts := x509.VerifyOptions{Intermediates: x509.NewCertPool()}
+				for _, cert := range cs.PeerCertificates[1:] {
+					opts.Intermediates.AddCert(cert)
+				}
+				_, err := cs.PeerCertificates[0].Verify(opts)
+				return err
+			},
+		}
+	default:
+		return &tls.Config{InsecureSkipVerify: true}
+	}
+}
+
 // getLdapConn establishes an LDAP connection to Active Directory
 func (p *ActiveDirectorySyncerProvider) getLdapConn() (*goldap.Conn, error) {
 	// syncer.Host should be the AD server hostname/IP
@@ -147,10 +182,7 @@ func (p *ActiveDirectorySyncerProvider) getLdapConn() (*goldap.Conn, error) {
 
 	// Check if SSL is enabled (port 636 typically indicates LDAPS)
 	if port == 636 {
-		tlsConfig := &tls.Config{
-			InsecureSkipVerify: true, // TODO: Make this configurable
-		}
-		conn, err = goldap.DialTLS("tcp", fmt.Sprintf("%s:%d", host, port), tlsConfig)
+		conn, err = goldap.DialTLS("tcp", fmt.Sprintf("%s:%d", host, port), p.getTlsConfig(host))
 	} else {
 		conn, err = goldap.Dial("tcp", fmt.Sprintf("%s:%d", host, port))
 	}
@@ -208,6 +240,7 @@ func (p *ActiveDirectorySyncerProvider) getActiveDirectoryUsers() ([]*OriginalUs
 		"objectGUID",         // Unique identifier
 		"whenCreated",        // Creation time
 		"userAccountControl", // Account status
+		"memberOf",           // Distinguished names of the groups the user is a direct member of
 	}
 
 	searchRequest := goldap.NewSearchRequest(
@@ -227,9 +260,20 @@ func (p *ActiveDirectorySyncerProvider) getActiveDirectoryUsers() ([]*OriginalUs
 		return nil, fmt.Errorf("failed to search Active Directory: %w", err)
 	}
 
+	// Resolve memberOf DNs to group names; membership is nil (unknown) if groups cannot be read
+	dnToGroupName, groupsErr := p.getGroupDnMap(conn, baseDN)
+	if groupsErr != nil {
+		fmt.Printf("Warning: failed to fetch Active Directory groups: %v. Group membership will not be synced.\n", groupsErr)
+	}
+
 	originalUsers := []*OriginalUser{}
 	for _, entry := range sr.Entries {
 		originalUser := p.adEntryToOriginalUser(entry)
+		if groupsErr != nil {
+			originalUser.Groups = nil
+		} else {
+			originalUser.Groups = adGroupNamesForEntry(entry, dnToGroupName)
+		}
 		originalUsers = append(originalUsers, originalUser)
 	}
 
@@ -371,14 +415,191 @@ func (p *ActiveDirectorySyncerProvider) adEntryToOriginalUser(entry *goldap.Entr
 	return user
 }
 
-// GetOriginalGroups retrieves all groups from Active Directory (not implemented yet)
-func (p *ActiveDirectorySyncerProvider) GetOriginalGroups() ([]*OriginalGroup, error) {
-	// TODO: Implement Active Directory group sync
-	return []*OriginalGroup{}, nil
+// adGroupAttributes are the attributes read from group objects.
+var adGroupAttributes = []string{"sAMAccountName", "cn", "description", "mail", "managedBy", "distinguishedName", "objectGUID"}
+
+// searchGroups lists all group objects below baseDN using paged searches.
+func (p *ActiveDirectorySyncerProvider) searchGroups(conn *goldap.Conn, baseDN string) ([]*goldap.Entry, error) {
+	searchRequest := goldap.NewSearchRequest(
+		baseDN,
+		goldap.ScopeWholeSubtree,
+		goldap.NeverDerefAliases,
+		0,
+		0,
+		false,
+		"(objectClass=group)",
+		adGroupAttributes,
+		nil,
+	)
+
+	sr, err := conn.SearchWithPaging(searchRequest, 500)
+	if err != nil {
+		return nil, fmt.Errorf("failed to search Active Directory groups: %w", err)
+	}
+
+	return sr.Entries, nil
 }
 
-// GetOriginalUserGroups retrieves the group IDs that a user belongs to (not implemented yet)
+// adGroupName returns the JetAuth group name for a group entry: sAMAccountName, falling back to cn.
+func adGroupName(entry *goldap.Entry) string {
+	name := getAttributeValueSafe(entry, "sAMAccountName")
+	if name == "" {
+		name = getAttributeValueSafe(entry, "cn")
+	}
+	return name
+}
+
+// adEntryToOriginalGroup converts an Active Directory group entry to an OriginalGroup.
+func adEntryToOriginalGroup(entry *goldap.Entry) *OriginalGroup {
+	name := adGroupName(entry)
+
+	id := name
+	if guidBytes := entry.GetRawAttributeValue("objectGUID"); len(guidBytes) == 16 {
+		id = convertGUIDToString(guidBytes)
+	}
+
+	displayName := getAttributeValueSafe(entry, "cn")
+	if displayName == "" {
+		displayName = name
+	}
+
+	return &OriginalGroup{
+		Id:          id,
+		Name:        name,
+		DisplayName: displayName,
+		Description: getAttributeValueSafe(entry, "description"),
+		Type:        "Virtual",
+		Manager:     adCommonNameFromDn(getAttributeValueSafe(entry, "managedBy")),
+		Email:       getAttributeValueSafe(entry, "mail"),
+	}
+}
+
+// adCommonNameFromDn extracts the first RDN value of a distinguished name ("CN=Jane,OU=x" -> "Jane").
+func adCommonNameFromDn(dn string) string {
+	parsed, err := goldap.ParseDN(dn)
+	if err != nil || len(parsed.RDNs) == 0 || len(parsed.RDNs[0].Attributes) == 0 {
+		return ""
+	}
+	return parsed.RDNs[0].Attributes[0].Value
+}
+
+// getGroupDnMap returns lower-cased group DN -> group name.
+func (p *ActiveDirectorySyncerProvider) getGroupDnMap(conn *goldap.Conn, baseDN string) (map[string]string, error) {
+	entries, err := p.searchGroups(conn, baseDN)
+	if err != nil {
+		return nil, err
+	}
+
+	res := map[string]string{}
+	for _, entry := range entries {
+		name := adGroupName(entry)
+		if name == "" {
+			continue
+		}
+		res[strings.ToLower(entry.DN)] = name
+	}
+
+	return res, nil
+}
+
+// adGroupNamesForEntry resolves the memberOf values of a user entry to group names. DNs that are
+// not known groups (e.g. outside the search base) are ignored.
+func adGroupNamesForEntry(entry *goldap.Entry, dnToGroupName map[string]string) []string {
+	names := []string{}
+	seen := map[string]bool{}
+	for _, dn := range entry.GetAttributeValues("memberOf") {
+		name, ok := dnToGroupName[strings.ToLower(dn)]
+		if ok && !seen[name] {
+			seen[name] = true
+			names = append(names, name)
+		}
+	}
+	return names
+}
+
+// GetOriginalGroups retrieves all groups from Active Directory. The sAMAccountName is the group name.
+func (p *ActiveDirectorySyncerProvider) GetOriginalGroups() ([]*OriginalGroup, error) {
+	conn, err := p.getLdapConn()
+	if err != nil {
+		return nil, err
+	}
+	defer conn.Close()
+
+	baseDN := p.Syncer.Database
+	if baseDN == "" {
+		return nil, fmt.Errorf("database field (base DN) is required for Active Directory syncer")
+	}
+
+	entries, err := p.searchGroups(conn, baseDN)
+	if err != nil {
+		return nil, err
+	}
+
+	originalGroups := []*OriginalGroup{}
+	for _, entry := range entries {
+		group := adEntryToOriginalGroup(entry)
+		if group.Name == "" {
+			continue
+		}
+		originalGroups = append(originalGroups, group)
+	}
+
+	return originalGroups, nil
+}
+
+// GetOriginalUserGroups retrieves the names of the groups a user (sAMAccountName or objectGUID) is a
+// direct member of. Nested group membership and the primary group are not expanded.
 func (p *ActiveDirectorySyncerProvider) GetOriginalUserGroups(userId string) ([]string, error) {
-	// TODO: Implement Active Directory user group membership sync
-	return []string{}, nil
+	conn, err := p.getLdapConn()
+	if err != nil {
+		return nil, err
+	}
+	defer conn.Close()
+
+	baseDN := p.Syncer.Database
+	if baseDN == "" {
+		return nil, fmt.Errorf("database field (base DN) is required for Active Directory syncer")
+	}
+
+	// userId is either the objectGUID string or the sAMAccountName (see adEntryToOriginalUser)
+	filter := fmt.Sprintf("(&(objectClass=user)(objectCategory=person)(sAMAccountName=%s))", goldap.EscapeFilter(userId))
+	if guid := adGuidStringToLdapFilterBytes(userId); guid != "" {
+		filter = fmt.Sprintf("(&(objectClass=user)(objectCategory=person)(objectGUID=%s))", guid)
+	}
+
+	sr, err := conn.Search(goldap.NewSearchRequest(baseDN, goldap.ScopeWholeSubtree, goldap.NeverDerefAliases, 1, 0, false, filter, []string{"memberOf"}, nil))
+	if err != nil {
+		return nil, fmt.Errorf("failed to search Active Directory user: %w", err)
+	}
+	if len(sr.Entries) == 0 {
+		return []string{}, nil
+	}
+
+	dnToGroupName, err := p.getGroupDnMap(conn, baseDN)
+	if err != nil {
+		return nil, err
+	}
+
+	return adGroupNamesForEntry(sr.Entries[0], dnToGroupName), nil
+}
+
+// adGuidStringToLdapFilterBytes converts a UUID string produced by convertGUIDToString into the
+// escaped binary form usable in an LDAP filter, or "" if s is not a GUID.
+func adGuidStringToLdapFilterBytes(s string) string {
+	hexStr := strings.ReplaceAll(s, "-", "")
+	if len(hexStr) != 32 {
+		return ""
+	}
+	raw, err := hex.DecodeString(hexStr)
+	if err != nil {
+		return ""
+	}
+
+	// Inverse of convertGUIDToString: the first three groups are stored little-endian
+	b := []byte{raw[3], raw[2], raw[1], raw[0], raw[5], raw[4], raw[7], raw[6], raw[8], raw[9], raw[10], raw[11], raw[12], raw[13], raw[14], raw[15]}
+	var sb strings.Builder
+	for _, c := range b {
+		sb.WriteString(fmt.Sprintf("\\%02x", c))
+	}
+	return sb.String()
 }
