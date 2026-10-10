@@ -36,6 +36,10 @@ func rebacRateLimited(c *ApiController, endpoint string) {
 type writeAuthorizationModelRequest struct {
 	SchemaDSL   string `json:"schemaDsl"`
 	Description string `json:"description,omitempty"`
+	// ExpectedModelId, when present (even as ""), enables compare-and-swap:
+	// the save is rejected with BIZ_REBAC_SCHEMA_STALE if the app's
+	// currentAuthorizationModelId differs. Omit to keep last-write-wins.
+	ExpectedModelId *string `json:"expectedModelId,omitempty"`
 }
 
 // BizWriteAuthorizationModel
@@ -52,6 +56,8 @@ type writeAuthorizationModelRequest struct {
 // ?dryRun=true to run the same parse + conflict-scan pipeline without
 // inserting — used by the admin UI DSL editor for inline validation.
 // @Param   appId    query    string  true   "The app id (owner/appName)"
+// Send `expectedModelId` (the model id the editor loaded) to reject the write
+// with BIZ_REBAC_SCHEMA_STALE when another admin changed the model meanwhile.
 // @Param   dryRun   query    bool    false  "When true, validate only; no DB insert or pointer advance"
 // @Param   body     body     controllers.writeAuthorizationModelRequest  true  "Schema DSL payload"
 // @Success 200 {object} object.SaveAuthorizationModelResult "outcome + model id or conflict list"
@@ -99,7 +105,7 @@ func (c *ApiController) BizWriteAuthorizationModel() {
 		c.ResponseError("unauthenticated: session has no username")
 		return
 	}
-	result, err := object.SaveAuthorizationModel(owner, appName, body.SchemaDSL, createdBy, body.Description)
+	result, err := object.SaveAuthorizationModelCAS(owner, appName, body.SchemaDSL, createdBy, body.Description, body.ExpectedModelId)
 	if err != nil {
 		c.ResponseError(err.Error())
 		return
@@ -237,6 +243,7 @@ func (c *ApiController) BizGetReBACStats() {
 // to probe foreign stores.
 // @Param   appId   query    string  true  "The app id (owner/appName)"
 // @Param   id      query    string  true  "Authorization model id to activate"
+// @Param   expectedModelId query string false "If present, activation is rejected with BIZ_REBAC_SCHEMA_STALE unless the app's current model id equals this value"
 // @Success 200 {object} controllers.Response "ok"
 // @Router /biz-activate-authorization-model [post]
 func (c *ApiController) BizActivateAuthorizationModel() {
@@ -251,7 +258,11 @@ func (c *ApiController) BizActivateAuthorizationModel() {
 		c.ResponseError(err.Error())
 		return
 	}
-	if err := object.ActivateBizAuthorizationModel(owner, appName, id); err != nil {
+	var expected *string
+	if vals, ok := c.Ctx.Request.URL.Query()["expectedModelId"]; ok && len(vals) > 0 {
+		expected = &vals[0]
+	}
+	if err := object.ActivateBizAuthorizationModelCAS(owner, appName, id, expected); err != nil {
 		if errors.Is(err, object.ErrAuthorizationModelNotFound) {
 			c.ResponseError("authorization model not found: " + id)
 			return

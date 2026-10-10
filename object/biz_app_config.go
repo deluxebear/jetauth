@@ -204,6 +204,29 @@ func SetBizAppConfigAuthorizationModelId(owner, appName, modelId string) (bool, 
 	return affected != 0, nil
 }
 
+// CompareAndSetBizAppConfigAuthorizationModelId advances the pointer only if
+// the stored CurrentAuthorizationModelId still equals expected (an empty
+// expected matches both ” and NULL). Returns false when the row's pointer
+// changed (or the row is gone), without writing anything. Used by the ReBAC
+// schema save/activate paths to close the concurrent-admin overwrite window
+// (Plan R6).
+func CompareAndSetBizAppConfigAuthorizationModelId(owner, appName, expected, modelId string) (bool, error) {
+	if util.IsStringsEmpty(owner, appName) {
+		return false, nil
+	}
+	sess := ormer.Engine.Table(&BizAppConfig{}).Where("owner = ? AND app_name = ?", owner, appName)
+	if expected == "" {
+		sess = sess.And("(current_authorization_model_id = '' OR current_authorization_model_id IS NULL)")
+	} else {
+		sess = sess.And("current_authorization_model_id = ?", expected)
+	}
+	affected, err := sess.Cols("current_authorization_model_id").Update(&BizAppConfig{CurrentAuthorizationModelId: modelId})
+	if err != nil {
+		return false, err
+	}
+	return affected != 0, nil
+}
+
 func DeleteBizAppConfig(config *BizAppConfig) (bool, error) {
 	affected, err := ormer.Engine.ID(core.PK{config.Owner, config.AppName}).Delete(&BizAppConfig{})
 	if err != nil {

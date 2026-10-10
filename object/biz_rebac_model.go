@@ -24,6 +24,50 @@ import (
 // distinguish "model exists but you can't see it" from "no such model".
 var ErrAuthorizationModelNotFound = errors.New("authorization model not found")
 
+// ErrAuthorizationModelStale is returned by the save/activate paths when the
+// caller supplied an expected CurrentAuthorizationModelId and the app's
+// pointer has since moved (another admin saved or activated a model). The
+// caller should reload the current model and retry deliberately.
+var ErrAuthorizationModelStale = errors.New("BIZ_REBAC_SCHEMA_STALE: the authorization model was changed by someone else; reload and retry")
+
+// checkExpectedModelId pre-validates an optional expected pointer against the
+// app config. expected == nil disables the check (backward compatible).
+func checkExpectedModelId(owner, appName string, expected *string) error {
+	if expected == nil {
+		return nil
+	}
+	cfg, err := GetBizAppConfig(util.GetId(owner, appName))
+	if err != nil {
+		return err
+	}
+	if cfg == nil {
+		return fmt.Errorf("app config not found: %s/%s", owner, appName)
+	}
+	if cfg.CurrentAuthorizationModelId != *expected {
+		return ErrAuthorizationModelStale
+	}
+	return nil
+}
+
+// advanceModelPointer moves the app pointer to modelId, using compare-and-swap
+// when expected is non-nil and a plain update otherwise.
+func advanceModelPointer(owner, appName, modelId string, expected *string) error {
+	if expected == nil {
+		if _, err := SetBizAppConfigAuthorizationModelId(owner, appName, modelId); err != nil {
+			return fmt.Errorf("advance current model pointer: %w", err)
+		}
+		return nil
+	}
+	ok, err := CompareAndSetBizAppConfigAuthorizationModelId(owner, appName, *expected, modelId)
+	if err != nil {
+		return fmt.Errorf("advance current model pointer: %w", err)
+	}
+	if !ok {
+		return ErrAuthorizationModelStale
+	}
+	return nil
+}
+
 // BizAuthorizationModel stores a single immutable snapshot of an OpenFGA-compatible
 // authorization schema (DSL + JSON representation) for a given application.
 //
@@ -264,11 +308,17 @@ func ValidateAuthorizationModel(owner, appName, dsl string) (*SaveAuthorizationM
 // into one outcome so the response cannot be used to probe foreign stores
 // (spec §7.2 cross-tenant invisibility).
 //
-// PR2 note: shares the same compare-and-swap gap as SaveAuthorizationModel
-// (concurrent activations can interleave; last write wins). Both call
-// sites should grow CAS together — see the matching note above
-// SaveAuthorizationModel.
+// Callers that want optimistic concurrency use
+// ActivateBizAuthorizationModelCAS; this variant overwrites unconditionally.
 func ActivateBizAuthorizationModel(owner, appName, modelId string) error {
+	return ActivateBizAuthorizationModelCAS(owner, appName, modelId, nil)
+}
+
+// ActivateBizAuthorizationModelCAS is ActivateBizAuthorizationModel with an
+// optional expected current model id. When expected is non-nil and the app's
+// pointer differs (checked up front and again atomically in the UPDATE),
+// ErrAuthorizationModelStale is returned and nothing changes.
+func ActivateBizAuthorizationModelCAS(owner, appName, modelId string, expected *string) error {
 	if modelId == "" {
 		return ErrAuthorizationModelNotFound
 	}
@@ -279,8 +329,11 @@ func ActivateBizAuthorizationModel(owner, appName, modelId string) error {
 	if m == nil || m.Owner != owner || m.AppName != appName {
 		return ErrAuthorizationModelNotFound
 	}
-	if _, err := SetBizAppConfigAuthorizationModelId(owner, appName, modelId); err != nil {
-		return fmt.Errorf("advance current model pointer: %w", err)
+	if err := checkExpectedModelId(owner, appName, expected); err != nil {
+		return err
+	}
+	if err := advanceModelPointer(owner, appName, modelId, expected); err != nil {
+		return err
 	}
 	// Active model id changed — drop cached stats so Overview shows new activeModelId.
 	InvalidateReBACStatsCache(owner, appName)
@@ -295,10 +348,22 @@ func ActivateBizAuthorizationModel(owner, appName, modelId string) error {
 // a model row that's never referenced (acceptable: §4.2 "永远不 UPDATE 或
 // DELETE" invariant).
 //
-// PR2 note: compare-and-swap on the previous CurrentAuthorizationModelId
-// will be added then; for PR1 the conflict scan already blocks the
-// destructive-change race that matters most.
+// SaveAuthorizationModel overwrites the pointer unconditionally; use
+// SaveAuthorizationModelCAS for optimistic concurrency (Plan R6).
 func SaveAuthorizationModel(owner, appName, dsl, createdBy, description string) (*SaveAuthorizationModelResult, error) {
+	return SaveAuthorizationModelCAS(owner, appName, dsl, createdBy, description, nil)
+}
+
+// SaveAuthorizationModelCAS is SaveAuthorizationModel with an optional
+// expected current model id (nil = no check; "" = the app must have no model
+// yet). A mismatch returns ErrAuthorizationModelStale. The check runs before
+// any row is inserted, and the pointer advance is itself a compare-and-swap
+// so a racing writer cannot slip in between; in that rare race the inserted
+// model row is stranded but harmless (append-only, never referenced).
+func SaveAuthorizationModelCAS(owner, appName, dsl, createdBy, description string, expected *string) (*SaveAuthorizationModelResult, error) {
+	if err := checkExpectedModelId(owner, appName, expected); err != nil {
+		return nil, err
+	}
 	done, parsed, err := evaluateAuthorizationModel(owner, appName, dsl)
 	if err != nil {
 		return nil, err
@@ -327,8 +392,8 @@ func SaveAuthorizationModel(owner, appName, dsl, createdBy, description string) 
 	// would (a) re-validate PolicyTable and (b) trigger syncBizPolicies, both
 	// of which are Casbin-lane operations wasted on a ReBAC app (spec §13
 	// Always: "Casbin 代码路径零修改").
-	if _, err := SetBizAppConfigAuthorizationModelId(owner, appName, m.Id); err != nil {
-		return nil, fmt.Errorf("advance current model pointer: %w", err)
+	if err := advanceModelPointer(owner, appName, m.Id, expected); err != nil {
+		return nil, err
 	}
 
 	// Schema advance may reclassify which tuples are admissible under
