@@ -25,6 +25,8 @@ import UnsavedBanner from "../components/UnsavedBanner";
 import { useUnsavedWarning } from "../hooks/useUnsavedWarning";
 import PermissionStateBadge from "../components/PermissionStateBadge";
 import { canApprovePermission, getStoredAccount, isGlobalAdmin } from "../utils/auth";
+import { DEFAULT_PERMISSION_MODEL, getModelSupport, type ModelSupport } from "../utils/casbinModel";
+import { validatePermissionForm } from "../utils/permissionValidation";
 
 const RESOURCE_TYPE_OPTIONS = [
   { value: "Application", label: "Application" },
@@ -142,6 +144,38 @@ export default function PermissionEditPage() {
     if (entity) { setPermission(entity); setOriginalJson(JSON.stringify(entity)); }
   }, [entity]);
 
+  // Model awareness: fetch the selected model's text and work out which fields it can use.
+  // Blank model => built-in default. null while a named model is still loading.
+  const modelId = permission?.model || "";
+  const hasPermission = !!permission;
+  const [modelSupport, setModelSupport] = useState<ModelSupport | null>(null);
+  useEffect(() => {
+    if (!hasPermission) return;
+    if (!modelId) { setModelSupport(getModelSupport("")); return; }
+    let cancelled = false;
+    setModelSupport(null);
+    const [mOwner, ...rest] = modelId.split("/");
+    ModelBackend.getModel(mOwner, rest.join("/")).then((res) => {
+      if (cancelled) return;
+      // Unknown model: leave every field editable; the server remains the authority.
+      setModelSupport(res.status === "ok" && res.data ? getModelSupport(res.data.modelText || "") : null);
+    }).catch(() => { if (!cancelled) setModelSupport(null); });
+    return () => { cancelled = true; };
+  }, [modelId, hasPermission]);
+
+  // Fields the model cannot use are cleared so the saved record matches what is enforced.
+  useEffect(() => {
+    if (!modelSupport) return;
+    setPermission((prev) => {
+      if (!prev) return prev;
+      const next = { ...prev };
+      let changed = false;
+      if (!modelSupport.hasRole && (prev.roles?.length ?? 0) > 0) { next.roles = []; changed = true; }
+      if (!modelSupport.hasDomain && (prev.domains?.length ?? 0) > 0) { next.domains = []; changed = true; }
+      return changed ? next : prev;
+    });
+  }, [modelSupport]);
+
   const isDirty = !!permission && originalJson !== "" && JSON.stringify(permission) !== originalJson;
   const showBanner = useUnsavedWarning({ isAddMode, isDirty });
 
@@ -162,7 +196,7 @@ export default function PermissionEditPage() {
 
   // Runs an approval action, then merges only the server-owned approval fields
   // so unsaved edits to the rest of the form survive.
-  const runStateAction = async (call: () => Promise<{ status: string; msg: string }>, okKey: Parameters<typeof t>[0]) => {
+  const runStateAction = async (call: () => Promise<{ status: string; msg: string }>, okKey: Parameters<typeof t>[0], savedForm?: Permission) => {
     setActionBusy(true);
     try {
       const res = await call();
@@ -175,7 +209,9 @@ export default function PermissionEditPage() {
         const f = fresh.data;
         const merge = (p: Permission): Permission => ({ ...p, state: f.state, approver: f.approver, approveTime: f.approveTime, rejectReason: f.rejectReason ?? "" });
         setPermission((prev) => (prev ? merge(prev) : prev));
-        try { setOriginalJson(JSON.stringify(merge(JSON.parse(originalJson)))); } catch { /* keep */ }
+        // When the call also saved the current form (revoke/resubmit), the form is now the baseline.
+        if (savedForm) setOriginalJson(JSON.stringify(merge(savedForm)));
+        else try { setOriginalJson(JSON.stringify(merge(JSON.parse(originalJson)))); } catch { /* keep */ }
       }
       modal.toast(t(okKey));
       invalidateList();
@@ -200,13 +236,22 @@ export default function PermissionEditPage() {
   };
   // Revoke and resubmit both move the permission back to Pending through the update endpoint,
   // which enforces the state machine server-side.
-  const moveToPending = (okKey: string) => runStateAction(async () => {
-    const latest = await PermissionBackend.getPermission(permission.owner, permission.name);
-    if (latest.status !== "ok" || !latest.data) return { status: "error", msg: latest.msg };
-    return PermissionBackend.updatePermission(permission.owner, permission.name, { ...latest.data, state: "Pending" });
-  }, okKey);
+  // They send the current form state (not the server copy) so unsaved edits are neither lost nor
+  // silently dropped; a dirty form is validated first because the update persists it.
+  const moveToPending = (okKey: string) => {
+    if (isDirty && !validateForm()) return Promise.resolve();
+    const payload = { ...permission, state: "Pending" };
+    return runStateAction(() => PermissionBackend.updatePermission(permission.owner, permission.name, payload), okKey as Parameters<typeof t>[0], payload);
+  };
+
+  const validateForm = (): boolean => {
+    const err = validatePermissionForm(permission, modelSupport);
+    if (err) { modal.toast(t(err), "error"); return false; }
+    return true;
+  };
 
   const handleSave = async () => {
+    if (!validateForm()) return;
     setSaving(true);
     try {
       const res = await PermissionBackend.updatePermission(owner!, name!, permission);
@@ -229,6 +274,7 @@ export default function PermissionEditPage() {
     }
   };
   const handleSaveAndExit = async () => {
+    if (!validateForm()) return;
     setSaving(true);
     try {
       const res = await PermissionBackend.updatePermission(owner!, name!, permission);
@@ -320,8 +366,14 @@ export default function PermissionEditPage() {
         <FormField label={t("field.description")}>
           <input value={permission.description || ""} onChange={(e) => set("description", e.target.value)} className={inputClass} />
         </FormField>
-        <FormField label={t("col.model")} tooltip={t("permissions.tooltip.model")}>
+        <FormField label={t("col.model")} tooltip={t("permissions.tooltip.model")} help={permission.model ? undefined : t("permissions.help.modelDefault")}>
           <SingleSearchSelect value={permission.model} options={modelOptions} onChange={(v) => set("model", v)} placeholder={t("common.search")} />
+          {!permission.model && (
+            <details className="mt-1 text-[11px] text-text-muted">
+              <summary className="cursor-pointer select-none">{t("permissions.help.showDefaultModel")}</summary>
+              <pre className="mt-1 overflow-x-auto rounded-lg bg-surface-2 p-2 font-mono text-[11px] leading-relaxed text-text-secondary">{DEFAULT_PERMISSION_MODEL}</pre>
+            </details>
+          )}
         </FormField>
         <FormField label={t("permissions.field.adapter")} tooltip={t("permissions.tooltip.adapter")}>
           <SingleSearchSelect value={permission.adapter} options={adapterOptions} onChange={(v) => set("adapter", v)} placeholder={t("common.search")} />
@@ -330,17 +382,17 @@ export default function PermissionEditPage() {
 
       {/* Members */}
       <FormSection title={t("permissions.section.members")}>
-        <FormField label={t("roles.field.users")} tooltip={t("permissions.tooltip.users")} span="full">
+        <FormField label={t("roles.field.users")} tooltip={t("permissions.tooltip.users")} required help={modelSupport && !modelSupport.hasRole ? t("permissions.help.usersRequired") : t("permissions.help.subjectRequired")} span="full">
           <MultiSearchSelect selected={permission.users || []} options={userOptions} onChange={(v) => set("users", v)} placeholder={t("common.search")} />
         </FormField>
-        <FormField label={t("roles.field.groups")} tooltip={t("permissions.tooltip.groups")} span="full">
+        <FormField label={t("roles.field.groups")} tooltip={t("permissions.tooltip.groups")} help={modelSupport && !modelSupport.hasRole ? t("permissions.help.groupsNoEffectNoRole") : t("permissions.help.groupsNoPolicy")} span="full">
           <MultiSearchSelect selected={permission.groups || []} options={groupOptions} onChange={(v) => set("groups", v)} placeholder={t("common.search")} />
         </FormField>
-        <FormField label={t("roles.field.roles")} tooltip={t("permissions.tooltip.roles")} span="full">
-          <MultiSearchSelect selected={permission.roles || []} options={roleOptions} onChange={(v) => set("roles", v)} placeholder={t("common.search")} />
+        <FormField label={t("roles.field.roles")} tooltip={t("permissions.tooltip.roles")} help={modelSupport !== null && !modelSupport.hasRole ? t("permissions.help.rolesDisabled") : undefined} span="full">
+          <MultiSearchSelect selected={permission.roles || []} options={roleOptions} onChange={(v) => set("roles", v)} placeholder={t("common.search")} disabled={modelSupport !== null && !modelSupport.hasRole} />
         </FormField>
-        <FormField label={t("roles.field.domains")} tooltip={t("permissions.tooltip.domains")} span="full">
-          <MultiSearchSelect selected={permission.domains || []} options={(permission.domains || []).map((d) => ({ value: d, label: d }))} onChange={(v) => set("domains", v)} placeholder={t("roles.field.domainsPlaceholder")} />
+        <FormField label={t("roles.field.domains")} tooltip={t("permissions.tooltip.domains")} help={modelSupport !== null && !modelSupport.hasDomain ? t("permissions.help.domainsDisabled") : undefined} span="full">
+          <MultiSearchSelect selected={permission.domains || []} options={(permission.domains || []).map((d) => ({ value: d, label: d }))} onChange={(v) => set("domains", v)} placeholder={t("roles.field.domainsPlaceholder")} disabled={modelSupport !== null && !modelSupport.hasDomain} />
         </FormField>
       </FormSection>
 
@@ -349,10 +401,10 @@ export default function PermissionEditPage() {
         <FormField label={t("permissions.field.resourceType")} tooltip={t("permissions.tooltip.resourceType")}>
           <SimpleSelect value={permission.resourceType} options={RESOURCE_TYPE_OPTIONS} onChange={(v) => { set("resourceType", v); set("resources", []); set("actions", []); }} />
         </FormField>
-        <FormField label={t("permissions.field.resources")} tooltip={t("permissions.tooltip.resources")} span="full">
+        <FormField label={t("permissions.field.resources")} tooltip={t("permissions.tooltip.resources")} required span="full">
           <MultiSearchSelect selected={permission.resources || []} options={resourceOpts} onChange={(v) => set("resources", v)} placeholder={isCustom || isAPI ? t("permissions.field.resourcesCustomPlaceholder") : t("common.search")} />
         </FormField>
-        <FormField label={t("permissions.field.actions")} tooltip={t("permissions.tooltip.actions")} span="full">
+        <FormField label={t("permissions.field.actions")} tooltip={t("permissions.tooltip.actions")} required span="full">
           <MultiSearchSelect selected={permission.actions || []} options={actionOpts} onChange={(v) => set("actions", v)} placeholder={t("common.search")} />
         </FormField>
         <FormField label={t("permissions.field.effect")} tooltip={t("permissions.tooltip.effect")}>
