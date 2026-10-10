@@ -32,7 +32,6 @@ interface WebAuthnFormProps {
 export default function WebAuthnForm({
   identifier,
   userHint,
-  application: _application,
   organization,
   onSuccess,
   onBack,

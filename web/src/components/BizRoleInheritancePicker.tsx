@@ -21,7 +21,7 @@ interface Props {
   onChanged?: () => void;
 }
 
-export default function BizRoleInheritancePicker({ roleId, organization: _organization, candidatePool, onChanged }: Props) {
+export default function BizRoleInheritancePicker({ roleId, candidatePool, onChanged }: Props) {
   const { t } = useTranslation();
   const modal = useModal();
   const queryClient = useQueryClient();

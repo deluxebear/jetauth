@@ -12,7 +12,7 @@ interface Props {
  * Mobile (<768px): collapses to single-column — the hero panel is hidden
  * and the form gets full viewport.
  */
-export default function LeftForm({ children, backgroundUrl, backgroundUrlMobile: _backgroundUrlMobile }: Props) {
+export default function LeftForm({ children, backgroundUrl }: Props) {
   return (
     <div
       className="min-h-screen flex"

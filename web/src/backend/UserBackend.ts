@@ -60,7 +60,7 @@ export function getGlobalUsers(params: {
   sortOrder?: string;
 }) {
   // For global users, only pass pagination params (no owner filter)
-  const { owner, ...rest } = params;
+  const rest = Object.fromEntries(Object.entries(params).filter(([k]) => k !== "owner"));
   const qs = Object.entries(rest)
     .filter(([, v]) => v !== undefined && v !== "")
     .map(([k, v]) => `${k}=${encodeURIComponent(String(v))}`)
@@ -172,7 +172,7 @@ export function generateRandomPassword(length = 8): string {
   const special = "!@#$%&*";
   const all = upper + lower + digits + special;
   // Ensure at least one of each category
-  let pwd = [
+  const pwd = [
     upper[Math.floor(Math.random() * upper.length)],
     lower[Math.floor(Math.random() * lower.length)],
     digits[Math.floor(Math.random() * digits.length)],

@@ -19,7 +19,7 @@ const SANITIZE_CONFIG: Config = {
     "width", "height",
   ],
   ALLOWED_URI_REGEXP:
-    /^(?:(?:https?|mailto|tel):|[^a-z]|[a-z+.\-]+(?:[^a-z+.\-:]|$))/i,
+    /^(?:(?:https?|mailto|tel):|[^a-z]|[a-z+.-]+(?:[^a-z+.:-]|$))/i,
   FORBID_TAGS: [
     "script", "iframe", "object", "embed", "form", "input",
     "style", "link", "meta",

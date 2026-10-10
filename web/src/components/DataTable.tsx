@@ -668,7 +668,6 @@ export default function DataTable<T extends object>({
                     </span>
                     {col.filterable && (
                       <FilterPopover
-                        columnKey={col.key}
                         isOpen={activeFilter === col.key}
                         onToggle={() => setActiveFilter(activeFilter === col.key ? null : col.key)}
                         onApply={(value) => handleFilter(col.key, value)}
@@ -853,13 +852,11 @@ export default function DataTable<T extends object>({
 
 // Column search/filter popover — uses fixed positioning to escape overflow:hidden
 function FilterPopover({
-  columnKey: _columnKey,
   isOpen,
   onToggle,
   onApply,
   options,
 }: {
-  columnKey: string;
   isOpen: boolean;
   onToggle: () => void;
   onApply: (value: string) => void;
