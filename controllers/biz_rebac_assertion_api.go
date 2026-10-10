@@ -89,7 +89,8 @@ func (c *ApiController) BizAddAssertion() {
 		len(body.Relation) > maxAssertionFieldLen ||
 		len(body.User) > maxAssertionFieldLen ||
 		len(body.Description) > maxAssertionFieldLen {
-		c.ResponseError("assertion field too long (max 1024 chars per field)"); return
+		c.ResponseError("assertion field too long (max 1024 chars per field)")
+		return
 	}
 	a := &object.BizReBACAssertion{
 		Owner: owner, AppName: appName,
