@@ -25,6 +25,19 @@ const reBACOperationsGuideURL = "/docs/rebac-operations-guide.md"
 // to use instead. Called from handlers whose semantics only exist in Casbin
 // (e.g. "list all roles a user has" — ReBAC has no role concept at this tier).
 //
+// Design decision (TODO "ReBAC-mode adaptation of biz-get-user-roles /
+// biz-get-user-permissions"): these endpoints intentionally stay unsupported
+// in ReBAC mode rather than being adapted. Their contract is "which role names
+// / (object, action) policies does this user hold across the app", which has
+// no ReBAC equivalent: there is no role entity, and the only enumeration
+// primitive is ListObjects/ListUsers, which requires a concrete
+// (objectType, relation) pair these endpoints do not take. Synthesising an
+// answer would mean scanning every (type, relation) in the schema, and the
+// result would be a different shape with different semantics (derived
+// accessibility, not granted policy rows) that SDK callers could silently
+// misread. Returning the explicit guidance error pointing at
+// /api/biz-list-objects (or /api/biz-check) is the safe behaviour.
+//
 // suggestUse is the ReBAC-native endpoint path the caller should hit instead,
 // e.g. "/api/biz-list-objects" or "/api/biz-check".
 func writeNotSupportedInReBAC(w http.ResponseWriter, suggestUse string) {
