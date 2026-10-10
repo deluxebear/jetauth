@@ -107,6 +107,11 @@ func (p *DatabaseSyncerProvider) GetOriginalUsers() ([]*OriginalUser, error) {
 	}
 	results = nil
 
+	err = p.attachConfiguredGroupMembership(users)
+	if err != nil {
+		return nil, err
+	}
+
 	return users, nil
 }
 
@@ -168,16 +173,4 @@ func (t dsnConnector) Connect(ctx context.Context) (driver.Conn, error) {
 
 func (t dsnConnector) Driver() driver.Driver {
 	return t.driver
-}
-
-// GetOriginalGroups retrieves all groups from Database (not implemented yet)
-func (p *DatabaseSyncerProvider) GetOriginalGroups() ([]*OriginalGroup, error) {
-	// TODO: Implement Database group sync
-	return []*OriginalGroup{}, nil
-}
-
-// GetOriginalUserGroups retrieves the group IDs that a user belongs to (not implemented yet)
-func (p *DatabaseSyncerProvider) GetOriginalUserGroups(userId string) ([]string, error) {
-	// TODO: Implement Database user group membership sync
-	return []string{}, nil
 }
