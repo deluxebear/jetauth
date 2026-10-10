@@ -3675,6 +3675,7 @@ const zh: Record<string, string> = {
   "rebac.schema.rollbackConfirmTitle": "回退到此版本？",
   "rebac.schema.rollbackConfirmBody": "活跃模型指针将指向当前版本。历史版本本身不变。",
   "rebac.schema.rollbackDone": "已回退到此版本",
+  "rebac.schema.staleConflict": "在你编辑期间，其他管理员已修改了该 Schema。请刷新页面查看最新版本后再重新应用你的修改。",
   "rebac.schema.publishNew": "发布新版",
   "rebac.schema.publishPromptTitle": "本次变更描述（可选）",
   "rebac.schema.publishPromptPlaceholder": "例如：增加 commenter 关系",

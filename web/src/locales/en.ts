@@ -3685,6 +3685,7 @@ const en = {
   "rebac.schema.rollbackConfirmTitle": "Rollback to this version?",
   "rebac.schema.rollbackConfirmBody": "The active model pointer will be moved to this version. The historical row itself is not modified.",
   "rebac.schema.rollbackDone": "Rolled back to this version",
+  "rebac.schema.staleConflict": "Someone else changed this schema while you were editing. Reload the page to see the latest version, then re-apply your changes.",
   "rebac.schema.publishNew": "Publish new",
   "rebac.schema.publishPromptTitle": "Description for this change (optional)",
   "rebac.schema.publishPromptPlaceholder": "e.g., add commenter relation",

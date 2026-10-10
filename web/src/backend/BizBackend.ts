@@ -897,15 +897,24 @@ export interface BizExpandResult {
 export function saveBizAuthorizationModel(
   appId: string,
   schemaDsl: string,
-  opts: { dryRun?: boolean; description?: string } = {},
+  opts: { dryRun?: boolean; description?: string; expectedModelId?: string } = {},
 ) {
   const q = new URLSearchParams({ appId });
   if (opts.dryRun) q.set("dryRun", "true");
+  // expectedModelId enables compare-and-swap on the server: when the app's
+  // current model id differs the write is rejected with BIZ_REBAC_SCHEMA_STALE
+  // (see isSchemaStaleMsg). "" is meaningful (= "no model yet"); undefined
+  // omits the field and keeps last-write-wins.
   return request<SaveAuthorizationModelResult>(
     "POST",
     `/api/biz-write-authorization-model?${q.toString()}`,
-    { schemaDsl, description: opts.description },
+    { schemaDsl, description: opts.description, expectedModelId: opts.expectedModelId },
   );
+}
+
+/** True when a backend error message is the schema compare-and-swap rejection. */
+export function isSchemaStaleMsg(msg: string | undefined | null): boolean {
+  return !!msg && msg.includes("BIZ_REBAC_SCHEMA_STALE");
 }
 
 // 2. biz-read-authorization-model
@@ -927,8 +936,9 @@ export function listBizAuthorizationModels(appId: string) {
 // 3a. biz-activate-authorization-model — admin "回退到此版本".
 // Repoints the app's CurrentAuthorizationModelId at a historical model row.
 // The historical row itself is not modified.
-export function activateBizAuthorizationModel(appId: string, modelId: string) {
+export function activateBizAuthorizationModel(appId: string, modelId: string, expectedModelId?: string) {
   const params = new URLSearchParams({ appId, id: modelId });
+  if (expectedModelId !== undefined) params.set("expectedModelId", expectedModelId);
   return request<{ activeModelId: string }>(
     "POST",
     `/api/biz-activate-authorization-model?${params.toString()}`,

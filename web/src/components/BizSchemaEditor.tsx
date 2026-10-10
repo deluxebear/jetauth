@@ -123,6 +123,11 @@ export default function BizSchemaEditor({ appId, modelId, mode = "view", onPubli
     createdBy: string;
   } | null>(null);
   const [activeModelId, setActiveModelId] = useState<string>("");
+  // The app's current model id as seen when this editor loaded (updated after
+  // each successful save). Sent as expectedModelId so a concurrent change by
+  // another admin is rejected instead of silently overwritten (Plan R6).
+  // undefined = app config could not be read; skip the check.
+  const expectedModelIdRef = useRef<string | undefined>(undefined);
   const [totalVersions, setTotalVersions] = useState<number>(0);
   const [versionIndexFromNewest, setVersionIndexFromNewest] = useState<number>(0); // 0 = newest
 
@@ -173,7 +178,9 @@ export default function BizSchemaEditor({ appId, modelId, mode = "view", onPubli
           leadSourceRef.current = "user-dsl";
         }
         if (cfgRes.status === "ok" && cfgRes.data) {
-          setActiveModelId((cfgRes.data as { currentAuthorizationModelId?: string }).currentAuthorizationModelId ?? "");
+          const cur = (cfgRes.data as { currentAuthorizationModelId?: string }).currentAuthorizationModelId ?? "";
+          setActiveModelId(cur);
+          expectedModelIdRef.current = cur;
         }
         if (listRes.status === "ok" && Array.isArray(listRes.data)) {
           setTotalVersions(listRes.data.length);
@@ -303,14 +310,20 @@ export default function BizSchemaEditor({ appId, modelId, mode = "view", onPubli
     if (!canSave) return;
     setSaving(true);
     try {
-      const res = await BizBackend.saveBizAuthorizationModel(appId, dsl);
+      const res = await BizBackend.saveBizAuthorizationModel(appId, dsl, {
+        expectedModelId: expectedModelIdRef.current,
+      });
       if (res.status !== "ok" || !res.data) {
-        modal.toast(res.msg || t("rebac.common.error"), "error");
+        modal.toast(BizBackend.isSchemaStaleMsg(res.msg) ? t("rebac.schema.staleConflict") : res.msg || t("rebac.common.error"), "error");
         return;
       }
       const r = res.data as SaveAuthorizationModelResult;
       switch (r.outcome) {
         case "advanced":
+          if (r.authorizationModelId) {
+            expectedModelIdRef.current = r.authorizationModelId;
+            setActiveModelId(r.authorizationModelId);
+          }
           // Clear leadSource before LOAD — otherwise the visual→DSL
           // effect fires right after dispatch and, if the backend's
           // protojson emits types/relations in a different order
@@ -358,14 +371,17 @@ export default function BizSchemaEditor({ appId, modelId, mode = "view", onPubli
           return;
         }
       }
-      const res = await BizBackend.saveBizAuthorizationModel(appId, dsl);
+      const res = await BizBackend.saveBizAuthorizationModel(appId, dsl, {
+        expectedModelId: expectedModelIdRef.current,
+      });
       if (res.status !== "ok" || !res.data) {
         // Deletes already succeeded — don't leave the modal showing phantom
         // "affected" tuples, and surface a specific message so the admin knows
         // which step failed.
         setPendingConflicts([]);
+        const detail = BizBackend.isSchemaStaleMsg(res.msg) ? t("rebac.schema.staleConflict") : res.msg;
         modal.toast(
-          `${t("rebac.schema.plan.savePartialFailure")}${res.msg ? `: ${res.msg}` : ""}`,
+          `${t("rebac.schema.plan.savePartialFailure")}${detail ? `: ${detail}` : ""}`,
           "error",
         );
         return;
@@ -379,6 +395,10 @@ export default function BizSchemaEditor({ appId, modelId, mode = "view", onPubli
         return;
       }
       // advanced | unchanged — save succeeded.
+      if (r.outcome === "advanced" && r.authorizationModelId) {
+        expectedModelIdRef.current = r.authorizationModelId;
+        setActiveModelId(r.authorizationModelId);
+      }
       leadSourceRef.current = "user-dsl";
       setSavedDsl(dsl);
       setDryRun({ kind: "unchanged" });
@@ -451,9 +471,9 @@ export default function BizSchemaEditor({ appId, modelId, mode = "view", onPubli
     modal.showConfirm(
       t("rebac.schema.rollbackConfirmBody"),
       async () => {
-        const res = await BizBackend.activateBizAuthorizationModel(appId, meta.id);
+        const res = await BizBackend.activateBizAuthorizationModel(appId, meta.id, expectedModelIdRef.current);
         if (res.status !== "ok") {
-          modal.toast(res.msg || t("rebac.common.error"), "error");
+          modal.toast(BizBackend.isSchemaStaleMsg(res.msg) ? t("rebac.schema.staleConflict") : res.msg || t("rebac.common.error"), "error");
           return;
         }
         modal.toast(t("rebac.schema.rollbackDone"), "success");
@@ -476,9 +496,10 @@ export default function BizSchemaEditor({ appId, modelId, mode = "view", onPubli
     try {
       const res = await BizBackend.saveBizAuthorizationModel(appId, dsl, {
         description: description ?? "",
+        expectedModelId: expectedModelIdRef.current,
       });
       if (res.status !== "ok" || !res.data) {
-        modal.toast(res.msg || t("rebac.common.error"), "error");
+        modal.toast(BizBackend.isSchemaStaleMsg(res.msg) ? t("rebac.schema.staleConflict") : res.msg || t("rebac.common.error"), "error");
         return;
       }
       const r = res.data as SaveAuthorizationModelResult;
