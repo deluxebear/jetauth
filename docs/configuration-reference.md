@@ -53,6 +53,8 @@ web.AppConfig.String(key)  ─── 命中 ────▶ 用 app.conf 的值
 | `redisEndpoint`             | `""`（用内存 session）                   | string  | ✅             |
 | `bizPolicyCacheEnabled`     | `false`                                  | bool    | ✅             |
 | `bizPolicyWatcherEnabled`   | `false`                                  | bool    | ✅             |
+| `bizEnforcerCacheMaxEntries` | `0`（不限制）                           | int     | ➕             |
+| `bizEnforcerCacheIdleTtlSeconds` | `0`（关闭）                         | int     | ➕             |
 | `bizReBACCacheL3Enabled`    | `false`                                  | bool    | ✅             |
 | `permissionEnforcerCacheEnabled` | `false`                             | bool    | ➕             |
 | `permissionEnforcerCacheSize` | `1000`                                 | int     | ➕             |
@@ -216,6 +218,18 @@ web.AppConfig.String(key)  ─── 命中 ────▶ 用 app.conf 的值
 - **地址**：`bizPolicyWatcherAddr`，为空时回退到 `redisEndpoint`；可选
   `bizPolicyWatcherPassword` / `bizPolicyWatcherDB` / `bizPolicyWatcherChannel`
   （默认 `/jetauth/biz-policy-update`）。Redis 不可用时自动退化为单实例行为。
+
+### `bizEnforcerCacheMaxEntries` / `bizEnforcerCacheIdleTtlSeconds` — 业务 Enforcer 本地缓存上限
+
+- **默认**：均为 `0`（不限制 / 关闭），行为与此前完全一致。
+- **用途**：应用数量很多（>100）时，限制进程内 Casbin Enforcer 数量（LRU）并淘汰长时间
+  未访问的应用（空闲 TTL，后台每 TTL/2 清扫一次）。淘汰只丢弃本进程的 Enforcer，
+  下次访问会从 Redis 策略缓存或 DB 重建，不会改变鉴权结果，只影响首次访问延迟。
+- **与失效机制的关系**：`ClearBizEnforcerCache` 与 `bizPolicyWatcherEnabled` 的跨实例
+  失效消息照常生效；失效发生在重建期间时，重建结果不会写入缓存（代数计数）。
+- **指标**：`biz_enforcer_cache_hits_total`、`biz_enforcer_cache_misses_total`、
+  `biz_enforcer_cache_evictions_total{reason=lru|ttl|invalidate}`、`biz_enforcer_cache_entries`。
+- 实现：`object/biz_enforcer_lru.go`。
 
 ### `bizReBACCacheL3Enabled` — 启用 ReBAC tupleset Redis 缓存（L3 层）
 

@@ -10,7 +10,6 @@ package object
 
 import (
 	"fmt"
-	"sync"
 
 	"github.com/casbin/casbin/v3"
 	"github.com/casbin/casbin/v3/model"
@@ -21,7 +20,10 @@ import (
 )
 
 var (
-	bizEnforcerCache sync.Map           // key: "owner/appName" → value: *casbin.Enforcer
+	// key: "owner/appName" → value: *casbin.Enforcer. Optional LRU cap / idle
+	// TTL via bizEnforcerCacheMaxEntries / bizEnforcerCacheIdleTtlSeconds
+	// (both default off = unbounded). See biz_enforcer_lru.go.
+	bizEnforcerCache = newBizEnforcerLRUFromConf()
 	bizEnforcerGroup singleflight.Group // dedup concurrent cache-fill for the same key
 )
 
@@ -92,6 +94,11 @@ func GetBizEnforcer(owner, appName string) (*casbin.Enforcer, error) {
 
 	// Use singleflight to dedup concurrent cache-fill for the same key
 	v, err, _ := bizEnforcerGroup.Do(key, func() (interface{}, error) {
+		// Capture the invalidation generation before reading anything: if a
+		// ClearBizEnforcerCache / watcher message lands while we build, the
+		// result is returned to this caller but not cached.
+		gen := bizEnforcerCache.Generation()
+
 		// Double-check after acquiring the flight
 		if cached, ok := bizEnforcerCache.Load(key); ok {
 			return cached, nil
@@ -101,7 +108,7 @@ func GetBizEnforcer(owner, appName string) (*casbin.Enforcer, error) {
 		if cacheData := bizPolicyCacheGet(owner, appName); cacheData != nil {
 			e, err := buildEnforcerInMemory(cacheData.ModelText, cacheData.Policies, cacheData.GroupingPolicies)
 			if err == nil {
-				bizEnforcerCache.Store(key, e)
+				bizEnforcerCache.StoreIfGen(key, e, gen)
 				return e, nil
 			}
 			// Redis data corrupt — fall through to DB
@@ -118,7 +125,7 @@ func GetBizEnforcer(owner, appName string) (*casbin.Enforcer, error) {
 			return nil, err
 		}
 
-		bizEnforcerCache.Store(key, e)
+		bizEnforcerCache.StoreIfGen(key, e, gen)
 
 		// Write back to Redis
 		policies, grouping := extractPolicies(e)
