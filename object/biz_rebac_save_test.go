@@ -233,29 +233,3 @@ func TestSaveAuthorizationModel_PersistsDescription(t *testing.T) {
 		t.Fatalf("Description: got %q, want %q", got.Description, "增加 commenter 关系")
 	}
 }
-
-// seedRebacAppConfigForTest creates a BizAppConfig row for the test and
-// registers a t.Cleanup to tear down all derived rows (tuples, models,
-// and the config itself) even if the test panics.
-func seedRebacAppConfigForTest(t *testing.T, owner, appName string) {
-	t.Helper()
-	config := &BizAppConfig{
-		Owner:       owner,
-		AppName:     appName,
-		DisplayName: "rebac integration test",
-		Description: "seeded by biz_rebac_save_test",
-		ModelType:   "rebac",
-		PolicyTable: "biz_" + appName + "_policy",
-		IsEnabled:   true,
-		CreatedTime: util.GetCurrentTime(),
-		UpdatedTime: util.GetCurrentTime(),
-	}
-	if _, err := AddBizAppConfig(config); err != nil {
-		t.Fatalf("seed BizAppConfig: %v", err)
-	}
-	t.Cleanup(func() {
-		_, _ = DeleteBizTuplesForApp(owner, appName)
-		_, _ = DeleteBizAuthorizationModelsForApp(owner, appName)
-		_, _ = DeleteBizAppConfig(config)
-	})
-}
