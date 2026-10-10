@@ -40,6 +40,26 @@ type SyncStats struct {
 	RoleCount   int `json:"roleCount"`
 }
 
+// recordBizPolicyChange appends the changelog entry for a finished sync and
+// returns the app's new policy version (0 on failure; failures are logged and
+// never fail the sync itself).
+func recordBizPolicyChange(owner, appName string, hint *bizChangeHint, c bizSyncCtx, policies, grouping [][]string) int64 {
+	var (
+		version int64
+		err     error
+	)
+	if ptype, rules, ok := resolveBizHint(hint, c, policies, grouping); ok {
+		version, err = appendChangelog(owner, appName, BizChangeAdd, ptype, rules)
+	} else {
+		version, err = appendChangelog(owner, appName, BizChangeFullRebuild, "", nil)
+	}
+	if err != nil {
+		logs.Warning("biz policy changelog append failed for %s/%s: %v", owner, appName, err)
+		return 0
+	}
+	return version
+}
+
 // syncBizPolicies is a helper that wraps SyncAppPolicies with error logging.
 // Use this in CRUD operations where the sync is best-effort.
 func syncBizPolicies(owner, appName string) {
@@ -53,6 +73,13 @@ func syncBizPolicies(owner, appName string) {
 // biz_role and biz_permission tables, then writes them to the app's dedicated
 // policy table. This is called whenever roles or permissions change.
 func SyncAppPolicies(owner, appName string) (*SyncStats, error) {
+	return syncAppPolicies(owner, appName, nil)
+}
+
+// syncAppPolicies is SyncAppPolicies plus an optional hint describing the
+// rules the triggering CRUD change added. With a nil/untrusted hint the
+// changelog records a full_rebuild marker (manual sync, removals, updates…).
+func syncAppPolicies(owner, appName string, hint *bizChangeHint) (*SyncStats, error) {
 	config, err := getBizAppConfigOrError(owner, appName)
 	if err != nil {
 		return nil, err
@@ -160,9 +187,18 @@ func SyncAppPolicies(owner, appName string) (*SyncStats, error) {
 		UpdatedTime:      bumpBizAppConfigUpdatedTime(owner, appName),
 	})
 
-	// 10. Tell the other instances to drop their stale local enforcer
-	// (no-op unless bizPolicyWatcherEnabled).
-	publishBizPolicyUpdate(owner, appName, 0)
+	// 10. Record the change (policy_version++ and changelog rows) AFTER the
+	// enforcer/cache are fresh, so a watcher woken by the new version always
+	// reads up-to-date policies.
+	version := recordBizPolicyChange(owner, appName, hint,
+		bizSyncCtx{hasEft: hasEft, honorsDeny: honorsDeny, hasRoleDef: hasRoleDef},
+		policies, groupingPolicies)
+
+	// 11. Tell the other instances to drop their stale local enforcer and
+	// wake local long-poll watchers (publish is a no-op unless
+	// bizPolicyWatcherEnabled).
+	publishBizPolicyUpdate(owner, appName, version)
+	notifyBizPolicyWatchers(owner, appName)
 
 	return &SyncStats{
 		PolicyCount: len(policies),

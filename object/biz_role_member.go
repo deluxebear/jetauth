@@ -63,7 +63,11 @@ func AddBizRoleMember(m *BizRoleMember, addedBy string) (bool, error) {
 	}
 	if affected != 0 {
 		if role, _ := getBizRoleById(m.RoleId); role != nil {
-			SyncAfterRoleMemberAdded(role.Organization, role.AppName, role.Id)
+			if m.SubjectType == BizRoleSubjectUser {
+				SyncAfterRoleUserMemberAdded(role.Organization, role.AppName, role.Id, m.SubjectId)
+			} else {
+				SyncAfterRoleMemberAdded(role.Organization, role.AppName, role.Id)
+			}
 		}
 	}
 	return affected != 0, nil

@@ -80,6 +80,7 @@ func main() {
 	object.InitBizReBACCache()
 	object.InitPermissionEnforcerCache()
 	object.InitBizPolicyWatcher()
+	object.StartBizPolicyChangelogRetention()
 	object.InitBizReBACRateLimiter(
 		rebacListObjectsRPS(),
 		rebacListObjectsBurst(),

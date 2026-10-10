@@ -78,7 +78,13 @@ func AddBizPermissionGrantee(g *BizPermissionGrantee, addedBy string) (bool, err
 		return false, err
 	}
 	if affected != 0 {
-		syncAffectedAppsByPermissionId(g.PermissionId)
+		// user/role grantees map 1:1 to p-rules for that subject, so the
+		// added delta is precise. Groups need membership expansion → full.
+		var hint *bizChangeHint
+		if g.SubjectType == BizPermGranteeUser || g.SubjectType == BizPermGranteeRole {
+			hint = bizPermissionAddedHint(g.PermissionId, g.SubjectId)
+		}
+		syncAffectedAppsByPermissionIdWithHint(g.PermissionId, hint)
 	}
 	return affected != 0, nil
 }
@@ -151,11 +157,17 @@ func ListPermissionsGrantedToUser(org, userId string) ([]*BizPermission, error) 
 // single app that owns the permission. Permissions are app-local, so a
 // grantee change never affects other apps.
 func syncAffectedAppsByPermissionId(permissionId int64) {
+	syncAffectedAppsByPermissionIdWithHint(permissionId, nil)
+}
+
+// syncAffectedAppsByPermissionIdWithHint is syncAffectedAppsByPermissionId
+// plus a changelog hint (nil → the change is recorded as full_rebuild).
+func syncAffectedAppsByPermissionIdWithHint(permissionId int64, hint *bizChangeHint) {
 	perm, err := getBizPermissionById(permissionId)
 	if err != nil || perm == nil {
 		return
 	}
 	go func(owner, appName string) {
-		_, _ = SyncAppPolicies(owner, appName)
+		_, _ = syncAppPolicies(owner, appName, hint)
 	}(perm.Owner, perm.AppName)
 }

@@ -30,6 +30,11 @@ type BizAppConfig struct {
 	PolicyTable string `xorm:"varchar(100)" json:"policyTable"`
 	IsEnabled   bool   `json:"isEnabled"`
 
+	// PolicyVersion is bumped on every committed policy change (see
+	// biz_policy_changelog.go). Server-maintained: client-supplied values are
+	// ignored on add/update.
+	PolicyVersion int64 `xorm:"bigint notnull default 0" json:"policyVersion"`
+
 	// ModelType selects the authorization engine. Defaults to "casbin"
 	// for backward compatibility; "rebac" routes BizEnforce to the
 	// OpenFGA-compatible graph engine. See docs/rebac-spec.md §4.1.
@@ -244,6 +249,7 @@ func AddBizAppConfig(config *BizAppConfig) (bool, error) {
 		return false, err
 	}
 
+	config.PolicyVersion = 0
 	affected, err := ormer.Engine.Insert(config)
 	if err != nil {
 		return false, err
@@ -264,7 +270,7 @@ func UpdateBizAppConfig(id string, config *BizAppConfig) (bool, error) {
 		return false, err
 	}
 
-	affected, err := ormer.Engine.ID(core.PK{owner, name}).AllCols().Update(config)
+	affected, err := ormer.Engine.ID(core.PK{owner, name}).AllCols().Omit("policy_version").Update(config)
 	if err != nil {
 		return false, err
 	}

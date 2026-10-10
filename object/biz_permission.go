@@ -143,7 +143,9 @@ func AddBizPermission(perm *BizPermission) (bool, error) {
 		return false, err
 	}
 	if affected != 0 {
-		syncAffectedAppsByPermissionId(perm.Id)
+		// A brand-new permission has no grantees yet, so the delta is
+		// usually empty; the hint keeps the changelog precise when it isn't.
+		syncAffectedAppsByPermissionIdWithHint(perm.Id, bizPermissionAddedHint(perm.Id, ""))
 	}
 	return affected != 0, nil
 }

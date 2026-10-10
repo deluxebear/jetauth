@@ -328,6 +328,13 @@ func SyncAfterRoleMemberAdded(org, appName string, roleId int64) {
 	syncAffectedApps(org, appName, roleId)
 }
 
+// SyncAfterRoleUserMemberAdded is SyncAfterRoleMemberAdded for a direct user
+// member: the added g-rules are precisely known, so the policy changelog can
+// record an incremental delta instead of a full_rebuild marker.
+func SyncAfterRoleUserMemberAdded(org, appName string, roleId int64, userId string) {
+	syncAffectedAppsWithHint(org, appName, roleId, bizMemberAddedHint(roleId, userId))
+}
+
 // SyncAfterRoleMemberRemoved is called after biz_role_member loses a row.
 func SyncAfterRoleMemberRemoved(org, appName string, roleId int64) {
 	syncAffectedApps(org, appName, roleId)
@@ -352,6 +359,14 @@ func SyncAfterInheritanceChanged(org, appName string, childRoleId int64) {
 //
 // Rebuilds are fire-and-forget goroutines so mutation endpoints don't block.
 func syncAffectedApps(org, appName string, roleId int64) {
+	syncAffectedAppsWithHint(org, appName, roleId, nil)
+}
+
+// syncAffectedAppsWithHint is syncAffectedApps with a changelog hint applied
+// to every rebuilt app (nil → full_rebuild marker). The hint is validated
+// per app against the rebuilt policy set, so fan-out to apps where the rules
+// don't materialise safely degrades to full_rebuild.
+func syncAffectedAppsWithHint(org, appName string, roleId int64, hint *bizChangeHint) {
 	role, err := getBizRoleById(roleId)
 	if err != nil || role == nil {
 		// Role already gone (delete path) or a DB error. The snapshot-based
@@ -359,7 +374,7 @@ func syncAffectedApps(org, appName string, roleId int64) {
 		// is now reached only on DB errors or races. Fall back to the app we
 		// were told about.
 		if appName != "" {
-			go func(o, a string) { _, _ = SyncAppPolicies(o, a) }(org, appName)
+			go func(o, a string) { _, _ = syncAppPolicies(o, a, hint) }(org, appName)
 		}
 		return
 	}
@@ -385,7 +400,7 @@ func syncAffectedApps(org, appName string, roleId int64) {
 	}
 
 	for app := range appSet {
-		go func(o, a string) { _, _ = SyncAppPolicies(o, a) }(org, app)
+		go func(o, a string) { _, _ = syncAppPolicies(o, a, hint) }(org, app)
 	}
 }
 

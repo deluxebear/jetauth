@@ -84,6 +84,12 @@ func RecordMessage(ctx *context.Context) {
 }
 
 func AfterRecordMessage(ctx *context.Context) {
+	// Long-poll watchers re-issue this GET every ~60s per SDK instance; logging
+	// each one would flood the record table with no audit value.
+	if ctx.Request.URL.Path == "/api/biz-watch-policies" {
+		return
+	}
+
 	record, err := object.NewRecord(ctx)
 	if err != nil {
 		fmt.Printf("AfterRecordMessage() error: %s\n", err.Error())
