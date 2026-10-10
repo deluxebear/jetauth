@@ -20,11 +20,15 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
 	"github.com/deluxebear/jetauth/util"
 )
+
+// oktaBaseUrlOverride replaces the https://<host> base URL, for tests only.
+var oktaBaseUrlOverride string
 
 // OktaSyncerProvider implements SyncerProvider for Okta API-based syncers
 type OktaSyncerProvider struct {
@@ -138,9 +142,7 @@ func (p *OktaSyncerProvider) getOktaUsers(nextLink string) ([]*OktaUser, string,
 	if nextLink != "" {
 		apiUrl = nextLink
 	} else {
-		// Remove https:// or http:// prefix if present in domain
-		domain = strings.TrimPrefix(strings.TrimPrefix(domain, "https://"), "http://")
-		apiUrl = fmt.Sprintf("https://%s/api/v1/users?limit=200", domain)
+		apiUrl = p.oktaBaseUrl() + "/api/v1/users?limit=200"
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
@@ -287,24 +289,170 @@ func (p *OktaSyncerProvider) getOktaOriginalUsers() ([]*OriginalUser, error) {
 		nextLink = next
 	}
 
+	userGroupsMap, groupsErr := p.buildUserGroupsMap()
+	if groupsErr != nil {
+		fmt.Printf("Warning: failed to fetch Okta group memberships: %v. Group membership will not be synced.\n", groupsErr)
+	}
+
 	// Convert Okta users to Casdoor OriginalUser
 	originalUsers := []*OriginalUser{}
 	for _, oktaUser := range allUsers {
 		originalUser := p.oktaUserToOriginalUser(oktaUser)
+		if groupsErr != nil {
+			originalUser.Groups = nil
+		} else if groups, ok := userGroupsMap[oktaUser.Id]; ok {
+			originalUser.Groups = groups
+		}
 		originalUsers = append(originalUsers, originalUser)
 	}
 
 	return originalUsers, nil
 }
 
-// GetOriginalGroups retrieves all groups from Okta (not implemented yet)
-func (p *OktaSyncerProvider) GetOriginalGroups() ([]*OriginalGroup, error) {
-	// TODO: Implement Okta group sync
-	return []*OriginalGroup{}, nil
+// oktaBaseUrl returns https://<okta domain> (an explicit http:// or https:// prefix in the host field is ignored).
+func (p *OktaSyncerProvider) oktaBaseUrl() string {
+	if oktaBaseUrlOverride != "" {
+		return oktaBaseUrlOverride
+	}
+	domain := strings.TrimPrefix(strings.TrimPrefix(p.Syncer.Host, "https://"), "http://")
+	domain = strings.TrimSuffix(domain, "/")
+	return "https://" + domain
 }
 
-// GetOriginalUserGroups retrieves the group IDs that a user belongs to (not implemented yet)
+// OktaGroup represents a group from the Okta API
+type OktaGroup struct {
+	Id      string `json:"id"`
+	Type    string `json:"type"`
+	Profile struct {
+		Name        string `json:"name"`
+		Description string `json:"description"`
+	} `json:"profile"`
+}
+
+// oktaGetJSONList fetches every page of an Okta list endpoint (Link: rel="next" pagination)
+// and passes the raw JSON array of each page to handle.
+func (p *OktaSyncerProvider) oktaGetJSONList(firstUrl string, handle func(page []byte) error) error {
+	if p.Syncer.Host == "" && oktaBaseUrlOverride == "" {
+		return fmt.Errorf("Okta domain (host field) is required for Okta syncer")
+	}
+	if p.Syncer.Password == "" {
+		return fmt.Errorf("API token (password field) is required for Okta syncer")
+	}
+
+	next := firstUrl
+	for next != "" {
+		body, header, err := syncerHttpGet(next, map[string]string{
+			"Authorization": "SSWS " + p.Syncer.Password,
+			"Accept":        "application/json",
+		})
+		if err != nil {
+			return err
+		}
+
+		err = handle(body)
+		if err != nil {
+			return err
+		}
+
+		next = ""
+		if linkHeader := header.Get("Link"); linkHeader != "" {
+			next = parseLinkHeader(linkHeader)["next"]
+		}
+	}
+
+	return nil
+}
+
+func (p *OktaSyncerProvider) getOktaGroups() ([]*OktaGroup, error) {
+	groups := []*OktaGroup{}
+	err := p.oktaGetJSONList(p.oktaBaseUrl()+"/api/v1/groups?limit=200", func(page []byte) error {
+		var items []*OktaGroup
+		if err := json.Unmarshal(page, &items); err != nil {
+			return err
+		}
+		groups = append(groups, items...)
+		return nil
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to list Okta groups: %w", err)
+	}
+	return groups, nil
+}
+
+// GetOriginalGroups retrieves all groups from Okta. The Okta group id is used as the unique
+// group name and the group profile name as display name.
+func (p *OktaSyncerProvider) GetOriginalGroups() ([]*OriginalGroup, error) {
+	oktaGroups, err := p.getOktaGroups()
+	if err != nil {
+		return nil, err
+	}
+
+	originalGroups := []*OriginalGroup{}
+	for _, g := range oktaGroups {
+		displayName := g.Profile.Name
+		if displayName == "" {
+			displayName = g.Id
+		}
+
+		originalGroups = append(originalGroups, &OriginalGroup{
+			Id:          g.Id,
+			Name:        g.Id,
+			DisplayName: displayName,
+			Description: g.Profile.Description,
+			Type:        "Virtual",
+		})
+	}
+
+	return originalGroups, nil
+}
+
+// buildUserGroupsMap builds user id -> group ids by listing the members of every group.
+func (p *OktaSyncerProvider) buildUserGroupsMap() (map[string][]string, error) {
+	groups, err := p.getOktaGroups()
+	if err != nil {
+		return nil, err
+	}
+
+	res := map[string][]string{}
+	for _, g := range groups {
+		memberUrl := fmt.Sprintf("%s/api/v1/groups/%s/users?limit=200", p.oktaBaseUrl(), url.PathEscape(g.Id))
+		err = p.oktaGetJSONList(memberUrl, func(page []byte) error {
+			var members []struct {
+				Id string `json:"id"`
+			}
+			if err := json.Unmarshal(page, &members); err != nil {
+				return err
+			}
+			for _, m := range members {
+				addUserToGroupMap(res, m.Id, g.Id)
+			}
+			return nil
+		})
+		if err != nil {
+			return nil, fmt.Errorf("failed to list members of Okta group %s: %w", g.Id, err)
+		}
+	}
+
+	return res, nil
+}
+
+// GetOriginalUserGroups retrieves the ids (group names) of the groups a user belongs to.
 func (p *OktaSyncerProvider) GetOriginalUserGroups(userId string) ([]string, error) {
-	// TODO: Implement Okta user group membership sync
-	return []string{}, nil
+	groupIds := []string{}
+	userUrl := fmt.Sprintf("%s/api/v1/users/%s/groups", p.oktaBaseUrl(), url.PathEscape(userId))
+	err := p.oktaGetJSONList(userUrl, func(page []byte) error {
+		var items []*OktaGroup
+		if err := json.Unmarshal(page, &items); err != nil {
+			return err
+		}
+		for _, g := range items {
+			groupIds = append(groupIds, g.Id)
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to list groups of Okta user %s: %w", userId, err)
+	}
+
+	return groupIds, nil
 }
