@@ -27,6 +27,13 @@ import (
 	"github.com/deluxebear/jetauth/util"
 )
 
+// Base URLs of the Microsoft identity platform and Graph API. Package variables so tests can
+// point them at a mock server.
+var (
+	azureAdLoginBaseUrl = "https://login.microsoftonline.com"
+	azureAdGraphBaseUrl = "https://graph.microsoft.com/v1.0"
+)
+
 // AzureAdSyncerProvider implements SyncerProvider for Azure AD API-based syncers
 type AzureAdSyncerProvider struct {
 	Syncer *Syncer
@@ -116,7 +123,7 @@ func (p *AzureAdSyncerProvider) getAzureAdAccessToken() (string, error) {
 		return "", fmt.Errorf("client secret (password field) is required for Azure AD syncer")
 	}
 
-	tokenUrl := fmt.Sprintf("https://login.microsoftonline.com/%s/oauth2/v2.0/token", tenantId)
+	tokenUrl := fmt.Sprintf("%s/%s/oauth2/v2.0/token", azureAdLoginBaseUrl, tenantId)
 
 	data := url.Values{}
 	data.Set("client_id", clientId)
@@ -166,7 +173,7 @@ func (p *AzureAdSyncerProvider) getAzureAdAccessToken() (string, error) {
 // getAzureAdUsers gets all users from Azure AD using Microsoft Graph API
 func (p *AzureAdSyncerProvider) getAzureAdUsers(accessToken string) ([]*AzureAdUser, error) {
 	allUsers := []*AzureAdUser{}
-	nextLink := "https://graph.microsoft.com/v1.0/users?$top=999"
+	nextLink := azureAdGraphBaseUrl + "/users?$top=999"
 
 	for nextLink != "" {
 		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
@@ -266,23 +273,179 @@ func (p *AzureAdSyncerProvider) getAzureAdOriginalUsers() ([]*OriginalUser, erro
 	}
 
 	// Convert Azure AD users to Casdoor OriginalUser
+	// Build user id -> group ids from the group member lists (one request per group).
+	// Membership stays nil (unknown) when the lookup fails, e.g. because the app
+	// registration lacks the Group.Read.All / GroupMember.Read.All permission.
+	userGroupsMap, groupsErr := p.buildUserGroupsMap(accessToken)
+	if groupsErr != nil {
+		fmt.Printf("Warning: failed to fetch Azure AD group memberships: %v. Group membership will not be synced.\n", groupsErr)
+	}
+
 	originalUsers := []*OriginalUser{}
 	for _, azureUser := range azureUsers {
 		originalUser := p.azureAdUserToOriginalUser(azureUser)
+		if groupsErr != nil {
+			originalUser.Groups = nil
+		} else if groups, ok := userGroupsMap[azureUser.Id]; ok {
+			originalUser.Groups = groups
+		}
 		originalUsers = append(originalUsers, originalUser)
 	}
 
 	return originalUsers, nil
 }
 
-// GetOriginalGroups retrieves all groups from Azure AD (not implemented yet)
-func (p *AzureAdSyncerProvider) GetOriginalGroups() ([]*OriginalGroup, error) {
-	// TODO: Implement Azure AD group sync
-	return []*OriginalGroup{}, nil
+type AzureAdGroup struct {
+	Id          string `json:"id"`
+	DisplayName string `json:"displayName"`
+	Description string `json:"description"`
+	Mail        string `json:"mail"`
 }
 
-// GetOriginalUserGroups retrieves the group IDs that a user belongs to (not implemented yet)
+type AzureAdGroupListResp struct {
+	OdataNextLink string          `json:"@odata.nextLink"`
+	Value         []*AzureAdGroup `json:"value"`
+}
+
+type AzureAdDirectoryObject struct {
+	Id string `json:"id"`
+}
+
+type AzureAdDirectoryObjectListResp struct {
+	OdataNextLink string                    `json:"@odata.nextLink"`
+	Value         []*AzureAdDirectoryObject `json:"value"`
+}
+
+// graphGet performs an authenticated GET against Microsoft Graph and unmarshals the JSON body.
+func (p *AzureAdSyncerProvider) graphGet(accessToken string, url string, out interface{}) error {
+	body, _, err := syncerHttpGet(url, map[string]string{
+		"Authorization": "Bearer " + accessToken,
+		"Accept":        "application/json",
+	})
+	if err != nil {
+		return err
+	}
+	return json.Unmarshal(body, out)
+}
+
+// getAzureAdGroups lists all groups of the tenant, following @odata.nextLink.
+func (p *AzureAdSyncerProvider) getAzureAdGroups(accessToken string) ([]*AzureAdGroup, error) {
+	groups := []*AzureAdGroup{}
+	nextLink := azureAdGraphBaseUrl + "/groups?$select=id,displayName,description,mail&$top=999"
+
+	for nextLink != "" {
+		var resp AzureAdGroupListResp
+		err := p.graphGet(accessToken, nextLink, &resp)
+		if err != nil {
+			return nil, fmt.Errorf("failed to list groups: %w", err)
+		}
+
+		groups = append(groups, resp.Value...)
+		nextLink = resp.OdataNextLink
+	}
+
+	return groups, nil
+}
+
+// getAzureAdGroupUserIds lists the ids of the direct user members of a group.
+func (p *AzureAdSyncerProvider) getAzureAdGroupUserIds(accessToken string, groupId string) ([]string, error) {
+	ids := []string{}
+	nextLink := fmt.Sprintf("%s/groups/%s/members/microsoft.graph.user?$select=id&$top=999", azureAdGraphBaseUrl, url.PathEscape(groupId))
+
+	for nextLink != "" {
+		var resp AzureAdDirectoryObjectListResp
+		err := p.graphGet(accessToken, nextLink, &resp)
+		if err != nil {
+			return nil, err
+		}
+
+		for _, m := range resp.Value {
+			ids = append(ids, m.Id)
+		}
+		nextLink = resp.OdataNextLink
+	}
+
+	return ids, nil
+}
+
+// buildUserGroupsMap returns user id -> group names (the group id is used as the group name).
+func (p *AzureAdSyncerProvider) buildUserGroupsMap(accessToken string) (map[string][]string, error) {
+	groups, err := p.getAzureAdGroups(accessToken)
+	if err != nil {
+		return nil, err
+	}
+
+	res := map[string][]string{}
+	for _, group := range groups {
+		memberIds, err := p.getAzureAdGroupUserIds(accessToken, group.Id)
+		if err != nil {
+			return nil, fmt.Errorf("failed to list members of group %s: %w", group.Id, err)
+		}
+
+		for _, id := range memberIds {
+			addUserToGroupMap(res, id, group.Id)
+		}
+	}
+
+	return res, nil
+}
+
+// GetOriginalGroups retrieves all groups from Azure AD via Microsoft Graph.
+// The group object id is used as the unique group name; the display name is kept as display name.
+func (p *AzureAdSyncerProvider) GetOriginalGroups() ([]*OriginalGroup, error) {
+	accessToken, err := p.getAzureAdAccessToken()
+	if err != nil {
+		return nil, err
+	}
+
+	groups, err := p.getAzureAdGroups(accessToken)
+	if err != nil {
+		return nil, err
+	}
+
+	originalGroups := []*OriginalGroup{}
+	for _, group := range groups {
+		displayName := group.DisplayName
+		if displayName == "" {
+			displayName = group.Id
+		}
+
+		originalGroups = append(originalGroups, &OriginalGroup{
+			Id:          group.Id,
+			Name:        group.Id,
+			DisplayName: displayName,
+			Description: group.Description,
+			Type:        "Virtual",
+			Email:       group.Mail,
+		})
+	}
+
+	return originalGroups, nil
+}
+
+// GetOriginalUserGroups retrieves the ids (group names) of the groups a user is a direct member of.
+// userId is the Azure AD object id or the user principal name.
 func (p *AzureAdSyncerProvider) GetOriginalUserGroups(userId string) ([]string, error) {
-	// TODO: Implement Azure AD user group membership sync
-	return []string{}, nil
+	accessToken, err := p.getAzureAdAccessToken()
+	if err != nil {
+		return nil, err
+	}
+
+	groupIds := []string{}
+	nextLink := fmt.Sprintf("%s/users/%s/memberOf/microsoft.graph.group?$select=id&$top=999", azureAdGraphBaseUrl, url.PathEscape(userId))
+
+	for nextLink != "" {
+		var resp AzureAdDirectoryObjectListResp
+		err = p.graphGet(accessToken, nextLink, &resp)
+		if err != nil {
+			return nil, fmt.Errorf("failed to list groups of user %s: %w", userId, err)
+		}
+
+		for _, g := range resp.Value {
+			groupIds = append(groupIds, g.Id)
+		}
+		nextLink = resp.OdataNextLink
+	}
+
+	return groupIds, nil
 }

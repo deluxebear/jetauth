@@ -57,11 +57,23 @@ type Syncer struct {
 	Table            string         `xorm:"varchar(100)" json:"table"`
 	TableColumns     []*TableColumn `xorm:"mediumtext" json:"tableColumns"`
 	AffiliationTable string         `xorm:"varchar(100)" json:"affiliationTable"`
-	AvatarBaseUrl    string         `xorm:"varchar(100)" json:"avatarBaseUrl"`
-	ErrorText        string         `xorm:"mediumtext" json:"errorText"`
-	SyncInterval     int            `json:"syncInterval"`
-	IsReadOnly       bool           `json:"isReadOnly"`
-	IsEnabled        bool           `json:"isEnabled"`
+
+	// Optional group sync configuration for the generic Database syncer.
+	// GroupTable + GroupTableColumns describe the table holding groups (same
+	// column-mapping model as TableColumns, using the Casdoor names Id, Name,
+	// DisplayName, Description, Type, Manager and Email). GroupMembershipTable
+	// is the join table mapping a user key to a group id.
+	GroupTable                 string         `xorm:"varchar(100)" json:"groupTable"`
+	GroupTableColumns          []*TableColumn `xorm:"mediumtext" json:"groupTableColumns"`
+	GroupMembershipTable       string         `xorm:"varchar(100)" json:"groupMembershipTable"`
+	GroupMembershipUserColumn  string         `xorm:"varchar(100)" json:"groupMembershipUserColumn"`
+	GroupMembershipGroupColumn string         `xorm:"varchar(100)" json:"groupMembershipGroupColumn"`
+
+	AvatarBaseUrl string `xorm:"varchar(100)" json:"avatarBaseUrl"`
+	ErrorText     string `xorm:"mediumtext" json:"errorText"`
+	SyncInterval  int    `json:"syncInterval"`
+	IsReadOnly    bool   `json:"isReadOnly"`
+	IsEnabled     bool   `json:"isEnabled"`
 
 	Ormer     *Ormer      `xorm:"-" json:"-"`
 	SshClient *ssh.Client `xorm:"-" json:"-"`

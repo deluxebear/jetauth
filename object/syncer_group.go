@@ -16,6 +16,7 @@ package object
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/deluxebear/jetauth/util"
 )
@@ -81,6 +82,12 @@ func (syncer *Syncer) syncGroups() error {
 	// Sync groups from external system to Casdoor
 	newGroups := []*Group{}
 	for _, oGroup := range oGroups {
+		if oGroup.Name == "" || strings.Contains(oGroup.Name, "/") {
+			// AddGroupsInBatch runs in one transaction, so a single invalid name would abort the whole batch
+			fmt.Printf("Skipping group with invalid name: %q\n", oGroup.Name)
+			continue
+		}
+
 		if _, ok := myGroups[oGroup.Name]; !ok {
 			newGroup := syncer.createGroupFromOriginalGroup(oGroup)
 			fmt.Printf("New group: %v\n", newGroup)

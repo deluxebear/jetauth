@@ -154,6 +154,11 @@ func (syncer *Syncer) syncUsers() error {
 		}
 	}
 
+	err = syncer.syncGroupMemberships(oUsers, myUsers, key)
+	if err != nil {
+		return err
+	}
+
 	if !syncer.IsReadOnly {
 		for _, user := range users {
 			primary := syncer.getUserValue(user, key)
