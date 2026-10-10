@@ -16,6 +16,7 @@ package controllers
 
 import (
 	"encoding/json"
+	"errors"
 
 	"github.com/beego/beego/v2/core/utils/pagination"
 	"github.com/deluxebear/jetauth/object"
@@ -163,7 +164,16 @@ func (c *ApiController) UpdatePermission() {
 
 	owner, _ := c.enforceOwnerFromId(id, func(owner string) { permission.Owner = owner })
 
-	c.Data["json"] = wrapActionResponse(object.UpdatePermissionWithApproval(id, &permission, user.GetId(), c.isPermissionApprover(owner)))
+	affected, err := object.UpdatePermissionWithApproval(id, &permission, user.GetId(), c.isPermissionApprover(owner))
+	if err != nil {
+		var validationErr *object.PermissionValidationError
+		if errors.As(err, &validationErr) {
+			c.ResponseError(c.T("permission:" + validationErr.Msg))
+			return
+		}
+	}
+
+	c.Data["json"] = wrapActionResponse(affected, err)
 	c.ServeJSON()
 }
 

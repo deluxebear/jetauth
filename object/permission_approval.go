@@ -222,7 +222,20 @@ func UpdatePermissionWithApproval(id string, permission *Permission, operatorId 
 		return false, err
 	}
 
+	// A pure state transition (approve/reject/revoke/resubmit with the stored content) is not a
+	// content save, so it skips field validation; legacy incomplete data must stay transitionable.
+	contentChanged := permissionPolicyFieldsChanged(oldPermission, permission)
+	if contentChanged || from == to {
+		if err = ValidatePermissionFields(permission, oldPermission); err != nil {
+			return false, err
+		}
+	}
+
 	reason := permission.RejectReason
+	if demoteOnContentChange(oldPermission, permission, from, to, isAdmin) {
+		to = PermissionStatePending
+		reason = PermissionReasonContentChanged
+	}
 	affected, err := UpdatePermission(id, permission)
 	if err != nil || !affected {
 		return affected, err
@@ -232,6 +245,28 @@ func UpdatePermissionWithApproval(id string, permission *Permission, operatorId 
 		recordApprovalChange(permission, operatorId, from, to, reason)
 	}
 	return affected, nil
+}
+
+// PermissionReasonContentChanged is the audit-log reason written when a non-approver's edit sends
+// an Approved/Rejected permission back to Pending.
+const PermissionReasonContentChanged = "policy content changed by a non-approver; re-approval required"
+
+// demoteOnContentChange closes the approval bypass where a non-approver edits the content of an
+// Approved (or Rejected) permission and it keeps its state. When the state is otherwise unchanged,
+// the editor is not an approver and policy-affecting fields differ from the stored record, the
+// permission is reset to Pending (approver bookkeeping cleared). Returns true if it demoted.
+func demoteOnContentChange(old, permission *Permission, from, to string, isAdmin bool) bool {
+	if isAdmin || from != to || (to != PermissionStateApproved && to != PermissionStateRejected) {
+		return false
+	}
+	if !permissionPolicyFieldsChanged(old, permission) {
+		return false
+	}
+	permission.State = PermissionStatePending
+	permission.Approver = ""
+	permission.ApproveTime = ""
+	permission.RejectReason = ""
+	return true
 }
 
 // SetPermissionState moves a permission to a new state (used by the approve/reject endpoints).
@@ -283,7 +318,7 @@ func notifyPermissionApproval(permission *Permission, operatorId, from, to, reas
 	var dest []string
 
 	switch {
-	case to == PermissionStatePending && from != PermissionStateApproved:
+	case to == PermissionStatePending && (from != PermissionStateApproved || reason == PermissionReasonContentChanged):
 		// new submission or resubmission: notify org admins
 		users, err := GetUsers(permission.Owner)
 		if err != nil {
