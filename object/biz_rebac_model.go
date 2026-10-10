@@ -9,6 +9,7 @@
 package object
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
@@ -334,7 +335,7 @@ func SaveAuthorizationModel(owner, appName, dsl, createdBy, description string) 
 	// each relation's type restriction; the L2 tupleset cache's
 	// pre-advance snapshot is no longer safe to serve. Flush the entire
 	// store's cache entries (spec §6.6 "schema 切换时整 store flush").
-	flushBizTuplesetCacheForStore(BuildStoreId(owner, appName))
+	flushBizTuplesetCacheForStore(context.Background(), BuildStoreId(owner, appName))
 
 	// Model count + activeModelId changed — drop cached stats so Overview
 	// reflects the new model without waiting for the 30s TTL to expire.

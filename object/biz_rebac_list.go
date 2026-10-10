@@ -290,7 +290,7 @@ pageLoop:
 		batch := candidates[start:end]
 
 		results := runCandidateChecksInParallel(timeoutCtx, batch, func(obj string) (bool, error) {
-			res, err := ReBACCheck(&CheckRequest{
+			res, err := ReBACCheckCtx(timeoutCtx, &CheckRequest{
 				StoreId:              req.StoreId,
 				AuthorizationModelId: req.AuthorizationModelId,
 				TupleKey:             TupleKey{Object: obj, Relation: req.Relation, User: req.User},
@@ -474,7 +474,7 @@ pageLoop:
 		batch := candidates[start:end]
 
 		results := runCandidateChecksInParallel(timeoutCtx, batch, func(user string) (bool, error) {
-			res, err := ReBACCheck(&CheckRequest{
+			res, err := ReBACCheckCtx(timeoutCtx, &CheckRequest{
 				StoreId:              req.StoreId,
 				AuthorizationModelId: req.AuthorizationModelId,
 				TupleKey:             TupleKey{Object: req.Object, Relation: req.Relation, User: user},

@@ -17,6 +17,7 @@
 package object
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"strings"
@@ -90,6 +91,17 @@ type checkContext struct {
 	requestContext map[string]any
 	memo           sync.Map // key: "object#relation@user" → checkState
 	evalCount      *atomic.Int64
+	// reqCtx is the caller's request context; nil means Background.
+	// Used for cache (Redis L3) calls so they honour cancellation.
+	reqCtx context.Context
+}
+
+// goCtx returns the request context, defaulting to Background.
+func (ctx *checkContext) goCtx() context.Context {
+	if ctx.reqCtx == nil {
+		return context.Background()
+	}
+	return ctx.reqCtx
 }
 
 // parseStoreId splits "{owner}/{appName}" back into its two parts, the
@@ -725,7 +737,7 @@ func (ctx *checkContext) tuplesetTuples(object, relation string) ([]tupleRef, er
 	}
 
 	// L2 cache lookup before DB.
-	if cached, ok := loadBizTuplesetCache(ctx.storeId, object, relation); ok {
+	if cached, ok := loadBizTuplesetCache(ctx.goCtx(), ctx.storeId, object, relation); ok {
 		for _, r := range cached {
 			if !seen[r.User] {
 				seen[r.User] = true
@@ -755,7 +767,7 @@ func (ctx *checkContext) tuplesetTuples(object, relation string) ([]tupleRef, er
 			})
 		}
 	}
-	storeBizTuplesetCache(ctx.storeId, object, relation, dbRefs)
+	storeBizTuplesetCache(ctx.goCtx(), ctx.storeId, object, relation, dbRefs)
 
 	for _, r := range dbRefs {
 		if !seen[r.User] {
@@ -924,6 +936,13 @@ func (ctx *checkContext) checkDifference(key TupleKey, d *openfgav1.Difference, 
 // under a coarse kind taxonomy. Observation is deferred so an early
 // validation return still reports as "error" rather than silently dropping.
 func ReBACCheck(req *CheckRequest) (res *CheckResult, err error) {
+	return ReBACCheckCtx(context.Background(), req)
+}
+
+// ReBACCheckCtx is ReBACCheck with a caller-supplied request context,
+// threaded into tupleset cache lookups so L3 (Redis) calls are cancelled
+// with the request. A nil ctx is treated as context.Background().
+func ReBACCheckCtx(reqCtx context.Context, req *CheckRequest) (res *CheckResult, err error) {
 	start := time.Now()
 	defer func() {
 		outcome := "allowed"
@@ -978,6 +997,7 @@ func ReBACCheck(req *CheckRequest) (res *CheckResult, err error) {
 		model:          model,
 		contextual:     req.ContextualTuples,
 		requestContext: req.Context,
+		reqCtx:         reqCtx,
 	}
 	state, err := ctx.check(req.TupleKey, 0, nil)
 	if err != nil {

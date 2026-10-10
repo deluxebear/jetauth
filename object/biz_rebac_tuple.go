@@ -9,6 +9,7 @@
 package object
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
@@ -175,7 +176,7 @@ func AddBizTuples(tuples []*BizTuple) (int64, error) {
 		return 0, err
 	}
 	for _, tup := range tuples {
-		invalidateBizTuplesetCacheKey(tup.StoreId, tup.Object, tup.Relation)
+		invalidateBizTuplesetCacheKey(context.Background(), tup.StoreId, tup.Object, tup.Relation)
 	}
 	return affected, nil
 }
@@ -195,7 +196,7 @@ func DeleteBizTuple(owner, appName, object, relation, user string) (int64, error
 		return 0, err
 	}
 	if affected > 0 {
-		invalidateBizTuplesetCacheKey(storeId, object, relation)
+		invalidateBizTuplesetCacheKey(context.Background(), storeId, object, relation)
 	}
 	return affected, nil
 }
@@ -378,7 +379,7 @@ func WriteBizTuples(writes []*BizTuple, deletes []*BizTuple, actorUser string) (
 		touched[key] = struct{ storeId, object, relation string }{storeId, d.Object, d.Relation}
 	}
 	for _, t := range touched {
-		invalidateBizTuplesetCacheKey(t.storeId, t.object, t.relation)
+		invalidateBizTuplesetCacheKey(context.Background(), t.storeId, t.object, t.relation)
 	}
 
 	// Drop the stats snapshot so the admin Overview reflects the new
@@ -412,7 +413,7 @@ func DeleteBizTuplesForApp(owner, appName string) (int64, error) {
 		return 0, err
 	}
 	if affected > 0 {
-		flushBizTuplesetCacheForStore(storeId)
+		flushBizTuplesetCacheForStore(context.Background(), storeId)
 	}
 	return affected, nil
 }

@@ -74,30 +74,32 @@ func SetBizReBACCache(c BizReBACCache) {
 	bizReBACCache.Store(&c)
 }
 
-// TODO(CP-8 C6): thread request ctx from engine callers instead of
-// constructing Background() here; matters for Redis L3 Get cancellation.
+// The cache helpers below take the caller's request context so a Redis L3
+// round-trip is cancelled together with the request (e.g. the ListObjects
+// 10s hard timeout). Pass context.Background() only where no request
+// context exists (tests, boot-time code).
 
 // loadBizTuplesetCache returns cached tuplerefs for (storeId, object, relation)
 // or (nil, false) on miss / expired. Preserves the pre-CP-8 package API.
-func loadBizTuplesetCache(storeId, object, relation string) ([]tupleRef, bool) {
-	return (*bizReBACCache.Load()).Get(context.Background(), cacheKey{StoreId: storeId, Object: object, Relation: relation})
+func loadBizTuplesetCache(ctx context.Context, storeId, object, relation string) ([]tupleRef, bool) {
+	return (*bizReBACCache.Load()).Get(ctx, cacheKey{StoreId: storeId, Object: object, Relation: relation})
 }
 
 // storeBizTuplesetCache writes an entry with the default TTL. Callers
 // pass the already-deduplicated refs slice from the DB path.
-func storeBizTuplesetCache(storeId, object, relation string, refs []tupleRef) {
-	(*bizReBACCache.Load()).Set(context.Background(), cacheKey{StoreId: storeId, Object: object, Relation: relation}, refs, bizTuplesetCacheTTL)
+func storeBizTuplesetCache(ctx context.Context, storeId, object, relation string, refs []tupleRef) {
+	(*bizReBACCache.Load()).Set(ctx, cacheKey{StoreId: storeId, Object: object, Relation: relation}, refs, bizTuplesetCacheTTL)
 }
 
 // invalidateBizTuplesetCacheKey evicts a single tupleset from the cache.
 // Called after tuple writes/deletes that change that exact (object, relation) set.
-func invalidateBizTuplesetCacheKey(storeId, object, relation string) {
-	(*bizReBACCache.Load()).Invalidate(context.Background(), cacheKey{StoreId: storeId, Object: object, Relation: relation})
+func invalidateBizTuplesetCacheKey(ctx context.Context, storeId, object, relation string) {
+	(*bizReBACCache.Load()).Invalidate(ctx, cacheKey{StoreId: storeId, Object: object, Relation: relation})
 }
 
 // flushBizTuplesetCacheForStore evicts every entry for a store. Called on
 // schema advance, which can change which tuples are admitted by type
 // restrictions.
-func flushBizTuplesetCacheForStore(storeId string) {
-	(*bizReBACCache.Load()).FlushStore(context.Background(), storeId)
+func flushBizTuplesetCacheForStore(ctx context.Context, storeId string) {
+	(*bizReBACCache.Load()).FlushStore(ctx, storeId)
 }

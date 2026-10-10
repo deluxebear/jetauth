@@ -20,8 +20,8 @@ import (
 
 func TestBizTuplesetCache_LoadHit(t *testing.T) {
 	refs := []tupleRef{{User: "user:alice"}}
-	storeBizTuplesetCache("s1", "document:d1", "viewer", refs)
-	got, ok := loadBizTuplesetCache("s1", "document:d1", "viewer")
+	storeBizTuplesetCache(context.Background(), "s1", "document:d1", "viewer", refs)
+	got, ok := loadBizTuplesetCache(context.Background(), "s1", "document:d1", "viewer")
 	if !ok {
 		t.Fatal("expected cache hit")
 	}
@@ -31,42 +31,42 @@ func TestBizTuplesetCache_LoadHit(t *testing.T) {
 }
 
 func TestBizTuplesetCache_LoadMiss(t *testing.T) {
-	_, ok := loadBizTuplesetCache("s1", "never:stored", "nope")
+	_, ok := loadBizTuplesetCache(context.Background(), "s1", "never:stored", "nope")
 	if ok {
 		t.Fatal("unexpected hit on empty cache slot")
 	}
 }
 
 func TestBizTuplesetCache_Invalidate(t *testing.T) {
-	storeBizTuplesetCache("s-inv", "doc:d1", "viewer", []tupleRef{{User: "user:a"}})
-	if _, ok := loadBizTuplesetCache("s-inv", "doc:d1", "viewer"); !ok {
+	storeBizTuplesetCache(context.Background(), "s-inv", "doc:d1", "viewer", []tupleRef{{User: "user:a"}})
+	if _, ok := loadBizTuplesetCache(context.Background(), "s-inv", "doc:d1", "viewer"); !ok {
 		t.Fatal("precondition: cache miss")
 	}
-	invalidateBizTuplesetCacheKey("s-inv", "doc:d1", "viewer")
-	if _, ok := loadBizTuplesetCache("s-inv", "doc:d1", "viewer"); ok {
+	invalidateBizTuplesetCacheKey(context.Background(), "s-inv", "doc:d1", "viewer")
+	if _, ok := loadBizTuplesetCache(context.Background(), "s-inv", "doc:d1", "viewer"); ok {
 		t.Fatal("expected miss after invalidate")
 	}
 }
 
 func TestBizTuplesetCache_FlushStore(t *testing.T) {
-	storeBizTuplesetCache("s-flush", "doc:d1", "viewer", []tupleRef{{User: "u:a"}})
-	storeBizTuplesetCache("s-flush", "doc:d2", "editor", []tupleRef{{User: "u:b"}})
+	storeBizTuplesetCache(context.Background(), "s-flush", "doc:d1", "viewer", []tupleRef{{User: "u:a"}})
+	storeBizTuplesetCache(context.Background(), "s-flush", "doc:d2", "editor", []tupleRef{{User: "u:b"}})
 	// Sibling store should survive the flush.
-	storeBizTuplesetCache("s-other", "doc:d1", "viewer", []tupleRef{{User: "u:c"}})
+	storeBizTuplesetCache(context.Background(), "s-other", "doc:d1", "viewer", []tupleRef{{User: "u:c"}})
 
-	flushBizTuplesetCacheForStore("s-flush")
+	flushBizTuplesetCacheForStore(context.Background(), "s-flush")
 
-	if _, ok := loadBizTuplesetCache("s-flush", "doc:d1", "viewer"); ok {
+	if _, ok := loadBizTuplesetCache(context.Background(), "s-flush", "doc:d1", "viewer"); ok {
 		t.Fatal("s-flush d1 viewer should be gone")
 	}
-	if _, ok := loadBizTuplesetCache("s-flush", "doc:d2", "editor"); ok {
+	if _, ok := loadBizTuplesetCache(context.Background(), "s-flush", "doc:d2", "editor"); ok {
 		t.Fatal("s-flush d2 editor should be gone")
 	}
-	if _, ok := loadBizTuplesetCache("s-other", "doc:d1", "viewer"); !ok {
+	if _, ok := loadBizTuplesetCache(context.Background(), "s-other", "doc:d1", "viewer"); !ok {
 		t.Fatal("s-other should survive the flush")
 	}
 	// Clean up for sibling tests.
-	invalidateBizTuplesetCacheKey("s-other", "doc:d1", "viewer")
+	invalidateBizTuplesetCacheKey(context.Background(), "s-other", "doc:d1", "viewer")
 }
 
 func TestBizTuplesetCache_TTLExpires(t *testing.T) {
@@ -78,7 +78,7 @@ func TestBizTuplesetCache_TTLExpires(t *testing.T) {
 	key := cacheKey{StoreId: "s-ttl", Object: "doc:d1", Relation: "viewer"}
 	(*bizReBACCache.Load()).Set(context.Background(), key, []tupleRef{{User: "u:a"}}, -1*time.Second)
 
-	if _, ok := loadBizTuplesetCache("s-ttl", "doc:d1", "viewer"); ok {
+	if _, ok := loadBizTuplesetCache(context.Background(), "s-ttl", "doc:d1", "viewer"); ok {
 		t.Fatal("expired entry should miss")
 	}
 	// A second Get on the same key confirms the entry was evicted (not lingering).
