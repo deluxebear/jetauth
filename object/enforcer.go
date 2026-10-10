@@ -340,6 +340,9 @@ func UpdatePolicy(id string, ptype string, oldPolicy []string, newPolicy []strin
 		return false, err
 	}
 
+	// The Enforcer entity may share its policy table with permission enforcers.
+	defer InvalidateAllPermissionEnforcers()
+
 	if ptype == "p" {
 		return enforcer.UpdatePolicy(oldPolicy, newPolicy)
 	} else {
@@ -353,6 +356,9 @@ func AddPolicy(id string, ptype string, policy []string) (bool, error) {
 		return false, err
 	}
 
+	// The Enforcer entity may share its policy table with permission enforcers.
+	defer InvalidateAllPermissionEnforcers()
+
 	if ptype == "p" {
 		return enforcer.AddPolicy(policy)
 	} else {
@@ -365,6 +371,9 @@ func RemovePolicy(id string, ptype string, policy []string) (bool, error) {
 	if err != nil {
 		return false, err
 	}
+
+	// The Enforcer entity may share its policy table with permission enforcers.
+	defer InvalidateAllPermissionEnforcers()
 
 	if ptype == "p" {
 		return enforcer.RemovePolicy(policy)

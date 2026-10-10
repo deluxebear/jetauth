@@ -26,23 +26,69 @@ import (
 	"github.com/deluxebear/jetauth/util"
 )
 
+// getPermissionEnforcer returns an enforcer for READ-ONLY use (Enforce,
+// BatchEnforce, policy listing). When the enforcer cache is enabled the
+// returned instance is shared between goroutines, so callers must never add
+// or remove policies on it; use newPermissionEnforcer() for that.
 func getPermissionEnforcer(p *Permission, permissionIDs ...string) (*casbin.Enforcer, error) {
+	cache := getPermissionEnforcerCache()
+	if cache == nil {
+		enforcer, _, err := buildPermissionEnforcer(p, permissionIDs...)
+		return enforcer, err
+	}
+
+	key := permissionEnforcerCacheKey(p, permissionIDs)
+	if enforcer, ok := cache.Get(key); ok {
+		return enforcer, nil
+	}
+
+	// Read the generation before touching the database: if any invalidation
+	// happens while we build, Put refuses to store a possibly stale enforcer.
+	gen := cache.Generation()
+	enforcer, deps, err := buildPermissionEnforcer(p, permissionIDs...)
+	if err != nil {
+		return nil, err
+	}
+	cache.Put(key, enforcer, deps, gen)
+	return enforcer, nil
+}
+
+// newPermissionEnforcer always builds a fresh, private enforcer that bypasses
+// the cache. Use it whenever the enforcer will be mutated.
+func newPermissionEnforcer(p *Permission, permissionIDs ...string) (*casbin.Enforcer, error) {
+	enforcer, _, err := buildPermissionEnforcer(p, permissionIDs...)
+	return enforcer, err
+}
+
+func buildPermissionEnforcer(p *Permission, permissionIDs ...string) (*casbin.Enforcer, permissionEnforcerDeps, error) {
+	deps := permissionEnforcerDeps{
+		permissionIds: []string{p.GetId()},
+		owners:        []string{p.Owner, "built-in"},
+	}
+	deps.permissionIds = append(deps.permissionIds, permissionIDs...)
+	for _, id := range []string{p.Model, p.Adapter} {
+		if id != "" {
+			owner, _ := util.GetOwnerAndNameFromIdNoCheck(id)
+			deps.owners = append(deps.owners, owner)
+		}
+	}
+
 	// Init an enforcer instance without specifying a model or adapter.
 	// If you specify an adapter, it will load all policies, which is a
 	// heavy process that can slow down the application.
 	enforcer, err := casbin.NewEnforcer()
 	if err != nil {
-		return nil, err
+		return nil, deps, err
 	}
 
 	err = p.setEnforcerModel(enforcer)
 	if err != nil {
-		return nil, err
+		return nil, deps, err
 	}
 
 	err = p.setEnforcerAdapter(enforcer)
 	if err != nil {
-		return nil, err
+		return nil, deps, err
 	}
 
 	policyFilterV5 := []string{p.GetId()}
@@ -58,16 +104,20 @@ func getPermissionEnforcer(p *Permission, permissionIDs ...string) (*casbin.Enfo
 
 	err = enforcer.LoadFilteredPolicy(policyFilter)
 	if err != nil {
-		return nil, err
+		return nil, deps, err
 	}
 
 	// we can rebuild group policies in memory
-	err = loadRuntimeGroupingPolicies(enforcer, p, permissionIDs...)
+	roleOwners, targetPermissions, err := loadRuntimeGroupingPolicies(enforcer, p, permissionIDs...)
+	deps.owners = append(deps.owners, roleOwners...)
+	for _, target := range targetPermissions {
+		deps.owners = append(deps.owners, target.Owner)
+	}
 	if err != nil {
-		return nil, err
+		return nil, deps, err
 	}
 
-	return enforcer, nil
+	return enforcer, deps, nil
 }
 
 func (p *Permission) setEnforcerAdapter(enforcer *casbin.Enforcer) error {
@@ -93,22 +143,11 @@ func (p *Permission) setEnforcerAdapter(enforcer *casbin.Enforcer) error {
 }
 
 func (p *Permission) setEnforcerModel(enforcer *casbin.Enforcer) error {
-	var permissionModel *Model
-	var err error
-	if p.Model != "" {
-		permissionModel, err = GetModel(p.Model)
-		if err != nil {
-			return err
-		}
-	}
-
-	// TODO: return error if permissionModel is nil.
-	m := model.Model{}
-	if permissionModel != nil {
-		m, err = GetBuiltInModel(permissionModel.ModelText)
-	} else {
-		m, err = GetBuiltInModel("")
-	}
+	// A permission that leaves Model empty uses the documented built-in
+	// model (GetBuiltInModel("")). A permission that names a model which does
+	// not exist is a configuration error: fail closed instead of silently
+	// authorizing with a different model.
+	m, err := p.getEnforcerModel()
 	if err != nil {
 		return err
 	}
@@ -118,6 +157,22 @@ func (p *Permission) setEnforcerModel(enforcer *casbin.Enforcer) error {
 		return err
 	}
 	return nil
+}
+
+func (p *Permission) getEnforcerModel() (model.Model, error) {
+	if p.Model == "" {
+		return GetBuiltInModel("")
+	}
+
+	permissionModel, err := GetModel(p.Model)
+	if err != nil {
+		return nil, err
+	}
+	if permissionModel == nil {
+		return nil, fmt.Errorf("the model: %s for permission: %s is not found", p.Model, p.GetId())
+	}
+
+	return GetBuiltInModel(permissionModel.ModelText)
 }
 
 func getPolicies(permission *Permission) [][]string {
@@ -261,7 +316,7 @@ func appendRuntimeGroupingPolicy(groupingPolicies *[][]string, visited map[strin
 	visited[key] = struct{}{}
 }
 
-func getRuntimeGroupingPolicies(permissions []*Permission) ([][]string, error) {
+func getRuntimeGroupingPolicies(permissions []*Permission) ([][]string, []string, error) {
 	var groupingPolicies [][]string
 	visitedPolicies := map[string]struct{}{}
 	roleResolver := newPermissionRoleResolver()
@@ -272,7 +327,7 @@ func getRuntimeGroupingPolicies(permissions []*Permission) ([][]string, error) {
 			visited := map[string]struct{}{}
 			rolesInRole, err := roleResolver.getRolesInRole(permission.Owner, roleId, visited)
 			if err != nil {
-				return nil, err
+				return nil, nil, err
 			}
 
 			for _, role := range rolesInRole {
@@ -300,40 +355,53 @@ func getRuntimeGroupingPolicies(permissions []*Permission) ([][]string, error) {
 		}
 	}
 
-	return groupingPolicies, nil
+	owners := make([]string, 0, len(roleResolver.rolesByOwner))
+	for owner := range roleResolver.rolesByOwner {
+		owners = append(owners, owner)
+	}
+
+	return groupingPolicies, owners, nil
 }
 
-func loadRuntimeGroupingPolicies(enforcer *casbin.Enforcer, permission *Permission, permissionIDs ...string) error {
+// loadRuntimeGroupingPolicies rebuilds the g rules from the role tables. It
+// also reports the role owners it consulted and the permissions it targeted,
+// which the enforcer cache records as invalidation dependencies.
+func loadRuntimeGroupingPolicies(enforcer *casbin.Enforcer, permission *Permission, permissionIDs ...string) ([]string, []*Permission, error) {
 	if !HasRoleDefinition(enforcer.GetModel()) {
-		return nil
+		return nil, nil, nil
 	}
 
 	targetPermissions, err := getPermissionEnforcerTargets(permission, permissionIDs...)
 	if err != nil {
-		return err
+		return nil, nil, err
 	}
 
-	groupingPolicies, err := getRuntimeGroupingPolicies(targetPermissions)
+	groupingPolicies, owners, err := getRuntimeGroupingPolicies(targetPermissions)
 	if err != nil {
-		return err
+		return owners, targetPermissions, err
 	}
 
 	if len(groupingPolicies) == 0 {
-		return nil
+		return owners, targetPermissions, nil
 	}
 
 	enforcer.EnableAutoSave(false)
 	defer enforcer.EnableAutoSave(true)
 	_, err = enforcer.AddGroupingPolicies(groupingPolicies)
 	if err != nil {
-		return err
+		return owners, targetPermissions, err
 	}
 
-	return nil
+	return owners, targetPermissions, nil
 }
 
 func addPolicies(permission *Permission) error {
-	enforcer, err := getPermissionEnforcer(permission)
+	// Invalidate after the write (even a partial one) so a concurrent reader
+	// cannot keep serving the pre-write p rules. The enforcer is mutated, so
+	// it must be private rather than the shared cached one.
+	defer InvalidatePermissionEnforcers(permission.GetId())
+
+	enforcer, err := newPermissionEnforcer(permission)
 	if err != nil {
 		return err
 	}
@@ -345,7 +413,12 @@ func addPolicies(permission *Permission) error {
 }
 
 func removePolicies(permission *Permission) error {
-	enforcer, err := getPermissionEnforcer(permission)
+	// Invalidate after the write (even a partial one) so a concurrent reader
+	// cannot keep serving the pre-write p rules. The enforcer is mutated, so
+	// it must be private rather than the shared cached one.
+	defer InvalidatePermissionEnforcers(permission.GetId())
+
+	enforcer, err := newPermissionEnforcer(permission)
 	if err != nil {
 		return err
 	}

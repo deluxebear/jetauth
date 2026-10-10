@@ -105,7 +105,8 @@ func GetPermission(id string) (*Permission, error) {
 
 // checkPermissionValid verifies if the permission is valid
 func checkPermissionValid(permission *Permission) error {
-	enforcer, err := getPermissionEnforcer(permission)
+	// The enforcer is mutated below, so it must not come from the shared cache.
+	enforcer, err := newPermissionEnforcer(permission)
 	if err != nil {
 		return err
 	}
