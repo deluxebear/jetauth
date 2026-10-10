@@ -15,7 +15,7 @@ describe("validatePermissionForm", () => {
     expect(validatePermissionForm({ ...ok, users: [], roles: ["a/r"] }, rbac)).toBeNull();
   });
   it("groups do not count as a subject", () => {
-    expect(validatePermissionForm({ ...ok, users: [], groups: ["g"] } as any, rbac)).toBe("permissions.validation.noSubject");
+    expect(validatePermissionForm({ ...ok, users: [], groups: ["g"] } as never, rbac)).toBe("permissions.validation.noSubject");
   });
   it("roles do not count when the model has no role definition", () => {
     expect(validatePermissionForm({ ...ok, users: [], roles: ["a/r"] }, acl)).toBe("permissions.validation.noSubject");

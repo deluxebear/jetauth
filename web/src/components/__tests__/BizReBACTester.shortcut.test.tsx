@@ -31,18 +31,18 @@ describe("BizReBACTester shortcut + mode toggle", () => {
     vi.mocked(BizBackend.getBizAuthorizationModel).mockResolvedValue({
       status: "ok",
       data: { id: "01J9XXXX", owner: "o", appName: "a", schemaDsl: "", schemaJson: "", schemaHash: "", createdTime: "", createdBy: "" },
-    } as any);
+    } as never);
   });
 
   it("⌘+Enter on window triggers bizCheck when form is valid", async () => {
     vi.mocked(BizBackend.bizCheck).mockResolvedValue({
       status: "ok",
       data: { allowed: true, resolution: "direct" },
-    } as any);
+    } as never);
     vi.mocked(BizBackend.bizExpand).mockResolvedValue({
       status: "ok",
       data: { root: { kind: "leaf", users: ["user:alice"] } },
-    } as any);
+    } as never);
 
     render(<BizReBACTester appId="admin/app" />);
 
@@ -82,7 +82,7 @@ describe("BizReBACTester shortcut + mode toggle", () => {
     vi.mocked(BizBackend.bizListObjects).mockResolvedValue({
       status: "ok",
       data: { objects: ["document:d1", "document:d2"] },
-    } as any);
+    } as never);
 
     render(<BizReBACTester appId="admin/app" />);
 

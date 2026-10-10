@@ -42,14 +42,14 @@ describe("BizReBACBrowser", () => {
     vi.mocked(BizBackend.getBizAuthorizationModel).mockResolvedValue({
       status: "ok",
       data: { id: "m1", schemaDsl: "", schemaJson: SCHEMA_JSON, schemaHash: "h" },
-    } as any);
+    } as never);
   });
 
   it("By User mode calls bizListObjects and renders the result list", async () => {
     vi.mocked(BizBackend.bizListObjects).mockResolvedValue({
       status: "ok",
       data: { objects: ["document:d1", "document:d2"] },
-    } as any);
+    } as never);
 
     render(<BizReBACBrowser appId="o/a" />);
 
@@ -89,7 +89,7 @@ describe("BizReBACBrowser", () => {
     vi.mocked(BizBackend.bizListUsers).mockResolvedValue({
       status: "ok",
       data: { users: ["user:alice", "user:bob"] },
-    } as any);
+    } as never);
 
     render(<BizReBACBrowser appId="o/a" />);
 
@@ -127,7 +127,7 @@ describe("BizReBACBrowser", () => {
     vi.mocked(BizBackend.bizListObjects).mockResolvedValue({
       status: "ok",
       data: { objects: ["document:d1"] },
-    } as any);
+    } as never);
 
     const onInvestigate = vi.fn();
     render(<BizReBACBrowser appId="o/a" onInvestigate={onInvestigate} />);
@@ -165,7 +165,7 @@ describe("BizReBACBrowser", () => {
     vi.mocked(BizBackend.getBizAuthorizationModel).mockResolvedValue({
       status: "ok",
       data: undefined,
-    } as any);
+    } as never);
 
     render(<BizReBACBrowser appId="o/a" />);
     await waitFor(() => {

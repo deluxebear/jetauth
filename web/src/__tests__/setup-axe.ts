@@ -9,7 +9,7 @@ expect.extend(matchers);
 // the old namespace, so we re-declare the matcher here to keep tsc happy.
 declare module "@vitest/expect" {
   // Type params must match @vitest/expect's own declaration.
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars, @typescript-eslint/no-explicit-any -- declaration merging requires the identical `T = any` type parameter
   interface Matchers<T = any> {
     toHaveNoViolations(): T;
   }

@@ -28,7 +28,7 @@ describe("BizReBACTester cases", () => {
     vi.mocked(BizBackend.getBizAuthorizationModel).mockResolvedValue({
       status: "ok",
       data: { id: "01J9XXXX", owner: "o", appName: "a", schemaDsl: "", schemaJson: "", schemaHash: "", createdTime: "", createdBy: "" },
-    } as any);
+    } as never);
   });
 
   it("shows cases tab with count when cases exist in localStorage", () => {
@@ -78,7 +78,7 @@ describe("BizReBACTester cases", () => {
     vi.mocked(BizBackend.bizBatchCheck).mockResolvedValue({
       status: "ok",
       data: { results: [{ allowed: true }] },
-    } as any);
+    } as never);
     render(<BizReBACTester appId="o/a" />);
     fireEvent.click(screen.getByRole("button", { name: /recent|history|最近/i }));
     fireEvent.click(screen.getByRole("button", { name: /cases|用例/i }));

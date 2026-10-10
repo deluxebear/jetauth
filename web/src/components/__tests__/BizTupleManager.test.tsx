@@ -40,14 +40,14 @@ describe("BizTupleManager", () => {
     vi.mocked(BizBackend.getBizAuthorizationModel).mockResolvedValue({
       status: "ok",
       data: undefined,
-    } as any);
+    } as never);
   });
 
   it("switching facet to object_type and typing search prefix calls readBizTuples with object filter ending in ':'", async () => {
     const readSpy = vi.mocked(BizBackend.readBizTuples).mockResolvedValue({
       status: "ok",
       data: { tuples: [SINGLE_TUPLE], total: 1 },
-    } as any);
+    } as never);
 
     render(<BizTupleManager appId="admin/drive_prod" />);
 
@@ -82,7 +82,7 @@ describe("BizTupleManager", () => {
       status: "ok",
       // total = 1, which is <= 50 (PAGE_SIZE) → no pagination
       data: { tuples: [SINGLE_TUPLE], total: 1 },
-    } as any);
+    } as never);
 
     render(<BizTupleManager appId="admin/drive_prod" />);
 

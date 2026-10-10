@@ -31,7 +31,7 @@ describe("BizAssertionList", () => {
         object: "document:r1", relation: "viewer", user: "user:carol",
         expected: true, createdTime: new Date().toISOString(),
       }],
-    } as any);
+    } as never);
     render(<BizAssertionList appId="admin/drive_prod" />);
     await waitFor(() => expect(screen.getByText(/carol/)).toBeInTheDocument());
   });
@@ -43,15 +43,15 @@ describe("BizAssertionList", () => {
         id: "a1", owner: "admin", appName: "drive_prod",
         object: "document:r1", relation: "viewer", user: "user:carol",
         expected: true, createdTime: new Date().toISOString(),
-      } as any],
-    } as any);
+      }],
+    } as never);
     vi.spyOn(BizBackend, "runBizAssertions").mockResolvedValue({
       status: "ok",
       data: [{
         id: "a1", object: "document:r1", relation: "viewer",
         user: "user:carol", expected: true, actual: true, pass: true,
       }],
-    } as any);
+    } as never);
     render(<BizAssertionList appId="admin/drive_prod" />);
     await waitFor(() => expect(screen.getByText(/carol/)).toBeInTheDocument());
     fireEvent.click(screen.getByText(/runAll/));

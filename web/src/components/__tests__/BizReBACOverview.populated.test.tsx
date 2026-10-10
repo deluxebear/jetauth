@@ -38,7 +38,7 @@ describe("BizReBACOverview (populated)", () => {
           },
         ],
       },
-    } as any);
+    } as never);
     vi.mocked(BizBackend.getBizAuthorizationModel).mockResolvedValue({
       status: "ok",
       data: {
@@ -51,7 +51,7 @@ describe("BizReBACOverview (populated)", () => {
         createdTime: new Date().toISOString(),
         createdBy: "test-user",
       },
-    } as any);
+    } as never);
 
     vi.mocked(BizBackend.listBizAssertions).mockResolvedValue({
       status: "ok",
@@ -59,7 +59,7 @@ describe("BizReBACOverview (populated)", () => {
         { id: "a1", lastActual: true,  expected: true,  owner: "admin", appName: "drive_prod", object: "document:r1", relation: "viewer", user: "user:alice", createdTime: new Date().toISOString() },
         { id: "a2", lastActual: false, expected: true,  owner: "admin", appName: "drive_prod", object: "document:r1", relation: "viewer", user: "user:bob",   createdTime: new Date().toISOString() },
       ],
-    } as any);
+    } as never);
 
     render(<BizReBACOverview appId="admin/drive_prod" />);
     await waitFor(() => {

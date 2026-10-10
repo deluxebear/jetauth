@@ -39,7 +39,7 @@ describe("BizAuditList", () => {
         offset: 0,
         limit: 50,
       },
-    } as any);
+    } as never);
 
     render(<BizAuditList appId="admin/drive_prod" />);
     await waitFor(() => expect(screen.getByText(/carol/)).toBeInTheDocument());
@@ -50,7 +50,7 @@ describe("BizAuditList", () => {
     const spy = vi.spyOn(BizBackend, "listBizTupleAudit").mockResolvedValue({
       status: "ok",
       data: { events: [], offset: 0, limit: 50 },
-    } as any);
+    } as never);
 
     render(<BizAuditList appId="admin/drive_prod" />);
     await waitFor(() => expect(spy).toHaveBeenCalledTimes(1));

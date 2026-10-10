@@ -54,7 +54,7 @@ function setupEmptyState() {
       typeDistribution: [],
       recentWrites: [],
     },
-  } as any);
+  } as never);
   // Legacy mocks kept as harmless extras (no longer called by the component)
   vi.mocked(BizBackend.countBizTuples).mockResolvedValue({
     status: "ok",

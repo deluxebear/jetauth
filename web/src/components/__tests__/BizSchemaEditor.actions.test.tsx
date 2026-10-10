@@ -48,7 +48,7 @@ beforeEach(() => {
   vi.mocked(BizBackend.saveBizAuthorizationModel).mockResolvedValue({
     status: "ok",
     data: { outcome: "unchanged" },
-  } as any);
+  } as never);
 });
 
 describe("BizSchemaEditor actions", () => {
@@ -56,15 +56,15 @@ describe("BizSchemaEditor actions", () => {
     vi.mocked(BizBackend.getBizAuthorizationModel).mockResolvedValue({
       status: "ok",
       data: { ...BASE_MODEL, id: "m1" },
-    } as any);
+    } as never);
     vi.mocked(BizBackend.getBizAppConfig).mockResolvedValue({
       status: "ok",
       data: { currentAuthorizationModelId: "m9" },
-    } as any);
+    } as never);
     vi.mocked(BizBackend.listBizAuthorizationModels).mockResolvedValue({
       status: "ok",
       data: [BASE_MODEL],
-    } as any);
+    } as never);
     const saveSpy = vi.mocked(BizBackend.saveBizAuthorizationModel);
 
     render(<BizSchemaEditor appId="admin/app" modelId="m1" />);
@@ -82,7 +82,7 @@ describe("BizSchemaEditor actions", () => {
     await waitFor(() => {
       // handleValidate calls saveBizAuthorizationModel with dryRun: true.
       const dryRunCalls = saveSpy.mock.calls.filter(
-        (args) => (args[2] as any)?.dryRun === true
+        (args) => (args[2] as { dryRun?: boolean } | undefined)?.dryRun === true
       );
       expect(dryRunCalls.length).toBeGreaterThan(0);
     }, { timeout: 3000 });
@@ -94,15 +94,15 @@ describe("BizSchemaEditor actions", () => {
     vi.mocked(BizBackend.getBizAuthorizationModel).mockResolvedValue({
       status: "ok",
       data: { ...BASE_MODEL, id: "m7" },
-    } as any);
+    } as never);
     vi.mocked(BizBackend.getBizAppConfig).mockResolvedValue({
       status: "ok",
       data: { currentAuthorizationModelId: "m7" },
-    } as any);
+    } as never);
     vi.mocked(BizBackend.listBizAuthorizationModels).mockResolvedValue({
       status: "ok",
       data: [BASE_MODEL],
-    } as any);
+    } as never);
 
     render(<BizSchemaEditor appId="admin/app" modelId="m7" mode="view" />);
 

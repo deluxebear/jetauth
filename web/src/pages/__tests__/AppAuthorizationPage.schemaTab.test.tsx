@@ -91,12 +91,12 @@ describe("AppAuthorizationPage — schema tab URL routing", () => {
         displayName: "Test App",
         modelType: "rebac",
         currentAuthorizationModelId: "m7",
-      } as any,
+      } as never,
     });
 
     // Roles / permissions (sidebar counts).
-    vi.mocked(BizBackend.getBizRoles).mockResolvedValue({ status: "ok", data: [] } as any);
-    vi.mocked(BizBackend.getBizPermissions).mockResolvedValue({ status: "ok", data: [] } as any);
+    vi.mocked(BizBackend.getBizRoles).mockResolvedValue({ status: "ok", data: [] } as never);
+    vi.mocked(BizBackend.getBizPermissions).mockResolvedValue({ status: "ok", data: [] } as never);
 
     // Schema version list — the row the test will click.
     vi.mocked(BizBackend.listBizAuthorizationModels).mockResolvedValue({
@@ -114,11 +114,11 @@ describe("AppAuthorizationPage — schema tab URL routing", () => {
           createdBy: "admin",
         },
       ],
-    } as any);
+    } as never);
 
     // Other ReBAC calls that are touched on mount — silent no-ops.
-    vi.mocked(BizBackend.getBizReBACStats).mockResolvedValue({ status: "ok", data: null } as any);
-    vi.mocked(BizBackend.getBizAuthorizationModel).mockResolvedValue({ status: "ok", data: null } as any);
+    vi.mocked(BizBackend.getBizReBACStats).mockResolvedValue({ status: "ok", data: null } as never);
+    vi.mocked(BizBackend.getBizAuthorizationModel).mockResolvedValue({ status: "ok", data: null } as never);
   });
 
   it("renders schema version list when ?tab=schema and no modelId", async () => {
