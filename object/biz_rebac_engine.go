@@ -974,6 +974,16 @@ func ReBACCheckCtx(reqCtx context.Context, req *CheckRequest) (res *CheckResult,
 		return nil, err
 	}
 
+	return reBACCheckResolved(reqCtx, model, req, true)
+}
+
+// reBACCheckResolved is the post-resolution half of ReBACCheckCtx. It lets
+// bulk callers (ListObjects / ListUsers) resolve and parse the authorization
+// model once per call instead of once per candidate — that parse dominated
+// the per-candidate allocation count (docs/rebac-sla-baseline.md B1#4).
+// validateContextual=false is only for callers that already validated the
+// contextual tuples against this exact model.
+func reBACCheckResolved(reqCtx context.Context, model *openfgav1.AuthorizationModel, req *CheckRequest, validateContextual bool) (*CheckResult, error) {
 	// Request-boundary schema validation. Caller-asserted tuples with
 	// unknown types/relations fail here rather than silently resolving to
 	// a denial inside the dispatcher — matches OpenFGA's 2000/2027-class
@@ -986,9 +996,11 @@ func ReBACCheckCtx(reqCtx context.Context, req *CheckRequest) (res *CheckResult,
 	if err := validateCheckRequestTuple(model, req.TupleKey, "check request", false); err != nil {
 		return nil, err
 	}
-	for i, ct := range req.ContextualTuples {
-		if err := validateCheckRequestTuple(model, ct, fmt.Sprintf("contextual tuple #%d", i), true); err != nil {
-			return nil, err
+	if validateContextual {
+		for i, ct := range req.ContextualTuples {
+			if err := validateCheckRequestTuple(model, ct, fmt.Sprintf("contextual tuple #%d", i), true); err != nil {
+				return nil, err
+			}
 		}
 	}
 
@@ -1008,4 +1020,24 @@ func ReBACCheckCtx(reqCtx context.Context, req *CheckRequest) (res *CheckResult,
 	// only inside the engine so lattice combinators can reason about
 	// cycle-in-subtract and similar edge cases correctly.
 	return &CheckResult{Allowed: state == StateAllowed}, nil
+}
+
+// reBACCheckPreparedObserved is the bulk-caller entry point: same metrics as
+// ReBACCheckCtx, but the model is already resolved and the contextual tuples
+// already validated by the caller (see reBACCheckResolved).
+func reBACCheckPreparedObserved(reqCtx context.Context, model *openfgav1.AuthorizationModel, req *CheckRequest) (res *CheckResult, err error) {
+	start := time.Now()
+	defer func() {
+		outcome := "allowed"
+		switch {
+		case err != nil:
+			outcome = "error"
+			recordReBACEngineError(err)
+		case res == nil || !res.Allowed:
+			outcome = "denied"
+		}
+		observeReBACCheck(outcome, time.Since(start))
+		checkQpsCounter.Inc(req.StoreId)
+	}()
+	return reBACCheckResolved(reqCtx, model, req, false)
 }

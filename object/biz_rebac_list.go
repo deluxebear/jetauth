@@ -25,6 +25,7 @@ import (
 	"strings"
 	"time"
 
+	openfgav1 "github.com/openfga/api/proto/openfga/v1"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -271,6 +272,13 @@ func ReBACListObjects(req *ListObjectsRequest) (res *ListObjectsResult, err erro
 		return nil, err
 	}
 
+	// B1#2: objects where the caller holds an unconditional direct tuple
+	// on the requested relation skip the full Check.
+	directGrants, err := gatherDirectGrantObjects(model, owner, appName, req.ObjectType, req.Relation, req.User, cursor.LastObjectId)
+	if err != nil {
+		return nil, err
+	}
+
 	timeoutCtx, cancel := context.WithTimeout(context.Background(), listTimeout)
 	defer cancel()
 
@@ -290,7 +298,10 @@ pageLoop:
 		batch := candidates[start:end]
 
 		results := runCandidateChecksInParallel(timeoutCtx, batch, func(obj string) (bool, error) {
-			res, err := ReBACCheckCtx(timeoutCtx, &CheckRequest{
+			if _, ok := directGrants[obj]; ok {
+				return true, nil // B1#2: unconditional direct grant, rewrite is monotone in `this`
+			}
+			res, err := reBACCheckPreparedObserved(timeoutCtx, model, &CheckRequest{
 				StoreId:              req.StoreId,
 				AuthorizationModelId: req.AuthorizationModelId,
 				TupleKey:             TupleKey{Object: obj, Relation: req.Relation, User: req.User},
@@ -474,7 +485,7 @@ pageLoop:
 		batch := candidates[start:end]
 
 		results := runCandidateChecksInParallel(timeoutCtx, batch, func(user string) (bool, error) {
-			res, err := ReBACCheckCtx(timeoutCtx, &CheckRequest{
+			res, err := reBACCheckPreparedObserved(timeoutCtx, model, &CheckRequest{
 				StoreId:              req.StoreId,
 				AuthorizationModelId: req.AuthorizationModelId,
 				TupleKey:             TupleKey{Object: req.Object, Relation: req.Relation, User: user},
@@ -695,4 +706,69 @@ func placeholders(n int) string {
 		out = append(out, '?')
 	}
 	return string(out)
+}
+
+// directGrantSafe reports whether an unconditional direct tuple
+// (object, relation, user) is by itself sufficient for Check to answer
+// "allowed" - i.e. the relation's rewrite is `this` or a union that has
+// `this` as a direct child (a union is monotone, so other branches can
+// only add grants), and the caller is a plain subject (not a userset or
+// wildcard). Intersection / difference / pure computed or TTU rewrites
+// return false: a direct tuple alone may not authorize there.
+func directGrantSafe(model *openfgav1.AuthorizationModel, objectType, relation, user string) bool {
+	_, userId, userRel, err := parseUserString(user)
+	if err != nil || userRel != "" || userId == "*" {
+		return false
+	}
+	rewrite, err := findRelation(model, objectType, relation)
+	if err != nil {
+		return false
+	}
+	switch r := rewrite.GetUserset().(type) {
+	case *openfgav1.Userset_This:
+	case *openfgav1.Userset_Union:
+		hasThis := false
+		for _, c := range r.Union.GetChild() {
+			if _, ok := c.GetUserset().(*openfgav1.Userset_This); ok {
+				hasThis = true
+				break
+			}
+		}
+		if !hasThis {
+			return false
+		}
+	default:
+		return false
+	}
+	// The tuple must also be admissible under the schema's direct type
+	// restrictions, exactly as checkThis filters it.
+	return subjectMatchesTypeRestriction(user, findDirectlyRelatedUserTypes(model, objectType, relation))
+}
+
+// gatherDirectGrantObjects returns the set of objects of objectType on which
+// `user` holds an unconditional direct `relation` tuple, when that alone
+// proves Check would answer allowed (see directGrantSafe). Returns an empty
+// set when the shortcut does not apply. Conditional tuples are excluded
+// because they need CEL evaluation.
+func gatherDirectGrantObjects(model *openfgav1.AuthorizationModel, owner, appName, objectType, relation, user, lastObjectId string) (map[string]struct{}, error) {
+	out := map[string]struct{}{}
+	if ormer == nil || !directGrantSafe(model, objectType, relation, user) {
+		return out, nil
+	}
+	session := ormer.Engine.
+		Table(&BizTuple{}).
+		Where("store_id = ? AND object_type = ? AND relation = ? AND user = ?",
+			BuildStoreId(owner, appName), objectType, relation, user).
+		And("(condition_name IS NULL OR condition_name = '')")
+	if lastObjectId != "" {
+		session = session.And("object > ?", lastObjectId)
+	}
+	rows := []*BizTuple{}
+	if err := session.Cols("object").Find(&rows); err != nil {
+		return nil, fmt.Errorf("rebac list_objects: direct grant scan: %w", err)
+	}
+	for _, r := range rows {
+		out[r.Object] = struct{}{}
+	}
+	return out, nil
 }

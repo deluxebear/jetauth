@@ -250,3 +250,66 @@ func BenchmarkReBAC_ListObjects(b *testing.B) {
 		}
 	}
 }
+
+// BenchmarkReBAC_ListObjects_Direct lists the `owner` relation, which is a
+// pure `this` rewrite: every hit is an unconditional direct tuple, so this
+// measures the B1#2 direct-grant short-circuit (docs/rebac-sla-baseline.md).
+func BenchmarkReBAC_ListObjects_Direct(b *testing.B) {
+	fx := seedBenchFixture(b)
+	r := rand.New(rand.NewPCG(11, 11))
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, err := ReBACListObjects(&ListObjectsRequest{
+			StoreId:    fx.storeId,
+			ObjectType: "document",
+			Relation:   "owner",
+			User:       fx.users[r.IntN(len(fx.users))],
+			PageSize:   100,
+		})
+		if err != nil {
+			b.Fatalf("list_objects direct: %v", err)
+		}
+	}
+}
+
+// BenchmarkReBAC_ListObjects_Editor lists `editor: [user] or owner` - a union
+// with `this`, so the owner-derived hits still go through the full Check
+// while any direct editor tuples short-circuit. Guards against the shortcut
+// adding cost on mixed rewrites.
+func BenchmarkReBAC_ListObjects_Editor(b *testing.B) {
+	fx := seedBenchFixture(b)
+	r := rand.New(rand.NewPCG(13, 13))
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, err := ReBACListObjects(&ListObjectsRequest{
+			StoreId:    fx.storeId,
+			ObjectType: "document",
+			Relation:   "editor",
+			User:       fx.users[r.IntN(len(fx.users))],
+			PageSize:   100,
+		})
+		if err != nil {
+			b.Fatalf("list_objects editor: %v", err)
+		}
+	}
+}
+
+// BenchmarkReBAC_ListUsers drives ReBACListUsers (shares the per-candidate
+// Check path, so it benefits from the B1#4 model-resolution hoist).
+func BenchmarkReBAC_ListUsers(b *testing.B) {
+	fx := seedBenchFixture(b)
+	r := rand.New(rand.NewPCG(17, 17))
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, err := ReBACListUsers(&ListUsersRequest{
+			StoreId:    fx.storeId,
+			Object:     fx.objects[r.IntN(len(fx.objects))],
+			Relation:   "viewer",
+			UserFilter: "user",
+			PageSize:   100,
+		})
+		if err != nil {
+			b.Fatalf("list_users: %v", err)
+		}
+	}
+}
