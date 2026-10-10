@@ -2145,6 +2145,22 @@ async function bizGetPolicies() {
   return resp.json(); // { data: { modelText, policies, groupingPolicies, version } }
 }
 
+// Keep a local policy cache fresh with long-poll watching.
+// Omit \`version\` on first connect -> full snapshot. Then pass the last
+// version you applied; the call blocks up to 60s and returns 304 if unchanged.
+//   { type: "full", version, modelText, policies, groupingPolicies }
+//   { type: "incremental", fromVersion, toVersion, changes: [{ action: "add"|"remove", ptype: "p"|"g", rule }] }
+// Cheap version check: GET \${ENDPOINT}/api/biz-get-policy-version?appId=... -> { data: { version } }
+async function bizWatchPolicies(version?: number) {
+  const q = version === undefined ? "" : \`&version=\${version}\`;
+  const resp = await fetch(
+    \`\${ENDPOINT}/api/biz-watch-policies?appId=\${encodeURIComponent(APP_ID)}\${q}\`,
+    { headers: { "Authorization": \`Bearer \${accessToken}\` } }
+  );
+  if (resp.status === 304) return null; // no change, poll again with the same version
+  return resp.json();
+}
+
 // Frontend permission check example
 const allowed = await bizEnforce(userId, "/orders", "DELETE");
 // <Button disabled={!allowed}>Delete Order</Button>`;
