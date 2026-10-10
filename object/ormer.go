@@ -453,6 +453,16 @@ func (a *Ormer) createTable() {
 		panic(err)
 	}
 
+	err = a.Engine.Sync2(new(BizReBACAssertion))
+	if err != nil {
+		panic(err)
+	}
+
+	err = a.Engine.Sync2(new(BizReBACTupleAudit))
+	if err != nil {
+		panic(err)
+	}
+
 	err = a.Engine.Sync2(new(Session))
 	if err != nil {
 		panic(err)

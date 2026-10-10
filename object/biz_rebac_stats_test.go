@@ -31,12 +31,14 @@ func TestGetReBACStats_ShapesAndCounts(t *testing.T) {
 		"test-user", "v1"); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := AddBizTuples([]*BizTuple{
+	// RecentWrites is sourced from the tuple audit log, so seed via the
+	// audited write path rather than AddBizTuples.
+	if _, _, err := WriteBizTuples([]*BizTuple{
 		{StoreId: storeId, Owner: owner, AppName: appName, Object: "document:roadmap-2026", Relation: "viewer", User: "user:carol"},
 		{StoreId: storeId, Owner: owner, AppName: appName, Object: "document:roadmap-2026", Relation: "editor", User: "user:bob"},
 		{StoreId: storeId, Owner: owner, AppName: appName, Object: "document:roadmap-2026", Relation: "owner", User: "user:alice"},
 		{StoreId: storeId, Owner: owner, AppName: appName, Object: "folder:design", Relation: "viewer", User: "user:david"},
-	}); err != nil {
+	}, nil, "test-user"); err != nil {
 		t.Fatal(err)
 	}
 
