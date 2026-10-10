@@ -17,6 +17,7 @@ package object
 import (
 	"context"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -30,7 +31,13 @@ import (
 type AwsIamSyncerProvider struct {
 	Syncer    *Syncer
 	iamClient *iam.IAM
+
+	mu           sync.Mutex
+	userNameById map[string]string
 }
+
+// awsIamEndpointOverride replaces the default IAM endpoint, for tests only.
+var awsIamEndpointOverride string
 
 // InitAdapter initializes the AWS IAM syncer
 func (p *AwsIamSyncerProvider) InitAdapter() error {
@@ -54,10 +61,15 @@ func (p *AwsIamSyncerProvider) InitAdapter() error {
 	}
 
 	// Create AWS session
-	sess, err := session.NewSession(&aws.Config{
+	awsConfig := &aws.Config{
 		Region:      aws.String(region),
 		Credentials: credentials.NewStaticCredentials(accessKeyId, secretAccessKey, ""),
-	})
+	}
+	if awsIamEndpointOverride != "" {
+		awsConfig.Endpoint = aws.String(awsIamEndpointOverride)
+		awsConfig.DisableSSL = aws.Bool(true)
+	}
+	sess, err := session.NewSession(awsConfig)
 	if err != nil {
 		return fmt.Errorf("failed to create AWS session: %w", err)
 	}
@@ -146,6 +158,22 @@ func (p *AwsIamSyncerProvider) getAwsIamUsers() ([]*OriginalUser, error) {
 		marker = result.Marker
 	}
 
+	// Cache UserId -> UserName for GetOriginalUserGroups
+	p.mu.Lock()
+	p.userNameById = map[string]string{}
+	for _, u := range allUsers {
+		if u.UserId != nil && u.UserName != nil {
+			p.userNameById[*u.UserId] = *u.UserName
+		}
+	}
+	p.mu.Unlock()
+
+	// Group membership is nil (unknown) when the groups cannot be listed (e.g. missing iam:ListGroups)
+	userGroupsMap, groupsErr := p.buildUserGroupsMap(ctx)
+	if groupsErr != nil {
+		fmt.Printf("Warning: failed to fetch IAM group memberships: %v. Group membership will not be synced.\n", groupsErr)
+	}
+
 	// Convert AWS IAM users to Casdoor OriginalUser
 	originalUsers := []*OriginalUser{}
 	for _, iamUser := range allUsers {
@@ -158,6 +186,11 @@ func (p *AwsIamSyncerProvider) getAwsIamUsers() ([]*OriginalUser, error) {
 			}
 			fmt.Printf("Warning: Failed to convert IAM user %s: %v\n", userName, err)
 			continue
+		}
+		if groupsErr != nil {
+			originalUser.Groups = nil
+		} else if groups, ok := userGroupsMap[originalUser.Id]; ok {
+			originalUser.Groups = groups
 		}
 		originalUsers = append(originalUsers, originalUser)
 	}
@@ -254,6 +287,28 @@ func (p *AwsIamSyncerProvider) awsIamUserToOriginalUser(iamUser *iam.User) (*Ori
 	return user, nil
 }
 
+// listIamGroups lists every IAM group, following pagination markers.
+func (p *AwsIamSyncerProvider) listIamGroups(ctx context.Context) ([]*iam.Group, error) {
+	allGroups := []*iam.Group{}
+	var marker *string
+
+	for {
+		result, err := p.iamClient.ListGroupsWithContext(ctx, &iam.ListGroupsInput{Marker: marker})
+		if err != nil {
+			return nil, fmt.Errorf("failed to list IAM groups: %w", err)
+		}
+
+		allGroups = append(allGroups, result.Groups...)
+
+		if result.IsTruncated == nil || !*result.IsTruncated {
+			break
+		}
+		marker = result.Marker
+	}
+
+	return allGroups, nil
+}
+
 // GetOriginalGroups retrieves all groups from AWS IAM
 func (p *AwsIamSyncerProvider) GetOriginalGroups() ([]*OriginalGroup, error) {
 	if p.iamClient == nil {
@@ -265,27 +320,9 @@ func (p *AwsIamSyncerProvider) GetOriginalGroups() ([]*OriginalGroup, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
 
-	allGroups := []*iam.Group{}
-	var marker *string
-
-	// Paginate through all groups
-	for {
-		input := &iam.ListGroupsInput{
-			Marker: marker,
-		}
-
-		result, err := p.iamClient.ListGroupsWithContext(ctx, input)
-		if err != nil {
-			return nil, fmt.Errorf("failed to list IAM groups: %w", err)
-		}
-
-		allGroups = append(allGroups, result.Groups...)
-
-		if result.IsTruncated == nil || !*result.IsTruncated {
-			break
-		}
-
-		marker = result.Marker
+	allGroups, err := p.listIamGroups(ctx)
+	if err != nil {
+		return nil, err
 	}
 
 	// Convert AWS IAM groups to Casdoor OriginalGroup
@@ -295,6 +332,7 @@ func (p *AwsIamSyncerProvider) GetOriginalGroups() ([]*OriginalGroup, error) {
 			group := &OriginalGroup{
 				Id:   *iamGroup.GroupId,
 				Name: *iamGroup.GroupName,
+				Type: "Virtual",
 			}
 
 			if iamGroup.GroupName != nil {
@@ -308,7 +346,81 @@ func (p *AwsIamSyncerProvider) GetOriginalGroups() ([]*OriginalGroup, error) {
 	return originalGroups, nil
 }
 
-// GetOriginalUserGroups retrieves the group IDs that a user belongs to
+// resolveUserName maps an IAM UserId (the id used as OriginalUser.Id) to the UserName that the
+// IAM group APIs require. The mapping is cached and refreshed from ListUsers on a miss. If the id
+// is unknown it is assumed to already be a UserName.
+func (p *AwsIamSyncerProvider) resolveUserName(ctx context.Context, userId string) (string, error) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	if name, ok := p.userNameById[userId]; ok {
+		return name, nil
+	}
+
+	p.userNameById = map[string]string{}
+	var marker *string
+	for {
+		result, err := p.iamClient.ListUsersWithContext(ctx, &iam.ListUsersInput{Marker: marker})
+		if err != nil {
+			return "", fmt.Errorf("failed to list IAM users: %w", err)
+		}
+
+		for _, u := range result.Users {
+			if u.UserId != nil && u.UserName != nil {
+				p.userNameById[*u.UserId] = *u.UserName
+			}
+		}
+
+		if result.IsTruncated == nil || !*result.IsTruncated {
+			break
+		}
+		marker = result.Marker
+	}
+
+	if name, ok := p.userNameById[userId]; ok {
+		return name, nil
+	}
+	return userId, nil
+}
+
+// buildUserGroupsMap builds IAM UserId -> group names using one paginated GetGroup call per group.
+func (p *AwsIamSyncerProvider) buildUserGroupsMap(ctx context.Context) (map[string][]string, error) {
+	groups, err := p.listIamGroups(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	res := map[string][]string{}
+	for _, group := range groups {
+		if group.GroupName == nil {
+			continue
+		}
+
+		var marker *string
+		for {
+			result, err := p.iamClient.GetGroupWithContext(ctx, &iam.GetGroupInput{GroupName: group.GroupName, Marker: marker})
+			if err != nil {
+				return nil, fmt.Errorf("failed to get IAM group %s: %w", *group.GroupName, err)
+			}
+
+			for _, u := range result.Users {
+				if u.UserId != nil {
+					addUserToGroupMap(res, *u.UserId, *group.GroupName)
+				}
+			}
+
+			if result.IsTruncated == nil || !*result.IsTruncated {
+				break
+			}
+			marker = result.Marker
+		}
+	}
+
+	return res, nil
+}
+
+// GetOriginalUserGroups retrieves the names of the IAM groups a user belongs to. userId is the IAM
+// UserId; it is translated to the UserName required by the ListGroupsForUser API.
 func (p *AwsIamSyncerProvider) GetOriginalUserGroups(userId string) ([]string, error) {
 	if p.iamClient == nil {
 		if err := p.InitAdapter(); err != nil {
@@ -316,12 +428,33 @@ func (p *AwsIamSyncerProvider) GetOriginalUserGroups(userId string) ([]string, e
 		}
 	}
 
-	// Note: AWS IAM API requires UserName to query groups, but this interface provides UserId.
-	// This is a known limitation. To properly implement this, we would need to:
-	// 1. Maintain a mapping cache from UserId to UserName, or
-	// 2. Modify the interface to accept both UserId and UserName
-	// For now, returning empty groups to maintain interface compatibility.
-	// TODO: Implement user group synchronization by maintaining a UserId->UserName mapping
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancel()
 
-	return []string{}, nil
+	userName, err := p.resolveUserName(ctx, userId)
+	if err != nil {
+		return nil, err
+	}
+
+	groupNames := []string{}
+	var marker *string
+	for {
+		result, err := p.iamClient.ListGroupsForUserWithContext(ctx, &iam.ListGroupsForUserInput{UserName: aws.String(userName), Marker: marker})
+		if err != nil {
+			return nil, fmt.Errorf("failed to list groups for IAM user %s: %w", userName, err)
+		}
+
+		for _, g := range result.Groups {
+			if g.GroupName != nil {
+				groupNames = append(groupNames, *g.GroupName)
+			}
+		}
+
+		if result.IsTruncated == nil || !*result.IsTruncated {
+			break
+		}
+		marker = result.Marker
+	}
+
+	return groupNames, nil
 }
