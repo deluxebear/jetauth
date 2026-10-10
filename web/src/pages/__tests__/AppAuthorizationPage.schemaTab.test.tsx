@@ -83,6 +83,7 @@ describe("AppAuthorizationPage — schema tab URL routing", () => {
     // App config — rebac model type so schema tab is shown.
     vi.mocked(BizBackend.getBizAppConfig).mockResolvedValue({
       status: "ok",
+      msg: "",
       data: {
         id: "admin/test_app",
         owner: "admin",

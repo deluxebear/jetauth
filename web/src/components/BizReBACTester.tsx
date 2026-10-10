@@ -778,63 +778,6 @@ function ListUsersResultPanel({
   );
 }
 
-// ── Expand tree — nested list rendering ────────────────────────────
-
-function ExpandTree({ node, depth = 0 }: { node: BizExpandNode; depth?: number }) {
-  return (
-    <div className="pl-3 border-l border-border/60 ml-2 text-[12px]">
-      <div className="flex items-center gap-2 py-0.5">
-        <span className="font-mono text-text-primary">{node.kind}</span>
-        {node.truncated && (
-          <span className="text-[10px] text-warning">truncated</span>
-        )}
-      </div>
-      {node.users && node.users.length > 0 && (
-        <ul className="pl-3 list-disc text-text-muted marker:text-text-muted">
-          {node.users.map((u, i) => (
-            <li key={i} className="font-mono text-[11px]">
-              {u}
-            </li>
-          ))}
-        </ul>
-      )}
-      {node.computed && (
-        <div className="pl-3 font-mono text-[11px] text-text-muted">
-          → {node.computed.object}#{node.computed.relation}
-        </div>
-      )}
-      {node.tupleToUserset && (
-        <div className="pl-3 font-mono text-[11px] text-text-muted">
-          from {node.tupleToUserset.tupleset?.relation ?? "?"} → {node.tupleToUserset.computed?.relation ?? "?"}
-        </div>
-      )}
-      {node.children && node.children.length > 0 && (
-        <div className="flex flex-col gap-0.5">
-          {node.children.map((c, i) => (
-            <ExpandTree key={i} node={c} depth={depth + 1} />
-          ))}
-        </div>
-      )}
-      {node.base && (
-        <div>
-          <p className="text-[10px] text-text-muted uppercase tracking-wide pl-3 mt-1">
-            base
-          </p>
-          <ExpandTree node={node.base} depth={depth + 1} />
-        </div>
-      )}
-      {node.subtract && (
-        <div>
-          <p className="text-[10px] text-text-muted uppercase tracking-wide pl-3 mt-1">
-            subtract
-          </p>
-          <ExpandTree node={node.subtract} depth={depth + 1} />
-        </div>
-      )}
-    </div>
-  );
-}
-
 // ── Inputs ──────────────────────────────────────────────────────────
 
 function LabeledInput({

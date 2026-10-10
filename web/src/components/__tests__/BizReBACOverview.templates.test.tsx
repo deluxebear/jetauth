@@ -5,6 +5,7 @@ import * as BizBackend from "../../backend/BizBackend";
 import type { ApiResponse } from "../../backend/request";
 import type {
   BizAuthorizationModel,
+  BizReBACAssertion,
   BizWriteTuplesResponse,
   SaveAuthorizationModelResult,
 } from "../../backend/BizBackend";
@@ -69,7 +70,7 @@ function setupEmptyState() {
     status: "ok",
     msg: "",
     data: [],
-  } as ApiResponse<unknown[]>);
+  } satisfies ApiResponse<BizReBACAssertion[]>);
 }
 
 describe("BizReBACOverview empty state", () => {
