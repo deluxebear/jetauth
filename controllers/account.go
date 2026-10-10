@@ -376,7 +376,8 @@ func (c *ApiController) Logout() {
 	user := c.GetSessionUsername()
 
 	if accessToken == "" && redirectUri == "" {
-		// TODO https://github.com/deluxebear/jetauth/pull/1494#discussion_r1095675265
+		// Decision: logout is idempotent. Without a signed-in session there is nothing
+		// to tear down, so report success instead of an error.
 		if user == "" {
 			c.ResponseOk()
 			return
@@ -435,7 +436,9 @@ func (c *ApiController) Logout() {
 		c.ClearUserSession()
 		c.ClearTokenSession()
 
-		// TODO https://github.com/deluxebear/jetauth/pull/1494#discussion_r1095675265
+		// Decision: the browser session is cleared first, then the stored user session is
+		// deleted; a failure to delete is reported to the caller rather than ignored, since
+		// the user would otherwise believe they were signed out everywhere.
 		if err := c.deleteUserSession(user); err != nil {
 			c.ResponseError(err.Error())
 			return
