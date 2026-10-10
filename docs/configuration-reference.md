@@ -82,6 +82,7 @@ web.AppConfig.String(key)  ─── 命中 ────▶ 用 app.conf 的值
 | `initDataFile`              | `""`                                     | string  | ✅             |
 | `frontendBaseDir`           | `""`                                     | string  | ✅             |
 | `ssrfAllowedHosts`          | `""`（全封私网）                         | string  | ✅             |
+| `siteRefreshIntervalSeconds` | `5`                                    | int     | ➕             |
 | `useGroupPathInToken`       | `false`                                  | bool    | ➕             |
 | `acmeEmail`                 | `""`                                     | string  | ➕             |
 | `acmePrivateKey`            | `""`                                     | string  | ➕             |
@@ -372,6 +373,11 @@ immediately flushes the matching L2 entry on instance B. CP-8 C6.
 ---
 
 ## 13. 安全与 SSRF
+
+### `siteRefreshIntervalSeconds` — Site 网关后台刷新间隔
+- **默认**：`5`（秒）；非法或 ≤0 的值回退到 5
+- **用途**：后台循环按此间隔检测 site / rule / cert / application 表是否变化（`count + max(updated_time)` 轻量指纹），仅在变化时才重建内存 SiteMap / ruleMap；无变化时最多每 60 秒强制全量刷新一次。同时也是证书监控的检查间隔。
+- **注意**：修改后需重启生效；调大会增加后台直接改库后的生效延迟。
 
 ### `ssrfAllowedHosts` — 自定义 HTTP 邮件 SSRF 白名单（CIDR）
 - **默认**：`""`（全部私网 IP 都被拦）

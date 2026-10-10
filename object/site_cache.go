@@ -26,6 +26,7 @@ import (
 var (
 	siteMapMu                sync.RWMutex
 	SiteMap                  = map[string]*Site{}
+	siteList                 []*Site // snapshot of the last refresh, guarded by siteMapMu
 	certMapMu                sync.RWMutex
 	certMap                  = map[string]*Cert{}
 	healthCheckNeededDomains []string
@@ -132,6 +133,7 @@ func refreshSiteMap() error {
 
 	siteMapMu.Lock()
 	SiteMap = newSiteMap
+	siteList = sites
 	healthCheckNeededDomains = newHealthCheckNeededDomains
 	siteMapMu.Unlock()
 	return nil
@@ -145,4 +147,20 @@ func GetSiteByDomain(domain string) *Site {
 		return site
 	}
 	return nil
+}
+
+// getSiteListSnapshot returns shallow copies of the sites loaded by the last
+// refreshSiteMap(). Copies are returned so that background workers (e.g. the
+// certificate monitor) can mutate their own objects without racing with
+// request goroutines reading the shared SiteMap entries.
+func getSiteListSnapshot() []*Site {
+	siteMapMu.RLock()
+	defer siteMapMu.RUnlock()
+
+	res := make([]*Site, 0, len(siteList))
+	for _, site := range siteList {
+		cp := *site
+		res = append(res, &cp)
+	}
+	return res
 }
