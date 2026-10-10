@@ -190,7 +190,13 @@ func (c *Client) Enforce(sub, obj, act string) (bool, error) {
 //   ok, _ := c.Enforce("org/alice", "/orders", "DELETE")
 //
 // Optional: instead of polling, long-poll /api/biz-watch-policies and call
-// Refresh when it reports a change.`;
+// Refresh when it reports a change.
+//
+// Data scope (role properties): GET /api/biz-get-user-data-scope?appId=...&userId=org/alice
+// returns {"type":"dept","values":[],"resources":{...},"sources":["sales"]}.
+// type is one of all|org|dept_and_children|dept|self|custom|none; with several
+// roles the most permissive wins. Map it to a query filter, e.g.:
+//   switch scope.Type { case "all": /* no filter */ case "self": /* WHERE owner = uid */ }`;
 
 const TS_TEMPLATE = `// JetAuth business authorization TypeScript SDK: __NAME__
 // Local Casbin enforcer cache, refreshed by polling /api/biz-get-policy-version
@@ -286,7 +292,15 @@ export class BizAuthClient {
 //   const ok = await auth.enforce("org/alice", "/orders", "DELETE");
 //
 // Optional: instead of polling, long-poll /api/biz-watch-policies and call
-// refresh() when it reports a change.`;
+// refresh() when it reports a change.
+//
+// Data scope (role properties): GET /api/biz-get-user-data-scope?appId=...&userId=org/alice
+// returns { type, values, resources?, sources } where type is one of
+// all | org | dept_and_children | dept | self | custom | none (most permissive
+// role wins). Map it to a query filter, e.g.:
+//   const { data } = await (await fetch(ENDPOINT + "/api/biz-get-user-data-scope?appId=" +
+//     encodeURIComponent(APP_ID) + "&userId=org/alice", { headers })).json();
+//   if (data.type === "self") query.where({ ownerId: "alice" });`;
 
 function fill(tpl: string, p: SdkTemplateParams): string {
   return tpl
