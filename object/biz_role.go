@@ -62,6 +62,9 @@ func validateBizRoleScope(role *BizRole) error {
 	if role.Organization == "" || role.Name == "" {
 		return fmt.Errorf("organization and name are required")
 	}
+	if err := ValidateBizRoleProperties(role.Properties); err != nil {
+		return err
+	}
 	return nil
 }
 
