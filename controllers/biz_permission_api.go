@@ -1656,6 +1656,70 @@ func (c *ApiController) BizGetUserPermissions() {
 	c.ResponseOk(data)
 }
 
+// ── Migrate from platform Permission ──
+
+// BizMigrationReportResponse wraps the dry-run plan / migration result.
+type BizMigrationReportResponse struct {
+	Status string                    `json:"status" example:"ok"`
+	Msg    string                    `json:"msg" example:""`
+	Data   object.BizMigrationReport `json:"data"`
+}
+
+// BizMigrateFromPermission
+// @Summary Migrate platform Roles/Permissions into a Casbin-mode biz app
+// @Tags Business Permission API
+// @Description Copies the platform Roles and Permissions of an organization into the
+//
+//	biz tables (biz_role, biz_role_member, biz_role_inheritance, biz_permission,
+//	biz_permission_grantee) of the target app. dryRun=true only returns the plan
+//	(counts, conflicts, unmappable fields). A real run is one DB transaction
+//	followed by a single policy sync. Rows are matched by name; onConflict decides
+//	whether existing rows are skipped or overwritten. Admin only; the source
+//	organization must be the app's own organization unless the caller is a global admin.
+//
+// @Param   appId               query    string  true   "The target app id (owner/appName)"
+// @Param   sourceOrganization  query    string  false  "Platform organization to read (defaults to the app owner)"
+// @Param   dryRun              query    bool    false  "Only report what would change (default false)"
+// @Param   onConflict          query    string  false  "skip (default) or overwrite"
+// @Success 200 {object} BizMigrationReportResponse "The migration report"
+// @Router /biz-migrate-from-permission [post]
+func (c *ApiController) BizMigrateFromPermission() {
+	if !c.IsAdmin() {
+		c.ResponseError(c.T("auth:Unauthorized operation"))
+		return
+	}
+
+	owner, appName, err := util.GetOwnerAndNameFromIdWithError(c.Ctx.Input.Query("appId"))
+	if err != nil {
+		c.ResponseError(err.Error())
+		return
+	}
+	sourceOrg := c.Ctx.Input.Query("sourceOrganization")
+	if sourceOrg == "" {
+		sourceOrg = owner
+	}
+
+	// Cross-tenant guard: only a global admin may touch an organization other
+	// than their own, and a non-global admin must belong to the app's org.
+	if !c.IsGlobalAdmin() {
+		user := c.getCurrentUser()
+		if user == nil || user.Owner != owner || sourceOrg != owner {
+			c.ResponseError(c.T("auth:Unauthorized operation"))
+			return
+		}
+	}
+
+	dryRun := c.Ctx.Input.Query("dryRun") == "true"
+	onConflict := c.Ctx.Input.Query("onConflict")
+
+	report, err := object.MigrateFromPlatformPermission(owner, appName, sourceOrg, onConflict, dryRun, c.GetSessionUsername())
+	if err != nil {
+		c.ResponseError(err.Error())
+		return
+	}
+	c.ResponseOk(report)
+}
+
 // ── Sync Policies ──
 
 // BizSyncPolicies

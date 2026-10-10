@@ -246,6 +246,8 @@ func InitAPI() {
 	web.Router("/api/biz-update-app-config", &controllers.ApiController{}, "POST:UpdateBizAppConfig")
 	web.Router("/api/biz-delete-app-config", &controllers.ApiController{}, "POST:DeleteBizAppConfig")
 
+	web.Router("/api/biz-migrate-from-permission", &controllers.ApiController{}, "POST:BizMigrateFromPermission")
+
 	web.Router("/api/biz-get-roles", &controllers.ApiController{}, "GET:GetBizRoles")
 	web.Router("/api/biz-get-role", &controllers.ApiController{}, "GET:GetBizRole")
 	web.Router("/api/biz-get-role-stats", &controllers.ApiController{}, "GET:GetBizRoleStats")
