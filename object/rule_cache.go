@@ -64,3 +64,15 @@ func GetRulesByRuleIds(ids []string) ([]*Rule, error) {
 	}
 	return res, nil
 }
+
+// SetRuleMapForTest replaces the in-memory rule map. Intended for tests in
+// other packages (e.g. rule) that cannot reach the unexported ruleMap.
+func SetRuleMapForTest(rules []*Rule) {
+	m := map[string]*Rule{}
+	for _, r := range rules {
+		m[util.GetId(r.Owner, r.Name)] = r
+	}
+	ruleMapMu.Lock()
+	ruleMap = m
+	ruleMapMu.Unlock()
+}

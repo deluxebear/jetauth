@@ -32,7 +32,41 @@ type RuleResult struct {
 	Reason     string
 }
 
+// evalContext is request-scoped state shared by nested (compound) rule
+// evaluation: a memo of already evaluated rule ids and the set of rules
+// currently being evaluated, used to reject circular references.
+type evalContext struct {
+	memo     map[string]memoEntry
+	visiting map[string]bool
+}
+
+type memoEntry struct {
+	result *RuleResult
+	err    error
+}
+
+func newEvalContext() *evalContext {
+	return &evalContext{memo: map[string]memoEntry{}, visiting: map[string]bool{}}
+}
+
 func CheckRules(ruleIds []string, r *http.Request) (*RuleResult, error) {
+	return checkRulesWithContext(ruleIds, r, newEvalContext())
+}
+
+// checkRuleOnce evaluates a single rule id, memoized per request.
+func (c *evalContext) checkRuleOnce(ruleId string, r *http.Request) (*RuleResult, error) {
+	if e, ok := c.memo[ruleId]; ok {
+		return e.result, e.err
+	}
+	if c.visiting[ruleId] {
+		return nil, fmt.Errorf("circular compound rule reference detected at rule: %s", ruleId)
+	}
+	result, err := checkRulesWithContext([]string{ruleId}, r, c)
+	c.memo[ruleId] = memoEntry{result: result, err: err}
+	return result, err
+}
+
+func checkRulesWithContext(ruleIds []string, r *http.Request, ctx *evalContext) (*RuleResult, error) {
 	rules, err := object.GetRulesByRuleIds(ruleIds)
 	if err != nil {
 		return nil, err
@@ -51,12 +85,15 @@ func CheckRules(ruleIds []string, r *http.Request) (*RuleResult, error) {
 				ruleName: rule.GetId(),
 			}
 		case "Compound":
-			ruleObj = &CompoundRule{}
+			ruleObj = &CompoundRule{ctx: ctx}
 		default:
 			return nil, fmt.Errorf("unknown rule type: %s for rule: %s", rule.Type, rule.GetId())
 		}
 
+		ruleId := ruleIds[i]
+		ctx.visiting[ruleId] = true
 		result, err := ruleObj.checkRule(rule.Expressions, r)
+		delete(ctx.visiting, ruleId)
 		if err != nil {
 			return nil, err
 		}

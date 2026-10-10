@@ -22,14 +22,19 @@ import (
 	"github.com/deluxebear/jetauth/util"
 )
 
-type CompoundRule struct{}
+type CompoundRule struct {
+	ctx *evalContext
+}
 
 func (r *CompoundRule) checkRule(expressions []*object.Expression, req *http.Request) (*RuleResult, error) {
+	if r.ctx == nil {
+		r.ctx = newEvalContext()
+	}
 	operators := util.NewStack()
 	res := true
 	for _, expression := range expressions {
 		isHit := true
-		result, err := CheckRules([]string{expression.Value}, req)
+		result, err := r.ctx.checkRuleOnce(expression.Value, req)
 		if err != nil {
 			return nil, err
 		}
