@@ -17,6 +17,7 @@ package object
 import (
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/deluxebear/jetauth/util"
 )
@@ -121,10 +122,47 @@ func permissionUserName(userId string) string {
 	return name
 }
 
+// permissionApproverName is what is stored in Permission.Approver: the user name, or the full
+// "app/<name>" id for an application session (a bare app name would be ambiguous with a user).
+func permissionApproverName(operatorId string) string {
+	if IsAppUser(operatorId) {
+		return operatorId
+	}
+	return permissionUserName(operatorId)
+}
+
+// isPermissionSubmitter reports whether operatorId submitted the permission. New records store the
+// full "owner/name" id. Legacy records stored the bare user name; those match only when the operator
+// belongs to the permission's own organization, so a same-named user of another organization cannot
+// impersonate the submitter.
+func isPermissionSubmitter(permission *Permission, operatorId string) bool {
+	if permission.Submitter == "" || operatorId == "" {
+		return false
+	}
+	if strings.Contains(permission.Submitter, "/") {
+		return permission.Submitter == operatorId
+	}
+
+	operatorOwner, operatorName := util.GetOwnerAndNameFromIdNoCheck(operatorId)
+	return permission.Submitter == operatorName && operatorOwner == permission.Owner
+}
+
+// permissionSubmitterUserId returns the user id of the submitter for notifications, or "" when the
+// submitter is an application.
+func permissionSubmitterUserId(permission *Permission) string {
+	if permission.Submitter == "" || IsAppUser(permission.Submitter) {
+		return ""
+	}
+	if strings.Contains(permission.Submitter, "/") {
+		return permission.Submitter
+	}
+	return util.GetId(permission.Owner, permission.Submitter)
+}
+
 // PreparePermissionForAdd normalizes the server-controlled approval fields of a new permission.
 // Non-admins always create Pending permissions; admins may create Approved (default) or Pending ones.
 func PreparePermissionForAdd(permission *Permission, operatorId string, isAdmin bool) error {
-	permission.Submitter = permissionUserName(operatorId)
+	permission.Submitter = operatorId
 	permission.Approver = ""
 	permission.ApproveTime = ""
 	permission.RejectReason = ""
@@ -141,7 +179,7 @@ func PreparePermissionForAdd(permission *Permission, operatorId string, isAdmin 
 
 	permission.State = state
 	if state == PermissionStateApproved {
-		permission.Approver = permissionUserName(operatorId)
+		permission.Approver = permissionApproverName(operatorId)
 		permission.ApproveTime = util.GetCurrentTime()
 	}
 	return nil
@@ -158,7 +196,7 @@ func ApplyPermissionStateChange(oldPermission, permission *Permission, operatorI
 	}
 	reason := permission.RejectReason
 
-	isSubmitter := oldPermission.Submitter != "" && oldPermission.Submitter == permissionUserName(operatorId)
+	isSubmitter := isPermissionSubmitter(oldPermission, operatorId)
 	if err := ValidatePermissionTransition(from, to, isAdmin, isSubmitter, reason); err != nil {
 		return from, to, err
 	}
@@ -174,11 +212,11 @@ func ApplyPermissionStateChange(oldPermission, permission *Permission, operatorI
 
 	switch to {
 	case PermissionStateApproved:
-		permission.Approver = permissionUserName(operatorId)
+		permission.Approver = permissionApproverName(operatorId)
 		permission.ApproveTime = util.GetCurrentTime()
 		permission.RejectReason = ""
 	case PermissionStateRejected:
-		permission.Approver = permissionUserName(operatorId)
+		permission.Approver = permissionApproverName(operatorId)
 		permission.ApproveTime = util.GetCurrentTime()
 		permission.RejectReason = reason
 	default:
@@ -355,7 +393,11 @@ func notifyPermissionApproval(permission *Permission, operatorId, from, to, reas
 		title = fmt.Sprintf("Permission awaiting approval: %s", permission.GetId())
 		content = fmt.Sprintf("Permission %s was submitted by %s and is waiting for approval.", permission.GetId(), permission.Submitter)
 	case to == PermissionStateApproved || to == PermissionStateRejected:
-		user, err := GetUser(util.GetId(permission.Owner, permission.Submitter))
+		submitterId := permissionSubmitterUserId(permission)
+		if submitterId == "" {
+			return
+		}
+		user, err := GetUser(submitterId)
 		if err != nil || user == nil || user.Email == "" {
 			return
 		}

@@ -390,7 +390,9 @@ func getPermissionsAndRolesByUser(userId string) ([]*Permission, []*Role, error)
 
 func GetPermissionsBySubmitter(owner string, submitter string) ([]*Permission, error) {
 	permissions := []*Permission{}
-	err := ormer.Engine.Desc("created_time").Find(&permissions, &Permission{Owner: owner, Submitter: submitter})
+	// New records store the full "owner/name" id; legacy ones the bare user name.
+	err := ormer.Engine.Where("owner = ? AND (submitter = ? OR submitter = ?)", owner, util.GetId(owner, submitter), submitter).
+		Desc("created_time").Find(&permissions)
 	if err != nil {
 		return permissions, err
 	}

@@ -193,7 +193,7 @@ export default function PermissionEditPage() {
   };
 
   const canApprove = canApprovePermission(account, permission.owner);
-  const isSubmitter = !!account && !!permission.submitter && permission.submitter === account.name;
+  const isSubmitter = !!account && !!permission.submitter && (permission.submitter === `${account.owner}/${account.name}` || (!permission.submitter.includes("/") && permission.submitter === account.name && permission.owner === account.owner));
 
   // Runs an approval action, then merges only the server-owned approval fields
   // so unsaved edits to the rest of the form survive.

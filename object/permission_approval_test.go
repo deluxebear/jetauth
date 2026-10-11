@@ -53,7 +53,7 @@ func TestPreparePermissionForAdd(t *testing.T) {
 	if err := PreparePermissionForAdd(p, "org/bob", false); err != nil {
 		t.Fatal(err)
 	}
-	if p.State != PermissionStatePending || p.Approver != "" || p.ApproveTime != "" || p.Submitter != "bob" {
+	if p.State != PermissionStatePending || p.Approver != "" || p.ApproveTime != "" || p.Submitter != "org/bob" {
 		t.Fatalf("non-admin add not forced to pending: %+v", p)
 	}
 
@@ -71,7 +71,7 @@ func TestPreparePermissionForAdd(t *testing.T) {
 }
 
 func TestApplyPermissionStateChange(t *testing.T) {
-	old := &Permission{State: "Pending", Submitter: "bob"}
+	old := &Permission{Owner: "org", State: "Pending", Submitter: "bob"}
 
 	// non-admin forging approval is rejected
 	forged := &Permission{State: "Approved", Approver: "bob", ApproveTime: "now"}
@@ -99,7 +99,7 @@ func TestApplyPermissionStateChange(t *testing.T) {
 	}
 
 	// reject stores reason, resubmit clears it
-	rej := &Permission{State: "Rejected", RejectReason: "too broad"}
+	rej := &Permission{Owner: "org", State: "Rejected", RejectReason: "too broad"}
 	if _, _, err = ApplyPermissionStateChange(old, rej, "built-in/admin", true); err != nil {
 		t.Fatal(err)
 	}
