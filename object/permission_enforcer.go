@@ -391,6 +391,12 @@ func addPolicies(permission *Permission) error {
 	// it must be private rather than the shared cached one.
 	defer InvalidatePermissionEnforcers(permission.GetId())
 
+	// Pending/Rejected content must never be live for business enforcement; the rows are
+	// written when the permission is approved (UpdatePermission removes, then re-adds).
+	if !permission.IsPolicyLive() {
+		return nil
+	}
+
 	enforcer, err := newPermissionEnforcer(permission)
 	if err != nil {
 		return err

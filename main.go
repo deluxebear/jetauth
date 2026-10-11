@@ -77,6 +77,7 @@ func main() {
 
 	object.InitDb()
 	object.InitCustomHttpEmailMigration()
+	object.InitPermissionPolicyReconciliation()
 	object.InitBizReBACCache()
 	object.InitPermissionEnforcerCache()
 	object.InitBizPolicyWatcher()

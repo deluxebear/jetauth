@@ -421,6 +421,10 @@ func GetMaskedPermissions(permissions []*Permission) []*Permission {
 func GroupPermissionsByModelAdapter(permissions []*Permission) map[string][]string {
 	m := make(map[string][]string)
 	for _, permission := range permissions {
+		// Defense in depth: Pending/Rejected permissions are never enforced.
+		if !permission.IsPolicyLive() {
+			continue
+		}
 		key := permission.GetModelAndAdapter()
 		permissionIds, ok := m[key]
 		if !ok {

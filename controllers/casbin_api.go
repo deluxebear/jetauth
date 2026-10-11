@@ -129,6 +129,11 @@ func (c *ApiController) Enforce() {
 		res := []bool{}
 		keyRes := []string{}
 
+		if !permission.IsPolicyLive() {
+			c.ResponseOk([]bool{false}, []string{permission.GetModelAndAdapter()})
+			return
+		}
+
 		enforceResult, err := object.Enforce(permission, request)
 		if err != nil {
 			c.ResponseError(err.Error())
@@ -269,6 +274,12 @@ func (c *ApiController) BatchEnforce() {
 
 		res := [][]bool{}
 		keyRes := []string{}
+
+		if !permission.IsPolicyLive() {
+			denied := make([]bool, len(requests))
+			c.ResponseOk([][]bool{denied}, []string{permission.GetModelAndAdapter()})
+			return
+		}
 
 		enforceResult, err := object.BatchEnforce(permission, requests)
 		if err != nil {

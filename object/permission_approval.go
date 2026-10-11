@@ -42,6 +42,26 @@ type PermissionApprovalLog struct {
 	Reason    string `xorm:"varchar(500)" json:"reason"`
 }
 
+// IsPolicyLive reports whether the permission's casbin policy rows may exist. Only Approved
+// permissions are enforced by /api/enforce; an empty state is legacy data created before the
+// approval workflow existed (every write path since then forces a non-empty state), so it keeps
+// working. IsEnabled is deliberately not part of this gate: it is a zero-valued bool for API
+// clients that never set it, and the platform enforcer has never honoured it.
+func (p *Permission) IsPolicyLive() bool {
+	return p.State == "" || p.State == PermissionStateApproved
+}
+
+// FilterLivePermissions drops permissions whose policies must not be enforced (Pending/Rejected).
+func FilterLivePermissions(permissions []*Permission) []*Permission {
+	res := make([]*Permission, 0, len(permissions))
+	for _, permission := range permissions {
+		if permission != nil && permission.IsPolicyLive() {
+			res = append(res, permission)
+		}
+	}
+	return res
+}
+
 func normalizePermissionState(state string) string {
 	if state == "" {
 		return PermissionStatePending
