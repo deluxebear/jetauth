@@ -5,6 +5,7 @@ import { Trash2, User, Heart, Shield, Settings, ChevronDown, LogOut, Eye, EyeOff
 import StickyEditHeader from "../components/StickyEditHeader";
 import { FormField, FormSection, Switch, inputClass, monoInputClass } from "../components/FormSection";
 import { useTranslation } from "../i18n";
+import { errMsg, errName } from "../types/lint-pages-nz";
 import { useOrganization } from "../OrganizationContext";
 import { useModal } from "../components/Modal";
 import { useEntityEdit } from "../hooks/useEntityEdit";
@@ -14,6 +15,7 @@ import * as GroupBackend from "../backend/GroupBackend";
 import * as AppBackend from "../backend/ApplicationBackend";
 import * as OrgBackend from "../backend/OrganizationBackend";
 import type { User as UserType } from "../backend/UserBackend";
+import type { FaceId } from "../components/FaceIdTable";
 import { friendlyError } from "../utils/errorHelper";
 import { obfuscatePassword } from "../utils/obfuscator";
 import FaceIdTable from "../components/FaceIdTable";
@@ -36,18 +38,18 @@ export default function UserEditPage() {
   // Anything else is an existing user being edited. isAddMode stays synced
   // with isNew but also flips to false after the first successful save.
   const isNew = name === "new";
-  const [isAddMode, setIsAddMode] = useState(isNew || (location.state as any)?.mode === "add");
+  const [isAddMode, setIsAddMode] = useState(isNew || (location.state as { mode?: string } | null)?.mode === "add");
   const { t, locale } = useTranslation();
   const modal = useModal();
   const { orgOptions, isGlobalAdmin } = useOrganization();
-  const [user, setUser] = useState<UserType | null>(null);
+  const [user, setUser] = useState<UserExtras | null>(null);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   useEffect(() => { if (saved) { const t = setTimeout(() => setSaved(false), 1500); return () => clearTimeout(t); } }, [saved]);
   const [originalJson, setOriginalJson] = useState("");
   const [activeTab, setActiveTab] = useState<string>("basic");
   const [showPassword, setShowPassword] = useState(false);
-  const [orgGroups, setOrgGroups] = useState<{ name: string; displayName: string }[]>([]);
+  const [orgGroups, setOrgGroups] = useState<{ owner: string; name: string; displayName: string }[]>([]);
   const [orgApps, setOrgApps] = useState<{ name: string; displayName: string }[]>([]);
   const [orgUserTypes, setOrgUserTypes] = useState<string[]>([]);
   const [orgTags, setOrgTags] = useState<string[]>([]);
@@ -121,11 +123,11 @@ export default function UserEditPage() {
   useEffect(() => {
     if (!owner) return;
     GroupBackend.getGroups({ owner }).then((res) => {
-      if (res.status === "ok" && res.data) setOrgGroups(res.data as any);
+      if (res.status === "ok" && res.data) setOrgGroups(res.data);
     });
     AppBackend.getApplicationsByOrganization({ owner: "admin", organization: owner }).then((res) => {
       if (res.status === "ok" && res.data) {
-        setOrgApps(res.data as any);
+        setOrgApps(res.data);
         if (res.data.length === 0 && owner !== "built-in") {
           setNoAppError(true);
         }
@@ -133,7 +135,7 @@ export default function UserEditPage() {
     });
     OrgBackend.getOrganization("admin", owner).then((res) => {
       if (res.status === "ok" && res.data) {
-        const org = (Array.isArray(res.data) ? res.data[0] : res.data) as any;
+        const org = (Array.isArray(res.data) ? res.data[0] : res.data) as OrgBackend.Organization | undefined;
         if (org) {
           setOrgUserTypes(org.userTypes ?? []);
           setOrgTags(org.tags ?? []);
@@ -153,6 +155,9 @@ export default function UserEditPage() {
     });
   }, [owner]);
 
+  const isDirty = !!user && originalJson !== "" && JSON.stringify(user) !== originalJson;
+  const showBanner = useUnsavedWarning({ isAddMode, isDirty });
+
   if (noAppError) {
     return (
       <div className="space-y-5">
@@ -167,9 +172,6 @@ export default function UserEditPage() {
       </div>
     );
   }
-
-  const isDirty = !!user && originalJson !== "" && JSON.stringify(user) !== originalJson;
-  const showBanner = useUnsavedWarning({ isAddMode, isDirty });
 
   if (loading || !user) {
     return <div className="flex items-center justify-center py-24"><div className="h-8 w-8 rounded-full border-2 border-accent/30 border-t-accent animate-spin" /></div>;
@@ -215,7 +217,7 @@ export default function UserEditPage() {
 
   const getFieldLabel = (name: string): string => {
     const key = `accountItem.${name}`;
-    const translated = t(key as any);
+    const translated = t(key);
     return translated === key ? name : translated;
   };
 
@@ -279,7 +281,7 @@ export default function UserEditPage() {
           navigate(`/users/${user.owner}/${user.name}`, { replace: true });
         }
       }
-    } catch (e: any) { modal.toast(e.message || t("common.saveFailed"), "error"); }
+    } catch (e) { modal.toast(errMsg(e) || t("common.saveFailed"), "error"); }
     finally { setSaving(false); }
   };
 
@@ -303,8 +305,8 @@ export default function UserEditPage() {
       setIsAddMode(true);
       // Make sure the URL stays /new so the next save re-enters add mode.
       if (!isNew) navigate(`/users/${owner}/new`, { replace: true, state: { mode: "add" } });
-    } catch (e: any) {
-      modal.toast(e?.message || t("common.saveFailed"), "error");
+    } catch (e) {
+      modal.toast(errMsg(e) || t("common.saveFailed"), "error");
     } finally {
       setSaving(false);
     }
@@ -319,8 +321,8 @@ export default function UserEditPage() {
         invalidateList();
         navigate("/users");
       }
-    } catch (e: any) {
-      modal.toast(e?.message || t("common.saveFailed"), "error");
+    } catch (e) {
+      modal.toast(errMsg(e) || t("common.saveFailed"), "error");
     } finally {
       setSaving(false);
     }
@@ -504,13 +506,13 @@ export default function UserEditPage() {
       <FormSection title={t("users.section.membership")}>
         {dynField("Groups", undefined, <MultiSearchSelect
             selected={user.groups ?? []}
-            options={orgGroups.map((g: any) => ({ value: `${g.owner}/${g.name}`, label: g.displayName || g.name }))}
+            options={orgGroups.map((g) => ({ value: `${g.owner}/${g.name}`, label: g.displayName || g.name }))}
             onChange={(v) => set("groups", v)}
             placeholder={t("common.search")}
           />)}
         {dynField("Signup application", undefined, <SingleSearchSelect
             value={user.signupApplication ?? ""}
-            options={orgApps.map((a) => ({ value: a.name, label: (a as any).displayName || a.name }))}
+            options={orgApps.map((a) => ({ value: a.name, label: a.displayName || a.name }))}
             onChange={(v) => set("signupApplication", v)}
             placeholder={t("common.search")}
           />)}
@@ -527,14 +529,14 @@ export default function UserEditPage() {
         {dynField("Address", "full", <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-[11px] text-text-muted mb-1">{t("users.field.address1")}</label>
-              <input value={Array.isArray(user.address) ? user.address[0] ?? "" : String(user.address ?? "")} onChange={(e) => { const arr = Array.isArray(user.address) ? [...user.address] : [String(user.address ?? ""), ""]; arr[0] = e.target.value; set("address", arr as any); }} className={inputClass} />
+              <input value={Array.isArray(user.address) ? user.address[0] ?? "" : String(user.address ?? "")} onChange={(e) => { const arr = Array.isArray(user.address) ? [...user.address] : [String(user.address ?? ""), ""]; arr[0] = e.target.value; set("address", arr); }} className={inputClass} />
             </div>
             <div>
               <label className="block text-[11px] text-text-muted mb-1">{t("users.field.address2")}</label>
-              <input value={Array.isArray(user.address) ? user.address[1] ?? "" : ""} onChange={(e) => { const arr = Array.isArray(user.address) ? [...user.address] : [String(user.address ?? ""), ""]; arr[1] = e.target.value; set("address", arr as any); }} className={inputClass} />
+              <input value={Array.isArray(user.address) ? user.address[1] ?? "" : ""} onChange={(e) => { const arr = Array.isArray(user.address) ? [...user.address] : [String(user.address ?? ""), ""]; arr[1] = e.target.value; set("address", arr); }} className={inputClass} />
             </div>
           </div>)}
-        {dynBlock("Addresses", <AddressesTable items={(user as any).addresses ?? []} onChange={(v) => setAny("addresses", v)} t={t} />)}
+        {dynBlock("Addresses", <AddressesTable items={user.addresses ?? []} onChange={(v) => setAny("addresses", v)} t={t} />)}
       </FormSection>
     </div>
   );
@@ -628,7 +630,7 @@ export default function UserEditPage() {
               { key: "idCardBack", label: t("users.field.idCardBack") },
               { key: "idCardWithPerson", label: t("users.field.idCardWithPerson") },
             ] as const).map(({ key, label }) => {
-              const url = (user.properties as any)?.[key] || "";
+              const url = user.properties?.[key] || "";
               return (
                 <div key={key} className="flex flex-col items-center gap-2">
                   {url ? (
@@ -721,14 +723,14 @@ export default function UserEditPage() {
           </div>
         ))}
         {dynField("IP whitelist", undefined, <input value={user.ipWhitelist ?? ""} onChange={(e) => set("ipWhitelist", e.target.value)} disabled={isFieldDisabled("IP whitelist")} className={inputClass} placeholder="192.168.1.1, 10.0.0.0/8" />)}
-        {isFieldVisible("Last change password time") && (user as any).lastChangePasswordTime && (
+        {isFieldVisible("Last change password time") && user.lastChangePasswordTime && (
           <div className="col-span-2 flex items-center gap-2 text-[12px] text-text-muted">
             <span>{getFieldLabel("Last change password time")}:</span>
             <span className="font-mono text-text-secondary">{(() => {
               try {
-                const d = new Date((user as any).lastChangePasswordTime);
+                const d = new Date(user.lastChangePasswordTime);
                 return `${d.getFullYear()}年${String(d.getMonth() + 1).padStart(2, "0")}月${String(d.getDate()).padStart(2, "0")}日 ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
-              } catch { return (user as any).lastChangePasswordTime; }
+              } catch { return user.lastChangePasswordTime; }
             })()}</span>
           </div>
         )}
@@ -752,14 +754,14 @@ export default function UserEditPage() {
             "yammer", "yandex", "zoom", "metamask", "web3Onboard",
             "custom", "custom2", "custom3", "custom4", "custom5",
           ];
-          const linked = PROVIDER_FIELDS.filter((p) => (user as any)[p]);
+          const linked = PROVIDER_FIELDS.filter((p) => user[p]);
           if (linked.length === 0) return <span className="text-[12px] text-text-muted">—</span>;
           return (
             <div className="space-y-1.5">
               {linked.map((provider) => (
                 <div key={provider} className="flex items-center gap-3 rounded-lg border border-border bg-surface-2 px-3 py-2">
                   <span className="text-[13px] font-medium text-text-primary capitalize">{provider}</span>
-                  <span className="text-[12px] text-text-muted font-mono truncate max-w-[300px]">{(user as any)[provider]}</span>
+                  <span className="text-[12px] text-text-muted font-mono truncate max-w-[300px]">{String(user[provider])}</span>
                   <span className="ml-auto inline-flex items-center gap-1 rounded-full bg-success/15 border border-success/20 px-2 py-0.5 text-[10px] font-medium text-success">
                     ✓ {t("users.provider.linked")}
                   </span>
@@ -775,7 +777,7 @@ export default function UserEditPage() {
       <FormSection title={t("users.section.mfa")}>
         {dynField("Multi-factor authentication", "full",
           <MfaSection
-            multiFactorAuths={(user as any).multiFactorAuths ?? (user as any).mfaProps ?? []}
+            multiFactorAuths={user.multiFactorAuths ?? user.mfaProps ?? []}
             user={user}
             isSelf={isSelf}
             isAdmin={isAdmin}
@@ -784,18 +786,18 @@ export default function UserEditPage() {
           />
         )}
         {dynBlock("MFA accounts",
-          <SimpleTable data={(user as any).mfaAccounts ?? []} columns={["issuer", "accountName"]} emptyText={t("common.noData")} title={t("users.field.mfaAccounts")} />
+          <SimpleTable data={user.mfaAccounts ?? []} columns={["issuer", "accountName"]} emptyText={t("common.noData")} title={t("users.field.mfaAccounts")} />
         )}
         {dynBlock("MFA items",
           <MfaItemsTable
-            items={(user as any).mfaItems ?? []}
+            items={user.mfaItems ?? []}
             onChange={(v) => setAny("mfaItems", v)}
             t={t}
           />
         )}
         {dynBlock("WebAuthn credentials",
           <WebAuthnTable
-            items={(user as any).webauthnCredentials ?? []}
+            items={user.webauthnCredentials ?? []}
             onChange={(v) => setAny("webauthnCredentials", v)}
             isSelf={isSelf}
             t={t}
@@ -804,7 +806,7 @@ export default function UserEditPage() {
         )}
         {dynBlock("Managed accounts",
           <ManagedAccountsTable
-            items={(user as any).managedAccounts ?? []}
+            items={user.managedAccounts ?? []}
             onChange={(v) => setAny("managedAccounts", v)}
             applications={orgApps}
             t={t}
@@ -812,7 +814,7 @@ export default function UserEditPage() {
         )}
         {dynBlock("Face ID",
           <FaceIdTable
-            table={(user as any).faceIds ?? []}
+            table={user.faceIds ?? []}
             onUpdateTable={(v) => setAny("faceIds", v)}
             account={{ owner: user.owner, name: user.name }}
           />
@@ -837,10 +839,10 @@ export default function UserEditPage() {
       {anySectionFieldVisible("Cart", "Transactions") && (
         <FormSection title={t("users.section.cart")}>
           {dynBlock("Cart",
-            <SimpleTable data={(user as any).cart ?? []} columns={["name", "price", "quantity", "currency"]} emptyText={t("common.noData")} title={getFieldLabel("Cart")} />
+            <SimpleTable data={user.cart ?? []} columns={["name", "price", "quantity", "currency"]} emptyText={t("common.noData")} title={getFieldLabel("Cart")} />
           )}
           {dynBlock("Transactions",
-            <SimpleTable data={(user as any).transactions ?? []} columns={["name", "amount", "currency", "createdTime"]} emptyText={t("common.noData")} title={getFieldLabel("Transactions")} />
+            <SimpleTable data={user.transactions ?? []} columns={["name", "amount", "currency", "createdTime"]} emptyText={t("common.noData")} title={getFieldLabel("Transactions")} />
           )}
         </FormSection>
       )}
@@ -865,10 +867,10 @@ export default function UserEditPage() {
         {dynField("Is admin", undefined, <Switch checked={!!user.isAdmin} onChange={(v) => set("isAdmin", v)} disabled={isFieldDisabled("Is admin")} />)}
         {dynField("Is forbidden", undefined, <Switch checked={!!user.isForbidden} onChange={(v) => set("isForbidden", v)} disabled={isFieldDisabled("Is forbidden")} />)}
         {dynField("Is deleted", undefined, <Switch checked={!!user.isDeleted} onChange={(v) => { set("isDeleted", v); setAny("deletedTime", v ? new Date().toISOString() : ""); }} disabled={isFieldDisabled("Is deleted")} />)}
-        {dynField("Need update password", undefined, <Switch checked={!!(user as any).needUpdatePassword} onChange={(v) => setAny("needUpdatePassword", v)} disabled={isFieldDisabled("Need update password")} />)}
-        {dynField("Is online", undefined, <Switch checked={!!(user as any).isOnline} onChange={() => {}} disabled />)}
+        {dynField("Need update password", undefined, <Switch checked={!!user.needUpdatePassword} onChange={(v) => setAny("needUpdatePassword", v)} disabled={isFieldDisabled("Need update password")} />)}
+        {dynField("Is online", undefined, <Switch checked={!!user.isOnline} onChange={() => {}} disabled />)}
         {dynField("Created time", undefined, <input value={user.createdTime ?? ""} disabled className={monoInputClass} />)}
-        {dynField("Updated time", undefined, <input value={String((user as any).updatedTime ?? "")} disabled className={monoInputClass} />)}
+        {dynField("Updated time", undefined, <input value={String(user.updatedTime ?? "")} disabled className={monoInputClass} />)}
       </FormSection>
       )}
 
@@ -876,14 +878,14 @@ export default function UserEditPage() {
       <FormSection title={t("users.section.roles")}>
         {dynField("Roles", "full",
           <div className="flex flex-wrap gap-1.5">
-            {((user as any).roles ?? []).length > 0 ? ((user as any).roles as { name: string; displayName?: string }[]).map((r, i) => (
+            {(user.roles ?? []).length > 0 ? (user.roles as { name: string; displayName?: string }[]).map((r, i) => (
               <Link key={i} to={`/roles/${user.owner}/${r.name}`} className="inline-flex items-center rounded-md bg-info/15 border border-info/20 px-2 py-0.5 text-[12px] font-mono font-medium text-info hover:underline">{r.displayName || r.name}</Link>
             )) : <span className="text-[12px] text-text-muted">—</span>}
           </div>
         )}
         {dynField("Permissions", "full",
           <div className="flex flex-wrap gap-1.5">
-            {((user as any).permissions ?? []).length > 0 ? ((user as any).permissions as { name: string; displayName?: string }[]).map((p, i) => (
+            {(user.permissions ?? []).length > 0 ? (user.permissions as { name: string; displayName?: string }[]).map((p, i) => (
               <Link key={i} to={`/permissions/${user.owner}/${p.name}`} className="inline-flex items-center rounded-md bg-warning/15 border border-warning/20 px-2 py-0.5 text-[12px] font-mono font-medium text-warning hover:underline">{p.displayName || p.name}</Link>
             )) : <span className="text-[12px] text-text-muted">—</span>}
           </div>
@@ -894,7 +896,7 @@ export default function UserEditPage() {
       {anySectionFieldVisible("Consents") && (
       <FormSection title={t("users.section.consents")}>
         {dynBlock("Consents",
-          <SimpleTable data={(user as any).consents ?? []} columns={["application", "grantedScopes"]} emptyText={t("common.noData")} />
+          <SimpleTable data={user.consents ?? []} columns={["application", "grantedScopes"]} emptyText={t("common.noData")} />
         )}
       </FormSection>
       )}
@@ -981,7 +983,7 @@ export default function UserEditPage() {
       {showBanner && <UnsavedBanner isAddMode={isAddMode} draftMode />}
 
       {/* Account locked banner */}
-      {isAdmin && !isSelf && (user as any).signinWrongTimes >= 5 && (
+      {isAdmin && !isSelf && (user.signinWrongTimes ?? 0) >= 5 && (
         <div className="flex items-center justify-between rounded-xl border border-danger/30 bg-danger/5 px-4 py-3">
           <div className="flex items-center gap-2">
             <LockKeyhole size={16} className="text-danger" />
@@ -989,7 +991,7 @@ export default function UserEditPage() {
               {t("users.locked.message")}
             </span>
             <span className="text-[12px] text-text-muted">
-              ({t("users.locked.wrongTimes")}: {(user as any).signinWrongTimes})
+              ({t("users.locked.wrongTimes")}: {user.signinWrongTimes})
             </span>
           </div>
           <button
@@ -1150,6 +1152,8 @@ function MultiSearchSelect({ selected, options, onChange, placeholder }: {
   const [search, setSearch] = useState("");
   const ref = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const [dropWidth, setDropWidth] = useState<number | undefined>();
+  const openDropdown = () => { setDropWidth(ref.current?.offsetWidth); setOpen(true); };
 
   useEffect(() => {
     const handler = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) { setOpen(false); setSearch(""); } };
@@ -1163,7 +1167,7 @@ function MultiSearchSelect({ selected, options, onChange, placeholder }: {
 
   return (
     <div ref={ref}>
-      <div onClick={() => { setOpen(true); setTimeout(() => inputRef.current?.focus(), 0); }}
+      <div onClick={() => { openDropdown(); setTimeout(() => inputRef.current?.focus(), 0); }}
         className={`relative flex flex-wrap gap-1.5 rounded-lg border bg-surface-2 px-2.5 py-2 pr-8 min-h-[38px] cursor-text transition-colors ${open ? "border-accent ring-1 ring-accent/30" : "border-border"}`}>
         {selected.map((val) => {
           const label = options.find((o) => o.value === val)?.label ?? val;
@@ -1174,12 +1178,12 @@ function MultiSearchSelect({ selected, options, onChange, placeholder }: {
             </span>
           );
         })}
-        <input ref={inputRef} value={search} onChange={(e) => { setSearch(e.target.value); setOpen(true); }}
+        <input ref={inputRef} value={search} onChange={(e) => { setSearch(e.target.value); openDropdown(); }}
           placeholder={selected.length === 0 ? placeholder : ""} className="flex-1 min-w-[80px] bg-transparent text-[12px] text-text-primary outline-none placeholder:text-text-muted" />
         <ChevronDown size={14} className={`absolute right-2.5 top-1/2 -translate-y-1/2 text-text-muted transition-transform duration-200 ${open ? "rotate-180" : ""}`} />
       </div>
       {open && filtered.length > 0 && (
-        <div className="absolute z-[60] mt-1 max-h-48 w-full overflow-y-auto rounded-xl border border-border bg-surface-1 py-1 shadow-[var(--shadow-elevated)]" style={{ width: ref.current?.offsetWidth }}>
+        <div className="absolute z-[60] mt-1 max-h-48 w-full overflow-y-auto rounded-xl border border-border bg-surface-1 py-1 shadow-[var(--shadow-elevated)]" style={{ width: dropWidth }}>
           {filtered.map((opt) => (
             <button key={opt.value} type="button" onClick={() => { onChange([...selected, opt.value]); setSearch(""); }}
               className="flex w-full items-center px-3 py-2 text-[13px] text-left text-text-primary hover:bg-surface-2 transition-colors">
@@ -1275,14 +1279,14 @@ function MfaItemsTable({ items, onChange, t }: { items: { name: string; rule: st
                 <td className="px-3 py-1.5">
                   <SimpleSelect value={item.name}
                     options={[
-                      { value: item.name, label: t(`users.mfaName.${getDisplayName(item.name)}` as any) },
-                      ...MFA_ITEMS.filter((m) => !usedValues.has(m.value)).map((m) => ({ value: m.value, label: t(`users.mfaName.${m.display}` as any) })),
+                      { value: item.name, label: t(`users.mfaName.${getDisplayName(item.name)}`) },
+                      ...MFA_ITEMS.filter((m) => !usedValues.has(m.value)).map((m) => ({ value: m.value, label: t(`users.mfaName.${m.display}`) })),
                     ]}
                     onChange={(v) => updateField(idx, "name", v)} compact />
                 </td>
                 <td className="px-3 py-1.5">
                   <SimpleSelect value={item.rule}
-                    options={MFA_RULE_KEYS.map((r) => ({ value: r, label: t(`users.mfaRule.${r}` as any) }))}
+                    options={MFA_RULE_KEYS.map((r) => ({ value: r, label: t(`users.mfaRule.${r}`) }))}
                     onChange={(v) => updateField(idx, "rule", v)} compact />
                 </td>
                 <td className="px-3 py-1.5">
@@ -1327,11 +1331,11 @@ function WebAuthnTable({ items, onChange, isSelf, t, onRefresh }: {
       } else {
         modal.toast(friendlyError(res.msg ?? "", t) || t("users.webauthn.registerFailed"), "error");
       }
-    } catch (e: any) {
-      if (e.name === "NotAllowedError") {
+    } catch (e) {
+      if (errName(e) === "NotAllowedError") {
         modal.toast(t("users.webauthn.cancelled"), "error");
       } else {
-        modal.toast(friendlyError(e.message, t) || t("users.webauthn.registerFailed"), "error");
+        modal.toast(friendlyError(errMsg(e) ?? "", t) || t("users.webauthn.registerFailed"), "error");
       }
     } finally {
       setRegistering(false);
@@ -1418,7 +1422,7 @@ function ManagedAccountsTable({ items, onChange, applications, t }: {
                     <SimpleSelect value={item.application ?? ""}
                       options={[
                         { value: "", label: "—" },
-                        ...applications.map((a) => ({ value: a.name, label: (a as any).displayName || a.name })),
+                        ...applications.map((a) => ({ value: a.name, label: a.displayName || a.name })),
                       ]}
                       onChange={(v) => updateField(idx, "application", v)} compact />
                   </td>
@@ -1605,7 +1609,7 @@ function MfaSection({ multiFactorAuths, user, isSelf, isAdmin, onRefresh, t }: {
 
   const getMfaLabel = (mfa: typeof multiFactorAuths[0]) => {
     const key = mfa.mfaType ?? mfa.type ?? "";
-    const translated = t(`users.mfa.${key}` as any);
+    const translated = t(`users.mfa.${key}`);
     return translated.startsWith("users.mfa.") ? key : translated;
   };
 
@@ -1815,3 +1819,22 @@ function AddressesTable({ items, onChange, t }: {
     </div>
   );
 }
+
+/** Fields the backend returns on a user that are not part of the base `User` interface. */
+type UserExtras = UserType & {
+  addresses?: Parameters<typeof AddressesTable>[0]["items"];
+  lastChangePasswordTime?: string;
+  multiFactorAuths?: Parameters<typeof MfaSection>[0]["multiFactorAuths"];
+  mfaProps?: Parameters<typeof MfaSection>[0]["multiFactorAuths"];
+  mfaAccounts?: Record<string, unknown>[];
+  mfaItems?: Parameters<typeof MfaItemsTable>[0]["items"];
+  webauthnCredentials?: Parameters<typeof WebAuthnTable>[0]["items"];
+  managedAccounts?: Parameters<typeof ManagedAccountsTable>[0]["items"];
+  faceIds?: FaceId[];
+  cart?: Record<string, unknown>[];
+  transactions?: Record<string, unknown>[];
+  consents?: Record<string, unknown>[];
+  roles?: { name: string; displayName?: string }[];
+  permissions?: { name: string; displayName?: string }[];
+  signinWrongTimes?: number;
+};
