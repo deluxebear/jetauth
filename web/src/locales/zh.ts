@@ -76,6 +76,7 @@ const zh: Record<string, string> = {
   "auth.forgot.confirmPassword": "确认密码",
   "auth.forgot.submitButton": "重置密码",
   "auth.forgot.mismatch": "两次密码不一致",
+  "auth.forgot.noContact": "该账号未绑定邮箱或手机号",
   "auth.forgot.success": "密码重置成功 — 请重新登录",
   "auth.forgot.backToSignin": "返回登录",
 

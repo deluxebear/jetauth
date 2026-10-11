@@ -76,6 +76,7 @@ const en = {
   "auth.forgot.confirmPassword": "Confirm password",
   "auth.forgot.submitButton": "Reset password",
   "auth.forgot.mismatch": "Passwords don't match",
+  "auth.forgot.noContact": "No email or phone number is linked to this account",
   "auth.forgot.success": "Password reset successful — please sign in",
   "auth.forgot.backToSignin": "Back to sign in",
 

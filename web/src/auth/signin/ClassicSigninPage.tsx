@@ -15,7 +15,7 @@ import { ArrowRight, Eye, EyeOff, Send, KeyRound, Camera } from "lucide-react";
 import QRBody from "./QRBody";
 import { useTheme } from "../../theme";
 import { useTranslation } from "../../i18n";
-import { api } from "../../api/client";
+import { api, postForm } from "../../api/client";
 import BrandingLayer from "../shell/BrandingLayer";
 import TopBar from "../shell/TopBar";
 import SafeHtml from "../shell/SafeHtml";
@@ -329,14 +329,19 @@ function CodeBody({
     setSendError("");
     setSending(true);
     try {
-      await api.post("/api/send-verification-code", {
+      // Form-encoded, no checkUser — see CodeForm.
+      const res = await postForm<{ status: string; msg?: string }>("/api/send-verification-code", {
         applicationId: `admin/${application}`,
         organizationId: `admin/${orgName}`,
         method: "login",
         type: destType,
         dest: username,
-        checkUser: username,
+        captchaType: "none",
       });
+      if (res.status !== "ok") {
+        setSendError(res.msg || t("auth.code.sendError"));
+        return;
+      }
       setPhase("verify");
       setCountdown(60);
     } catch (e: unknown) {

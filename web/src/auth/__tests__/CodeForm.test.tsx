@@ -8,7 +8,7 @@ vi.mock("../../i18n", () => ({
 
 const mockPost = vi.fn();
 vi.mock("../../api/client", () => ({
-  api: { post: (...args: unknown[]) => mockPost(...args) },
+  postForm: (...args: unknown[]) => mockPost(...args),
 }));
 
 describe("CodeForm", () => {
@@ -148,5 +148,23 @@ describe("CodeForm", () => {
     );
     fireEvent.click(screen.getByRole("button", { name: /auth\.code\.sendToEmail/ }));
     await waitFor(() => expect(screen.getByText(/offline|auth\.code\.sendError/)).toBeInTheDocument());
+  });
+
+  it("stays on the send step and shows the server message when the API returns an error", async () => {
+    mockPost.mockResolvedValueOnce({ status: "error", msg: "Missing parameter: type." });
+    render(
+      <CodeForm
+        identifier="alice"
+        destType="email"
+        destValue="alice@example.com"
+        application="app-built-in"
+        organization="built-in"
+        onSubmit={vi.fn()}
+        onBack={vi.fn()}
+      />
+    );
+    fireEvent.click(screen.getByRole("button", { name: /auth\.code\.sendToEmail/ }));
+    await waitFor(() => expect(screen.getByText("Missing parameter: type.")).toBeInTheDocument());
+    expect(screen.queryByPlaceholderText("auth.code.codePlaceholder")).toBeNull();
   });
 });

@@ -2,12 +2,11 @@ import { useState, type FormEvent } from "react";
 import { Eye, EyeOff, ArrowRight, ArrowLeft, CheckCircle } from "lucide-react";
 import { useTheme } from "../../theme";
 import { useTranslation } from "../../i18n";
-import { api } from "../../api/client";
+import { api, postForm } from "../../api/client";
 import BrandingLayer from "../shell/BrandingLayer";
 import TopBar from "../shell/TopBar";
 import SafeHtml from "../shell/SafeHtml";
 import IdentifierStep from "./IdentifierStep";
-import { resolveSigninMethods } from "../api/resolveSigninMethods";
 import { useSigninItemVisibility } from "../items/useSigninItemVisibility";
 import { resolveTemplate } from "../templates";
 import type { AuthApplication } from "../api/types";
@@ -24,7 +23,6 @@ export default function ForgotPasswordPage({ application }: Props) {
 
   const [phase, setPhase] = useState<Phase>("identifier");
   const [identifier, setIdentifier] = useState("");
-  const [destType, setDestType] = useState<"email" | "phone">("email");
   const [destValue, setDestValue] = useState("");
   const [code, setCode] = useState("");
   const [password, setPassword] = useState("");
@@ -46,34 +44,43 @@ export default function ForgotPasswordPage({ application }: Props) {
       ? application.organizationObj.logoDark
       : application.organizationObj?.logo ?? application.logo;
 
+  // /api/get-email-and-phone is a GET with query params;
+  // /api/send-verification-code and /api/set-password parse form fields, so
+  // they go through postForm; /api/verify-code reads a JSON body. Each step checks the response status
+  // so a failure stays on the current step with the server's message.
   const handleIdentifierSubmit = async (v: string) => {
     setError("");
     try {
-      const payload = await resolveSigninMethods({
-        application: application.name,
-        organization: orgName,
-        identifier: v,
-      });
-      setIdentifier(v);
-      // userHint is masked; we need a non-masked dest for sending the code.
-      // The caller flow: resolveSigninMethods returns masked hint; send-code
-      // accepts the identifier and re-resolves server-side, so we pass the
-      // identifier as the dest. If destType can't be inferred, default to email.
-      if (payload.userHint && payload.userHint.includes("@")) {
-        setDestType("email");
-      } else if (payload.userHint) {
-        setDestType("phone");
+      const lookup = await api.get<{ status: string; msg?: string; data?: { name: string; email?: string; phone?: string } }>(
+        `/api/get-email-and-phone?${new URLSearchParams({ organization: orgName, username: v })}`,
+      );
+      if (lookup.status !== "ok" || !lookup.data) {
+        setError(lookup.msg || t("auth.forgot.noContact"));
+        return;
       }
-      setDestValue(v); // backend looks up the user by identifier anyway
-      // Trigger the code send immediately.
-      await api.post("/api/send-verification-code", {
+      // Email/phone come back masked when the user typed a username; the
+      // backend accepts the masked form and resolves it from checkUser.
+      const { name, email, phone } = lookup.data;
+      const type = email ? "email" : phone ? "phone" : null;
+      const dest = email || phone || "";
+      if (!type) {
+        setError(t("auth.forgot.noContact"));
+        return;
+      }
+      const sent = await postForm<{ status: string; msg?: string }>("/api/send-verification-code", {
         applicationId: `admin/${application.name}`,
-        organizationId: `admin/${orgName}`,
         method: "forget",
-        type: payload.userHint.includes("@") ? "email" : "phone",
-        dest: v,
-        checkUser: v,
+        type,
+        dest,
+        checkUser: name,
+        captchaType: "none",
       });
+      if (sent.status !== "ok") {
+        setError(sent.msg || "failed");
+        return;
+      }
+      setIdentifier(name);
+      setDestValue(dest);
       setPhase("code");
     } catch (e: unknown) {
       setError((e as Error).message || "failed");
@@ -84,7 +91,28 @@ export default function ForgotPasswordPage({ application }: Props) {
     e.preventDefault();
     if (code.length !== 6) return;
     setError("");
-    setPhase("password");
+    setLoading(true);
+    try {
+      // Marks the code as verified in the session; /api/set-password
+      // refuses a code-based reset without it.
+      const res = await api.post<{ status: string; msg?: string }>("/api/verify-code", {
+        application: application.name,
+        organization: orgName,
+        name: identifier,
+        username: destValue,
+        code,
+        type: "login",
+      });
+      if (res.status !== "ok") {
+        setError(res.msg || "failed");
+        return;
+      }
+      setPhase("password");
+    } catch (err: unknown) {
+      setError((err as Error).message || "network error");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handlePasswordSubmit = async (e: FormEvent) => {
@@ -96,20 +124,14 @@ export default function ForgotPasswordPage({ application }: Props) {
     setLoading(true);
     setError("");
     try {
-      const res = await api.post<{ status: string; msg?: string }>(
-        "/api/set-password",
-        {
-          userOwner: orgName,
-          userName: identifier,
-          newPassword: password,
-          code,
-          dest: destValue,
-          type: destType,
-        }
-      );
+      const res = await postForm<{ status: string; msg?: string }>("/api/set-password", {
+        userOwner: orgName,
+        userName: identifier,
+        newPassword: password,
+        code,
+      });
       if (res.status !== "ok") {
         setError(res.msg || "failed");
-        setLoading(false);
         return;
       }
       setPhase("done");
