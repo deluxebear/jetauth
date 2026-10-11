@@ -1784,6 +1784,10 @@ function TestTab({ appOwner, appName, config, roles, permissions, t }: {
 const SUBJECT_PAGE_SIZE = 200;
 const SUBJECT_DEBOUNCE_MS = 250;
 
+// Subjects are entered as "owner/name" (see the placeholder), but the user and
+// group endpoints filter on the bare name column, so drop the owner prefix.
+const subjectNameQuery = (q: string) => q.slice(q.indexOf("/") + 1);
+
 function SubjectPicker({ value, onChange, owner, roleCandidates, placeholder, inputCls, t }: {
   value: string;
   onChange: (v: string) => void;
@@ -1824,7 +1828,7 @@ function SubjectPicker({ value, onChange, owner, roleCandidates, placeholder, in
     staleTime: 30_000,
     queryFn: async () => {
       const mod = await import("../backend/UserBackend");
-      const q = debouncedQuery.trim();
+      const q = subjectNameQuery(debouncedQuery.trim());
       const res = await mod.getUsers({
         owner,
         p: 1,
@@ -1849,7 +1853,7 @@ function SubjectPicker({ value, onChange, owner, roleCandidates, placeholder, in
     staleTime: 30_000,
     queryFn: async () => {
       const mod = await import("../backend/GroupBackend");
-      const q = debouncedQuery.trim();
+      const q = subjectNameQuery(debouncedQuery.trim());
       const res = await mod.getGroups({
         owner,
         p: 1,

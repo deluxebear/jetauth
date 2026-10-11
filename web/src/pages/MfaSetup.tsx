@@ -71,18 +71,27 @@ export default function MfaSetup({
     setError("");
     setLoading(true);
     try {
-      const loginRes: RawApiResult = await fetch("/api/login", {
-        method: "POST", credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          application, organization, username: name,
-          password: encryptedPassword || password,
-          signinMethod: "Password", type: "login",
-        }),
-      }).then(r => r.json());
+      // During sign-in the password is re-submitted to /api/login for the
+      // pending application. A signed-in user has no application here, so
+      // check the password directly instead of starting a new login.
+      const verifyRes: RawApiResult = isLoginFlow
+        ? await fetch("/api/login", {
+          method: "POST", credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            application, organization, username: name,
+            password: encryptedPassword,
+            signinMethod: "Password", type: "login",
+          }),
+        }).then(r => r.json())
+        : await fetch("/api/check-user-password", {
+          method: "POST", credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ owner, name, password }),
+        }).then(r => r.json());
 
-      if (loginRes.status === "error") {
-        setError(t("mfa.setup.passwordIncorrect"));
+      if (verifyRes.status === "error") {
+        setError(verifyRes.msg || t("mfa.setup.passwordIncorrect"));
         return;
       }
 

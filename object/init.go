@@ -26,6 +26,9 @@ import (
 func InitDb() {
 	existed := initBuiltInOrganization()
 	if !existed {
+		// The built-in permission references this model and AddPermission
+		// resolves it, so it must exist first on a fresh database.
+		initBuiltInUserModel()
 		initBuiltInPermission()
 		initBuiltInProvider()
 		initBuiltInUser()

@@ -14,7 +14,10 @@ import { useSigninItemVisibility } from "../items/useSigninItemVisibility";
 import CustomTextItems from "../items/CustomTextItems";
 import SafeHtml from "../shell/SafeHtml";
 import { resolveTemplate } from "../templates";
-import { submitSamlResponse, readSamlParams, buildOAuthCodeQuery, buildOAuthRedirectUrl, type LoginApiResponse } from "../authPost";
+import { submitSamlResponse, readSamlParams, buildOAuthCodeQuery, buildOAuthRedirectUrl, isConsentRequired, type LoginApiResponse } from "../authPost";
+import OAuthConsentStep from "../OAuthConsentStep";
+import LoginMfaStep from "./LoginMfaStep";
+import { pendingMfaFrom, type PendingMfa } from "./pendingMfa";
 import type {
   AuthApplication,
   ResolvedProvider,
@@ -44,6 +47,8 @@ export default function SigninPage({ application, providers }: SigninPageProps) 
   const [recommended, setRecommended] = useState<string>("");
   const [userHint, setUserHint] = useState<string>("");
   const [error, setError] = useState<string>("");
+  const [pendingMfa, setPendingMfa] = useState<PendingMfa | null>(null);
+  const [consentRequired, setConsentRequired] = useState(false);
 
   const signinItemVis = useSigninItemVisibility(application.signinItems);
 
@@ -111,6 +116,23 @@ export default function SigninPage({ application, providers }: SigninPageProps) 
     return true;
   };
 
+  // Shared tail of every successful sign-in, including after MFA.
+  const completeLogin = (res: LoginApiResponse) => {
+    if (isConsentRequired(res)) {
+      setPendingMfa(null);
+      setConsentRequired(true);
+      return;
+    }
+    if (handleSamlResponse(res)) return;
+    if (res.data && handleOAuthRedirect(res.data)) return;
+    // Full page reload so App.tsx re-bootstraps its `user` state via
+    // /api/get-account; a plain navigate("/") would bounce back to
+    // /login because the top-level state still thinks we're anon.
+    // The backend also routes the user to the right landing page based
+    // on role (admin → Dashboard, non-admin → UserHomePage).
+    reloadHome();
+  };
+
   const handlePasswordSubmit = async (password: string, extras?: { autoSignin?: boolean }) => {
     setError("");
     // Construct the same AuthForm shape the legacy Login.tsx used — the
@@ -141,14 +163,12 @@ export default function SigninPage({ application, providers }: SigninPageProps) 
         setError(res.msg ?? t("auth.signin.noMethodError"));
         return;
       }
-      if (handleSamlResponse(res)) return;
-      if (res.data && handleOAuthRedirect(res.data)) return;
-      // Full page reload so App.tsx re-bootstraps its `user` state via
-      // /api/get-account; a plain navigate("/") would bounce back to
-      // /login because the top-level state still thinks we're anon.
-      // The backend also routes the user to the right landing page based
-      // on role (admin → Dashboard, non-admin → UserHomePage).
-      reloadHome();
+      const mfa = pendingMfaFrom(res, loginUrl(), body);
+      if (mfa) {
+        setPendingMfa(mfa);
+        return;
+      }
+      completeLogin(res);
     } catch (e: unknown) {
       setError((e as Error).message ?? "network error");
     }
@@ -177,9 +197,12 @@ export default function SigninPage({ application, providers }: SigninPageProps) 
         setError(res.msg ?? t("auth.signin.noMethodError"));
         return;
       }
-      if (handleSamlResponse(res)) return;
-      if (res.data && handleOAuthRedirect(res.data)) return;
-      reloadHome();
+      const mfa = pendingMfaFrom(res, loginUrl(), body);
+      if (mfa) {
+        setPendingMfa(mfa);
+        return;
+      }
+      completeLogin(res);
     } catch (e: unknown) {
       setError((e as Error).message ?? "network error");
     }
@@ -198,6 +221,24 @@ export default function SigninPage({ application, providers }: SigninPageProps) 
     application.displayName ||
     application.organizationObj?.displayName ||
     application.name;
+
+  if (consentRequired) {
+    return <OAuthConsentStep application={application} searchParams={searchParams} />;
+  }
+
+  if (pendingMfa) {
+    return (
+      <LoginMfaStep
+        pending={pendingMfa}
+        application={application.name}
+        organization={orgName}
+        orgBranding={{ logo: orgLogo, logoDark: application.organizationObj?.logoDark, displayName: orgDisplay }}
+        onDone={completeLogin}
+        onPending={setPendingMfa}
+        onError={(msg) => { setPendingMfa(null); setError(msg); }}
+      />
+    );
+  }
 
   const { Component: Template } = resolveTemplate(application.template);
 

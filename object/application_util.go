@@ -159,13 +159,26 @@ func extendApplicationWithSigninItems(application *Application) (err error) {
 		}
 		application.SigninItems = append(application.SigninItems, signinItem)
 	}
-	for idx, item := range application.SigninItems {
-		if item.Label != "" && item.CustomCss == "" {
-			application.SigninItems[idx].CustomCss = item.Label
-			application.SigninItems[idx].Label = ""
+	for _, item := range application.SigninItems {
+		if isLegacyCssLabel(item) {
+			item.CustomCss = item.Label
+			item.Label = ""
 		}
 	}
 	return
+}
+
+// isLegacyCssLabel reports whether a signin item still carries CSS in Label,
+// where early versions stored it before the CustomCss field existed. Label is
+// now a real field — a plain-text override on built-in items and admin HTML on
+// custom items — so only a non-custom item with no CustomCss whose Label is a
+// CSS rule block (braces, no markup) is migrated. Running the old unconditional
+// move on every read wiped label edits that came without CSS.
+func isLegacyCssLabel(item *SigninItem) bool {
+	if item == nil || item.IsCustom || item.Label == "" || item.CustomCss != "" {
+		return false
+	}
+	return strings.Contains(item.Label, "{") && strings.Contains(item.Label, "}") && !strings.Contains(item.Label, "<")
 }
 
 func extendApplicationWithSigninMethods(application *Application) (err error) {

@@ -105,6 +105,12 @@ export interface SigninItemProvider {
   visible?: boolean;
 }
 
+export interface AuthScopeDescription {
+  scope: string;
+  displayName?: string;
+  description?: string;
+}
+
 export interface AuthApplication {
   name: string;
   organization: string;
@@ -139,6 +145,8 @@ export interface AuthApplication {
   signupItems: SignupItem[];
   signinItems: SigninItem[];
   forgetItems?: SigninItem[];
+  /** OAuth scopes the application asks users to consent to. */
+  customScopes?: AuthScopeDescription[];
   /**
    * Layout template id. Empty / missing → "centered-card" (default). Pages
    * resolve via `resolveTemplate()`; unknown ids also fall back to default.

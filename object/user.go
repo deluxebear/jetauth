@@ -791,6 +791,36 @@ func getLastUser(owner string) (*User, error) {
 	return nil, nil
 }
 
+// selfServiceUserColumns are the only columns a non-admin may write through
+// /api/update-user: profile fields plus their own passkeys, face data and
+// managed accounts. Identity (email / phone / password), balances, scores,
+// counters and verification flags are admin-only or server-managed and have
+// dedicated endpoints (set-password, reset-email-or-phone, …). Account-item
+// modify rules still apply on top of this list.
+var selfServiceUserColumns = []string{
+	"display_name", "avatar", "is_default_avatar", "first_name", "last_name",
+	"location", "address", "addresses", "region", "language", "affiliation", "title",
+	"id_card_type", "id_card", "homepage", "bio", "tag", "gender", "birthday", "education", "properties",
+	"webauthnCredentials", "face_ids", "managedAccounts",
+}
+
+// FilterSelfServiceUserColumns limits a non-admin update to
+// selfServiceUserColumns. A requested column list can only narrow it — the
+// caller-supplied `columns` query parameter must never widen what a user may
+// write about themselves.
+func FilterSelfServiceUserColumns(requested []string) []string {
+	if len(requested) == 0 {
+		return append([]string{}, selfServiceUserColumns...)
+	}
+	filtered := []string{}
+	for _, column := range requested {
+		if util.InSlice(selfServiceUserColumns, column) && !util.InSlice(filtered, column) {
+			filtered = append(filtered, column)
+		}
+	}
+	return filtered
+}
+
 func UpdateUser(id string, user *User, columns []string, isAdmin bool) (bool, error) {
 	var err error
 	owner, name := util.GetOwnerAndNameFromIdNoCheck(id)

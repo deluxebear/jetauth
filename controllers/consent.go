@@ -105,12 +105,6 @@ func (c *ApiController) RevokeConsent() {
 // @Success 200 {object} ActionResponse "Authorization code"
 // @Router /grant-consent [post]
 func (c *ApiController) GrantConsent() {
-	userId := c.GetSessionUsername()
-	if userId == "" {
-		c.ResponseError(c.T("general:Please login first"))
-		return
-	}
-
 	var request struct {
 		Application  string   `json:"application"`
 		Scopes       []string `json:"grantedScopes"`
@@ -129,6 +123,17 @@ func (c *ApiController) GrantConsent() {
 	err := json.Unmarshal(c.Ctx.Input.RequestBody, &request)
 	if err != nil {
 		c.ResponseError(err.Error())
+		return
+	}
+
+	// A signed-in user consents as themselves; otherwise accept the user that
+	// /api/login parked for this exact client when it answered "consent required".
+	userId := c.GetSessionUsername()
+	if userId == "" {
+		userId = c.getPendingConsentUser(request.ClientId)
+	}
+	if userId == "" {
+		c.ResponseError(c.T("general:Please login first"))
 		return
 	}
 
@@ -159,6 +164,10 @@ func (c *ApiController) GrantConsent() {
 		c.ResponseError(c.T("general:User not found"))
 		return
 	}
+
+	// Only record scopes this request actually asked for and the application
+	// defines, so a crafted body cannot pre-approve scopes the user never saw.
+	request.Scopes = object.FilterConsentScopes(application, request.Scope, request.Scopes)
 
 	appId := application.GetId()
 	found := false
@@ -221,6 +230,11 @@ func (c *ApiController) GrantConsent() {
 		c.ResponseError(err.Error())
 		return
 	}
+	if code.Code == "" {
+		c.ResponseError(code.Message)
+		return
+	}
 
+	c.clearPendingConsent()
 	c.ResponseOk(code.Code)
 }

@@ -321,12 +321,14 @@ func enrichBizRoles(roles []*BizRole) error {
 	ids := make([]int64, 0, len(roles))
 	names := make([]string, 0, len(roles))
 	byId := make(map[int64]*BizRole, len(roles))
-	byName := make(map[string]*BizRole, len(roles))
+	// Role-grants are keyed by role name, which is only unique per
+	// organization, so look roles up by (organization, name).
+	byOrgName := make(map[string]*BizRole, len(roles))
 	for _, r := range roles {
 		ids = append(ids, r.Id)
 		names = append(names, r.Name)
 		byId[r.Id] = r
-		byName[r.Name] = r
+		byOrgName[util.GetId(r.Organization, r.Name)] = r
 	}
 
 	// Member counts: one row per role_id with COUNT(*).
@@ -353,21 +355,23 @@ func enrichBizRoles(roles []*BizRole) error {
 	// key role-grants by role NAME (not id), so group by subject_id scoped
 	// to subject_type='role'.
 	type permCountRow struct {
+		Owner     string
 		SubjectId string
 		C         int64
 	}
 	permRows := []permCountRow{}
-	err = ormer.Engine.Table(&BizPermissionGrantee{}).
-		Select("subject_id, COUNT(*) AS c").
-		Where("subject_type = ?", BizPermGranteeRole).
-		In("subject_id", names).
-		GroupBy("subject_id").
+	err = ormer.Engine.Table("biz_permission_grantee").
+		Join("INNER", "biz_permission", "biz_permission.id = biz_permission_grantee.permission_id").
+		Select("biz_permission.owner AS owner, biz_permission_grantee.subject_id AS subject_id, COUNT(*) AS c").
+		Where("biz_permission_grantee.subject_type = ?", BizPermGranteeRole).
+		In("biz_permission_grantee.subject_id", names).
+		GroupBy("biz_permission.owner, biz_permission_grantee.subject_id").
 		Find(&permRows)
 	if err != nil {
 		return err
 	}
 	for _, row := range permRows {
-		if r, ok := byName[row.SubjectId]; ok {
+		if r, ok := byOrgName[util.GetId(row.Owner, row.SubjectId)]; ok {
 			r.PermissionCount = row.C
 		}
 	}

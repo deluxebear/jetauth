@@ -591,7 +591,7 @@ func gatherCandidateUsers(owner, appName, object, relation string, contextual []
 			Table(&BizTuple{}).
 			Where("store_id = ? AND object = ? AND relation = ?", storeId, object, relation)
 		if lastUser != "" {
-			session = session.And("user > ?", lastUser)
+			session = session.And(bizTupleUserCol()+" > ?", lastUser)
 		}
 		rows := []*BizTuple{}
 		if err := session.Cols("user").Find(&rows); err != nil {
@@ -657,7 +657,7 @@ func gatherCandidateObjects(owner, appName, objectType string, hints *preselectH
 			fragments := []string{}
 			args := []any{}
 			if len(hints.directRelations) > 0 && len(hints.effectiveSubjects) > 0 {
-				fragments = append(fragments, "(relation IN ("+placeholders(len(hints.directRelations))+") AND user IN ("+placeholders(len(hints.effectiveSubjects))+"))")
+				fragments = append(fragments, "(relation IN ("+placeholders(len(hints.directRelations))+") AND "+bizTupleUserCol()+" IN ("+placeholders(len(hints.effectiveSubjects))+"))")
 				for _, r := range hints.directRelations {
 					args = append(args, r)
 				}
@@ -757,7 +757,7 @@ func gatherDirectGrantObjects(model *openfgav1.AuthorizationModel, owner, appNam
 	}
 	session := ormer.Engine.
 		Table(&BizTuple{}).
-		Where("store_id = ? AND object_type = ? AND relation = ? AND user = ?",
+		Where("store_id = ? AND object_type = ? AND relation = ? AND "+bizTupleUserCol()+" = ?",
 			BuildStoreId(owner, appName), objectType, relation, user).
 		And("(condition_name IS NULL OR condition_name = '')")
 	if lastObjectId != "" {

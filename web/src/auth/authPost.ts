@@ -19,6 +19,22 @@ export function buildOAuthRedirectUrl(redirectUri: string, code: string, state: 
   return `${redirectUri}${sep}code=${encodeURIComponent(code)}&state=${encodeURIComponent(state)}`;
 }
 
+/** Same as buildOAuthRedirectUrl, but reports an OAuth error (RFC 6749 §4.1.2.1). */
+export function buildOAuthErrorRedirectUrl(redirectUri: string, error: string, state: string): string {
+  const sep = redirectUri.includes("?") ? "&" : "?";
+  const stateParam = state ? `&state=${encodeURIComponent(state)}` : "";
+  return `${redirectUri}${sep}error=${encodeURIComponent(error)}${stateParam}`;
+}
+
+/**
+ * /api/login answers an OAuth code request with `data: { required: true }`
+ * instead of a code when the user still has to consent to the app's scopes.
+ */
+export function isConsentRequired(res: { data?: unknown }): boolean {
+  const data = res.data as { required?: unknown } | null | undefined;
+  return typeof data === "object" && data !== null && data.required === true;
+}
+
 export function readSamlParams(searchParams: URLSearchParams) {
   return {
     samlRequest: searchParams.get("samlRequest") ?? searchParams.get("SAMLRequest") ?? "",

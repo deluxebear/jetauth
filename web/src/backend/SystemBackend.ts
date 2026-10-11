@@ -15,6 +15,8 @@ export interface VersionInfo {
   version: string;
   commitId: string;
   commitOffset: number;
+  /** Configured DB driver (e.g. "postgres"); only returned to admins. */
+  databaseType?: string;
 }
 
 export interface ApiLatencyItem {

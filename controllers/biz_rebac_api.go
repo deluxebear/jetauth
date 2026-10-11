@@ -473,6 +473,10 @@ func (c *ApiController) BizListObjects() {
 		c.ResponseError(err.Error())
 		return
 	}
+	// Always send an array so clients can rely on "objects": [] for no matches.
+	if res.Objects == nil {
+		res.Objects = []string{}
+	}
 	c.ResponseOk(res)
 }
 
@@ -542,6 +546,10 @@ func (c *ApiController) BizListUsers() {
 	if err != nil {
 		c.ResponseError(err.Error())
 		return
+	}
+	// Always send an array so clients can rely on "users": [] for no matches.
+	if res.Users == nil {
+		res.Users = []string{}
 	}
 	c.ResponseOk(res)
 }
@@ -655,6 +663,10 @@ func (c *ApiController) BizWriteTuples() {
 			return
 		}
 		writes = append(writes, t)
+	}
+	if err := object.ValidateBizTupleWrites(body.AppId, modelId, writes); err != nil {
+		c.ResponseError(err.Error())
+		return
 	}
 	var deletes []*object.BizTuple
 	for _, d := range body.Deletes {

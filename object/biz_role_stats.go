@@ -83,10 +83,14 @@ func GetBizRoleStats(roleId int64) (*BizRoleStats, error) {
 	stats.ChildRoleCount = childCount
 
 	// Permission count: grantees key role-grants by role NAME (not id) under
-	// subject_type='role'. Must filter by role name.
-	permCount, err := ormer.Engine.
-		Where("subject_type = ? AND subject_id = ?", BizPermGranteeRole, role.Name).
-		Count(&BizPermissionGrantee{})
+	// subject_type='role', so the name alone matches same-named roles in other
+	// organizations. Scope through biz_permission.owner, mirroring
+	// ListPermissionsGrantedToRole.
+	permCount, err := ormer.Engine.Table("biz_permission_grantee").
+		Join("INNER", "biz_permission", "biz_permission.id = biz_permission_grantee.permission_id").
+		Where("biz_permission.owner = ? AND biz_permission_grantee.subject_type = ? AND biz_permission_grantee.subject_id = ?",
+			role.Organization, BizPermGranteeRole, role.Name).
+		Count()
 	if err != nil {
 		return nil, err
 	}

@@ -253,6 +253,36 @@ func (c *ApiController) getMfaUserSession() string {
 	return userId.(string)
 }
 
+// A pending consent remembers a user who passed /api/login for an OAuth client
+// that still needs their consent. /api/grant-consent uses it to mint the code
+// without signing the user in to JetAuth itself, and it is bound to the client
+// so it cannot be replayed to authorize a different application.
+const (
+	pendingConsentUserId   = "pendingConsentUserId"
+	pendingConsentClientId = "pendingConsentClientId"
+)
+
+func (c *ApiController) setPendingConsent(userId string, clientId string) {
+	c.SetSession(pendingConsentUserId, userId)
+	c.SetSession(pendingConsentClientId, clientId)
+}
+
+// getPendingConsentUser returns the user waiting to consent to clientId, or ""
+// when there is none or it was recorded for another client.
+func (c *ApiController) getPendingConsentUser(clientId string) string {
+	userId, _ := c.GetSession(pendingConsentUserId).(string)
+	pendingClientId, _ := c.GetSession(pendingConsentClientId).(string)
+	if userId == "" || clientId == "" || pendingClientId != clientId {
+		return ""
+	}
+	return userId
+}
+
+func (c *ApiController) clearPendingConsent() {
+	c.DelSession(pendingConsentUserId)
+	c.DelSession(pendingConsentClientId)
+}
+
 func (c *ApiController) setExpireForSession(cookieExpireInHours int64) {
 	timestamp := time.Now().Unix()
 	if cookieExpireInHours == 0 {

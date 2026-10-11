@@ -191,6 +191,18 @@ func (c *ApiController) HandleLoggedIn(application *object.Application, user *ob
 		}
 
 		if consentRequired {
+			// The consent page sends the browser to redirectUri even when the
+			// user denies, and grant-consent mints the code for clientId, so
+			// both must belong to the application the user just signed in to.
+			if clientId != application.ClientId {
+				c.ResponseError(c.T("token:Invalid client_id"))
+				return
+			}
+			if !application.IsRedirectUriValid(redirectUri) {
+				c.ResponseError(fmt.Sprintf(c.T("token:Redirect URI: %s doesn't exist in the allowed Redirect URI list"), redirectUri))
+				return
+			}
+			c.setPendingConsent(userId, clientId)
 			resp = &Response{Status: "ok", Data: map[string]bool{"required": true}}
 			resp.Data3 = user.NeedUpdatePassword
 			return
@@ -483,7 +495,9 @@ func checkMfaEnable(c *ApiController, user *object.User, organization *object.Or
 		// Set both: username (for authz filter to allow MFA API access) and MFA session (to block getAccount)
 		c.SetSessionUsername(user.GetId())
 		c.setMfaUserSession(user.GetId())
-		c.ResponseOk(object.RequiredMfa)
+		// data2 = user id: the client may have signed in with an email or
+		// phone, but MFA setup needs owner/name.
+		c.ResponseOk(object.RequiredMfa, user.GetId())
 		return true
 	}
 

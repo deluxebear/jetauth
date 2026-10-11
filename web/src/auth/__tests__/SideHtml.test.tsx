@@ -34,4 +34,15 @@ describe("SideHtml", () => {
     );
     expect(container.innerHTML).not.toContain("javascript:");
   });
+
+  // Payloads that bypassed the old regex scrub.
+  it.each([
+    ["unquoted event handler", '<img src="x" onerror=alert(1)>', /onerror/i],
+    ["svg onload with slash separator", "<svg/onload=alert(1)>", /onload|<svg/i],
+    ["entity-encoded javascript: URL", '<a href="java&#115;cript:alert(1)">x</a>', /javascript:|java&#115;cript/i],
+  ])("neutralises %s", (_name, payload, forbidden) => {
+    const { container } = render(<SideHtml html={payload} />);
+    expect(container.innerHTML).not.toMatch(forbidden);
+  });
 });
+

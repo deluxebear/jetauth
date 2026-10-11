@@ -55,3 +55,37 @@ func TestPaginationBizRolesAndPermissions(t *testing.T) {
 		t.Fatalf("injection guard n=%d err=%v", n, err)
 	}
 }
+
+// Role-grants are keyed by role name, so a same-named role in another
+// organization must not inflate this role's permission count.
+func TestBizRolePermissionCountScopedToOrg(t *testing.T) {
+	orgA := newBizRoleTestOrg(t)
+	orgB := newBizRoleTestOrg(t)
+	app := "countapp"
+	var roleA *BizRole
+	for _, org := range []string{orgA, orgB} {
+		role := &BizRole{Organization: org, AppName: app, Name: "admin", ScopeKind: BizRoleScopeApp, IsEnabled: true}
+		if _, err := AddBizRole(role); err != nil {
+			t.Fatal(err)
+		}
+		if org == orgA {
+			roleA = role
+		}
+		perm := &BizPermission{Owner: org, AppName: app, Name: "full", Effect: "Allow", IsEnabled: true}
+		if _, err := ormer.Engine.Insert(perm); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := ormer.Engine.Insert(&BizPermissionGrantee{PermissionId: perm.Id, SubjectType: BizPermGranteeRole, SubjectId: "admin"}); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	stats, err := GetBizRoleStats(roleA.Id)
+	if err != nil || stats == nil || stats.PermissionCount != 1 {
+		t.Fatalf("stats=%+v err=%v, want permissionCount=1", stats, err)
+	}
+	roles, err := GetBizRoles(orgA, app)
+	if err != nil || len(roles) != 1 || roles[0].PermissionCount != 1 {
+		t.Fatalf("roles=%+v err=%v, want one role with permissionCount=1", roles, err)
+	}
+}

@@ -238,6 +238,28 @@ func validateCheckRequestTuple(model *openfgav1.AuthorizationModel, tk TupleKey,
 	return nil
 }
 
+// ValidateBizTupleWrites checks tuples about to be written against the
+// authorization model they will be stamped with: object type, relation and
+// user type must exist, and the user must satisfy the relation's direct type
+// restrictions — the same rules OpenFGA's Write API enforces. Without this a
+// tuple naming an unknown relation is stored but can never be matched.
+func ValidateBizTupleWrites(storeId, modelId string, writes []*BizTuple) error {
+	if len(writes) == 0 {
+		return nil
+	}
+	model, err := resolveAuthorizationModel(storeId, modelId)
+	if err != nil {
+		return err
+	}
+	for i, w := range writes {
+		tk := TupleKey{Object: w.Object, Relation: w.Relation, User: w.User}
+		if err := validateCheckRequestTuple(model, tk, fmt.Sprintf("write tuple #%d", i), true); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // findDirectlyRelatedUserTypes returns the schema's direct-type-restriction
 // list for (objectType, relation) — the `[user, team#member, user:*]`
 // fragment of a `this`-flavored rewrite. Nil means "no restriction"

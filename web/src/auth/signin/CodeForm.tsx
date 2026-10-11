@@ -1,7 +1,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { ArrowLeft, ArrowRight, Send } from "lucide-react";
 import { useTranslation } from "../../i18n";
-import { api } from "../../api/client";
+import { postForm } from "../../api/client";
 import { useModal } from "../../components/Modal";
 import { MarkdownLinks } from "../items/MarkdownLinks";
 
@@ -42,7 +42,6 @@ const COUNTDOWN_SECONDS = 60;
  * to the parent via onSubmit.
  */
 export default function CodeForm({
-  identifier,
   destType,
   destValue,
   application,
@@ -77,14 +76,21 @@ export default function CodeForm({
     setSendError("");
     setSending(true);
     try {
-      await api.post("/api/send-verification-code", {
+      // Form-encoded: the endpoint parses form fields, not JSON. No
+      // checkUser — the backend treats it as a username lookup (forget
+      // flow), while login resolves the user from the email/phone dest.
+      const res = await postForm<{ status: string; msg?: string }>("/api/send-verification-code", {
         applicationId: `admin/${application}`,
         organizationId: `admin/${organization}`,
         method: "login",
         type: destType,
         dest: destValue,
-        checkUser: identifier,
+        captchaType: "none",
       });
+      if (res.status !== "ok") {
+        setSendError(res.msg || t("auth.code.sendError"));
+        return;
+      }
       setPhase("verify");
       setCountdown(COUNTDOWN_SECONDS);
     } catch (e: unknown) {

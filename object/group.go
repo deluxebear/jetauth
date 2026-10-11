@@ -116,6 +116,34 @@ func GetGroupsHaveChildrenMap(groups []*Group) (map[string]*Group, error) {
 	return resultMap, nil
 }
 
+// GetGroupIdsWithChildren returns the ids (owner/name) of the given groups
+// that have at least one sub-group. GetGroupsHaveChildrenMap cannot answer
+// this: it looks groups up by their own name, so it always contains them.
+func GetGroupIdsWithChildren(groups []*Group) (map[string]bool, error) {
+	result := map[string]bool{}
+	if len(groups) == 0 {
+		return result, nil
+	}
+
+	names := make([]string, 0, len(groups))
+	for _, group := range groups {
+		names = append(names, group.Name)
+	}
+
+	// Top groups store the organization name in parent_id, so skip them to
+	// avoid matching a group that happens to share its organization's name.
+	children := []*Group{}
+	err := ormer.Engine.Cols("owner", "parent_id").Where("is_top_group = ?", false).In("parent_id", names).Find(&children)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, child := range children {
+		result[util.GetId(child.Owner, child.ParentId)] = true
+	}
+	return result, nil
+}
+
 func getGroup(owner string, name string) (*Group, error) {
 	if owner == "" || name == "" {
 		return nil, nil

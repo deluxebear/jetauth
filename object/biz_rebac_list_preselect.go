@@ -199,7 +199,7 @@ func effectiveSubjectsOfUser(owner, appName, user string) ([]string, error) {
 	rows := []*BizTuple{}
 	if err := ormer.Engine.
 		Table(&BizTuple{}).
-		Where("store_id = ? AND user = ?", storeId, user).
+		Where("store_id = ? AND "+bizTupleUserCol()+" = ?", storeId, user).
 		Cols("object", "relation").
 		Find(&rows); err != nil {
 		return nil, fmt.Errorf("rebac preselect: scan usersets of %s: %w", user, err)

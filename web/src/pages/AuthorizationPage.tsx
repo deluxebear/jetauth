@@ -428,10 +428,13 @@ function QuickCreateWizard({ open, onClose, onCreated, existingAppNames }: {
   const handleCreate = async () => {
     if (!selectedApp) return;
     setCreating(true);
+    // In "All" mode the picker lists apps from every org, so the config must
+    // live in the selected app's own organization, not the fallback owner.
+    const owner = selectedApp.organization || orgName;
 
     try {
       const config: BizAppConfig = {
-        owner: orgName,
+        owner,
         appName: selectedApp.name,
         createdTime: new Date().toISOString(),
         updatedTime: new Date().toISOString(),
@@ -458,7 +461,7 @@ function QuickCreateWizard({ open, onClose, onCreated, existingAppNames }: {
 
       modal.toast(t("authz.wizard.bizSuccess"));
       onCreated();
-      navigate(`/authorization/${orgName}/${selectedApp.name}`);
+      navigate(`/authorization/${owner}/${selectedApp.name}`);
     } catch (e) {
       modal.toast(errorMessage(e) || t("common.saveFailed"), "error");
       setCreating(false);
@@ -761,13 +764,13 @@ function QuickCreateWizard({ open, onClose, onCreated, existingAppNames }: {
                     <div className="space-y-1.5 text-[12px] text-text-secondary">
                       <div className="flex items-center gap-2">
                         <div className="w-1.5 h-1.5 rounded-full bg-accent" />
-                        <span>{t("general.application") || "Application"}:</span>
+                        <span>{t("col.application")}:</span>
                         <span className="font-mono font-medium text-text-primary">{selectedApp?.displayName || selectedApp?.name || "..."}</span>
                       </div>
                       <div className="flex items-center gap-2">
                         <div className="w-1.5 h-1.5 rounded-full bg-cyan-400" />
                         <span>{t("authz.wizard.modelText") || "Model"}:</span>
-                        <span className="font-mono font-medium text-text-primary text-[11px]">RBAC ({modelText.split("\n").length} lines)</span>
+                        <span className="font-mono font-medium text-text-primary text-[11px]">RBAC ({modelText.split("\n").length} {t("authz.overview.lines")})</span>
                       </div>
                       <div className="flex items-center gap-2">
                         <div className="w-1.5 h-1.5 rounded-full bg-green-400" />

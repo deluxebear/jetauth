@@ -8,7 +8,7 @@ interface Props {
 
 /**
  * Renders the signinItems that have isCustom=true. Each item's `label` is
- * treated as sanitized HTML (same minimal scrub as SideHtml). Admin-provided
+ * rendered through SideHtml (DOMPurify allow-list). Admin-provided
  * text blocks — promos, legal notices, maintenance banners, etc.
  */
 export default function CustomTextItems({ items, className }: Props) {

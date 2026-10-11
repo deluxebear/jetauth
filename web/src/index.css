@@ -1,5 +1,9 @@
 @import "tailwindcss";
 
+/* Drive `dark:` utilities from the in-app theme toggle (data-theme on <html>)
+   instead of Tailwind's default prefers-color-scheme media query. */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
 /* ── Light theme (default) ── */
 :root,
 [data-theme="light"] {

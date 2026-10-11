@@ -1,12 +1,15 @@
 import { useEffect, useRef, useState } from "react";
 import { Navigate, useSearchParams } from "react-router-dom";
 import { api } from "../api/client";
+import { useTranslation } from "../i18n";
 import {
   buildOAuthCodeQuery,
   buildOAuthRedirectUrl,
+  isConsentRequired,
   type LoginApiResponse,
 } from "./authPost";
-import type { AppLoginResponse } from "./api/types";
+import OAuthConsentStep from "./OAuthConsentStep";
+import type { AppLoginResponse, AuthApplication } from "./api/types";
 
 interface Props {
   /**
@@ -24,8 +27,10 @@ interface Props {
  * (anon). SigninPage.handleOAuthRedirect completes the anon path.
  */
 export default function OAuthAuthorizePage({ authed }: Props) {
+  const { t } = useTranslation();
   const [searchParams] = useSearchParams();
   const [target, setTarget] = useState<string | null>(null);
+  const [consentApp, setConsentApp] = useState<AuthApplication | null>(null);
   const [error, setError] = useState("");
   const ranRef = useRef(false);
   // Pure input validation is derived during render rather than set from the effect.
@@ -72,8 +77,12 @@ export default function OAuthAuthorizePage({ authed }: Props) {
           organization: org,
           type: "code",
         });
+        if (login.status === "ok" && isConsentRequired(login)) {
+          setConsentApp(res.data);
+          return;
+        }
         if (login.status !== "ok" || !login.data) {
-          setError(login.msg || "Authorization failed");
+          setError(login.msg || t("oauth.consent.failed"));
           return;
         }
         window.location.replace(buildOAuthRedirectUrl(redirectUri, login.data, state));
@@ -81,14 +90,14 @@ export default function OAuthAuthorizePage({ authed }: Props) {
         setError((e as Error).message ?? "network error");
       }
     })();
-  }, [authed, searchParams, paramsError]);
+  }, [authed, searchParams, paramsError, t]);
 
   const shownError = paramsError || error;
   if (shownError) {
     return (
       <div className="flex min-h-[40vh] items-center justify-center p-6">
         <div className="max-w-md rounded-lg border border-danger/30 bg-danger/10 px-4 py-3 text-[13px] text-danger">
-          <div className="font-semibold mb-1">OAuth authorize failed</div>
+          <div className="font-semibold mb-1">{t("oauth.authorize.failed")}</div>
           <div className="opacity-80 break-all">{shownError}</div>
         </div>
       </div>
@@ -97,9 +106,12 @@ export default function OAuthAuthorizePage({ authed }: Props) {
   if (target) {
     return <Navigate to={target} replace />;
   }
+  if (consentApp) {
+    return <OAuthConsentStep application={consentApp} searchParams={searchParams} />;
+  }
   return (
     <div className="flex min-h-[40vh] items-center justify-center text-[13px] text-text-muted">
-      Authorizing…
+      {t("oauth.authorize.inProgress")}
     </div>
   );
 }

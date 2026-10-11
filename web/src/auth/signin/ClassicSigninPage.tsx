@@ -15,7 +15,7 @@ import { ArrowRight, Eye, EyeOff, Send, KeyRound, Camera } from "lucide-react";
 import QRBody from "./QRBody";
 import { useTheme } from "../../theme";
 import { useTranslation } from "../../i18n";
-import { api } from "../../api/client";
+import { api, postForm } from "../../api/client";
 import BrandingLayer from "../shell/BrandingLayer";
 import TopBar from "../shell/TopBar";
 import SafeHtml from "../shell/SafeHtml";
@@ -24,8 +24,11 @@ import { useSigninItemVisibility } from "../items/useSigninItemVisibility";
 import { MarkdownLinks } from "../items/MarkdownLinks";
 import { useModal } from "../../components/Modal";
 import { resolveTemplate } from "../templates";
-import { submitSamlResponse, readSamlParams, buildOAuthCodeQuery, buildOAuthRedirectUrl, type LoginApiResponse } from "../authPost";
+import { submitSamlResponse, readSamlParams, buildOAuthCodeQuery, buildOAuthRedirectUrl, isConsentRequired, type LoginApiResponse } from "../authPost";
+import OAuthConsentStep from "../OAuthConsentStep";
 import type { AuthApplication, ResolvedProvider } from "../api/types";
+import LoginMfaStep from "./LoginMfaStep";
+import { pendingMfaFrom, type PendingMfa } from "./pendingMfa";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -327,14 +330,19 @@ function CodeBody({
     setSendError("");
     setSending(true);
     try {
-      await api.post("/api/send-verification-code", {
+      // Form-encoded, no checkUser — see CodeForm.
+      const res = await postForm<{ status: string; msg?: string }>("/api/send-verification-code", {
         applicationId: `admin/${application}`,
         organizationId: `admin/${orgName}`,
         method: "login",
         type: destType,
         dest: username,
-        checkUser: username,
+        captchaType: "none",
       });
+      if (res.status !== "ok") {
+        setSendError(res.msg || t("auth.code.sendError"));
+        return;
+      }
       setPhase("verify");
       setCountdown(60);
     } catch (e: unknown) {
@@ -740,6 +748,8 @@ export default function ClassicSigninPage({ application, providers }: Props) {
   const [searchParams] = useSearchParams();
   const [username, setUsername] = useState("");
   const [error, setError] = useState("");
+  const [pendingMfa, setPendingMfa] = useState<PendingMfa | null>(null);
+  const [consentRequired, setConsentRequired] = useState(false);
 
   const orgName =
     application.organizationObj?.name ?? application.organization ?? "built-in";
@@ -805,15 +815,26 @@ export default function ClassicSigninPage({ application, providers }: Props) {
     return oauthQs ? `/api/login?${oauthQs}` : "/api/login";
   };
 
+  // Every credential flow ends here: consent screen when the OAuth client
+  // still needs it, otherwise the usual SAML / OAuth / home redirect.
+  const finishLogin = (res: LoginApiResponse) => {
+    if (isConsentRequired(res)) {
+      setPendingMfa(null);
+      setConsentRequired(true);
+      return;
+    }
+    handleRedirect(res, searchParams);
+  };
+
   const handlePasswordSubmit = async (password: string) => {
     setError("");
     try {
-      const res = await api.post<LoginApiResponse>(
-        loginUrl(),
-        buildLoginBody(application, orgName, username, "Password", searchParams, { password }),
-      );
+      const body = buildLoginBody(application, orgName, username, "Password", searchParams, { password });
+      const res = await api.post<LoginApiResponse>(loginUrl(), body);
       if (res.status !== "ok") { setError(res.msg ?? t("auth.signin.noMethodError")); return; }
-      handleRedirect(res, searchParams);
+      const mfa = pendingMfaFrom(res, loginUrl(), body);
+      if (mfa) { setPendingMfa(mfa); return; }
+      finishLogin(res);
     } catch (e: unknown) {
       setError((e as Error).message ?? "network error");
     }
@@ -822,12 +843,12 @@ export default function ClassicSigninPage({ application, providers }: Props) {
   const handleCodeSubmit = async (code: string) => {
     setError("");
     try {
-      const res = await api.post<LoginApiResponse>(
-        loginUrl(),
-        buildLoginBody(application, orgName, username, "Verification code", searchParams, { code }),
-      );
+      const body = buildLoginBody(application, orgName, username, "Verification code", searchParams, { code });
+      const res = await api.post<LoginApiResponse>(loginUrl(), body);
       if (res.status !== "ok") { setError(res.msg ?? t("auth.signin.noMethodError")); return; }
-      handleRedirect(res, searchParams);
+      const mfa = pendingMfaFrom(res, loginUrl(), body);
+      if (mfa) { setPendingMfa(mfa); return; }
+      finishLogin(res);
     } catch (e: unknown) {
       setError((e as Error).message ?? "network error");
     }
@@ -848,6 +869,24 @@ export default function ClassicSigninPage({ application, providers }: Props) {
   const usernamePlaceholder = (application.signinItems ?? []).find(
     (it) => it.name === "Username" && !it.isCustom,
   )?.placeholder;
+
+  if (consentRequired) {
+    return <OAuthConsentStep application={application} searchParams={searchParams} />;
+  }
+
+  if (pendingMfa) {
+    return (
+      <LoginMfaStep
+        pending={pendingMfa}
+        application={application.name}
+        organization={orgName}
+        orgBranding={{ logo: orgLogo, logoDark: application.organizationObj?.logoDark, displayName: orgDisplay }}
+        onDone={finishLogin}
+        onPending={setPendingMfa}
+        onError={(msg) => { setPendingMfa(null); setError(msg); }}
+      />
+    );
+  }
 
   const { Component: Template } = resolveTemplate(application.template);
 

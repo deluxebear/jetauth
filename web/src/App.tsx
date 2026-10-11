@@ -1,4 +1,4 @@
-import { Routes, Route, Navigate, useNavigate } from "react-router-dom";
+import { Routes, Route, Navigate, useNavigate, useParams } from "react-router-dom";
 import { useEffect, useState, useCallback, type ComponentProps, type ReactNode } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import Sidebar from "./components/Sidebar";
@@ -113,6 +113,7 @@ import SwaggerPage from "./pages/SwaggerPage";
 import { entityConfigs } from "./pages/entities/entityConfigs";
 import { getAccount, login as apiLogin, logout as apiLogout } from "./api/client";
 import { isLocalAdmin, isGlobalAdmin } from "./utils/auth";
+import PageErrorBoundary from "./components/PageErrorBoundary";
 
 type OrgThemeData = NonNullable<Parameters<ReturnType<typeof useTheme>["applyOrgTheme"]>[0]>;
 type OrgWithTheme = { themeData?: (OrgThemeData & { isEnabled?: boolean }) | null };
@@ -202,13 +203,23 @@ function Layout({
               exit={{ opacity: 0 }}
               transition={{ duration: 0.2 }}
             >
-              {children}
+              <PageErrorBoundary key={location.pathname}>{children}</PageErrorBoundary>
             </motion.div>
           </AnimatePresence>
         </main>
       </motion.div>
     </div>
   );
+}
+
+// Non-admins may only open their own profile; any other /users/:owner/:name
+// is sent back to it instead of rendering another user's edit form.
+function OwnProfileRoute({ user }: { user: User }) {
+  const { owner, name } = useParams();
+  if (owner !== user.owner || name !== user.name) {
+    return <Navigate to={`/users/${user.owner}/${user.name}`} replace />;
+  }
+  return <UserEditPage />;
 }
 
 export default function App() {
@@ -546,7 +557,7 @@ export default function App() {
         <EnableMfaNotification account={mfaAccount} justLoggedIn={justLoggedIn} onDismiss={() => setJustLoggedIn(false)} />
         <Routes>
           <Route path="/" element={<UserHomePage userOrg={user.owner} />} />
-          <Route path="/users/:owner/:name" element={<UserEditPage />} />
+          <Route path="/users/:owner/:name" element={<OwnProfileRoute user={user} />} />
           <Route path="/mfa/setup" element={(() => {
             const orgData = JSON.parse(localStorage.getItem("organizationData") ?? "null");
             return (

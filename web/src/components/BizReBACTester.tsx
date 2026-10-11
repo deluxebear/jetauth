@@ -721,16 +721,17 @@ function ListObjectsResultPanel({
   result: BizListObjectsResult;
   t: ReturnType<typeof useTranslation>["t"];
 }) {
+  const objects = result.objects ?? [];
   return (
     <div className="rounded-xl border border-border bg-surface-1 p-4">
       <h3 className="text-[13px] font-semibold mb-2">
-        {result.objects.length} {t("rebac.tester.matchingObjects")}
+        {objects.length} {t("rebac.tester.matchingObjects")}
       </h3>
-      {result.objects.length === 0 ? (
+      {objects.length === 0 ? (
         <p className="text-[12px] text-text-muted">{t("rebac.tester.noResults")}</p>
       ) : (
         <ul className="flex flex-col gap-1.5">
-          {result.objects.map((obj) => (
+          {objects.map((obj) => (
             <li key={obj}>
               <TupleChip kind="object" value={obj} />
             </li>
@@ -753,16 +754,17 @@ function ListUsersResultPanel({
   result: BizListUsersResult;
   t: ReturnType<typeof useTranslation>["t"];
 }) {
+  const users = result.users ?? [];
   return (
     <div className="rounded-xl border border-border bg-surface-1 p-4">
       <h3 className="text-[13px] font-semibold mb-2">
-        {result.users.length} {t("rebac.tester.matchingUsers")}
+        {users.length} {t("rebac.tester.matchingUsers")}
       </h3>
-      {result.users.length === 0 ? (
+      {users.length === 0 ? (
         <p className="text-[12px] text-text-muted">{t("rebac.tester.noResults")}</p>
       ) : (
         <ul className="flex flex-col gap-1.5">
-          {result.users.map((user) => (
+          {users.map((user) => (
             <li key={user}>
               <TupleChip kind="user" value={user} />
             </li>

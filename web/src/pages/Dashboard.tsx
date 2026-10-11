@@ -12,6 +12,8 @@ import { request } from "../backend/request";
 import { useOrganization } from "../OrganizationContext";
 import * as RecordBackend from "../backend/RecordBackend";
 import type { Record as AuditRecord } from "../backend/RecordBackend";
+import * as SystemBackend from "../backend/SystemBackend";
+import type { VersionInfo } from "../backend/SystemBackend";
 
 interface DashboardData {
   organizationCounts: number[];
@@ -39,6 +41,15 @@ const fadeUp: Variants = {
   show: { opacity: 1, y: 0, transition: { duration: 0.35, ease: "easeOut" } },
 };
 
+/** Display names for the xorm driver names the backend reports. */
+const DATABASE_LABELS: Record<string, string> = {
+  sqlite: "SQLite",
+  postgres: "PostgreSQL",
+  mysql: "MySQL",
+  mssql: "SQL Server",
+  cockroachdb: "CockroachDB",
+};
+
 /** Wall-clock helper kept outside the component so render stays lint-pure. */
 const currentTimeMs = () => Date.now();
 
@@ -51,6 +62,17 @@ export default function Dashboard() {
   const loading = result?.org !== selectedOrg;
   const data = result && result.org === selectedOrg ? result.data : null;
   const [records, setRecords] = useState<AuditRecord[]>([]);
+  const [versionInfo, setVersionInfo] = useState<VersionInfo | null>(null);
+
+  useEffect(() => {
+    SystemBackend.getVersionInfo()
+      .then((res) => {
+        if (res.status === "ok" && res.data) {
+          setVersionInfo(res.data);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     let fetched: DashboardData | null = null;
@@ -77,6 +99,13 @@ export default function Dashboard() {
   }, [selectedOrg]);
 
   // Array has 31 entries: index 0 = 30 days ago, index 30 = today
+  let versionText = versionInfo?.version || t("sysinfo.unknownVersion");
+  if (versionInfo && versionInfo.commitOffset > 0) {
+    versionText += ` (+${versionInfo.commitOffset})`;
+  }
+  const databaseType = versionInfo?.databaseType ?? "";
+  const databaseText = DATABASE_LABELS[databaseType] ?? (databaseType || "-");
+
   const userTotal = data?.userCounts?.[30] ?? 0;
   const userDaily = data ? (data.userCounts[30] - data.userCounts[30 - 1]) : 0;
   const userWeekly = data ? (data.userCounts[30] - data.userCounts[30 - 7]) : 0;
@@ -279,11 +308,11 @@ export default function Dashboard() {
             <div className="space-y-2 text-[12px]">
               <div className="flex justify-between">
                 <span className="text-text-muted">{t("dashboard.system.version")}</span>
-                <span className="font-mono text-text-secondary">v2.400.0</span>
+                <span className="font-mono text-text-secondary">{versionText}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-text-muted">{t("dashboard.system.database")}</span>
-                <span className="font-mono text-text-secondary">SQLite</span>
+                <span className="font-mono text-text-secondary">{databaseText}</span>
               </div>
             </div>
           </div>

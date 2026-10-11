@@ -48,3 +48,40 @@ func TestSanitizeApplicationHtml_NilSafe(t *testing.T) {
 	// must not panic
 	sanitizeApplicationHtml(nil)
 }
+
+func TestSanitizeApplicationHtml_FormSideHtmlAndCustomItems(t *testing.T) {
+	app := &Application{
+		FormSideHtml: `<p>side</p><img src=x onerror=alert(1)><svg/onload=alert(1)>`,
+		SigninItems: []*SigninItem{
+			{Name: "Username", Label: "Name & email"},
+			{Name: "Promo", IsCustom: true, Label: `<b>hi</b><a href="java&#115;cript:alert(1)">x</a>`},
+			nil,
+		},
+		ForgetItems: []*SigninItem{
+			{Name: "Notice", IsCustom: true, Label: `<script>alert(1)</script>ok`},
+		},
+	}
+	sanitizeApplicationHtml(app)
+
+	for _, bad := range []string{"onerror", "onload", "<svg"} {
+		if strings.Contains(strings.ToLower(app.FormSideHtml), bad) {
+			t.Errorf("FormSideHtml should strip %q, got %q", bad, app.FormSideHtml)
+		}
+	}
+	if !strings.Contains(app.FormSideHtml, "<p>side</p>") {
+		t.Errorf("FormSideHtml should keep safe markup, got %q", app.FormSideHtml)
+	}
+	if got := app.SigninItems[0].Label; got != "Name & email" {
+		t.Errorf("built-in item label must stay plain text, got %q", got)
+	}
+	promo := app.SigninItems[1].Label
+	if strings.Contains(strings.ToLower(promo), "javascript") || strings.Contains(promo, "&#115;") {
+		t.Errorf("custom signin label should drop the javascript: link, got %q", promo)
+	}
+	if !strings.Contains(promo, "<b>hi</b>") {
+		t.Errorf("custom signin label should keep safe markup, got %q", promo)
+	}
+	if got := app.ForgetItems[0].Label; strings.Contains(got, "<script") {
+		t.Errorf("custom forget label should strip <script>, got %q", got)
+	}
+}
