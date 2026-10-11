@@ -15,7 +15,9 @@
 package object
 
 import (
+	"crypto/sha256"
 	"fmt"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -114,18 +116,62 @@ func tableFingerprint(bean interface{}, column string) (string, error) {
 	return rows[0]["c"] + "|" + rows[0]["m"], nil
 }
 
+// Columns hashed into the site fingerprint. Second-resolution timestamps miss
+// same-second edits, and Cert / Application have no updated_time at all, so
+// for those tables the fingerprint hashes the content the gateway consumes
+// (certificate material and expiry, client credentials, redirect URIs, ...).
+// public_ip is deliberately excluded: the DNS retry path rewrites it.
+var (
+	siteFingerprintCols = []string{"owner", "name", "updated_time", "domain", "other_domains", "need_redirect", "rules", "host", "port", "hosts", "ssl_mode", "status", "casdoor_application", "enable_biz_authz", "biz_authz_bypass", "biz_authz_fail_mode"}
+	certFingerprintCols = []string{"owner", "name", "created_time", "expire_time", "domain_expire_time", "certificate", "private_key"}
+	appFingerprintCols  = []string{"owner", "name", "created_time", "organization", "cert", "client_id", "client_secret", "client_cert", "redirect_uris", "grant_types", "token_format", "expire_in_hours", "refresh_expire_in_hours"}
+)
+
+// hashRows returns "count|sha256" over the given rows restricted to cols. Rows
+// are sorted so the result does not depend on database row order.
+func hashRows(rows []map[string]string, cols []string) string {
+	lines := make([]string, 0, len(rows))
+	var sb strings.Builder
+	for _, row := range rows {
+		sb.Reset()
+		for _, c := range cols {
+			sb.WriteString(row[c])
+			sb.WriteByte(0x1f)
+		}
+		lines = append(lines, sb.String())
+	}
+	sort.Strings(lines)
+	h := sha256.New()
+	for _, l := range lines {
+		h.Write([]byte(l))
+		h.Write([]byte{0x1e})
+	}
+	return fmt.Sprintf("%d|%x", len(rows), h.Sum(nil))
+}
+
+// contentFingerprint hashes the selected columns of every row of a table.
+// Cheap enough for the small config tables involved (sites, certs, apps) and
+// catches edits that tables without a reliable updated_time would miss.
+func contentFingerprint(bean interface{}, cols []string) (string, error) {
+	rows, err := ormer.Engine.Table(bean).Select(strings.Join(cols, ", ")).QueryString()
+	if err != nil {
+		return "", err
+	}
+	return hashRows(rows, cols), nil
+}
+
 func siteFingerprint() (string, error) {
 	parts := []struct {
 		bean interface{}
-		col  string
+		cols []string
 	}{
-		{&Site{}, "updated_time"},
-		{&Cert{}, "created_time"},
-		{&Application{}, "created_time"},
+		{&Site{}, siteFingerprintCols},
+		{&Cert{}, certFingerprintCols},
+		{&Application{}, appFingerprintCols},
 	}
 	var sb strings.Builder
 	for _, p := range parts {
-		fp, err := tableFingerprint(p.bean, p.col)
+		fp, err := contentFingerprint(p.bean, p.cols)
 		if err != nil {
 			return "", err
 		}
