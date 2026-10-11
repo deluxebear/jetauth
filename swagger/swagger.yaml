@@ -22,6 +22,11 @@ components:
         msg:
           example: ""
           type: string
+        providersResolved:
+          items:
+            $ref: '#/components/schemas/object.ResolvedProvider'
+          type: array
+          uniqueItems: false
         status:
           example: ok
           type: string
@@ -105,6 +110,17 @@ components:
         data:
           example: true
           type: boolean
+        msg:
+          example: ""
+          type: string
+        status:
+          example: ok
+          type: string
+      type: object
+    controllers.BizMigrationReportResponse:
+      properties:
+        data:
+          $ref: '#/components/schemas/object.BizMigrationReport'
         msg:
           example: ""
           type: string
@@ -394,6 +410,17 @@ components:
           example: ok
           type: string
       type: object
+    controllers.BizUserDataScopeResponse:
+      properties:
+        data:
+          $ref: '#/components/schemas/object.BizEffectiveDataScope'
+        msg:
+          example: ""
+          type: string
+        status:
+          example: ok
+          type: string
+      type: object
     controllers.BizUserPermissionsResponse:
       properties:
         data:
@@ -408,6 +435,8 @@ components:
                 type: string
               type: array
               uniqueItems: false
+            dataScope:
+              $ref: '#/components/schemas/object.BizEffectiveDataScope'
             properties:
               additionalProperties: {}
               type: object
@@ -431,6 +460,12 @@ components:
             type: string
           type: array
           uniqueItems: false
+        data2:
+          additionalProperties:
+            $ref: '#/components/schemas/object.BizRolePropertiesView'
+          description: Data2 maps role name to its custom properties and typed dataScope
+            (additive).
+          type: object
         msg:
           example: ""
           type: string
@@ -625,6 +660,80 @@ components:
           example: ok
           type: string
       type: object
+    controllers.PermissionApprovalLogListResponse:
+      properties:
+        data:
+          items:
+            $ref: '#/components/schemas/object.PermissionApprovalLog'
+          type: array
+          uniqueItems: false
+        msg:
+          example: ""
+          type: string
+        status:
+          example: ok
+          type: string
+      type: object
+    controllers.RejectPermissionRequest:
+      properties:
+        reason:
+          type: string
+      type: object
+    controllers.ResolveSigninPayload:
+      properties:
+        methods:
+          items:
+            $ref: '#/components/schemas/controllers.SigninMethodInfo'
+          type: array
+          uniqueItems: false
+        recommended:
+          description: Name of the suggested method, or ""
+          type: string
+        userHint:
+          description: masked display (e.g. "a***@example.com") or ""
+          type: string
+      type: object
+    controllers.ResolveSigninRequest:
+      properties:
+        application:
+          description: '"admin/app-foo" or short name "app-foo"'
+          type: string
+        identifier:
+          description: username, email, or phone
+          type: string
+        organization:
+          description: optional; falls back to the application's org
+          type: string
+      type: object
+    controllers.ResolveSigninResponse:
+      properties:
+        data:
+          $ref: '#/components/schemas/controllers.ResolveSigninPayload'
+        msg:
+          example: ""
+          type: string
+        status:
+          example: ok
+          type: string
+      type: object
+    controllers.ResolvedThemePayload:
+      properties:
+        css:
+          type: string
+        theme:
+          $ref: '#/components/schemas/object.ThemeData'
+      type: object
+    controllers.ResolvedThemeResponse:
+      properties:
+        data:
+          $ref: '#/components/schemas/controllers.ResolvedThemePayload'
+        msg:
+          example: ""
+          type: string
+        status:
+          example: ok
+          type: string
+      type: object
     controllers.Response:
       properties:
         data: {}
@@ -637,6 +746,19 @@ components:
         status:
           type: string
         sub:
+          type: string
+      type: object
+    controllers.SigninMethodInfo:
+      properties:
+        displayName:
+          description: human label from application.SigninMethods
+          type: string
+        name:
+          description: '"Password" | "Verification code" | "WebAuthn" | "Face ID"
+            | "LDAP" | "WeChat"'
+          type: string
+        rule:
+          description: e.g. "All" | "Email only" | "Phone only" | "Non-LDAP"
           type: string
       type: object
     controllers.SmsForm:
@@ -732,12 +854,257 @@ components:
           example: ok
           type: string
       type: object
+    controllers.addAssertionRequest:
+      properties:
+        description:
+          type: string
+        expected:
+          type: boolean
+        object:
+          type: string
+        relation:
+          type: string
+        user:
+          type: string
+      type: object
+    controllers.bizBatchCheckItem:
+      properties:
+        context:
+          additionalProperties: {}
+          type: object
+        contextualTuples:
+          items:
+            $ref: '#/components/schemas/controllers.bizCheckTupleKey'
+          type: array
+          uniqueItems: false
+        tupleKey:
+          $ref: '#/components/schemas/controllers.bizCheckTupleKey'
+      type: object
+    controllers.bizBatchCheckRequest:
+      properties:
+        appId:
+          type: string
+        authorizationModelId:
+          type: string
+        checks:
+          items:
+            $ref: '#/components/schemas/controllers.bizBatchCheckItem'
+          type: array
+          uniqueItems: false
+      type: object
+    controllers.bizBatchCheckResponse:
+      properties:
+        results:
+          items:
+            $ref: '#/components/schemas/controllers.bizBatchCheckResponseItem'
+          type: array
+          uniqueItems: false
+      type: object
+    controllers.bizBatchCheckResponseItem:
+      properties:
+        allowed:
+          type: boolean
+        error:
+          type: string
+        resolution:
+          type: string
+      type: object
+    controllers.bizCheckRequest:
+      properties:
+        appId:
+          type: string
+        authorizationModelId:
+          type: string
+        context:
+          additionalProperties: {}
+          type: object
+        contextualTuples:
+          items:
+            $ref: '#/components/schemas/controllers.bizCheckTupleKey'
+          type: array
+          uniqueItems: false
+        tupleKey:
+          $ref: '#/components/schemas/controllers.bizCheckTupleKey'
+      type: object
+    controllers.bizCheckResponse:
+      properties:
+        allowed:
+          type: boolean
+        resolution:
+          type: string
+      type: object
+    controllers.bizCheckTupleKey:
+      properties:
+        object:
+          type: string
+        relation:
+          type: string
+        user:
+          type: string
+      type: object
+    controllers.bizCountTuplesResponse:
+      properties:
+        count:
+          type: integer
+      type: object
+    controllers.bizListObjectsRequest:
+      properties:
+        appId:
+          type: string
+        authorizationModelId:
+          type: string
+        context:
+          additionalProperties: {}
+          type: object
+        contextualTuples:
+          items:
+            $ref: '#/components/schemas/controllers.bizCheckTupleKey'
+          type: array
+          uniqueItems: false
+        continuationToken:
+          type: string
+        objectType:
+          type: string
+        pageSize:
+          type: integer
+        relation:
+          type: string
+        user:
+          type: string
+      type: object
+    controllers.bizListTupleAuditResponse:
+      properties:
+        events:
+          items:
+            $ref: '#/components/schemas/object.BizReBACTupleAudit'
+          type: array
+          uniqueItems: false
+        limit:
+          type: integer
+        offset:
+          type: integer
+      type: object
+    controllers.bizListUsersRequest:
+      properties:
+        appId:
+          type: string
+        authorizationModelId:
+          type: string
+        context:
+          additionalProperties: {}
+          type: object
+        contextualTuples:
+          items:
+            $ref: '#/components/schemas/controllers.bizCheckTupleKey'
+          type: array
+          uniqueItems: false
+        continuationToken:
+          type: string
+        object:
+          type: string
+        pageSize:
+          type: integer
+        relation:
+          type: string
+        userFilter:
+          type: string
+      type: object
+    controllers.bizReadTuplesResponse:
+      properties:
+        limit:
+          type: integer
+        offset:
+          type: integer
+        total:
+          type: integer
+        tuples:
+          items:
+            $ref: '#/components/schemas/object.BizTuple'
+          type: array
+          uniqueItems: false
+      type: object
+    controllers.bizWriteTupleIn:
+      properties:
+        conditionContext:
+          type: string
+        conditionName:
+          type: string
+        object:
+          type: string
+        relation:
+          type: string
+        user:
+          type: string
+      type: object
+    controllers.bizWriteTuplesRequest:
+      properties:
+        appId:
+          type: string
+        authorizationModelId:
+          type: string
+        deletes:
+          items:
+            $ref: '#/components/schemas/controllers.bizCheckTupleKey'
+          type: array
+          uniqueItems: false
+        writes:
+          items:
+            $ref: '#/components/schemas/controllers.bizWriteTupleIn'
+          type: array
+          uniqueItems: false
+      type: object
+    controllers.bizWriteTuplesResponse:
+      properties:
+        deleted:
+          type: integer
+        written:
+          type: integer
+      type: object
     controllers.roleInheritanceEdge:
       properties:
         childRoleId:
           type: integer
         parentRoleId:
           type: integer
+      type: object
+    controllers.writeAuthorizationModelRequest:
+      properties:
+        description:
+          type: string
+        expectedModelId:
+          description: |-
+            ExpectedModelId, when present (even as ""), enables compare-and-swap:
+            the save is rejected with BIZ_REBAC_SCHEMA_STALE if the app's
+            currentAuthorizationModelId differs. Omit to keep last-write-wins.
+          type: string
+        schemaDsl:
+          type: string
+      type: object
+    email.Preset:
+      properties:
+        bodyTemplate:
+          type: string
+        contentType:
+          type: string
+        docs:
+          description: URL to upstream docs
+          type: string
+        endpointExample:
+          description: interpolatable URL hint (may contain {account_id} etc.)
+          type: string
+        httpHeaders:
+          additionalProperties:
+            type: string
+          description: Authorization value is a hint — admin fills secret
+          type: object
+        key:
+          description: stable id
+          type: string
+        method:
+          type: string
+        name:
+          description: human-readable
+          type: string
       type: object
     form.AuthForm:
       properties:
@@ -1106,6 +1473,13 @@ components:
           type: string
         forcedRedirectOrigin:
           type: string
+        forgetHtml:
+          type: string
+        forgetItems:
+          items:
+            $ref: '#/components/schemas/object.SigninItem'
+          type: array
+          uniqueItems: false
         forgetUrl:
           type: string
         formBackgroundUrl:
@@ -1187,6 +1561,8 @@ components:
             $ref: '#/components/schemas/object.SigninItem'
           type: array
           uniqueItems: false
+        signinMethodMode:
+          type: string
         signinMethods:
           items:
             $ref: '#/components/schemas/object.SigninMethod'
@@ -1212,6 +1588,17 @@ components:
             type: string
           type: array
           uniqueItems: false
+        template:
+          description: |-
+            Layout template for signin/signup/forgot pages. Empty = "centered-card"
+            default, resolved client-side via resolveTemplate(). Options carry
+            template-specific params (hero image, sidebar copy, etc.) and their
+            schema is owned by each template module — deliberately typed as
+            map[string]interface{} to stay template-agnostic at the DB layer.
+          type: string
+        templateOptions:
+          additionalProperties: {}
+          type: object
         termsOfUse:
           type: string
         themeData:
@@ -1239,11 +1626,36 @@ components:
         useEmailAsSamlNameId:
           type: boolean
       type: object
+    object.AssertionRunResult:
+      properties:
+        actual:
+          type: boolean
+        error:
+          type: string
+        expected:
+          type: boolean
+        id:
+          type: string
+        object:
+          type: string
+        pass:
+          type: boolean
+        relation:
+          type: string
+        user:
+          type: string
+      type: object
     object.BizAppConfig:
       properties:
         appName:
           type: string
         createdTime:
+          type: string
+        currentAuthorizationModelId:
+          description: |-
+            CurrentAuthorizationModelId points at the latest BizAuthorizationModel
+            row for this app. Writes and Checks default to this model; historical
+            models are preserved (spec §4.2) and can be addressed explicitly.
           type: string
         description:
           type: string
@@ -1253,10 +1665,22 @@ components:
           type: boolean
         modelText:
           type: string
+        modelType:
+          description: |-
+            ModelType selects the authorization engine. Defaults to "casbin"
+            for backward compatibility; "rebac" routes BizEnforce to the
+            OpenFGA-compatible graph engine. See docs/rebac-spec.md §4.1.
+          type: string
         owner:
           type: string
         policyTable:
           type: string
+        policyVersion:
+          description: |-
+            PolicyVersion is bumped on every committed policy change (see
+            biz_policy_changelog.go). Server-maintained: client-supplied values are
+            ignored on add/update.
+          type: integer
         supportsDeny:
           description: |-
             SupportsDeny is a computed field (not persisted) that reports whether
@@ -1302,6 +1726,154 @@ components:
           type: string
         updatedTime:
           type: string
+      type: object
+    object.BizAuthorizationModel:
+      properties:
+        appName:
+          type: string
+        createdBy:
+          type: string
+        createdTime:
+          type: string
+        description:
+          type: string
+        id:
+          type: string
+        owner:
+          type: string
+        schemaDsl:
+          type: string
+        schemaHash:
+          type: string
+        schemaJson:
+          type: string
+      type: object
+    object.BizDataScope:
+      properties:
+        resources:
+          additionalProperties:
+            $ref: '#/components/schemas/object.BizDataScope'
+          type: object
+        type:
+          type: string
+        values:
+          items:
+            type: string
+          type: array
+          uniqueItems: false
+      type: object
+    object.BizEffectiveDataScope:
+      description: DataScope is the merged (most-permissive-wins) data scope of the
+        user.
+      properties:
+        resources:
+          additionalProperties:
+            $ref: '#/components/schemas/object.BizEffectiveDataScope'
+          type: object
+        sources:
+          description: names of roles that contributed
+          items:
+            type: string
+          type: array
+          uniqueItems: false
+        type:
+          type: string
+        values:
+          items:
+            type: string
+          type: array
+          uniqueItems: false
+      type: object
+    object.BizMigrationCounts:
+      properties:
+        create:
+          description: new rows
+          example: 7
+          type: integer
+        failed:
+          description: invalid entities that cannot be migrated at all
+          example: 0
+          type: integer
+        skip:
+          description: existing rows left untouched (onConflict=skip)
+          example: 2
+          type: integer
+        total:
+          description: migratable entities found in the source organization
+          example: 10
+          type: integer
+        update:
+          description: existing rows overwritten (onConflict=overwrite)
+          example: 1
+          type: integer
+      type: object
+    object.BizMigrationIssue:
+      properties:
+        entity:
+          description: role | permission | inheritance
+          example: permission
+          type: string
+        field:
+          example: domains
+          type: string
+        kind:
+          example: unmappable
+          type: string
+        message:
+          example: domains are not supported by biz permissions and were ignored
+          type: string
+        name:
+          example: perm-1
+          type: string
+      type: object
+    object.BizMigrationReport:
+      properties:
+        appId:
+          example: org/app
+          type: string
+        applied:
+          description: data was written (never true for dryRun)
+          example: false
+          type: boolean
+        dryRun:
+          example: true
+          type: boolean
+        granteeAdds:
+          description: biz_permission_grantee rows to add
+          example: 20
+          type: integer
+        inheritanceAdds:
+          description: biz_role_inheritance rows to add
+          example: 3
+          type: integer
+        issues:
+          items:
+            $ref: '#/components/schemas/object.BizMigrationIssue'
+          type: array
+          uniqueItems: false
+        memberAdds:
+          description: biz_role_member rows to add
+          example: 12
+          type: integer
+        onConflict:
+          example: skip
+          type: string
+        permissions:
+          $ref: '#/components/schemas/object.BizMigrationCounts'
+        policyCount:
+          example: 0
+          type: integer
+        roles:
+          $ref: '#/components/schemas/object.BizMigrationCounts'
+        sourceOrganization:
+          example: org
+          type: string
+        syncError:
+          type: string
+        synced:
+          description: policies were rebuilt after the write
+          example: false
+          type: boolean
       type: object
     object.BizPermission:
       properties:
@@ -1425,6 +1997,65 @@ components:
         userGranteeCount:
           example: 15
           type: integer
+      type: object
+    object.BizPolicyVersionResponse:
+      properties:
+        version:
+          type: integer
+      type: object
+    object.BizReBACAssertion:
+      properties:
+        appName:
+          type: string
+        createdBy:
+          type: string
+        createdTime:
+          type: string
+        description:
+          type: string
+        expected:
+          type: boolean
+        id:
+          type: string
+        lastActual:
+          description: |-
+            Last-run snapshot — refreshed by RunAssertion. Not the source of
+            truth for the bulk runner (which always re-checks); the columns
+            exist so the list UI can show the most recent verdict without
+            running every time.
+          type: boolean
+        lastRunTime:
+          type: string
+        object:
+          type: string
+        owner:
+          type: string
+        relation:
+          type: string
+        user:
+          type: string
+      type: object
+    object.BizReBACTupleAudit:
+      properties:
+        actorUser:
+          type: string
+        appName:
+          type: string
+        atTime:
+          type: string
+        id:
+          type: integer
+        object:
+          type: string
+        op:
+          description: '"write" | "delete"'
+          type: string
+        owner:
+          type: string
+        relation:
+          type: string
+        user:
+          type: string
       type: object
     object.BizResourceImportApplyRequest:
       properties:
@@ -1578,6 +2209,14 @@ components:
         subjectType:
           type: string
       type: object
+    object.BizRolePropertiesView:
+      properties:
+        dataScope:
+          $ref: '#/components/schemas/object.BizDataScope'
+        properties:
+          additionalProperties: {}
+          type: object
+      type: object
     object.BizRoleStats:
       properties:
         childRoleCount:
@@ -1603,6 +2242,63 @@ components:
           type: integer
         userMemberCount:
           example: 10
+          type: integer
+      type: object
+    object.BizTuple:
+      properties:
+        appName:
+          type: string
+        authorizationModelId:
+          type: string
+        conditionContext:
+          type: string
+        conditionName:
+          description: |-
+            ConditionName/ConditionContext hold the CEL condition name and its JSON
+            parameter context respectively. CEL evaluation is wired in CP-4 (Task 9);
+            this task only stores the strings so the schema is forward-compatible.
+          type: string
+        createdTime:
+          type: string
+        object:
+          description: |-
+            Object/User widths are capped at 200 so the four-column composite unique
+            index uq_tuple (store_id 200 + object 200 + relation 100 + user 200 = 700
+            chars × 4 bytes per utf8mb4 char = 2800 bytes) stays under the MySQL 8
+            InnoDB 3072-byte key-length limit. 200 chars still covers "type:id" and
+            userset ("type:id#relation") forms for every realistic OpenFGA identifier.
+          type: string
+        owner:
+          type: string
+        relation:
+          type: string
+        storeId:
+          type: string
+        user:
+          type: string
+      type: object
+    object.BizWatchFullResponse:
+      properties:
+        groupingPolicies:
+          items:
+            items:
+              type: string
+            type: array
+          type: array
+          uniqueItems: false
+        modelText:
+          type: string
+        policies:
+          items:
+            items:
+              type: string
+            type: array
+          type: array
+          uniqueItems: false
+        type:
+          example: full
+          type: string
+        version:
           type: integer
       type: object
     object.Cert:
@@ -1845,6 +2541,61 @@ components:
           type: string
         userAgent:
           type: string
+      type: object
+    object.ExpandNode:
+      properties:
+        base:
+          $ref: '#/components/schemas/object.ExpandNode'
+        children:
+          description: Children — populated for Kind="union" or "intersection".
+          items:
+            $ref: '#/components/schemas/object.ExpandNode'
+          type: array
+          uniqueItems: false
+        computed:
+          $ref: '#/components/schemas/object.ExpandObjectRelation'
+        kind:
+          description: |-
+            Kind is one of "this", "computed_userset", "tuple_to_userset",
+            "union", "intersection", "difference". Determines which of the
+            other fields is populated.
+          type: string
+        subtract:
+          $ref: '#/components/schemas/object.ExpandNode'
+        truncated:
+          description: Truncated set when the recursion stopped early (hit depth cap).
+          type: boolean
+        tupleToUserset:
+          $ref: '#/components/schemas/object.ExpandTupleToUserset'
+        users:
+          description: |-
+            Users — populated for Kind="this". Each entry is a raw subject
+            string (user:alice, user:*, team:eng#member, …).
+          items:
+            type: string
+          type: array
+          uniqueItems: false
+      type: object
+    object.ExpandObjectRelation:
+      description: Computed — populated for Kind="computed_userset".
+      properties:
+        object:
+          type: string
+        relation:
+          type: string
+      type: object
+    object.ExpandResult:
+      properties:
+        root:
+          $ref: '#/components/schemas/object.ExpandNode'
+      type: object
+    object.ExpandTupleToUserset:
+      description: TupleToUserset — populated for Kind="tuple_to_userset".
+      properties:
+        computed:
+          $ref: '#/components/schemas/object.ExpandObjectRelation'
+        tupleset:
+          $ref: '#/components/schemas/object.ExpandObjectRelation'
       type: object
     object.Expression:
       properties:
@@ -2186,6 +2937,26 @@ components:
           description: Gcn                   string
           type: string
       type: object
+    object.ListObjectsResult:
+      properties:
+        continuationToken:
+          type: string
+        objects:
+          items:
+            type: string
+          type: array
+          uniqueItems: false
+      type: object
+    object.ListUsersResult:
+      properties:
+        continuationToken:
+          type: string
+        users:
+          items:
+            type: string
+          type: array
+          uniqueItems: false
+      type: object
     object.ManagedAccount:
       properties:
         application:
@@ -2356,6 +3127,8 @@ components:
             type: string
           type: array
           uniqueItems: false
+        revocation_endpoint:
+          type: string
         scopes_supported:
           items:
             type: string
@@ -2594,6 +3367,16 @@ components:
           type: string
         passwordType:
           type: string
+        signinMethods:
+          items:
+            $ref: '#/components/schemas/object.SigninMethod'
+          type: array
+          uniqueItems: false
+        signupItems:
+          items:
+            $ref: '#/components/schemas/object.SignupItem'
+          type: array
+          uniqueItems: false
         tags:
           items:
             type: string
@@ -2737,6 +3520,10 @@ components:
           type: string
         owner:
           type: string
+        rejectReason:
+          description: RejectReason is set when State is Rejected; cleared on any
+            other state.
+          type: string
         resourceType:
           type: string
         resources:
@@ -2758,6 +3545,25 @@ components:
             type: string
           type: array
           uniqueItems: false
+      type: object
+    object.PermissionApprovalLog:
+      properties:
+        createdTime:
+          type: string
+        fromState:
+          type: string
+        id:
+          type: integer
+        operator:
+          type: string
+        owner:
+          type: string
+        permissionName:
+          type: string
+        reason:
+          type: string
+        toState:
+          type: string
       type: object
     object.Plan:
       properties:
@@ -2919,6 +3725,12 @@ components:
       properties:
         appId:
           type: string
+        bodyMapping:
+          additionalProperties:
+            type: string
+          type: object
+        bodyTemplate:
+          type: string
         bucket:
           type: string
         category:
@@ -2937,11 +3749,15 @@ components:
           description: If provider type is WeChat, Content means QRCode string by
             Base64 encoding
           type: string
+        contentType:
+          type: string
         createdTime:
           type: string
         customAuthUrl:
           type: string
         customLogo:
+          type: string
+        customLogoDark:
           type: string
         customLogoutUrl:
           type: string
@@ -3051,6 +3867,52 @@ components:
         signupGroup:
           type: string
       type: object
+    object.ReBACRecentWrite:
+      properties:
+        at:
+          type: string
+        object:
+          type: string
+        op:
+          description: '"write" | "delete"'
+          type: string
+        relation:
+          type: string
+        user:
+          type: string
+      type: object
+    object.ReBACStats:
+      properties:
+        activeModelId:
+          type: string
+        checkQpsLastHour:
+          type: integer
+        lastUpdated:
+          type: string
+        modelCount:
+          type: integer
+        recentWrites:
+          items:
+            $ref: '#/components/schemas/object.ReBACRecentWrite'
+          type: array
+          uniqueItems: false
+        todayDelta:
+          type: integer
+        tupleCount:
+          type: integer
+        typeDistribution:
+          items:
+            $ref: '#/components/schemas/object.ReBACTypeDistribution'
+          type: array
+          uniqueItems: false
+      type: object
+    object.ReBACTypeDistribution:
+      properties:
+        count:
+          type: integer
+        type:
+          type: string
+      type: object
     object.Record:
       properties:
         action:
@@ -3082,6 +3944,43 @@ components:
         statusCode:
           type: integer
         user:
+          type: string
+      type: object
+    object.ResolvedProvider:
+      properties:
+        appId:
+          type: string
+        canSignUp:
+          type: boolean
+        clientId:
+          type: string
+        clientId2:
+          type: string
+        customAuthUrl:
+          type: string
+        disableSsl:
+          type: boolean
+        displayName:
+          type: string
+        domain:
+          type: string
+        logoUrl:
+          type: string
+        logoUrlDark:
+          type: string
+        method:
+          type: string
+        name:
+          type: string
+        prompted:
+          type: boolean
+        rule:
+          type: string
+        scopes:
+          type: string
+        subType:
+          type: string
+        type:
           type: string
       type: object
     object.Resource:
@@ -3185,6 +4084,43 @@ components:
         value:
           type: string
       type: object
+    object.SaveAuthorizationModelOutcome:
+      enum:
+      - unchanged
+      - advanced
+      - conflict
+      type: string
+      x-enum-varnames:
+      - SaveOutcomeUnchanged
+      - SaveOutcomeAdvanced
+      - SaveOutcomeConflict
+    object.SaveAuthorizationModelResult:
+      properties:
+        authorizationModelId:
+          type: string
+        conflicts:
+          items:
+            $ref: '#/components/schemas/object.SchemaConflict'
+          type: array
+          uniqueItems: false
+        outcome:
+          $ref: '#/components/schemas/object.SaveAuthorizationModelOutcome'
+        schemaJson:
+          type: string
+      type: object
+    object.SchemaConflict:
+      properties:
+        object:
+          type: string
+        reason:
+          type: string
+        relation:
+          type: string
+        tupleId:
+          type: integer
+        user:
+          type: string
+      type: object
     object.ScopeDescription:
       properties:
         description:
@@ -3259,9 +4195,34 @@ components:
           type: string
         placeholder:
           type: string
+        providers:
+          description: |-
+            Providers is only meaningful for the row with Name == "Providers".
+            When nil or empty the login page renders all configured providers in
+            server order at the default size (backward-compatible default). When
+            set, admins can reorder, hide, resize, and group individual providers.
+          items:
+            $ref: '#/components/schemas/object.SigninItemProvider'
+          type: array
+          uniqueItems: false
         rule:
           type: string
         visible:
+          type: boolean
+      type: object
+    object.SigninItemProvider:
+      properties:
+        group:
+          description: '"primary" | "secondary"'
+          type: string
+        name:
+          description: provider name (unique key)
+          type: string
+        size:
+          description: '"large" | "small"'
+          type: string
+        visible:
+          description: false hides the button
           type: boolean
       type: object
     object.SigninMethod:
@@ -3276,6 +4237,12 @@ components:
     object.SignupItem:
       properties:
         customCss:
+          type: string
+        group:
+          type: string
+        helper:
+          description: W3 additions — all optional, zero-default means "use built-in
+            behavior"
           type: string
         label:
           type: string
@@ -3296,8 +4263,14 @@ components:
           type: boolean
         rule:
           type: string
+        step:
+          type: integer
         type:
           type: string
+        validationMessage:
+          additionalProperties:
+            type: string
+          type: object
         visible:
           type: boolean
       type: object
@@ -3314,6 +4287,13 @@ components:
           type: integer
         applicationObj:
           $ref: '#/components/schemas/object.Application'
+        bizAuthzBypass:
+          items:
+            type: string
+          type: array
+          uniqueItems: false
+        bizAuthzFailMode:
+          type: string
         casdoorApplication:
           type: string
         challenges:
@@ -3330,6 +4310,12 @@ components:
         domain:
           type: string
         enableAlert:
+          type: boolean
+        enableBizAuthz:
+          description: |-
+            URL-level authorization via the Application Authorization module. See
+            validateBizAuthz for invariants. Multi-instance caveat: the enforcer
+            cache is per-process; see TODO.md "Redis 缓存 — 多实例部署支持".
           type: boolean
         host:
           type: string
@@ -3448,6 +4434,25 @@ components:
           type: string
         errorText:
           type: string
+        groupMembershipGroupColumn:
+          type: string
+        groupMembershipTable:
+          type: string
+        groupMembershipUserColumn:
+          type: string
+        groupTable:
+          description: |-
+            Optional group sync configuration for the generic Database syncer.
+            GroupTable + GroupTableColumns describe the table holding groups (same
+            column-mapping model as TableColumns, using the Casdoor names Id, Name,
+            DisplayName, Description, Type, Manager and Email). GroupMembershipTable
+            is the join table mapping a user key to a group id.
+          type: string
+        groupTableColumns:
+          items:
+            $ref: '#/components/schemas/object.TableColumn'
+          type: array
+          uniqueItems: false
         host:
           type: string
         isEnabled:
@@ -3512,13 +4517,40 @@ components:
       properties:
         borderRadius:
           type: integer
+        colorCTA:
+          description: Extended semantic colors (empty string = inherit from lower
+            layer).
+          type: string
+        colorDanger:
+          type: string
         colorPrimary:
+          type: string
+        colorSuccess:
+          type: string
+        colorWarning:
+          type: string
+        darkBackground:
+          type: string
+        darkColorPrimary:
+          description: Dark-mode overrides (empty string = auto-derive from light-mode
+            colors).
+          type: string
+        fontFamily:
+          description: Typography (empty = inherit).
+          type: string
+        fontFamilyMono:
           type: string
         isCompact:
           type: boolean
         isEnabled:
           type: boolean
+        spacingScale:
+          description: Spacing multiplier; 0 = inherit, 0.875 = compact, 1.0 = normal,
+            1.125 = spacious.
+          type: number
         themeType:
+          description: Legacy fields (kept for backward compatibility with existing
+            records).
           type: string
       type: object
     object.Ticket:
@@ -4862,8 +5894,8 @@ externalDocs:
   description: ""
   url: ""
 info:
-  description: Swagger Docs of Casdoor Backend API
-  title: Casdoor RESTful API
+  description: Swagger Docs of JetAuth Backend API
+  title: JetAuth RESTful API
   version: ""
 openapi: 3.1.0
 paths:
@@ -5948,6 +6980,27 @@ paths:
       summary: AddOtlpTrace
       tags:
       - OTLP API
+  /approve-permission:
+    post:
+      description: approve a pending permission (global admin or admin of the permission's
+        organization only)
+      parameters:
+      - description: The id ( owner/name ) of the permission
+        in: query
+        name: id
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/controllers.ActionResponse'
+          description: Action result
+      summary: ApprovePermission
+      tags:
+      - Permission API
   /batch-enforce:
     post:
       description: Call Casbin BatchEnforce API
@@ -5987,9 +7040,48 @@ paths:
       summary: BatchEnforce
       tags:
       - Enforcer API
+  /biz-activate-authorization-model:
+    post:
+      description: Repoint the app's current authorization model at a historical,
+      parameters:
+      - description: The app id (owner/appName)
+        in: query
+        name: appId
+        required: true
+        schema:
+          type: string
+      - description: Authorization model id to activate
+        in: query
+        name: id
+        required: true
+        schema:
+          type: string
+      - description: If present, activation is rejected with BIZ_REBAC_SCHEMA_STALE
+          unless the app's current model id equals this value
+        in: query
+        name: expectedModelId
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/controllers.Response'
+          description: ok
+      summary: BizActivateAuthorizationModel
+      tags:
+      - Business Permission API
   /biz-add-app-config:
     post:
       description: Create a new business permission app config
+      parameters:
+      - description: 'Casbin mode only: also create a default admin role and full-access
+          permission'
+        in: query
+        name: initDefaults
+        schema:
+          type: boolean
       requestBody:
         content:
           application/json:
@@ -6028,6 +7120,35 @@ paths:
                 $ref: '#/components/schemas/controllers.ActionResponse'
           description: Action result
       summary: Add a resource catalog entry
+      tags:
+      - Business Permission API
+  /biz-add-assertion:
+    post:
+      description: Add a frozen assertion test case for a ReBAC app.
+      parameters:
+      - description: owner/appName
+        in: query
+        name: appId
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/controllers.addAssertionRequest'
+              description: assertion fields
+              summary: body
+        description: assertion fields
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/object.BizReBACAssertion'
+          description: OK
+      summary: BizAddAssertion
       tags:
       - Business Permission API
   /biz-add-permission:
@@ -6136,6 +7257,34 @@ paths:
       summary: Add a member (user/group) to a role
       tags:
       - Business Permission API
+  /biz-batch-check:
+    post:
+      description: Evaluate multiple Check requests against the same app /
+      parameters:
+      - description: The app id (owner/appName); required via body if absent
+        in: query
+        name: appId
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/controllers.bizBatchCheckRequest'
+              description: Batch check request
+              summary: body
+        description: Batch check request
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/controllers.bizBatchCheckResponse'
+          description: Ordered results, one per input
+      summary: BizBatchCheck
+      tags:
+      - Business Permission API
   /biz-batch-enforce:
     post:
       description: Check multiple requests at once for the given business app
@@ -6217,6 +7366,54 @@ paths:
       summary: Delete multiple business roles in one call
       tags:
       - Business Permission API
+  /biz-check:
+    post:
+      description: Evaluate whether a user has a relation on an object using
+      parameters:
+      - description: The app id (owner/appName); required via body if absent
+        in: query
+        name: appId
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/controllers.bizCheckRequest'
+              description: Check request
+              summary: body
+        description: Check request
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/controllers.bizCheckResponse'
+          description: allowed flag + optional resolution trace
+      summary: BizCheck
+      tags:
+      - Business Permission API
+  /biz-count-tuples:
+    get:
+      description: Return the total tuple count for an app without
+      parameters:
+      - description: The app id (owner/appName)
+        in: query
+        name: appId
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/controllers.bizCountTuplesResponse'
+          description: Tuple count
+      summary: BizCountTuples
+      tags:
+      - Business Permission API
   /biz-delete-app-config:
     post:
       description: Delete a business permission app config
@@ -6256,6 +7453,32 @@ paths:
                 $ref: '#/components/schemas/controllers.ActionResponse'
           description: Action result
       summary: Delete a resource catalog entry
+      tags:
+      - Business Permission API
+  /biz-delete-assertion:
+    post:
+      description: Delete an assertion. Cross-tenant ids return "assertion not found".
+      parameters:
+      - description: owner/appName
+        in: query
+        name: appId
+        required: true
+        schema:
+          type: string
+      - description: assertion id
+        in: query
+        name: id
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/controllers.Response'
+          description: ok with deleted id
+      summary: BizDeleteAssertion
       tags:
       - Business Permission API
   /biz-delete-permission:
@@ -6356,6 +7579,43 @@ paths:
       summary: Enforce with explanation (for admin UI)
       tags:
       - Business Permission API
+  /biz-expand:
+    get:
+      description: Return the rewrite tree for (object, relation) — a
+      parameters:
+      - description: The app id (owner/appName)
+        in: query
+        name: appId
+        required: true
+        schema:
+          type: string
+      - description: Object (e.g. document:d1)
+        in: query
+        name: object
+        required: true
+        schema:
+          type: string
+      - description: Relation
+        in: query
+        name: relation
+        required: true
+        schema:
+          type: string
+      - description: 'Authorization model id (default: app''s current)'
+        in: query
+        name: id
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/object.ExpandResult'
+          description: Rewrite tree with nested rewrite nodes
+      summary: BizExpand
+      tags:
+      - Business Permission API
   /biz-get-app-config:
     get:
       description: Get a single business permission app config
@@ -6450,6 +7710,52 @@ paths:
         required: true
         schema:
           type: string
+      - description: Page number (1-based); with pageSize enables server pagination,
+          total is returned in data2
+        in: query
+        name: p
+        schema:
+          type: string
+      - description: Page size; omit to return all permissions
+        in: query
+        name: pageSize
+        schema:
+          type: string
+      - description: Search field (name, displayName, description, effect, state)
+        in: query
+        name: field
+        schema:
+          type: string
+      - description: Search value (substring match)
+        in: query
+        name: value
+        schema:
+          type: string
+      - description: Sort field
+        in: query
+        name: sortField
+        schema:
+          type: string
+      - description: ascend or descend
+        in: query
+        name: sortOrder
+        schema:
+          type: string
+      - description: 'Filter: Allow or Deny'
+        in: query
+        name: effect
+        schema:
+          type: string
+      - description: 'Filter: Approved, Pending or Rejected'
+        in: query
+        name: state
+        schema:
+          type: string
+      - description: 'Filter: true or false'
+        in: query
+        name: isEnabled
+        schema:
+          type: string
       responses:
         "200":
           content:
@@ -6479,6 +7785,27 @@ paths:
           description: The policies data with modelText, policies, groupingPolicies,
             version
       summary: Get business policies for SDK
+      tags:
+      - Business Permission API
+  /biz-get-policy-version:
+    get:
+      description: Lightweight version query; SDKs can compare it with their local
+        version before deciding to pull.
+      parameters:
+      - description: The app id (owner/appName)
+        in: query
+        name: appId
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/object.BizPolicyVersionResponse'
+          description: The current policy version
+      summary: Get the current policy version of a business app
       tags:
       - Business Permission API
   /biz-get-role:
@@ -6530,9 +7857,50 @@ paths:
         required: true
         schema:
           type: string
-      - description: The app name ('' for org-scope only)
+      - description: The app name (” for org-scope only)
         in: query
         name: appName
+        schema:
+          type: string
+      - description: Page number (1-based); with pageSize enables server pagination,
+          total is returned in data2
+        in: query
+        name: p
+        schema:
+          type: string
+      - description: Page size; omit to return all roles
+        in: query
+        name: pageSize
+        schema:
+          type: string
+      - description: Search field (name, displayName, description, scopeKind, appName)
+        in: query
+        name: field
+        schema:
+          type: string
+      - description: Search value (substring match)
+        in: query
+        name: value
+        schema:
+          type: string
+      - description: Sort field
+        in: query
+        name: sortField
+        schema:
+          type: string
+      - description: ascend or descend
+        in: query
+        name: sortOrder
+        schema:
+          type: string
+      - description: 'Filter: app or org'
+        in: query
+        name: scopeKind
+        schema:
+          type: string
+      - description: 'Filter: true or false'
+        in: query
+        name: isEnabled
         schema:
           type: string
       responses:
@@ -6543,6 +7911,34 @@ paths:
                 $ref: '#/components/schemas/controllers.BizRoleListResponse'
           description: The Response object
       summary: Get business roles
+      tags:
+      - Business Permission API
+  /biz-get-user-data-scope:
+    get:
+      description: 'Merge the dataScope declared on all of the user''s enabled roles.
+        Rule: most permissive wins (self < dept < dept_and_children < org < all);
+        custom values are unioned. Type "none" means no role declares a data scope.'
+      parameters:
+      - description: The app id (owner/appName)
+        in: query
+        name: appId
+        required: true
+        schema:
+          type: string
+      - description: The user id (org/username)
+        in: query
+        name: userId
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/controllers.BizUserDataScopeResponse'
+          description: The effective data scope
+      summary: Get the effective data scope of a user in business app
       tags:
       - Business Permission API
   /biz-get-user-permissions:
@@ -6644,6 +8040,78 @@ paths:
                 $ref: '#/components/schemas/controllers.BizAppResourceListResponse'
           description: The Response object
       summary: List resource catalog entries for a business app
+      tags:
+      - Business Permission API
+  /biz-list-assertions:
+    get:
+      description: List all assertions for a ReBAC app, ordered by created_time asc.
+      parameters:
+      - description: owner/appName
+        in: query
+        name: appId
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/object.BizReBACAssertion'
+                type: array
+          description: OK
+      summary: BizListAssertions
+      tags:
+      - Business Permission API
+  /biz-list-authorization-models:
+    get:
+      description: List all authorization models for an app, newest first.
+      parameters:
+      - description: The app id (owner/appName)
+        in: query
+        name: appId
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/object.BizAuthorizationModel'
+                type: array
+          description: Array of authorization models, newest first
+      summary: BizListAuthorizationModels
+      tags:
+      - Business Permission API
+  /biz-list-objects:
+    post:
+      description: Enumerate the objects of ObjectType for which User holds
+      parameters:
+      - description: The app id (owner/appName)
+        in: query
+        name: appId
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/controllers.bizListObjectsRequest'
+              description: List-objects request
+              summary: body
+        description: List-objects request
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/object.ListObjectsResult'
+          description: Objects the user can reach + continuation token
+      summary: BizListObjects
       tags:
       - Business Permission API
   /biz-list-permission-grantees:
@@ -6793,6 +8261,41 @@ paths:
       summary: List direct parent roles (one level up) of a role
       tags:
       - Business Permission API
+  /biz-list-tuple-audit:
+    get:
+      description: List tuple write/delete audit events for a ReBAC app, most-recent-first.
+      parameters:
+      - description: owner/appName
+        in: query
+        name: appId
+        required: true
+        schema:
+          type: string
+      - description: 'filter: write | delete (omit for all)'
+        in: query
+        name: op
+        schema:
+          type: string
+      - description: pagination offset (default 0)
+        in: query
+        name: offset
+        schema:
+          type: integer
+      - description: page size (default 100, max 1000)
+        in: query
+        name: limit
+        schema:
+          type: integer
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/controllers.bizListTupleAuditResponse'
+          description: Audit events with pagination cursors
+      summary: BizListTupleAudit
+      tags:
+      - Business Permission API
   /biz-list-user-roles:
     get:
       parameters:
@@ -6818,6 +8321,70 @@ paths:
       summary: List all roles a user belongs to within an organization
       tags:
       - Business Permission API
+  /biz-list-users:
+    post:
+      description: Enumerate the users that hold Relation on Object.
+      parameters:
+      - description: The app id (owner/appName)
+        in: query
+        name: appId
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/controllers.bizListUsersRequest'
+              description: List-users request
+              summary: body
+        description: List-users request
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/object.ListUsersResult'
+          description: Users + continuation token
+      summary: BizListUsers
+      tags:
+      - Business Permission API
+  /biz-migrate-from-permission:
+    post:
+      description: Copies the platform Roles and Permissions of an organization into
+        the
+      parameters:
+      - description: The target app id (owner/appName)
+        in: query
+        name: appId
+        required: true
+        schema:
+          type: string
+      - description: Platform organization to read (defaults to the app owner)
+        in: query
+        name: sourceOrganization
+        schema:
+          type: string
+      - description: Only report what would change (default false)
+        in: query
+        name: dryRun
+        schema:
+          type: boolean
+      - description: skip (default) or overwrite
+        in: query
+        name: onConflict
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/controllers.BizMigrationReportResponse'
+          description: The migration report
+      summary: Migrate platform Roles/Permissions into a Casbin-mode biz app
+      tags:
+      - Business Permission API
   /biz-parse-resource-import:
     post:
       description: Parse content without persisting. Returns per-row classification
@@ -6838,6 +8405,96 @@ paths:
                 $ref: '#/components/schemas/controllers.BizResourceImportPreviewResponse'
           description: Parsed preview
       summary: Parse an OpenAPI / template / paste into a resource import preview
+      tags:
+      - Business Permission API
+  /biz-read-authorization-model:
+    get:
+      description: Read an authorization model by id, or the current model if id
+      parameters:
+      - description: The app id (owner/appName)
+        in: query
+        name: appId
+        required: true
+        schema:
+          type: string
+      - description: Authorization model id; if empty, uses the app's current model
+        in: query
+        name: id
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/object.BizAuthorizationModel'
+          description: The authorization model
+      summary: BizReadAuthorizationModel
+      tags:
+      - Business Permission API
+  /biz-read-tuples:
+    get:
+      description: Read tuples filtered by object / relation / user with pagination.
+      parameters:
+      - description: The app id (owner/appName)
+        in: query
+        name: appId
+        schema:
+          type: string
+      - description: 'Filter: exact object (e.g. document:d1) or type prefix (e.g.
+          document:)'
+        in: query
+        name: object
+        schema:
+          type: string
+      - description: 'Filter: relation'
+        in: query
+        name: relation
+        schema:
+          type: string
+      - description: 'Filter: user'
+        in: query
+        name: user
+        schema:
+          type: string
+      - description: Pagination offset (default 0)
+        in: query
+        name: offset
+        schema:
+          type: integer
+      - description: Pagination limit (1-1000); omit or 0 defaults to 1000
+        in: query
+        name: limit
+        schema:
+          type: integer
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/controllers.bizReadTuplesResponse'
+          description: Paginated tuples with total count
+      summary: BizReadTuples
+      tags:
+      - Business Permission API
+  /biz-rebac-stats:
+    get:
+      description: Aggregate snapshot of admin Overview metrics for one ReBAC
+      parameters:
+      - description: The app id (owner/appName)
+        in: query
+        name: appId
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/object.ReBACStats'
+          description: Overview snapshot
+      summary: BizGetReBACStats
       tags:
       - Business Permission API
   /biz-remove-permission-grantee:
@@ -6901,6 +8558,28 @@ paths:
                 $ref: '#/components/schemas/controllers.ActionResponse'
           description: Action result
       summary: Remove a member from a role
+      tags:
+      - Business Permission API
+  /biz-run-assertions:
+    post:
+      description: Run all assertions for a ReBAC app and return per-assertion results.
+      parameters:
+      - description: owner/appName
+        in: query
+        name: appId
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/object.AssertionRunResult'
+                type: array
+          description: OK
+      summary: BizRunAssertions
       tags:
       - Business Permission API
   /biz-sync-policies:
@@ -7059,6 +8738,110 @@ paths:
                 $ref: '#/components/schemas/controllers.ActionResponse'
           description: Action result
       summary: Update an existing business role
+      tags:
+      - Business Permission API
+  /biz-watch-policies:
+    get:
+      description: Long-polls for policy changes of a Casbin business app. Without
+        `version` (first connect) a full snapshot is returned immediately. With `version`
+        equal to the current policy version the request blocks up to `timeout` seconds
+        (max 60) and answers HTTP 304 if nothing changed. When the version moved,
+        an incremental change list is returned, or a full snapshot if the history
+        was purged, a manual full sync happened, or the client version is ahead of
+        the server. The body is the raw object below (not wrapped in status/data).
+      parameters:
+      - description: The app id (owner/appName)
+        in: query
+        name: appId
+        required: true
+        schema:
+          type: string
+      - description: The policy version the client currently holds
+        in: query
+        name: version
+        schema:
+          type: integer
+      - description: Max seconds to block (1-60, default 60)
+        in: query
+        name: timeout
+        schema:
+          type: integer
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/object.BizWatchFullResponse'
+          description: 'type=full: complete snapshot (type=incremental returns object.BizWatchIncrementalResponse)'
+        "304":
+          content:
+            application/json:
+              schema:
+                type: string
+          description: No change within the timeout
+      summary: Watch business policy changes (long poll)
+      tags:
+      - Business Permission API
+  /biz-write-authorization-model:
+    post:
+      description: Save a ReBAC authorization model from DSL. If the DSL is
+      parameters:
+      - description: The app id (owner/appName)
+        in: query
+        name: appId
+        required: true
+        schema:
+          type: string
+      - description: When true, validate only; no DB insert or pointer advance
+        in: query
+        name: dryRun
+        schema:
+          type: boolean
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/controllers.writeAuthorizationModelRequest'
+              description: Schema DSL payload
+              summary: body
+        description: Schema DSL payload
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/object.SaveAuthorizationModelResult'
+          description: outcome + model id or conflict list
+      summary: BizWriteAuthorizationModel
+      tags:
+      - Business Permission API
+  /biz-write-tuples:
+    post:
+      description: Apply a batch of tuple writes and/or deletes atomically.
+      parameters:
+      - description: The app id (owner/appName)
+        in: query
+        name: appId
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/controllers.bizWriteTuplesRequest'
+              description: Batch tuple writes/deletes
+              summary: body
+        description: Batch tuple writes/deletes
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/controllers.bizWriteTuplesResponse'
+          description: Written + deleted row counts
+      summary: BizWriteTuples
       tags:
       - Business Permission API
   /buy-product:
@@ -8727,6 +10510,18 @@ paths:
       summary: List all groups
       tags:
       - Group API
+  /get-http-email-presets:
+    get:
+      description: Return built-in Custom HTTP Email presets.
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/email.Preset'
+                type: array
+          description: OK
   /get-invitation:
     get:
       description: get invitation
@@ -9150,9 +10945,30 @@ paths:
       summary: GetPermission
       tags:
       - Permission API
+  /get-permission-approval-logs:
+    get:
+      description: get the approval state-change history of a permission
+      parameters:
+      - description: The id ( owner/name ) of the permission
+        in: query
+        name: id
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/controllers.PermissionApprovalLogListResponse'
+          description: The Response object
+      summary: GetPermissionApprovalLogs
+      tags:
+      - Permission API
   /get-permissions:
     get:
-      description: get permissions
+      description: get permissions; use field=state&value=Pending to list the approval
+        queue
       parameters:
       - description: The owner of permissions
         in: query
@@ -9488,6 +11304,32 @@ paths:
       summary: GetRecordsByFilter
       tags:
       - Record API
+  /get-resolved-theme:
+    get:
+      description: Return the merged theme for an application (system → org → app
+        cascade).
+      parameters:
+      - description: application id (e.g. admin/app-foo)
+        in: query
+        name: app
+        required: true
+        schema:
+          type: string
+      - description: 'light | dark (default: light)'
+        in: query
+        name: mode
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/controllers.ResolvedThemeResponse'
+          description: The Response object
+      summary: GetResolvedTheme
+      tags:
+      - Theme API
   /get-resource:
     get:
       description: get resource
@@ -10682,6 +12524,37 @@ paths:
       summary: RefreshToken
       tags:
       - Token API
+  /login/oauth/revoke:
+    post:
+      description: OAuth 2.0 Token Revocation endpoint (RFC 7009). The client authenticates
+        the same way as
+      requestBody:
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              oneOf:
+              - title: token
+                type: string
+              - title: token_type_hint
+                type: string
+        description: the access_token or refresh_token to revoke | access_token or
+          refresh_token; unknown hints are ignored
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: string
+          description: Token revoked or unknown (empty body)
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/object.TokenError'
+          description: Client authentication failed
+      summary: RevokeToken
+      tags:
+      - Login API
   /logout:
     post:
       description: logout the current user
@@ -10901,6 +12774,46 @@ paths:
       summary: PlaceOrder
       tags:
       - Order API
+  /qr/begin:
+    get:
+      description: Generates a QR code image + ticket for the given provider.
+      parameters:
+      - description: The id (owner/name) of the QR-capable provider
+        in: query
+        name: provider
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/controllers.Response'
+          description: Data=imageUrl, Data2=ticket, Data3=expiresInSec
+      summary: Begin a QR sign-in flow
+      tags:
+      - System API
+  /qr/status:
+    get:
+      description: Returns pending/scanned/expired for a ticket previously
+      parameters:
+      - description: The ticket from /qr/begin
+        in: query
+        name: ticket
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/controllers.Response'
+          description: Data = pending | scanned | expired
+      summary: Poll a QR ticket's status
+      tags:
+      - System API
   /refresh-engines:
     post:
       description: Refresh all CLI engines
@@ -10927,6 +12840,36 @@ paths:
       summary: RefreshEngines
       tags:
       - CLI API
+  /reject-permission:
+    post:
+      description: reject a pending permission with a reason (global admin or admin
+        of the permission's organization only)
+      parameters:
+      - description: The id ( owner/name ) of the permission
+        in: query
+        name: id
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/controllers.RejectPermissionRequest'
+              description: The reject reason
+              summary: body
+        description: The reject reason
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/controllers.ActionResponse'
+          description: Action result
+      summary: RejectPermission
+      tags:
+      - Permission API
   /remove-policy:
     post:
       description: remove policy
@@ -10988,6 +12931,29 @@ paths:
       summary: ResetEmailOrPhone
       tags:
       - Account API
+  /resolve-signin-methods:
+    post:
+      description: 'Identifier-first signin: returns available methods for a given
+        identifier in an app.'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/controllers.ResolveSigninRequest'
+              description: Request
+              summary: body
+        description: Request
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/controllers.ResolveSigninResponse'
+          description: The Response object
+      summary: ResolveSigninMethods
+      tags:
+      - Login API
   /revoke-consent:
     post:
       description: revoke a consent record
@@ -12615,6 +14581,9 @@ paths:
       summary: VerifyInvitation
       tags:
       - Invitation API
+  /web3/nonce:
+    get:
+      responses: null
   /webauthn/signin/begin:
     get:
       description: WebAuthn Login Flow 1st stage
