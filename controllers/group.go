@@ -101,12 +101,14 @@ func (c *ApiController) GetGroups() {
 			c.ResponseError(err.Error())
 			return
 		}
+		groupIdsWithChildren, err := object.GetGroupIdsWithChildren(groups)
+		if err != nil {
+			c.ResponseError(err.Error())
+			return
+		}
 
 		for _, group := range groups {
-			_, ok := groupsHaveChildrenMap[group.GetId()]
-			if ok {
-				group.HaveChildren = true
-			}
+			group.HaveChildren = groupIdsWithChildren[group.GetId()]
 
 			parent, ok := groupsHaveChildrenMap[fmt.Sprintf("%s/%s", group.Owner, group.ParentId)]
 			if ok {

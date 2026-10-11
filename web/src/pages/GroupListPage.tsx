@@ -139,7 +139,7 @@ export default function GroupListPage() {
             onClick={(e) => handleDelete(r, e)}
             disabled={r.haveChildren}
             className="rounded p-1.5 text-text-muted hover:text-danger hover:bg-danger/10 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-            title={r.haveChildren ? "Cannot delete: has sub-groups" : "Delete"}
+            title={r.haveChildren ? t("groups.error.hasSubGroups") : t("common.delete")}
           >
             <Trash2 size={14} />
           </button>
