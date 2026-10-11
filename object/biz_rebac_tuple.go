@@ -59,6 +59,13 @@ type BizTuple struct {
 	CreatedTime          string `xorm:"varchar(100)" json:"createdTime"`
 }
 
+// bizTupleUserCol returns the biz_tuple "user" column quoted for the active
+// dialect. A bare `user` in raw SQL is CURRENT_USER on PostgreSQL, so an
+// unquoted `user = ?` silently compares against the DB role and never matches.
+func bizTupleUserCol() string {
+	return ormer.Engine.Quote("user")
+}
+
 // BuildStoreId constructs the canonical store identifier for (owner, appName).
 // The "/" delimiter mirrors OpenFGA's store naming convention while staying
 // compatible with JetAuth's owner/appName entity addressing (spec §4.3).
@@ -189,7 +196,7 @@ func AddBizTuples(tuples []*BizTuple) (int64, error) {
 func DeleteBizTuple(owner, appName, object, relation, user string) (int64, error) {
 	storeId := BuildStoreId(owner, appName)
 	affected, err := ormer.Engine.
-		Where("store_id = ? AND object = ? AND relation = ? AND user = ?",
+		Where("store_id = ? AND object = ? AND relation = ? AND "+bizTupleUserCol()+" = ?",
 			storeId, object, relation, user).
 		Delete(&BizTuple{})
 	if err != nil {
@@ -222,7 +229,7 @@ func ReadBizTuples(owner, appName, object, relation, user string, offset, limit 
 		base = base.And("relation = ?", relation)
 	}
 	if user != "" {
-		base = base.And("user = ?", user)
+		base = base.And(bizTupleUserCol()+" = ?", user)
 	}
 
 	// Count first — Xorm's Count consumes the session, so we use a fresh
@@ -240,7 +247,7 @@ func ReadBizTuples(owner, appName, object, relation, user string, offset, limit 
 		countSession = countSession.And("relation = ?", relation)
 	}
 	if user != "" {
-		countSession = countSession.And("user = ?", user)
+		countSession = countSession.And(bizTupleUserCol()+" = ?", user)
 	}
 	total, err = countSession.Count(new(BizTuple))
 	if err != nil {
@@ -321,7 +328,7 @@ func WriteBizTuples(writes []*BizTuple, deletes []*BizTuple, actorUser string) (
 	for _, d := range deletes {
 		storeId := BuildStoreId(d.Owner, d.AppName)
 		affected, derr := session.
-			Where("store_id = ? AND object = ? AND relation = ? AND user = ?",
+			Where("store_id = ? AND object = ? AND relation = ? AND "+bizTupleUserCol()+" = ?",
 				storeId, d.Object, d.Relation, d.User).
 			Delete(&BizTuple{})
 		if derr != nil {
