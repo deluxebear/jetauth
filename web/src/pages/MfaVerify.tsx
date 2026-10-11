@@ -26,6 +26,10 @@ interface MfaVerifyProps {
   orgBranding?: { logo?: string; logoDark?: string; displayName?: string } | null;
   onVerified: (response: RawApiResult) => void;
   onError: (msg: string) => void;
+  /** Login endpoint incl. OAuth query; defaults to /api/login. */
+  loginUrl?: string;
+  /** Fields of the original sign-in request (type, SAML/OAuth params) to resend with the passcode. */
+  baseBody?: Record<string, unknown>;
 }
 
 const METHOD_LABELS: Record<string, string> = {
@@ -34,7 +38,7 @@ const METHOD_LABELS: Record<string, string> = {
   email: "mfa.verify.methodEmail",
 };
 
-export default function MfaVerify({ mfaProps, loginForm, themeData, orgBranding, onVerified }: MfaVerifyProps) {
+export default function MfaVerify({ mfaProps, loginForm, themeData, orgBranding, onVerified, loginUrl = "/api/login", baseBody }: MfaVerifyProps) {
   const { t } = useTranslation();
   const { theme, applyOrgTheme, clearOrgTheme } = useTheme();
   const [selectedType, setSelectedType] = useState(mfaProps.find(p => p.isPreferred)?.mfaType || mfaProps[0]?.mfaType || "app");
@@ -58,10 +62,11 @@ export default function MfaVerify({ mfaProps, loginForm, themeData, orgBranding,
     setError("");
     setLoading(true);
     try {
-      const body: Record<string, string | boolean> = {
+      const body: Record<string, unknown> = {
+        type: "login",
+        ...baseBody,
         application: loginForm.application,
         organization: loginForm.organization,
-        type: "login",
       };
       if (useRecovery) {
         body.recoveryCode = recoveryCode;
@@ -71,7 +76,7 @@ export default function MfaVerify({ mfaProps, loginForm, themeData, orgBranding,
         body.enableMfaRemember = remember;
       }
 
-      const res: RawApiResult = await fetch("/api/login", {
+      const res: RawApiResult = await fetch(loginUrl, {
         method: "POST", credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),

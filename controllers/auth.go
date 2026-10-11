@@ -483,7 +483,9 @@ func checkMfaEnable(c *ApiController, user *object.User, organization *object.Or
 		// Set both: username (for authz filter to allow MFA API access) and MFA session (to block getAccount)
 		c.SetSessionUsername(user.GetId())
 		c.setMfaUserSession(user.GetId())
-		c.ResponseOk(object.RequiredMfa)
+		// data2 = user id: the client may have signed in with an email or
+		// phone, but MFA setup needs owner/name.
+		c.ResponseOk(object.RequiredMfa, user.GetId())
 		return true
 	}
 

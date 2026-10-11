@@ -26,6 +26,8 @@ import { useModal } from "../../components/Modal";
 import { resolveTemplate } from "../templates";
 import { submitSamlResponse, readSamlParams, buildOAuthCodeQuery, buildOAuthRedirectUrl, type LoginApiResponse } from "../authPost";
 import type { AuthApplication, ResolvedProvider } from "../api/types";
+import LoginMfaStep from "./LoginMfaStep";
+import { pendingMfaFrom, type PendingMfa } from "./pendingMfa";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -740,6 +742,7 @@ export default function ClassicSigninPage({ application, providers }: Props) {
   const [searchParams] = useSearchParams();
   const [username, setUsername] = useState("");
   const [error, setError] = useState("");
+  const [pendingMfa, setPendingMfa] = useState<PendingMfa | null>(null);
 
   const orgName =
     application.organizationObj?.name ?? application.organization ?? "built-in";
@@ -808,11 +811,11 @@ export default function ClassicSigninPage({ application, providers }: Props) {
   const handlePasswordSubmit = async (password: string) => {
     setError("");
     try {
-      const res = await api.post<LoginApiResponse>(
-        loginUrl(),
-        buildLoginBody(application, orgName, username, "Password", searchParams, { password }),
-      );
+      const body = buildLoginBody(application, orgName, username, "Password", searchParams, { password });
+      const res = await api.post<LoginApiResponse>(loginUrl(), body);
       if (res.status !== "ok") { setError(res.msg ?? t("auth.signin.noMethodError")); return; }
+      const mfa = pendingMfaFrom(res, loginUrl(), body);
+      if (mfa) { setPendingMfa(mfa); return; }
       handleRedirect(res, searchParams);
     } catch (e: unknown) {
       setError((e as Error).message ?? "network error");
@@ -822,11 +825,11 @@ export default function ClassicSigninPage({ application, providers }: Props) {
   const handleCodeSubmit = async (code: string) => {
     setError("");
     try {
-      const res = await api.post<LoginApiResponse>(
-        loginUrl(),
-        buildLoginBody(application, orgName, username, "Verification code", searchParams, { code }),
-      );
+      const body = buildLoginBody(application, orgName, username, "Verification code", searchParams, { code });
+      const res = await api.post<LoginApiResponse>(loginUrl(), body);
       if (res.status !== "ok") { setError(res.msg ?? t("auth.signin.noMethodError")); return; }
+      const mfa = pendingMfaFrom(res, loginUrl(), body);
+      if (mfa) { setPendingMfa(mfa); return; }
       handleRedirect(res, searchParams);
     } catch (e: unknown) {
       setError((e as Error).message ?? "network error");
@@ -848,6 +851,20 @@ export default function ClassicSigninPage({ application, providers }: Props) {
   const usernamePlaceholder = (application.signinItems ?? []).find(
     (it) => it.name === "Username" && !it.isCustom,
   )?.placeholder;
+
+  if (pendingMfa) {
+    return (
+      <LoginMfaStep
+        pending={pendingMfa}
+        application={application.name}
+        organization={orgName}
+        orgBranding={{ logo: orgLogo, logoDark: application.organizationObj?.logoDark, displayName: orgDisplay }}
+        onDone={(res) => handleRedirect(res, searchParams)}
+        onPending={setPendingMfa}
+        onError={(msg) => { setPendingMfa(null); setError(msg); }}
+      />
+    );
+  }
 
   const { Component: Template } = resolveTemplate(application.template);
 
