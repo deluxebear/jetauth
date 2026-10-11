@@ -85,9 +85,38 @@ touching `check.go` / `permission_enforcer.go` / `authz.go`:
 - **Test-match endpoint** (`biz-test-permission-match`) using Casbin
   `util.KeyMatch` / `KeyMatch2` to show admins exactly which patterns fire
   for a given request.
-- **In-memory enforcer cache** (`bizEnforcerCache sync.Map`) — enforce in
-  ~0.01 ms after warm-up, versus the legacy path that issues 15–25 DB
-  queries per call.
+- **In-memory enforcer cache** — enforce in ~0.01 ms after warm-up, versus
+  the legacy path that issues 15–25 DB queries per call. The store is an
+  LRU with optional `bizEnforcerCacheMaxEntries` / `bizEnforcerCacheIdleTtlSeconds`
+  bounds (both off by default), a generation guard against rebuild/invalidate
+  races, and Prometheus hit/miss/eviction metrics
+  (`object/biz_enforcer_lru.go`).
+- **Cross-instance invalidation** — optional Redis pub/sub watcher
+  (`bizPolicyWatcherEnabled`, default off; `object/biz_policy_watcher.go`)
+  so a policy change on one node drops the cached enforcer on the others.
+  The optional Redis policy cache (`bizPolicyCacheEnabled`) is unchanged.
+- **Policy versioning, changelog and watch API** — `BizAppConfig.PolicyVersion`
+  plus a `biz_policy_changelog` table. Additions are recorded as precise
+  deltas; removals, updates and manual syncs record a `full_rebuild` marker.
+  `GET /api/biz-watch-policies` (long poll: incremental / full / 304) and
+  `GET /api/biz-get-policy-version` serve SDKs; the log keeps the last 1000
+  versions per app. A `biz-policy-changed` webhook event fires after each
+  policy sync. Go/TypeScript SDK templates in the integration tab keep a local
+  enforcer cache.
+- **Role properties and data scope** — `biz_role.properties` holds typed,
+  validated metadata; `dataScope` (`all` / `org` / `dept` / `dept_and_children`
+  / `self` / `custom`, optional per-resource overrides) is merged across a
+  user's roles and exposed by `GET /api/biz-get-user-data-scope`. The role
+  edit page has a data-scope editor.
+- **Server-side pagination** for `biz-get-roles` / `biz-get-permissions`
+  (`p`, `pageSize`, sort and filter parameters; total in `data2`).
+- **Migration from platform permissions** — `POST /api/biz-migrate-from-permission`
+  copies an organization's platform roles and permissions into the biz tables
+  (dry-run report, `skip` / `overwrite` conflict policy, single transaction,
+  one policy sync), with a preview/confirm dialog in the web UI.
+- **Management UX** — per-application business-permission tab on the user
+  edit page, quick-create wizard that seeds a default admin role and
+  permission, CodeMirror model editor with server-side Casbin model validation.
 - **Scope-aware roles and grantees**: a role defined in application scope
   can inherit from an org-scope role. `ResolveScopedRoles` unions app +
   org at sync time.
@@ -105,6 +134,32 @@ flow) — not a port of the upstream `PermissionEditPage`.
 
 Docs: `docs/business-permission-architecture.md`,
 `docs/enterprise-authorization-plan.md`, `docs/authorization-guide.md`.
+
+### Platform permission system improvements
+
+The platform `Permission` / `Role` / `Enforcer` path was left structurally
+intact (it is intentionally separate from the biz subsystem) but gained:
+
+- **Approval workflow** — a state machine (`Pending` → `Approved` / `Rejected`,
+  revoke, resubmit; admin-only approval, mandatory reject reason), an audit
+  log table, `POST /api/approve-permission`, `/api/reject-permission` and
+  `GET /api/get-permission-approval-logs`, e-mail notifications, automatic
+  demotion to `Pending` when a non-approver edits policy-affecting fields, and
+  an approval queue / "my submissions" UI (`object/permission_approval.go`).
+- **Field validation and model awareness** — required-field and
+  domain-vs-model checks on save (`object/permission_fields.go`); the form
+  parses the selected model (blank = built-in default) to disable fields the
+  model cannot use. A permission that names a missing model now fails closed.
+- **Enforcer caching** — LRU + TTL cache for `getPermissionEnforcer()` with
+  ORM-hook invalidation and an optional Redis pub/sub watcher; off by default
+  (`permissionEnforcerCacheEnabled`, `permissionEnforcerCacheSize`,
+  `permissionEnforcerCacheTtlSeconds`, `permissionEnforcerWatcherEnabled`).
+  Benchmark: ~255 µs/op uncached vs ~4.6 µs/op cached.
+- **Model-driven policy layout** — rows are generated from the model's
+  `policy_definition` field names; the permission id stays on the reserved
+  `v5` column and rows are removed by it. Up to five model fields plus the
+  id column are supported; legacy rows and models are byte-identical. See
+  `docs/permission-policy-layout.md`.
 
 ### ReBAC (Zanzibar-style) — shipped alongside Casbin
 
@@ -148,6 +203,13 @@ deployments.
   transparent 429 back-off + pagination, end-to-end smoke script at
   `web/scripts/rebac-e2e-smoke.sh`, and benchmark harness gated by
   `make rebac-bench` (SLA targets: Check p99<50ms, ListObjects p99<300ms).
+- **Concurrency and performance follow-ups** — compare-and-swap on schema
+  save/activate via optional `expectedModelId` (`BIZ_REBAC_SCHEMA_STALE`
+  on conflict; the schema editor sends it), request-context threading into
+  the L2/L3 cache calls (`ReBACCheckCtx`), ListObjects direct-grant
+  short-circuit and per-call model hoisting (193 ms → 19 ms on the bench
+  fixture), and a fix creating the assertion and tuple-audit tables on fresh
+  databases.
 - **Guidance errors** — ReBAC apps returning HTTP 400 with
   `msg=BIZ_API_NOT_SUPPORTED_IN_REBAC` when a caller hits the
   Casbin-only endpoints (`biz-get-user-roles`, `biz-get-user-permissions`,
@@ -181,10 +243,27 @@ channel — remains.
 - **Entity update APIs** — block owner-field tampering across organization
   boundaries (admins could previously rewrite `owner` in PUT payloads and
   move objects across tenants).
-- **Site gateway audit (2026-04-16)** — 17 of 20 findings fixed across P0
-  (SiteMap / ruleMap concurrent-map panic, connection-pool exhaustion) and
-  P1 (hot-path allocations, unnecessary header copies). Ongoing work
-  tracked under "Site 网关后端安全与性能审计" in `TODO.md`.
+- **Site gateway audit (2026-04-16)** — all findings fixed. P0/P1 covered
+  the SiteMap / ruleMap concurrent-map panic, connection-pool exhaustion,
+  hot-path allocations and unnecessary header copies; the remaining P2/P3
+  items landed later: per-site certificate locks, change-detected refresh
+  (`count + max(updated_time)` fingerprint, forced every 60 s, interval
+  configurable via `siteRefreshIntervalSeconds`) and memoized, cycle-safe
+  compound-rule lookups.
+- **Gateway API-level authorization** — the gateway can call `BizEnforce`
+  between OAuth and proxy-forward (`Site.EnableBizAuthz`, bypass list, fail
+  mode), using the site's application as the join key.
+- **RFC 7009 token revocation** — `POST /api/login/oauth/revoke`; revoked
+  tokens (stored `expires_in = 0`, shared with SSO logout) are rejected by
+  introspection, token exchange, API bearer auth and the MCP self-server.
+  Revoking either the access or the refresh token invalidates both, since
+  they share one stored row.
+- **Syncer group sync** — group and membership reconciliation for Azure AD,
+  Okta, SCIM, WeCom, Lark, AWS IAM, Active Directory (with configurable
+  LDAPS verification via `SslMode`), Keycloak and the Database syncer
+  (configurable group tables). Locally assigned groups are preserved.
+- **Auth cleanups** — IdP auto-signup decision centralized, unreachable SAML
+  branch removed, stale logout TODOs replaced by documented decisions.
 - **SSRF guard** for the Custom HTTP Email sender (see above).
 
 ## Other subsystems
@@ -234,23 +313,25 @@ are unrelated to JetAuth's internal implementation and therefore keep
 
 ## Planned work (tracked in `TODO.md`)
 
-- **Approval workflow** for permissions (backend role check, Rejected
-  state, approval-queue page, notifications, audit log).
-- **Permission fields × model awareness** — surface the correct number of
-  policy fields in the UI based on the chosen Casbin model.
-- **Enforcer caching** — in-memory, Redis-watcher multi-instance
-  invalidation, optional Redis policy-text cache, LRU+TTL.
-- **Role custom properties** — structured data-scope (`dataScope`) and
-  other business metadata stored on `biz_role.properties`.
-- **Policy-definition field limit** — remove the six-field ceiling in
-  `GetBuiltInModel()` once the dependent code paths are audited.
-- **Gateway Casbin integration** — insert `BizEnforce` between OAuth and
-  proxy-forward in `service/proxy.go` so the gateway enforces API-level
-  permissions on forwarded requests, using `Site.CasdoorApplication` as
-  the join key.
-- **ReBAC** — six-phase rollout (data model → graph engine → API → schema
-  editor → tuple manager → cache).
-- **Site gateway audit P2 items** — remaining stability cleanups.
+Most earlier planned items have shipped (see above). What genuinely remains:
+
+- **Plain widening of the policy table** — permission models whose sixth
+  field is not the permission id, or with seven or more fields, are still
+  rejected (the adapter table has six columns).
+- **Role custom properties on the platform `Role`** — only `biz_role` has
+  `properties`; there is also no UI editor for per-resource data scopes.
+- **Precise removal deltas** in the biz policy changelog — removals and
+  updates always record `full_rebuild`.
+- **Migration tool** — whole-organization import only, no selective import.
+- **Syncer group follow-ups** — not verified against real tenants (unit
+  tests with mocked endpoints only); no nested/hierarchical groups, and
+  groups deleted remotely are not removed locally.
+- **Permission form** — Actions options do not follow the model.
+- **Defaults and ops** — enforcer caches and Redis watchers are off by
+  default and lack multi-node soak tests; Redis policy-text compression is
+  not implemented; swagger output has not been regenerated for the new APIs.
+- **ReBAC** — real-hardware p50/p99 for the SLA baseline, and reconciling the
+  consolidated-suite skip count between code and docs.
 
 ## License
 
