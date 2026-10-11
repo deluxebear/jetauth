@@ -363,6 +363,13 @@ func (c *ApiController) UpdateUser() {
 	if columnsStr != "" {
 		columns = strings.Split(columnsStr, ",")
 	}
+	if !isAdmin {
+		columns = object.FilterSelfServiceUserColumns(columns)
+		if len(columns) == 0 {
+			c.ResponseError(c.T("auth:Unauthorized operation"))
+			return
+		}
+	}
 
 	affected, err := object.UpdateUser(id, &user, columns, isAdmin)
 	if err != nil {
