@@ -130,15 +130,6 @@ var skippedTests = map[string]string{
 	// test as a whole still exercises ListObjects semantics we don't
 	// yet implement — keep it skipped until CP-5.
 	"list_objects_with_subcheck_encounters_cycle": "CP-5 ListObjects (checkAssertions happen to use cycle schemas)",
-
-	// Cycle inside a difference subtract branch: OpenFGA's engine
-	// recognises the pending-resolution state and conservatively denies
-	// the whole diff. Our visited-path detector returns (false, nil) for
-	// the cycle — which is correct locally but lets the outer diff
-	// compute `base(true) but not subtract(false)` = true, missing the
-	// upstream deny. Fixing this needs a ternary (true/false/cycle)
-	// propagation through the evaluation stack; scope creep for CP-4.
-	"true_butnot_cycle_return_false": "cycle inside difference-subtract needs ternary resolution state (follow-up)",
 }
 
 // expectedSkipCount is a guard against skippedTests silently growing.
@@ -148,7 +139,7 @@ var skippedTests = map[string]string{
 // Unique skip-map entries. Changing either the count or any entry's
 // reason requires updating this constant explicitly — the gate below
 // compares len(skippedTests) to this value to catch silent growth/shrink.
-const expectedSkipCount = 5
+const expectedSkipCount = 4
 
 func TestConsolidatedSuite(t *testing.T) {
 	ensureDBForConsolidated(t)
