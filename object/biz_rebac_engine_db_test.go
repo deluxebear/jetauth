@@ -885,3 +885,28 @@ func TestResolveAuthorizationModel_CrossStore(t *testing.T) {
 		t.Fatalf("cross-store resolve: want 'not found' error, got: %v", err)
 	}
 }
+
+func TestValidateBizTupleWrites_RejectsSchemaViolations(t *testing.T) {
+	if ormer == nil {
+		t.Skip("ormer not initialised (test needs DB)")
+	}
+	storeId, modelId := seedTupleToUsersetApp(t)
+	owner, appName, _ := parseStoreId(storeId)
+	tuple := func(object, relation, user string) []*BizTuple {
+		return []*BizTuple{{Owner: owner, AppName: appName, Object: object, Relation: relation, User: user}}
+	}
+
+	if err := ValidateBizTupleWrites(storeId, modelId, tuple("folder:f1", "viewer", "user:alice")); err != nil {
+		t.Fatalf("valid tuple rejected: %v", err)
+	}
+	for name, w := range map[string][]*BizTuple{
+		"unknown object type": tuple("nosuch:x", "viewer", "user:alice"),
+		"unknown relation":    tuple("folder:f1", "bogus", "user:alice"),
+		"unknown user type":   tuple("folder:f1", "viewer", "nosuch:alice"),
+		"type restriction":    tuple("document:d1", "parent", "user:alice"),
+	} {
+		if err := ValidateBizTupleWrites(storeId, modelId, w); err == nil {
+			t.Errorf("%s: want error, got nil", name)
+		}
+	}
+}

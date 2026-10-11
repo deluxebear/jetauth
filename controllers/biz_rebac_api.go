@@ -664,6 +664,10 @@ func (c *ApiController) BizWriteTuples() {
 		}
 		writes = append(writes, t)
 	}
+	if err := object.ValidateBizTupleWrites(body.AppId, modelId, writes); err != nil {
+		c.ResponseError(err.Error())
+		return
+	}
 	var deletes []*object.BizTuple
 	for _, d := range body.Deletes {
 		deletes = append(deletes, &object.BizTuple{
