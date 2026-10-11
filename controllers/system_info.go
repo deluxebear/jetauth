@@ -17,6 +17,7 @@ package controllers
 import (
 	"errors"
 
+	"github.com/deluxebear/jetauth/conf"
 	"github.com/deluxebear/jetauth/util"
 	"github.com/go-git/go-git/v5"
 )
@@ -42,11 +43,19 @@ func (c *ApiController) GetSystemInfo() {
 	c.ResponseOk(systemInfo)
 }
 
+// VersionInfoResponse is the version info plus the configured database
+// driver. DatabaseType is only filled for admins so the backing store is not
+// disclosed to ordinary users.
+type VersionInfoResponse struct {
+	util.VersionInfo
+	DatabaseType string `json:"databaseType,omitempty"`
+}
+
 // GetVersionInfo
 // @Summary GetVersionInfo
 // @Tags System API
-// @Description get version info like Casdoor release version and commit ID
-// @Success 200 {object} util.VersionInfo "The Response object"
+// @Description get version info like JetAuth release version, commit ID and (for admins) the database driver
+// @Success 200 {object} controllers.VersionInfoResponse "The Response object"
 // @Router /get-version-info [get]
 func (c *ApiController) GetVersionInfo() {
 	versionInfo, err := util.GetVersionInfo()
@@ -55,12 +64,15 @@ func (c *ApiController) GetVersionInfo() {
 		return
 	}
 
-	if versionInfo.Version != "" {
-		c.ResponseOk(versionInfo)
-		return
+	if versionInfo.Version == "" {
+		versionInfo = util.GetBuiltInVersionInfo()
 	}
 
-	c.ResponseOk(util.GetBuiltInVersionInfo())
+	resp := VersionInfoResponse{VersionInfo: *versionInfo}
+	if c.IsAdmin() {
+		resp.DatabaseType = conf.GetConfigString("driverName")
+	}
+	c.ResponseOk(resp)
 }
 
 // Health
