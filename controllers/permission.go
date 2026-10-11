@@ -161,14 +161,14 @@ func (c *ApiController) UpdatePermission() {
 		return
 	}
 
-	user, ok := c.RequireSignedInUser()
+	operatorId, ok := c.requirePermissionOperator()
 	if !ok {
 		return
 	}
 
 	owner, _ := c.enforceOwnerFromId(id, func(owner string) { permission.Owner = owner })
 
-	affected, err := object.UpdatePermissionWithApproval(id, &permission, user.GetId(), c.isPermissionApprover(owner))
+	affected, err := object.UpdatePermissionWithApproval(id, &permission, operatorId, c.isPermissionApprover(owner))
 	if err != nil {
 		var validationErr *object.PermissionValidationError
 		if errors.As(err, &validationErr) {
@@ -196,12 +196,12 @@ func (c *ApiController) AddPermission() {
 		return
 	}
 
-	user, ok := c.RequireSignedInUser()
+	operatorId, ok := c.requirePermissionOperator()
 	if !ok {
 		return
 	}
 
-	c.Data["json"] = wrapActionResponse(object.AddPermissionWithApproval(&permission, user.GetId(), c.isPermissionApprover(permission.Owner)))
+	c.Data["json"] = wrapActionResponse(object.AddPermissionWithApproval(&permission, operatorId, c.isPermissionApprover(permission.Owner)))
 	c.ServeJSON()
 }
 
@@ -231,6 +231,27 @@ type RejectPermissionRequest struct {
 	ContentHash string `json:"contentHash"`
 }
 
+// requirePermissionOperator resolves the identity recorded as submitter/approver/operator of an
+// approval-workflow action. An application (client-credentials) session acts as itself
+// ("app/<name>"); unlike RequireSignedInUser it never lets a ?userId= query parameter choose the
+// operator, which would allow spoofing the submitter or approver. Application sessions keep the
+// administrator rights they always had on these endpoints (see isGlobalAdmin).
+func (c *ApiController) requirePermissionOperator() (string, bool) {
+	sessionId, ok := c.RequireSignedIn()
+	if !ok {
+		return "", false
+	}
+	if object.IsAppUser(sessionId) {
+		return sessionId, true
+	}
+
+	user, ok := c.RequireSignedInUser()
+	if !ok {
+		return "", false
+	}
+	return user.GetId(), true
+}
+
 // isPermissionApprover reports whether the current user may approve/reject permissions owned by
 // the given organization: a global admin, or an admin of that organization.
 func (c *ApiController) isPermissionApprover(owner string) bool {
@@ -243,7 +264,7 @@ func (c *ApiController) isPermissionApprover(owner string) bool {
 
 func (c *ApiController) changePermissionState(to, reason, contentHash string) {
 	id := c.Ctx.Input.Query("id")
-	user, ok := c.RequireSignedInUser()
+	operatorId, ok := c.requirePermissionOperator()
 	if !ok {
 		return
 	}
@@ -254,7 +275,7 @@ func (c *ApiController) changePermissionState(to, reason, contentHash string) {
 		return
 	}
 
-	affected, err := object.SetPermissionState(id, to, reason, user.GetId(), true, contentHash)
+	affected, err := object.SetPermissionState(id, to, reason, operatorId, true, contentHash)
 	if err != nil {
 		var validationErr *object.PermissionValidationError
 		if errors.As(err, &validationErr) {
