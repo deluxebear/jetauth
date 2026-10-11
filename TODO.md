@@ -1,45 +1,40 @@
 # JetAuth 待改进项
 
+> 2026-10-11 更新：自 `2017b796` 起的一批工作已落地（审批流、字段校验、Enforcer 缓存、策略布局、biz 版本/Watch/Webhook/Redis Watcher/LRU、数据范围、分页与迁移、RFC 7009 吊销、Syncer 组同步、Site 网关 P2、ReBAC CAS 与 ListObjects 优化）。各节"当前状态"已改写，并在"未完成"小节中列出明确遗留项。
+>
+> 全局遗留（跨模块）：本批新增 API 的 swag 注释已写，但 `swagger/` 下的生成物**尚未重新生成**；各类缓存 / Watcher 开关默认均为关闭。
+
 ## 权限审批流 (Permission Approval Workflow)
 
-**当前状态：半成品**
+**当前状态（2026-10-11）：已完成（后端状态机 + 审计日志 + 邮件通知 + Web UI）。** 遗留项见下方"未完成"。
 
-### 已有能力
+### 已完成
 
-- `State` 字段（Approved / Pending）**后端会检查** — 只有 `State=Approved` 的权限才在 `check.go` 中生效，Pending 状态直接跳过
-- `submitter` / `approver` / `approveTime` 追踪字段存在于数据库和 API 中
-- `GET /api/get-permissions-by-submitter` API 可查询"我提交的权限"
-- 非管理员创建权限时 `state` 默认为 `Pending`，管理员默认为 `Approved`
+- [x] **后端审批权限控制** — 只有全局管理员或该组织管理员（`isPermissionApprover`，`controllers/permission.go`）才能 Approve / Reject；非管理员创建权限强制为 `Pending`
+- [x] **Rejected 状态 + 拒绝原因** — 状态机 `ValidatePermissionTransition`（`object/permission_approval.go`）：`Pending→Approved|Rejected`（仅管理员，Reject 必须带原因）、`Rejected→Pending`（提交人或管理员，重新提交）、`Approved→Pending`（仅管理员，撤销）；其余流转一律拒绝（例如 Approved 不能直接变 Rejected）
+- [x] **专用审批 API** — `POST /api/approve-permission`、`POST /api/reject-permission`（body `{reason}`）、`GET /api/get-permission-approval-logs`；`get-permissions-by-submitter` 保留
+- [x] **审批日志** — `PermissionApprovalLog` 表记录 operator / fromState / toState / reason / 时间；权限编辑页读取并展示
+- [x] **审批通知** — 提交/重新提交/内容变更回到 Pending 时邮件通知组织管理员；批准/拒绝时邮件通知提交人（`notifyPermissionApproval`，通过该组织 Application 的 Email Provider 发送）
+- [x] **编辑即降级** — 非审批人修改 Approved/Rejected 权限中影响策略的字段（模型、Adapter、资源类型、效果、启用状态、用户、组、角色、域、资源、动作，`permissionPolicyFieldsChanged`）后自动回到 Pending，写日志并通知管理员
+- [x] **审批队列与我的提交页面** — `web/src/pages/PermissionApprovalsPage.tsx`；权限编辑页提供批准/拒绝/撤销/重新提交控件，撤销/重提会带上未保存的表单修改
 
-### 缺失能力
+### 未完成 / 已知限制
 
-- **无审批权限控制** — 任何能编辑权限的人都能直接把 State 从 Pending 改成 Approved，后端不校验操作者身份
-- **无审批通知** — 没有邮件/站内消息通知管理员有新权限待审批
-- **无审批队列页面** — 没有专门的"待审批"列表，管理员只能在权限列表里手动过滤
-- **无审批动作 API** — 没有 `/api/approve-permission` 或 `/api/reject-permission` 等专用端点
-- **无状态机校验** — 后端不限制状态流转（可以从 Approved 改回 Pending，也没有 Rejected 状态）
-- **前端 approver 自动填充仅为前端行为** — 后端不验证也不自动设置
-
-### 改进建议
-
-1. **后端增加审批权限校验** — 只有 admin / 组织管理员才能将 State 改为 Approved
-2. **增加 Rejected 状态** — 支持拒绝并记录拒绝原因
-3. **审批队列页面** — 新前端增加"待审批权限"专用视图（利用已有的 `get-permissions-by-submitter` API）
-4. **通知集成** — 权限提交时通知管理员，审批完成时通知提交者
-5. **审批日志** — 记录每次状态变更的操作者和时间
+- [ ] 通知仅有邮件通道（需要该组织的 Application 配置了 Email Provider；找不到 Provider 或管理员没有邮箱时静默跳过），没有站内消息 / Webhook 通知
+- [ ] 审批相关接口的 swagger 注释已写（`@Router /approve-permission` 等），但 `swagger/` 下生成物**尚未重新生成**
+- [ ] 无批量审批、无指定审批人（任何组织管理员均可审批），无多级审批
 
 ### 相关代码位置
 
-- 后端权限检查：`object/check.go:489` 和 `object/check.go:605`
-- Permission 结构体：`object/permission.go:46-49`
-- Submitter 查询 API：`controllers/permission.go:90`
-- 前端审批区域：`web/src/pages/PermissionEditPage.tsx` Approval section
-
+- 状态机 / 日志 / 通知：`object/permission_approval.go`
+- 控制器：`controllers/permission.go`（`ApprovePermission` / `RejectPermission` / `GetPermissionApprovalLogs`）
+- 后端权限检查（只有 `Approved` 生效）：`object/check.go`
+- 前端：`web/src/pages/PermissionApprovalsPage.tsx`、`web/src/pages/PermissionEditPage.tsx`
 ---
 
 ## 权限表单字段与模型联动 (Permission Fields × Model Awareness)
 
-**当前状态：表单字段与所选模型无关，用户无法知道哪些字段有效**
+**当前状态（2026-10-11）：已完成。** 前端按所选模型解析并联动字段，后端保存时校验；见下方"已完成 / 未完成"。下文"问题描述 / 分析"保留作设计背景。
 
 ### 问题描述
 
@@ -104,28 +99,27 @@ m = g(r.sub, p.sub) && r.obj == p.obj && r.act == p.act
 - 不标注 Users/Resources/Actions 为必填
 - 不根据模型动态调整 Actions 的可选值
 
-### 当前新前端状态
+### 已完成
 
-- 所有字段始终可编辑，无论选择了什么模型
-- 没有任何必填标注（Users+Roles、Resources、Actions 实际上是必填的）
-- 没有根据模型禁用/启用字段的逻辑
-- Model 留空时不提示用户将使用默认内置模型
+- [x] **必填标注与保存前校验** — 前端标注 Users/Roles（至少一个）、Resources、Actions 为必填并在保存前校验；后端 `object/permission_fields.go` 同样校验（`PermissionErrNoSubject` 等）
+- [x] **模型感知联动** — 解析所选模型（留空 = 内置默认模型，`web/src/utils/casbinModel.ts` 的 `getModelSupport`）：无 `role_definition` 禁用并清空 Roles、提示 Groups 无效；无三参数 `g = _, _, _` 禁用并清空 Domains
+- [x] **Model 留空提示** — 帮助文本说明将使用默认内置模型，并可展开查看默认模型文本
+- [x] **后端域校验** — 模型没有 domain-aware 角色定义时拒绝填写 Domains（`PermissionErrDomains`）；**仅在 domains/model 发生变化时校验**，避免阻塞存量数据
+- [x] **缺失模型 fail-closed** — 权限引用不存在的模型时 enforcer 构建失败而不是 nil 解引用（原 `permission_enforcer.go` 的 `TODO: return error if permissionModel is nil` 已解决）
 
-### 改进建议
+### 未完成 / 已知限制
 
-1. **必填标注** — Users/Roles（至少一个非空）、Resources、Actions 标注为必填，保存前校验
-2. **模型感知的字段联动** — 选择 Model 后解析模型文本：
-   - 无 `role_definition` → 禁用 Roles 并清空、提示 Groups 无效
-   - 无 `g = _, _, _`（三参数角色定义）→ 禁用 Domains 并提示
-3. **Model 留空提示** — tooltip 或 help 文本说明将使用默认 RBAC 模型
-4. **保存前验证** — 后端已有 `// TODO: return error if permissionModel is nil.` 注释（`permission_enforcer.go:106`），可考虑实现
+- [ ] **Actions 可选值不随模型变化** — 目前只按 `resourceType` 切换（API: GET/POST/PUT/DELETE/PATCH；其它: Read/Write/Admin），不会根据模型 matcher 推导
+- [ ] ABAC 类模型（不用 Roles/Groups、matcher 依赖属性）没有专门提示，只按 `role_definition` / 三参数 `g` 判断
+- [ ] Groups 字段只给出文字提示（"间接生效/无效"），不会被禁用或校验
+- [ ] 保存校验对**存量**权限不回溯（只有改动 domains/model 时才触发域校验）
 
 ### 相关代码位置
 
 - 策略生成（笛卡尔积）：`object/permission_enforcer.go:124-146`
 - 角色继承策略生成：`object/permission_enforcer.go:265-298`
 - 模型加载与默认模型：`object/permission_enforcer.go:96-120` 和 `460-476`
-- 默认模型 TODO 注释：`object/permission_enforcer.go:106`
+- 字段校验：`object/permission_fields.go`；前端模型解析：`web/src/utils/casbinModel.ts`
 - 原版前端模型检查：`web/src/PermissionEditPage.js` 中 `getModel()` 调用
 - 新前端权限编辑页：`web/src/pages/PermissionEditPage.tsx`
 
@@ -133,7 +127,25 @@ m = g(r.sub, p.sub) && r.obj == p.obj && r.act == p.act
 
 ## Casbin Enforcer 性能优化 (Permission Enforcer Caching)
 
-**当前状态：无缓存，每次请求重建 Enforcer，大规模场景下数据库将成为瓶颈**
+**当前状态（2026-10-11）：平台 Enforcer 缓存已实现，但默认关闭（`permissionEnforcerCacheEnabled=false`）。** 下文"问题描述 / 单次请求开销 / 规模估算"是实现前的分析，保留作背景。
+
+### 已完成
+
+- [x] **LRU + TTL 内存缓存** — `object/permission_enforcer_cache.go`：`getPermissionEnforcer()` 先查缓存；配置 `permissionEnforcerCacheEnabled`（默认 `false`）、`permissionEnforcerCacheSize`（默认 `1000`）、`permissionEnforcerCacheTtlSeconds`（默认 `60`，同时是陈旧上限）
+- [x] **自动失效** — `object/permission_enforcer_invalidate.go`：xorm After* 钩子覆盖 Role / Permission / Model / Adapter 的增改删，加上 p 规则写入时的显式失效；写入路径统一使用不经缓存的 `newPermissionEnforcer()`；代数计数（generation guard）防止重建与失效竞争时缓存陈旧结果
+- [x] **Redis pub/sub 跨实例失效** — `object/permission_enforcer_watcher.go`：`permissionEnforcerWatcherEnabled`（默认 `false`，需缓存已启用），可选 `permissionEnforcerWatcherAddr`（回退 `redisEndpoint`）/ `Password` / `DB` / `Channel`（默认 `jetauth:permission-enforcer:invalidations`）；Redis 故障时清空缓存并回退到 TTL；启动时连不上则跳过并告警
+- [x] **Prometheus 指标** — `permission_enforcer_cache_hits_total` / `_misses_total` / `_evictions_total{reason}` / `_invalidations_total{scope,source}` / `permission_enforcer_cache_entries`
+- [x] **基准** — SQLite、4 层角色链：未缓存约 255us/op，缓存后约 4.6us/op（`permission_enforcer_cache_bench_test.go`）
+- [x] **启动钩子** — `main.go` 调用 `object.InitPermissionEnforcerCache()`；配置说明见 `docs/configuration-reference.md`
+
+### 未完成 / 已知限制
+
+- [ ] **默认关闭** — 缓存和 Watcher 默认都是关闭状态，需要手动在 `conf/app.conf` 打开；尚未做大规模场景的线上验证
+- [ ] 绕过 JetAuth 直接改库（手写 SQL）只能靠 TTL 过期发现；多实例且未开启 Watcher 时，陈旧窗口最长为 TTL
+- [ ] 方案三（外部系统用 SDK 本地判断平台 Permission）未做 — 平台 Permission 的 `g` 策略是运行时动态生成的，业务系统请使用 biz 子系统的 SDK（见下文）
+- [ ] 没有 Redis 策略文本缓存（仅 biz 子系统有 `bizPolicyCacheEnabled`）
+- [ ] 群组成员关系变化不触发失效（enforcer 只读 `role.users` / `role.roles`，因此设计上不需要，但若将来让 Groups 参与策略生成需要补）
+
 
 ### 问题描述
 
@@ -225,7 +237,8 @@ enforcer.SetWatcher(watcher)
 
 ### 相关代码位置
 
-- Enforcer 创建（无缓存）：`object/permission_enforcer.go:30-71`
+- 缓存 / 失效 / Watcher：`object/permission_enforcer_cache.go`、`permission_enforcer_invalidate.go`、`permission_enforcer_watcher.go`
+- Enforcer 创建（缓存未命中时回源，原无缓存路径）：`object/permission_enforcer.go`
 - 策略按 permissionId 过滤加载：`object/permission_enforcer.go:49-60`
 - 角色继承动态构建（不持久化）：`object/permission_enforcer.go:265-298`
 - API 权限检查（遍历所有 Permission）：`object/check.go:476-579`
@@ -236,7 +249,24 @@ enforcer.SetWatcher(watcher)
 
 ## 角色自定义属性 (Role Custom Properties)
 
-**当前状态：Role 结构体无扩展属性字段，无法存储业务元数据**
+**当前状态（2026-10-11）：`biz_role` 已完成（类型化 properties + dataScope 校验/合并 + 编辑器 + 消费端 API）；平台 `Role` 结构体仍无 properties。**
+
+### 已完成（biz 子系统）
+
+- [x] **`biz_role.properties` JSON 字段** — `object/biz_role_properties.go`：键名正则白名单、最多 50 个键、总大小 ≤16KB；`dataScope` 结构化校验（`type`: `all` / `org` / `dept` / `dept_and_children` / `self` / `custom`，`values` 最多 500 个，可选 `resources` 按业务资源覆盖，最多 50 个）
+- [x] **多角色合并** — 用户拥有多个角色时标准范围取最宽松，`custom` 取并集；无角色声明时返回 `none`
+- [x] **消费端 API** — `GET /api/biz-get-user-data-scope`（`BizGetUserDataScope`）返回用户生效的数据范围；用户角色接口同时带出 role properties
+- [x] **Casbin SDK 片段** — 集成 Tab 的 Go/TS 模板展示数据范围用法
+- [x] **前端编辑器** — `web/src/components/BizRoleDataScopeEditor.tsx`（`BizRoleEditPage` 属性区）
+
+### 未完成 / 已知限制
+
+- [ ] **平台 `Role`（`object/role.go`）没有 properties 字段** — 仅 `biz_role` 支持；平台权限体系下仍只能用"资源路径编码数据范围"的替代方案；迁移工具（见下）也无法迁移该信息
+- [ ] **按资源（per-resource）数据范围没有 UI 编辑器** — 后端 `dataScope.resources` 已支持并校验，但 `BizRoleDataScopeEditor` 只编辑顶层 `type` / `values`；per-resource 覆盖目前只能通过 JSON / API 写入
+- [ ] properties 中 `dataScope` 之外的键没有专用编辑器（原始 JSON）
+- [ ] SDK 没有独立的 `getRoleProperties()` 封装，业务系统直接调用上述 HTTP API
+
+### 以下为实现前的需求分析（保留作背景）
 
 ### 问题描述
 
@@ -298,7 +328,22 @@ p, director,      /scope/orders, company, allow
 
 ## Permission 系统的模型兼容性限制 (Policy Definition Field Limit)
 
-**当前状态：Permission 系统硬性限制模型最多 6 字段，第 6 个必须是 permissionId**
+**当前状态（2026-10-11）：部分解决 — 策略行按模型 `policy_definition` 的字段名生成，权限 id 固定在保留的 `v5` 列；"6 字段且第 6 个不是 permissionId"与"7+ 字段"仍然不支持（有意保留）。** 详见 `docs/permission-policy-layout.md`。
+
+### 已完成
+
+- [x] **模型驱动的策略布局** — `object/permission_policy_layout.go`：按字段名（大小写不敏感）识别 sub/subject/user、dom/domain/tenant、obj/object/res/resource、act/action、eft/effect，各值写入对应列；无法识别时使用旧的位置布局，存量行和存量模型的生成结果逐字节不变
+- [x] **按保留列删除** — 删除/更新用 `RemoveFilteredPolicy(5, id)`（按 `v5` 权限 id），旧布局写入的行也能清掉
+- [x] **`GetAllObjects` / `GetAllActions` 跟随模型布局**
+- [x] 无需数据迁移，缓存键 / 失效逻辑不变
+
+### 未完成 / 已知限制（有意保留）
+
+- [ ] **6 个字段且第 6 个不是 `permissionId`**（如 `api-model-built-in`）仍被拒绝 — xorm-adapter 表只有 `v0..v5` 六列，权限 id 占用 `v5`；支持需要加宽 `casbin_rule` 表，会同时影响 Enforcer 实体路径和两套授权子系统，当前明确不做
+- [ ] **7+ 字段**仍被拒绝；`permissionId` 出现在非第 6 位同样被拒绝
+- [ ] 实际支持宽度是"**最多 5 个模型字段 + 保留 id 列**"
+
+### 以下为实现前的问题分析（保留作背景）
 
 ### 问题描述
 
@@ -340,15 +385,25 @@ Permission 系统依赖 xorm-adapter 的 V5 列（第 6 位）存储 `permission
 
 ### 一、Redis 缓存 — 多实例部署支持
 
-**当前状态：`sync.Map` 内存缓存，单实例有效，多实例部署时节点间缓存不一致**
+**当前状态（2026-10-11）：阶段 1（Redis pub/sub 跨实例失效）、阶段 2 的 Redis 策略缓存、阶段 3 的 LRU + 空闲 TTL 均已实现；全部默认关闭/不限制，需在 `conf/app.conf` 手动开启。**
 
-> **⚠️ 2026-04-20 起此问题升级为热路径依赖。** WAF 网关的"URL 级授权"功能上线后,`GetBizEnforcer` 从"后台/SDK 偶发调用"变成"每个 HTTP 请求必经路径"。多实例部署时节点间策略陈旧不再是"管理员改完权限稍等片刻再生效",而是"Node B 会按旧策略拦/放流量"—— 直接影响线上安全正确性。
->
-> 修复前建议继续单实例部署,或关闭 `Site.EnableBizAuthz`。
->
-> 现有的 `/api/biz-get-policies` 已返回 `version`(基于 `BizAppConfig.UpdatedTime`),业务 SDK 自己轮询时安全;但进程内直调 `object.BizEnforce` 的网关路径**未接入**此 version 对账。阶段 1 的 Redis Watcher 方案正是补上这一步。
+> 历史说明：2026-04-20 WAF 网关"URL 级授权"上线后，`GetBizEnforcer` 成为每个 HTTP 请求的必经路径，多实例部署下节点间策略陈旧会直接影响线上安全正确性。现在可通过 `bizPolicyWatcherEnabled=true`（需 Redis）解决；未开启时仍建议单实例部署或关闭 `Site.EnableBizAuthz`。
 
-#### 问题描述
+### 已完成
+
+- [x] **阶段 1：Redis pub/sub 跨实例失效** — `object/biz_policy_watcher.go`：`bizPolicyWatcherEnabled`（默认 `false`）；`bizPolicyWatcherAddr`（回退 `redisEndpoint`）/ `Password` / `DB` / `Channel`（默认 `/jetauth/biz-policy-update`）；`SyncAppPolicies` 与缓存清除会发布 `{owner, appName}`，其它实例丢弃本地 Enforcer；Redis 不可用时降级为单实例行为并告警（实现用 `go-redis` 直接 pub/sub，未引入 `casbin/redis-watcher`）
+- [x] **阶段 2：Redis 策略数据缓存** — 此前已有（`object/biz_redis_cache.go`，`bizPolicyCacheEnabled` + `redisEndpoint` 双条件）
+- [x] **阶段 3：LRU 上限 + 空闲 TTL** — `object/biz_enforcer_lru.go` 替换原 `sync.Map`：`bizEnforcerCacheMaxEntries`（默认 `0` = 不限制）、`bizEnforcerCacheIdleTtlSeconds`（默认 `0` = 关闭，后台每 TTL/2 清扫）；代数计数保证重建与失效竞争时不缓存陈旧结果；指标 `biz_enforcer_cache_hits_total` / `_misses_total` / `_evictions_total{reason=lru|ttl|invalidate}` / `biz_enforcer_cache_entries`
+- [x] **配置文档** — `docs/configuration-reference.md` 已覆盖上述键
+
+### 未完成 / 已知限制
+
+- [ ] **Redis 策略文本缓存未做压缩 / 拆 key** — 文中的 Snappy 压缩、按 ptype 拆 key、Redis Hash 方案均未实现；策略量 >1 万条时再评估
+- [ ] 所有开关默认关闭 — 多实例部署必须显式开启 `bizPolicyWatcherEnabled`；尚无多节点集成测试 / 压测记录
+- [ ] LRU 淘汰只丢弃本进程 Enforcer（下次访问重建，不影响鉴权结果，但首次访问延迟变高）
+- [ ] 网关进程内直调 `object.BizEnforce` 的路径没有基于 `policy_version` 的对账，依赖 Watcher 消息；Redis 断连期间的失效消息会丢失（只能等下一次变更或重启）
+
+#### 问题描述（实现前分析）
 
 `bizEnforcerCache sync.Map` 在每个进程内独立维护。当 Node A 调用 `SyncAppPolicies` 更新策略后，Node B 的缓存仍是旧的，直到该缓存条目被手动清除或进程重启。
 
@@ -522,7 +577,23 @@ HGET jetauth:biz:policies:org/app policies   // 只读策略，不读模型
 
 ### 二、策略版本管理 + 增量同步 — SDK 集成优化
 
-**当前状态：SDK 每次拉取全量策略，无版本号，无法判断是否需要更新**
+**当前状态（2026-10-11）：版本号、变更日志、长轮询 Watch API、`biz-policy-changed` Webhook、SDK 模板均已实现；但变更日志对"删除/更新"一律记 `full_rebuild`，只有"新增"是精确增量。**
+
+### 已完成
+
+- [x] **版本号** — `BizAppConfig.PolicyVersion`（`policy_version`），每次已提交的策略变更自增
+- [x] **变更日志表** — `biz_policy_changelog`（`object/biz_policy_changelog.go`）；**入口：同步引擎在 `SyncAppPolicies` 内记录**（并非设计稿里的"各 CRUD 函数逐个 appendChangelog"）。授权对象/成员/权限的**新增**记录精确的 `add` 规则，其余情况记一条 `full_rebuild` 标记
+- [x] **Watch API** — `GET /api/biz-watch-policies`（长轮询，最长 60s；返回 `incremental` / `full` / HTTP 304；等待者每 3 秒读库以覆盖未启用 Redis Watcher 的多实例场景）与轻量版本查询 `GET /api/biz-get-policy-version`
+- [x] **日志保留** — 每小时清理，每个应用保留最近 1000 个版本；SDK 版本过旧自动降级为全量
+- [x] **Webhook** — 策略同步完成后触发 `biz-policy-changed` 事件（`object/biz_policy_webhook.go`，经常规 Webhook 子系统异步投递；Webhook 编辑页可订阅）
+- [x] **SDK 模板** — 集成 Tab 的完整 Go / TS SDK 模板（含本地 Enforcer 缓存）：轮询 `biz-get-policy-version`，版本变化时全量拉取 `biz-get-policies`；`biz-watch-policies` 在片段中说明为可选
+
+### 未完成 / 已知限制
+
+- [ ] **删除 / 更新 / 角色继承 / 分组变化 / 手动 Sync 始终是 `full_rebuild`** — 同一条规则可能由多个权限/角色产生，精确 `remove` 不安全，因此 `remove` 动作常量存在但**从不精确写入**；SDK 遇到这类变化必须全量拉取
+- [ ] SDK 模板默认走版本轮询，未把 `StartWatch` 长轮询做成现成的客户端实现
+- [ ] 变更日志没有做 Redis 版本缓存或跨应用批量清理优化；`biz_policy_changelog` 表量级未压测
+- [ ] Webhook 为尽力投递（失败只记日志），没有重试 / 死信
 
 #### 目标
 
@@ -673,38 +744,46 @@ func (c *Client) applyResponse(resp WatchResponse) {
 - 现有策略导出 API：`controllers/biz_permission_api.go` — `BizGetPolicies`
 - 版本字段所在结构体：`object/biz_app_config.go` — `BizAppConfig`
 
-### 三、前端待完善
+### 三、前端 / 后端待办清单
 
-| 项目 | 说明 |
-|------|------|
-| 概况 Tab 模型文本可编辑 | 当前只读，需加 CodeMirror 编辑器 + 保存到 `biz_app_config.modelText` |
-| 快速创建向导自动创建默认角色/权限 | 当前只创建 BizAppConfig，应同时创建 admin 角色 + 默认权限 |
-| 用户权限画像 | 后端 `biz-get-user-permissions` 已就绪，需在用户编辑页增加权限概览 Tab |
-| SDK 模板完善 | 集成 Tab 只展示 HTTP 调用片段，需补充完整 Go/TS SDK 模板（含本地缓存） |
+#### 前端
 
-### 三、后端待实现
+- [x] **概况 Tab 模型文本可编辑** — CodeMirror 编辑器 + 服务端 Casbin 模型校验（`b621c15e`）
+- [x] **快速创建向导自动创建默认角色/权限** — 勾选项（仅 Casbin 模式，可取消），服务端 `InitBizAppDefaults` 经 `/biz-add-app-config?initDefaults=true` 完成
+- [x] **用户权限画像** — 用户编辑页新增按应用的业务权限 Tab（`67ef1fb5`）
+- [x] **SDK 模板完善** — 完整 Go / TS 模板含本地缓存、版本/Watch、数据范围用法
+- [x] **角色数据范围编辑器** — `BizRoleDataScopeEditor`（per-resource 覆盖仍无 UI，见"角色自定义属性"）
+- [x] **平台权限导入对话框** — dry-run 预览（数量、冲突、不可映射字段）→ 确认，冲突策略 skip / overwrite（en + zh i18n）
+- [x] **角色 / 权限列表服务端分页** — 角色、权限 Tab 使用服务端分页
 
-| 项目 | 说明 |
-|------|------|
-| 迁移工具 | `POST /api/biz-migrate-from-permission` — 将现有 Permission 数据迁移到 biz 表 |
-| 列表分页 | biz-get-roles / biz-get-permissions 尚未支持分页，角色/权限量大时需加 |
-| 策略变更 Webhook | 策略同步后通过 Webhook 通知业务系统刷新本地缓存 |
+#### 后端
+
+- [x] **迁移工具** — `POST /api/biz-migrate-from-permission`（`object/biz_migrate_from_permission.go`、`biz_migrate_plan.go`）：把平台 Permission / Role 复制进 `biz_role` / `biz_role_member` / `biz_role_inheritance` / `biz_permission` / `biz_permission_grantee`；参数 `appId`、`sourceOrganization`（非全局管理员只能迁自己组织）、`dryRun`、`onConflict=skip|overwrite`；单事务，成功后触发一次策略同步
+- [x] **列表分页** — `biz-get-roles` / `biz-get-permissions` 支持 `p`、`pageSize`、`field`、`value`、`sortField`、`sortOrder`（权限另有 `scopeKind` / `effect` / `state` / `isEnabled` 过滤），总数在 `data2`；不带 `p`+`pageSize` 行为不变（`object/biz_list_page.go`）
+- [x] **策略变更 Webhook** — `biz-policy-changed`
+
+#### 未完成
+
+- [ ] **迁移工具没有选择性导入** — 只能整组织导入（全部角色和权限），不能挑选子集；只支持 Casbin 模式的应用；域（domains）、模型、Adapter、resourceType 等无对应字段，作为 `unmappable` 问题报告后丢弃；平台角色没有 properties 因而无数据范围可迁
+- [ ] 迁移不是增量/可重放对账：`overwrite` 按名称覆盖，不做删除同步
+- [ ] 分页仅覆盖 roles / permissions 两个列表；其它列表（成员、授权对象、资源目录）按各自既有接口
+- [ ] `biz-migrate-from-permission` 与新增的 Watch/Version/DataScope 接口的 swagger 生成物尚未重新生成
 
 ---
 
 ## ReBAC (Zanzibar) 关系型授权集成
 
-**状态：待开发** | **方案文档：[docs/rebac-integration-plan.md](docs/rebac-integration-plan.md)**
+**状态（2026-10-11）：CP-1 ~ CP-8 已全部落地并在 `main` 上；下方 P1~P6 的复选框已与 [`docs/rebac-implementation-status.md`](docs/rebac-implementation-status.md) 对齐。** | **方案文档：[docs/rebac-integration-plan.md](docs/rebac-integration-plan.md)**
 
 在现有"应用授权"模块中引入 Zanzibar 风格 ReBAC，使用户创建应用时可选择 RBAC（Casbin）或 ReBAC 模型。采用轻量自建图引擎方案（复用现有 DB/缓存，零运维增量）。
 
 ### P1: 数据模型（2-3 天）
 
-- [ ] `BizAppConfig` 增加 `ModelType`（"casbin" | "rebac"）和 `SchemaText` 字段
-- [ ] 新建 `BizTuple` 结构体（Owner/AppName/ObjectType/ObjectId/Relation/SubjectType/SubjectId/SubjectRel）
-- [ ] `ormer.go` 注册 `BizTuple` 表，配置复合索引（idx_forward + idx_reverse）
-- [ ] 实现 Schema JSON 解析器（`biz_rebac_schema.go`）：JSON → 内存类型/关系定义结构
-- [ ] BizTuple CRUD 函数（AddTuples / DeleteTuples / ReadTuples）
+- [x] `BizAppConfig` 增加 `ModelType`（"casbin" | "rebac"）和 `CurrentAuthorizationModelId`（Schema 改存 append-only 的 `BizAuthorizationModel` 表，不再用 `SchemaText` 字段）
+- [x] 新建 `BizTuple` 结构体（字段对齐 OpenFGA TupleKey：Object/Relation/User + 派生列 ObjectType/UserType/UserRelation）
+- [x] `ormer.go` 注册 `BizTuple` 表，配置复合索引（idx_forward + idx_reverse）
+- [x] 实现 Schema JSON 解析器（`biz_rebac_schema.go`）：JSON → 内存类型/关系定义结构
+- [x] BizTuple CRUD 函数（AddTuples / DeleteTuples / ReadTuples）
 
 ### P2: 图遍历引擎（3-4 天）
 
@@ -718,16 +797,16 @@ func (c *Client) applyResponse(resp WatchResponse) {
   - [x] maxDepth=25 深度限制 (Task 11)
 - [x] 实现 `ReBACListObjects(owner, appName, objectType, relation, subject)` — 列出可访问对象 (CP-5)
 - [x] 实现 `ReBACListUsers(owner, appName, object, relation)` — 列出有权限的用户 (CP-5)
-- [x] 单元测试覆盖：直接关系、userset、继承链、循环检测、深度限制 (CP-3 + openfga consolidated suite 112/134)
+- [x] 单元测试覆盖：直接关系、userset、继承链、循环检测、深度限制 (CP-3 + openfga consolidated suite，当前口径见 `docs/rebac-implementation-status.md`)
 
 ### P3: API 层（2 天）
 
-- [ ] `BizEnforce` / `BizBatchEnforce` 按 `config.ModelType` 路由到 Casbin 或 ReBAC 引擎
+- [x] `BizEnforce` / `BizBatchEnforce` 按 `config.ModelType` 路由到 Casbin 或 ReBAC 引擎（CP-8 C1，`object/biz_rebac_dispatch.go`）
 - [x] 新增路由：`biz-write-tuples` / `biz-read-tuples` (CP-5 — delete 合并在 write 批次里,无独立 delete-tuples)
 - [x] 新增路由：`biz-check` / `biz-batch-check` (CP-4)
 - [x] 新增路由：`biz-list-objects` / `biz-list-users` (CP-5)
 - [x] 新增路由：`biz-expand`（展开关系树，调试用）(CP-5)
-- [ ] ReBAC 模式下适配 `biz-get-user-roles` / `biz-get-user-permissions`
+- [x] ReBAC 模式下 `biz-get-user-roles` / `biz-get-user-permissions` / `biz-get-permissions-for-subject` **有意不适配**：返回 HTTP 400 + `BIZ_API_NOT_SUPPORTED_IN_REBAC` 并指向 `biz-list-objects` 等替代接口（CP-8 C2，`controllers/biz_rebac_guidance.go`；原因见 `dc5e7af0`）
 
 ### P4: 前端 Schema + Tuple（3-4 天）
 
@@ -758,9 +837,25 @@ func (c *Client) applyResponse(resp WatchResponse) {
 ### P6: 缓存优化（2 天）
 
 - [x] sync.Map 元组查询结果缓存 + 写入时失效 (CP-6, biz_rebac_cache.go)
-- [ ] 可选 Redis L3 缓存层（复用 `bizPolicyCacheEnabled` 配置）— CP-6 follow-up
+- [x] 可选 Redis L3 缓存层 + pub/sub 跨实例失效（CP-8 C6）— 实际由独立开关 `bizReBACCacheL3Enabled` 控制（地址回退 `redisEndpoint`），**没有**复用 `bizPolicyCacheEnabled`；默认关闭
 - [x] ListObjects context 超时控制 (CP-5 — 10s 硬超时)
-- [ ] ListObjects 并发遍历 (CP-8 产品级验收)
+- [x] ListObjects 并发遍历 + 反向索引 preselect（B1#1 / B1#3）+ 直接授予短路与 per-call 模型提升（B1#2 / B1#4，`437d275f`）：同一 2500 文档夹具上 801ms → 177ms → 19ms（见 `docs/rebac-sla-baseline.md`）
+
+### 本批新增（2026-10-11）
+
+- [x] **Schema 保存/激活 compare-and-swap（Plan R6）** — `biz-write-authorization-model`（body）与 `biz-activate-authorization-model`（query）接受可选 `expectedModelId`；与应用当前 `CurrentAuthorizationModelId` 不一致时返回 `BIZ_REBAC_SCHEMA_STALE`，指针前推本身是原子条件 UPDATE；省略则保持旧的"后写覆盖"语义（`5dd853c1`）。前端 Schema 编辑器已携带该参数并提示冲突（`a3baccfc`，en + zh）
+- [x] **请求 context 贯穿缓存调用** — 新增 `ReBACCheckCtx`，ListObjects / ListUsers 的超时 context 经 `checkContext` 传到 L2/L3 缓存，Redis 调用随请求取消；`ReBACCheck` 签名不变（`f9acb573`）
+- [x] **断言 / 审计表启动建表** — `BizReBACAssertion` 与 `BizReBACTupleAudit` 此前从未传给 `Sync2`，全新数据库上断言 Tab、审计 Tab、最近写入卡片报 "no such table"，现已修复（`667aa906`）
+
+### 未完成 / 已知限制
+
+- [ ] 文档口径不一致待核实：`docs/rebac-implementation-status.md` 记 consolidated 套件 130/134 + 4 skip，但 `object/biz_rebac_consolidated_db_test.go` 的 `skippedTests` / `expectedSkipCount` 仍是 5 条（仍含 `true_butnot_cycle_return_false`）；需在有数据库的环境跑 `go test -v ./object -run TestConsolidatedSuite` 确认并让测试表与文档一致
+- [ ] 4 条 OpenFGA 一致性 skip 为有意分歧（冲突扫描拒绝会孤立 tuple 的 schema 变更）或仅 ListObjects 断言形式差异
+- [ ] `biz-count-tuples` 不支持按条件计数；tuple 删除必须精确匹配 `(object, relation, user)`（无前缀批量删）
+- [ ] `docs/rebac-sla-baseline.md` 数值为 SQLite + 单次均值（非百分位）；MySQL/Postgres 与生产硬件尚未实测
+- [ ] Redis L3 默认关闭，多实例 pub/sub 失效没有多节点集成测试
+- [ ] 断言（Assertions）与审计（Audit）已落地后端路由与前端组件，但"环境切换（prod/staging）"等 iter-2 产品项未做
+- [ ] 新增 `expectedModelId` 与相关错误码的 swagger 生成物尚未重新生成
 
 ### 清理
 
@@ -774,7 +869,7 @@ func (c *Client) applyResponse(resp WatchResponse) {
 - BizAppConfig：`object/biz_app_config.go`
 - Enforce 入口：`object/biz_enforcer_cache.go` — `BizEnforce`
 - 现有 API：`controllers/biz_permission_api.go`
-- 路由注册：`routers/router.go:231-254`
+- 路由注册：`routers/router.go`（`/api/biz-*` ReBAC 段）
 - 前端授权页：`web/src/pages/AuthorizationPage.tsx`
 - 前端应用授权页：`web/src/pages/AppAuthorizationPage.tsx`
 
@@ -782,7 +877,7 @@ func (c *Client) applyResponse(resp WatchResponse) {
 
 ## Site 网关后端安全与性能审计
 
-**审计日期：2026-04-16** | **状态：P0/P1 已修复，P2 部分修复**
+**审计日期：2026-04-16** | **状态（2026-10-11）：P0 / P1 / P2 / P3 全部修复，审计清单已清零。**
 
 Site 模块是 JetAuth 内置的反向代理网关 + WAF，拦截所有 HTTP(S) 流量。以下是对其后端代码的安全性和性能审计结果。
 
@@ -834,21 +929,19 @@ Site 模块是 JetAuth 内置的反向代理网关 + WAF，拦截所有 HTTP(S) 
 
 ### P2: 稳定性修复（中期）
 
-- [ ] **证书监控持全局锁阻塞请求** — `object/site_timer.go:41-44` ⚠️ 剩余
+- [x] **证书监控持全局锁阻塞请求** — `object/site_timer.go`（2026-10-11 已改为 per-site 证书锁，`65430a56`）
   - `lock.Lock()` 期间执行 DB 查询 + ACME HTTP 请求，阻塞所有请求 100ms-1s
-  - 修复：改为 per-site 锁或异步证书更新
-  - 注意：涉及 ACME 证书续期流程，改动风险较高，建议单独分支做
+  - 修复：改为 per-site 锁；`monitorSiteCerts` 复用刷新快照，不再重复查库
 
 - [x] **DNS 解析协程无上限泄漏** — `object/site_cache.go:102-108`
   - 每 5 秒为每个空 PublicIp 的 site 启动 goroutine，无 WaitGroup/信号量
   - 1000 站点 + DNS 慢 → 每小时数十万协程 → 内存耗尽
   - 修复：加 `semaphore.NewWeighted(10)` 限制并发数
 
-- [ ] **全量刷新每 5 秒无变更检测** — `object/site_timer.go:65-84` ⚠️ 剩余
+- [x] **全量刷新每 5 秒无变更检测** — `object/site_timer.go`（2026-10-11 已修复）
   - 每 5 秒 `GetGlobalSites()` + `GetGlobalRules()` 全量查库
   - `monitorSiteCerts()` 再次调 `GetGlobalSites()`（重复查询）
-  - 修复：增量刷新 + UpdatedTime 变更检测，刷新间隔可调大到 30 秒
-  - 注意：功能性改动，不影响稳定性，优先级低于安全修复
+  - 修复：`count + max(updated_time)` 指纹变更检测，仅变化时重建 SiteMap/ruleMap，最多每 60 秒强制全量刷新；刷新间隔可配 `siteRefreshIntervalSeconds`（默认 5）
 
 - [x] **HTTP Server 无超时保护** — `service/proxy.go:323,331`
   - 无 `ReadTimeout` / `WriteTimeout` / `IdleTimeout`
@@ -869,10 +962,9 @@ Site 模块是 JetAuth 内置的反向代理网关 + WAF，拦截所有 HTTP(S) 
   - 用 `err.Error() != "http: named cookie not present"` 判断
   - 修复：改用 `errors.Is(err, http.ErrNoCookie)`
 
-- [ ] **组合规则递归查找无记忆化** — `rule/rule_compound.go:32` ⚠️ 剩余
+- [x] **组合规则递归查找无记忆化** — `rule/rule_compound.go`（2026-10-11 已修复，`24e4012b`）
   - 嵌套规则每层重新查找 ruleMap
-  - 修复：传递已加载规则的 map，避免重复查找
-  - 注意：仅深度嵌套组合规则时有性能影响，实际场景罕见
+  - 修复：嵌套组合规则查找记忆化，并检测/拒绝循环引用（`rule/rule_compound_test.go`）
 
 - [x] **WAF Transaction 未关闭** — `rule/rule_waf.go:44`
   - `waf.NewTransaction()` 无 `defer tx.Close()`
@@ -881,6 +973,11 @@ Site 模块是 JetAuth 内置的反向代理网关 + WAF，拦截所有 HTTP(S) 
 - [x] **错误信息泄露内部结构** — `service/proxy.go:246,257`
   - `site = %v` 暴露完整 Site 对象
   - 修复：生产环境默认不输出内部细节
+
+### 未完成 / 已知限制
+
+- [ ] 变更检测指纹是 `count + max(updated_time)`：直接改库且不更新 `updated_time` 的修改最多 60 秒（强制全量刷新间隔）后才生效；调大 `siteRefreshIntervalSeconds` 同样拉长生效延迟
+- [ ] 证书监控的 ACME 续期流程未做端到端回归（仅锁粒度与快照复用被改动）
 
 ### 相关代码位置
 
@@ -902,7 +999,7 @@ Site 模块是 JetAuth 内置的反向代理网关 + WAF，拦截所有 HTTP(S) 
 
 **状态：✅ 已完成（2026-04-20）** | **相关 PR：feat/auth-ui-revamp 分支**
 
-> 多实例部署下仍有策略陈旧风险 —— 详见 **[业务权限模块改进计划 → 一、Redis 缓存 — 多实例部署支持](#一redis-缓存--多实例部署支持)**。本次交付默认单实例部署。
+> 多实例部署：2026-10-11 起可通过 `bizPolicyWatcherEnabled=true`（Redis pub/sub）让各节点及时丢弃本地 Enforcer，详见 **[业务权限模块改进计划 → 一、Redis 缓存 — 多实例部署支持](#一redis-缓存--多实例部署支持)**；该开关默认关闭，未开启时仍以单实例部署为前提。
 
 ### 背景
 
