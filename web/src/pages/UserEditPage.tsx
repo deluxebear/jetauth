@@ -25,6 +25,7 @@ import SimpleSelect from "../components/SimpleSelect";
 import SingleSearchSelect from "../components/SingleSearchSelect";
 import SaveButton from "../components/SaveButton";
 import PasswordModal from "../components/PasswordModal";
+import ContactChangeModal from "../components/ContactChangeModal";
 import UserPermissionOverview from "../components/UserPermissionOverview";
 import UserBizPermissionOverview from "../components/UserBizPermissionOverview";
 import UnsavedBanner from "../components/UnsavedBanner";
@@ -189,6 +190,20 @@ export default function UserEditPage() {
   const isAdmin = loggedInAccount?.owner === "built-in" || loggedInAccount?.isAdmin === true;
 
   const getAccountItem = (name: string) => accountItems.find((i) => i.name === name);
+
+  // Non-admins cannot write email / phone through update-user; on their own
+  // profile they change them through a verification-code dialog instead.
+  const selfServiceContact = isSelf && !isAdmin && !isNew;
+  const contactApp = user.signupApplication || orgApps[0]?.name || "";
+
+  // Apply fields the server already saved (a verified email / phone) without
+  // marking the form dirty or dropping the user's other unsaved edits.
+  const applySavedFields = (patch: Partial<UserExtras>) => {
+    setUser((u) => (u ? { ...u, ...patch } : u));
+    setOriginalJson((o) => {
+      try { return JSON.stringify({ ...JSON.parse(o), ...patch }); } catch { return o; }
+    });
+  };
 
   const isFieldVisible = (name: string): boolean => {
     const item = getAccountItem(name);
@@ -519,11 +534,29 @@ export default function UserEditPage() {
       </FormSection>
 
       <FormSection title={t("users.section.contact")}>
-        {dynField("Email", undefined, <input value={user.email ?? ""} onChange={(e) => setWithValidation("Email", "email", e.target.value)} disabled={isFieldDisabled("Email")} type="email" className={inputClass} />)}
-        {dynField("Phone", undefined, <div className="flex gap-2">
-            <PhoneCodeSelect value={user.countryCode ?? ""} onChange={(v) => set("countryCode", v)} />
-            <input value={user.phone ?? ""} onChange={(e) => setWithValidation("Phone", "phone", e.target.value)} disabled={isFieldDisabled("Phone")} className={`${inputClass} flex-1`} />
-          </div>)}
+        {selfServiceContact ? (
+          <>
+            {dynField("Email", undefined, <div className="flex gap-2">
+                <input value={user.email ?? ""} readOnly type="email" className={`${inputClass} flex-1`} />
+                <ContactChangeModal type="email" applicationName={contactApp} disabled={isFieldDisabled("Email") || !contactApp}
+                  onChanged={(v) => applySavedFields({ email: v, emailVerified: true })} />
+              </div>)}
+            {dynField("Phone", undefined, <div className="flex gap-2">
+                <PhoneCodeSelect value={user.countryCode ?? ""} onChange={() => {}} disabled />
+                <input value={user.phone ?? ""} readOnly className={`${inputClass} flex-1`} />
+                <ContactChangeModal type="phone" applicationName={contactApp} countryCode={user.countryCode} disabled={isFieldDisabled("Phone") || !contactApp}
+                  onChanged={(v) => applySavedFields({ phone: v })} />
+              </div>)}
+          </>
+        ) : (
+          <>
+            {dynField("Email", undefined, <input value={user.email ?? ""} onChange={(e) => setWithValidation("Email", "email", e.target.value)} disabled={isFieldDisabled("Email")} type="email" className={inputClass} />)}
+            {dynField("Phone", undefined, <div className="flex gap-2">
+                <PhoneCodeSelect value={user.countryCode ?? ""} onChange={(v) => set("countryCode", v)} />
+                <input value={user.phone ?? ""} onChange={(e) => setWithValidation("Phone", "phone", e.target.value)} disabled={isFieldDisabled("Phone")} className={`${inputClass} flex-1`} />
+              </div>)}
+          </>
+        )}
         {dynField("Country/Region", undefined, <RegionSelect value={user.region ?? ""} onChange={(v) => set("region", v)} />)}
         {dynField("Location", undefined, <input value={user.location ?? ""} onChange={(e) => setWithValidation("Location", "location", e.target.value)} disabled={isFieldDisabled("Location")} className={inputClass} />)}
         {dynField("Address", "full", <div className="grid grid-cols-2 gap-3">
@@ -1021,7 +1054,7 @@ export default function UserEditPage() {
 }
 
 // Phone country code dropdown selector
-function PhoneCodeSelect({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+function PhoneCodeSelect({ value, onChange, disabled }: { value: string; onChange: (v: string) => void; disabled?: boolean }) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
   const ref = useRef<HTMLDivElement>(null);
@@ -1079,6 +1112,7 @@ function PhoneCodeSelect({ value, onChange }: { value: string; onChange: (v: str
       <button
         ref={triggerRef}
         type="button"
+        disabled={disabled}
         onClick={() => { setOpen(!open); setSearch(""); }}
         className={`flex items-center gap-1.5 rounded-lg border bg-surface-2 px-2.5 py-2 text-[13px] transition-colors shrink-0 ${
           open ? "border-accent ring-1 ring-accent/30" : "border-border hover:border-border-hover"
