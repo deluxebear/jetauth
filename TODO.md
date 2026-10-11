@@ -2,7 +2,36 @@
 
 > 2026-10-11 更新：自 `2017b796` 起的一批工作已落地（审批流、字段校验、Enforcer 缓存、策略布局、biz 版本/Watch/Webhook/Redis Watcher/LRU、数据范围、分页与迁移、RFC 7009 吊销、Syncer 组同步、Site 网关 P2、ReBAC CAS 与 ListObjects 优化）。各节"当前状态"已改写，并在"未完成"小节中列出明确遗留项。
 >
-> 全局遗留（跨模块）：本批新增 API 的 swag 注释已写，但 `swagger/` 下的生成物**尚未重新生成**；各类缓存 / Watcher 开关默认均为关闭。
+> 全局遗留（跨模块）：各类缓存 / Watcher 开关默认均为关闭。`swagger/` 已重新生成（`4a21140b`，补齐 32 个此前缺失的接口）。
+>
+> 同日追加：对本批后端代码做了一轮安全审查，11 个问题（2 高 / 5 中 / 4 低）已全部修复并附回归测试，详见下方"2026-10-11 安全审查修复"；前端 ESLint 错误清零（483 → 0），CI 前端 job 新增 `npm run lint` 与 `vitest run`。
+
+## 2026-10-11 安全审查修复
+
+**当前状态：已全部修复。** 每项均有回归测试。
+
+| 级别 | 问题 | 修复 |
+|---|---|---|
+| 高 | biz 授权过滤器先看 `owner`/`organization` 再看 `appId`，且 POST body 不读 `appId` → A 组织管理员可读写 B 组织的 biz 应用（watch / write-tuples 等） | `routers/authz_filter.go` 解析 query + body 中所有租户标识，必须指向同一组织，否则拒绝；新增 `controllers/biz_tenant_guard.go`（`parseBizAppId`）在每个带 `appId` 的 biz / ReBAC 处理器里再校验一次 |
+| 高 | `/api/enforce` 不看审批状态：Pending / Rejected / 编辑后降级的权限策略行照样生效 | 只有 `IsPolicyLive()`（Approved，或旧数据的空状态）的权限才写策略行；所有状态流转经 `UpdatePermission` 增删行；enforce 控制器跳过非生效权限；启动时 `InitPermissionPolicyReconciliation()` 清理存量非 Approved 权限的策略行（见 `docs/permission-approval-enforcement.md`） |
+| 中 | biz Enforcer 缓存可被重建中的陈旧/空结果覆盖并推送到 Redis 30 分钟 | 同步写缓存时推进代数；只有 `StoreIfGen` 成功才回写 Redis；`xormadapter.SavePolicy` 改为单事务 delete + insert（不再 drop/create） |
+| 中 | Watch 全量快照可能比所标版本旧 | 全量快照直接从数据库策略表读取，不走缓存 |
+| 中 | 并发 `syncAppPolicies` 丢更新，SDK 增量与服务端分叉 | 按 (owner, app) 串行并合并突发同步（`object/biz_sync_serialize.go`）；合并多次调用时记 `full_rebuild` |
+| 中 | 审批没有绑定管理员审阅时的内容 | 新增非持久化 `Permission.ContentHash`；approve 必须携带、reject 可选，不一致则拒绝；前端审批页/编辑页已携带并提示冲突 |
+| 中 | 权限增改接口对 `app/<name>`（client credentials）会话回归，且可经 `?userId=` 冒充操作人 | `requirePermissionOperator`：应用会话身份为 `app/<name>`，不再读取 `userId` |
+| 低 | Excel 上传绕过审批（保留文件里的 State / Approver / Owner） | 每行走 `PreparePermissionForAdd`，Owner 强制为上传者组织（全局管理员除外） |
+| 低 | 提交人只比对用户名 | 新记录存 `owner/name`；旧的纯用户名只在同组织内匹配 |
+| 低 | ReBAC CAS 激活当前模型时在 MySQL 上误报 stale | 期望值等于目标值时短路；UPDATE 影响 0 行时回读确认 |
+| 低 | 网关变更检测用秒级 `MAX(updated_time)`，同秒修改与证书/应用修改要等 60s 强制刷新 | 指纹改为对相关列内容做哈希 |
+
+### 需要留意的默认行为
+
+- [ ] **升级后未批准的权限不再生效** — 启动对账会删掉所有非 Approved 权限的策略行；如有"Pending 但实际在用"的权限，升级前先批准
+- [ ] **`IsEnabled` 不参与 `/api/enforce` 生效判断**（与改动前一致；`check.go` 会看它）。若希望禁用的权限也不生效，改 `Permission.IsPolicyLive()` 一行即可
+- [ ] 审批的内容哈希校验与读取之间仍有极小竞争窗口：并发编辑会被审阅过的内容覆盖（批准写入的是被哈希的那份）
+- [ ] `Submitter` 列仍为 `varchar(100)`，很长的 `owner/name` 可能被截断（未做破坏性迁移）
+- [ ] 同步串行化只在进程内生效；多实例下仍可能交错（最后完成的那次重建包含其开始前已提交的全部变更）
+- [ ] `ruleFingerprint` 仍使用 `updated_time` 计数 + 最大值
 
 ## 权限审批流 (Permission Approval Workflow)
 
@@ -21,7 +50,7 @@
 ### 未完成 / 已知限制
 
 - [ ] 通知仅有邮件通道（需要该组织的 Application 配置了 Email Provider；找不到 Provider 或管理员没有邮箱时静默跳过），没有站内消息 / Webhook 通知
-- [ ] 审批相关接口的 swagger 注释已写（`@Router /approve-permission` 等），但 `swagger/` 下生成物**尚未重新生成**
+- [ ] 审批状态对 `/api/enforce` 的影响、内容哈希绑定、应用会话、上传路径等后续加固见"2026-10-11 安全审查修复"
 - [ ] 无批量审批、无指定审批人（任何组织管理员均可审批），无多级审批
 
 ### 相关代码位置
@@ -767,7 +796,7 @@ func (c *Client) applyResponse(resp WatchResponse) {
 - [ ] **迁移工具没有选择性导入** — 只能整组织导入（全部角色和权限），不能挑选子集；只支持 Casbin 模式的应用；域（domains）、模型、Adapter、resourceType 等无对应字段，作为 `unmappable` 问题报告后丢弃；平台角色没有 properties 因而无数据范围可迁
 - [ ] 迁移不是增量/可重放对账：`overwrite` 按名称覆盖，不做删除同步
 - [ ] 分页仅覆盖 roles / permissions 两个列表；其它列表（成员、授权对象、资源目录）按各自既有接口
-- [ ] `biz-migrate-from-permission` 与新增的 Watch/Version/DataScope 接口的 swagger 生成物尚未重新生成
+- [x] `biz-migrate-from-permission` 与 Watch / Version / DataScope 接口的 swagger 已重新生成（`4a21140b`）
 
 ---
 
@@ -849,13 +878,13 @@ func (c *Client) applyResponse(resp WatchResponse) {
 
 ### 未完成 / 已知限制
 
-- [ ] 文档口径不一致待核实：`docs/rebac-implementation-status.md` 记 consolidated 套件 130/134 + 4 skip，但 `object/biz_rebac_consolidated_db_test.go` 的 `skippedTests` / `expectedSkipCount` 仍是 5 条（仍含 `true_butnot_cycle_return_false`）；需在有数据库的环境跑 `go test -v ./object -run TestConsolidatedSuite` 确认并让测试表与文档一致
+- [x] consolidated 套件口径已对齐：`true_butnot_cycle_return_false` 在 CP-8 C7 后已能通过，移出 skip 列表，`expectedSkipCount` 改为 4（`92ee95cd`）
 - [ ] 4 条 OpenFGA 一致性 skip 为有意分歧（冲突扫描拒绝会孤立 tuple 的 schema 变更）或仅 ListObjects 断言形式差异
 - [ ] `biz-count-tuples` 不支持按条件计数；tuple 删除必须精确匹配 `(object, relation, user)`（无前缀批量删）
 - [ ] `docs/rebac-sla-baseline.md` 数值为 SQLite + 单次均值（非百分位）；MySQL/Postgres 与生产硬件尚未实测
 - [ ] Redis L3 默认关闭，多实例 pub/sub 失效没有多节点集成测试
 - [ ] 断言（Assertions）与审计（Audit）已落地后端路由与前端组件，但"环境切换（prod/staging）"等 iter-2 产品项未做
-- [ ] 新增 `expectedModelId` 与相关错误码的 swagger 生成物尚未重新生成
+- [x] swagger 已重新生成（`4a21140b`）；CAS 在 MySQL 上激活当前模型误报 stale 的问题已修复
 
 ### 清理
 

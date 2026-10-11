@@ -265,6 +265,25 @@ channel — remains.
 - **Auth cleanups** — IdP auto-signup decision centralized, unreachable SAML
   branch removed, stale logout TODOs replaced by documented decisions.
 - **SSRF guard** for the Custom HTTP Email sender (see above).
+- **2026-10-11 security review of the new authorization code** (all with
+  regression tests):
+  - Biz authz filter resolves every tenant identifier (query and JSON body,
+    including `appId`) and rejects mixed-org requests; handlers that take
+    `appId` re-check the caller against the app's organization. Previously
+    an org admin could reach another org's biz apps via `?owner=`.
+  - Only approved permissions have live policy rows, so `/api/enforce` no
+    longer honours Pending/Rejected content; a startup reconciliation
+    removes rows of non-approved permissions.
+  - Approval is bound to the reviewed content (`contentHash`); app
+    (client-credentials) sessions act as `app/<name>` and cannot spoof the
+    operator; spreadsheet upload goes through the approval preparation;
+    submitters are stored as `owner/name`.
+  - Biz enforcer cache can no longer be overwritten by a stale rebuild,
+    `SavePolicy` rewrites the policy table in one transaction, watch full
+    snapshots come from the database, and policy syncs are serialized per
+    app.
+  - ReBAC CAS no longer reports a false conflict on MySQL; the site gateway
+    change fingerprint hashes row content.
 
 ## Other subsystems
 
@@ -296,6 +315,11 @@ channel — remains.
   `casdoor-go-sdk`) remain, as they are maintained upstream libraries we
   depend on — renaming would require forking those libraries.
 - **Homegrown i18n** in `web/src/i18n.tsx` — see above.
+- **Frontend lint gate** — the web app is ESLint-clean (no `any`, no
+  setState-in-effect); CI's frontend job runs `npm run lint` and
+  `vitest run` before the build.
+- **Swagger** regenerated with swag v2 (`swag init --v3.1 -g routers/router.go
+  -o swagger --outputTypes json,yaml --parseDependency --parseDependencyLevel 1`).
 
 ## Retained upstream integrations
 
@@ -329,9 +353,8 @@ Most earlier planned items have shipped (see above). What genuinely remains:
 - **Permission form** — Actions options do not follow the model.
 - **Defaults and ops** — enforcer caches and Redis watchers are off by
   default and lack multi-node soak tests; Redis policy-text compression is
-  not implemented; swagger output has not been regenerated for the new APIs.
-- **ReBAC** — real-hardware p50/p99 for the SLA baseline, and reconciling the
-  consolidated-suite skip count between code and docs.
+  not implemented; biz policy-sync serialization is per process only.
+- **ReBAC** — real-hardware p50/p99 for the SLA baseline.
 
 ## License
 

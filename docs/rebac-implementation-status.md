@@ -102,7 +102,7 @@
 - **Contextual Tuples**:
   - `POST /api/biz-check` 和 `POST /api/biz-batch-check` 接口体支持 `contextualTuples` 字段,请求级临时 tuple,**不入库**,仅在当次 Check 的 memo 上下文生效;
   - 请求级校验 `validateCheckRequestTuple` 会把每条 contextual tuple 过 schema 再进 Check。
-- **per-branch cycle**:在 difference 分支内实现了独立的 visited 栈,避免 union/intersection 的一个分支的 cycle 影响到另一分支的判定(仍有 1 条 OpenFGA 一致性测试 `true_butnot_cycle_return_false` 需要 ternary 状态传播,**已 skip 并文档化**)。
+- **per-branch cycle**:在 difference 分支内实现了独立的 visited 栈,避免 union/intersection 的一个分支的 cycle 影响到另一分支的判定(原先需要 ternary 状态传播的 `true_butnot_cycle_return_false` 已由 CP-8 C7 解决并移出 skip 列表)。
 
 ### 3.5 ListObjects / ListUsers / Expand(CP-5)
 
@@ -310,11 +310,11 @@ web/src/pages/
 | `biz_rebac_list_test.go` / `biz_rebac_list_db_test.go` | cursor 稳定性、超时、PageSize 边界 |
 | `biz_rebac_expand_test.go` | Expand 树、maxDepth 防溢 |
 | `biz_rebac_cache_test.go` | 命中、TTL 过期、精确失效、store flush |
-| `biz_rebac_consolidated_db_test.go` | OpenFGA `consolidated_1_1_tests.yaml`,文档口径 **130/134 pass + 4 skip**(见下方核实提示) |
+| `biz_rebac_consolidated_db_test.go` | OpenFGA `consolidated_1_1_tests.yaml`,**130/134 pass + 4 skip**(2026-10-11 在本地 SQLite 上实测) |
 | `biz_rebac_model_cas_db_test.go` | Schema CAS(`expectedModelId`)冲突/通过 |
 | `biz_rebac_list_direct_test.go` / `biz_rebac_bench_test.go` | ListObjects 直接授予短路、基准(`make rebac-bench`) |
 
-> **核实提示(2026-10-11)**:测试代码里 `skippedTests` 仍含 5 条(包括 `true_butnot_cycle_return_false`),`expectedSkipCount = 5`;而 CP-8 C7 文档称该用例已解锁(130/134 + 4 skip)。本次仅更新文档,未改测试;请在有数据库的环境跑 `go test -v ./object -run TestConsolidatedSuite` 确认实际数字,并让 `skippedTests`/`expectedSkipCount` 与本文一致。
+> **已核实(2026-10-11)**:`true_butnot_cycle_return_false` 实测通过,已从 `skippedTests` 移除并将 `expectedSkipCount` 改为 4(`92ee95cd`),测试代码与本文口径一致。
 
 建议执行:
 
