@@ -53,7 +53,7 @@ function generateObfuscatedCode(coreCode: string, prefixLen: number, suffixLen: 
 }
 
 /** Try to parse existing regex back into obfuscation settings */
-function parseRegexToSettings(regex: string, _coreCode: string): { prefixLen: number; suffixLen: number; charSet: CharSet } | null {
+function parseRegexToSettings(regex: string): { prefixLen: number; suffixLen: number; charSet: CharSet } | null {
   // Patterns like [a-zA-Z0-9]{3}coreCode[a-zA-Z0-9]{4}
   const match = regex.match(/^(?:\[[\w-]+\]\{(\d+)\})?(.+?)(?:\[[\w-]+\]\{(\d+)\})?$/);
   if (!match) return null;
@@ -237,7 +237,7 @@ export default function InvitationEditPage() {
     try {
       // Draft mode: seed locally instead of hitting /api/get-invitation.
       const res = isNew
-        ? { status: "ok" as const, data: InvBackend.newInvitation(owner) }
+        ? { status: "ok" as const, msg: "", data: InvBackend.newInvitation(owner) }
         : await InvBackend.getInvitation(owner, name);
       if (res.status === "ok" && res.data) {
         setInv(res.data);
@@ -248,7 +248,7 @@ export default function InvitationEditPage() {
           // Extract core code: strip regex parts to get the literal chars
           const extractedCore = (res.data.code || "").replace(/\[[\w-]+\]\{\d+,?\d*\}/g, "").replace(/\\(.)/g, "$1");
           setCoreCode(extractedCore);
-          const parsed = parseRegexToSettings(res.data.code, extractedCore);
+          const parsed = parseRegexToSettings(res.data.code);
           if (parsed) {
             setPrefixLen(parsed.prefixLen);
             setSuffixLen(parsed.suffixLen);
@@ -258,7 +258,7 @@ export default function InvitationEditPage() {
           setCoreCode(res.data.code || "");
         }
       } else {
-        modal.showError((res as any).msg || t("invitations.loadFailed"));
+        modal.showError(res.msg || t("invitations.loadFailed"));
         navigate("/invitations");
       }
     } catch (e) {

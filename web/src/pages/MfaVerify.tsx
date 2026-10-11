@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 import { ShieldCheck, ArrowRight } from "lucide-react";
 import { useTranslation } from "../i18n";
 import { useTheme } from "../theme";
-import { errorMessage } from "../types/lint-pages-am";
+import { errorMessage, type OrgThemeInput, type RawApiResult } from "../types/lint-pages-am";
 
 interface MfaProps {
   enabled: boolean;
@@ -22,9 +22,9 @@ interface MfaVerifyProps {
     application: string;
     organization: string;
   };
-  themeData?: any;
+  themeData?: (OrgThemeInput & { isEnabled?: boolean }) | null;
   orgBranding?: { logo?: string; logoDark?: string; displayName?: string } | null;
-  onVerified: (response: any) => void;
+  onVerified: (response: RawApiResult) => void;
   onError: (msg: string) => void;
 }
 
@@ -34,7 +34,7 @@ const METHOD_LABELS: Record<string, string> = {
   email: "mfa.verify.methodEmail",
 };
 
-export default function MfaVerify({ mfaProps, loginForm, themeData, orgBranding, onVerified, onError: _onError }: MfaVerifyProps) {
+export default function MfaVerify({ mfaProps, loginForm, themeData, orgBranding, onVerified }: MfaVerifyProps) {
   const { t } = useTranslation();
   const { theme, applyOrgTheme, clearOrgTheme } = useTheme();
   const [selectedType, setSelectedType] = useState(mfaProps.find(p => p.isPreferred)?.mfaType || mfaProps[0]?.mfaType || "app");
@@ -58,7 +58,7 @@ export default function MfaVerify({ mfaProps, loginForm, themeData, orgBranding,
     setError("");
     setLoading(true);
     try {
-      const body: any = {
+      const body: Record<string, string | boolean> = {
         application: loginForm.application,
         organization: loginForm.organization,
         type: "login",
@@ -71,7 +71,7 @@ export default function MfaVerify({ mfaProps, loginForm, themeData, orgBranding,
         body.enableMfaRemember = remember;
       }
 
-      const res: any = await fetch("/api/login", {
+      const res: RawApiResult = await fetch("/api/login", {
         method: "POST", credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
@@ -128,7 +128,7 @@ export default function MfaVerify({ mfaProps, loginForm, themeData, orgBranding,
                   className={inputClass}
                 >
                   {mfaProps.map(p => (
-                    <option key={p.mfaType} value={p.mfaType}>{t(METHOD_LABELS[p.mfaType] as any || p.mfaType)}</option>
+                    <option key={p.mfaType} value={p.mfaType}>{t(METHOD_LABELS[p.mfaType] || p.mfaType)}</option>
                   ))}
                 </select>
               </div>

@@ -5,7 +5,7 @@ import QRCode from "qrcode";
 import { useTranslation } from "../i18n";
 import { useTheme } from "../theme";
 import { postForm } from "../api/client";
-import { errorMessage } from "../types/lint-pages-am";
+import { errorMessage, type OrgThemeInput, type RawApiResult } from "../types/lint-pages-am";
 
 interface MfaSetupProps {
   mfaType: string;
@@ -14,7 +14,7 @@ interface MfaSetupProps {
   organization: string;
   application: string;
   encryptedPassword: string;
-  themeData?: any;
+  themeData?: (OrgThemeInput & { isEnabled?: boolean }) | null;
   orgBranding?: { logo?: string; logoDark?: string; displayName?: string } | null;
   onComplete: () => void;
 }
@@ -44,12 +44,10 @@ export default function MfaSetup({
   const [loading, setLoading] = useState(false);
 
   const [secret, setSecret] = useState("");
-  const [_totpUrl, setTotpUrl] = useState("");
   const [qrDataUrl, setQrDataUrl] = useState("");
   const [recoveryCodes, setRecoveryCodes] = useState<string[]>([]);
 
   const [passcode, setPasscode] = useState("");
-  const [_codeSent, setCodeSent] = useState(false);
   const [countdown, setCountdown] = useState(0);
   const [copied, setCopied] = useState(false);
 
@@ -73,7 +71,7 @@ export default function MfaSetup({
     setError("");
     setLoading(true);
     try {
-      const loginRes: any = await fetch("/api/login", {
+      const loginRes: RawApiResult = await fetch("/api/login", {
         method: "POST", credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -94,7 +92,6 @@ export default function MfaSetup({
 
       if (res.status === "ok" && res.data) {
         setSecret(res.data.secret);
-        setTotpUrl(res.data.url);
         setRecoveryCodes(res.data.recoveryCodes || []);
 
         if (mfaType === "app" && res.data.url) {
@@ -125,7 +122,6 @@ export default function MfaSetup({
         captchaToken: "",
         clientSecret: "",
       });
-      setCodeSent(true);
       setCountdown(60);
     } catch (e) {
       setError(errorMessage(e) || "Failed to send code");
@@ -144,7 +140,7 @@ export default function MfaSetup({
         if (mfaType === "sms") params.countryCode = "";
       }
 
-      const res: any = await postForm("/api/mfa/setup/verify", params);
+      const res = await postForm<RawApiResult>("/api/mfa/setup/verify", params);
       if (res.status === "ok") {
         setStep(2);
       } else {
@@ -172,7 +168,7 @@ export default function MfaSetup({
         if (mfaType === "sms") params.countryCode = "";
       }
 
-      const res: any = await postForm("/api/mfa/setup/enable", params);
+      const res = await postForm<RawApiResult>("/api/mfa/setup/enable", params);
       if (res.status === "ok") {
         onComplete();
       } else {

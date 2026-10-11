@@ -11,6 +11,7 @@ import { friendlyError } from "../utils/errorHelper";
 import * as LdapBackend from "../backend/LdapBackend";
 import * as GroupBackend from "../backend/GroupBackend";
 import type { Ldap } from "../backend/LdapBackend";
+import type { Group } from "../backend/GroupBackend";
 import SaveButton from "../components/SaveButton";
 import UnsavedBanner from "../components/UnsavedBanner";
 import { useUnsavedWarning } from "../hooks/useUnsavedWarning";
@@ -25,7 +26,7 @@ export default function LdapEditPage() {
   const { t } = useTranslation();
   const modal = useModal();
   const [ldap, setLdap] = useState<Ldap | null>(null);
-  const [groups, setGroups] = useState<{ name: string; displayName: string }[]>([]);
+  const [groups, setGroups] = useState<Group[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -52,7 +53,7 @@ export default function LdapEditPage() {
         navigate(-1);
       }
       if (groupRes.status === "ok" && groupRes.data) {
-        setGroups(groupRes.data as any);
+        setGroups(groupRes.data);
       }
     } catch (e) {
       console.error(e);
@@ -218,7 +219,7 @@ export default function LdapEditPage() {
 
         <FormSection title={t("ldap.section.sync")}>
           <FormField label={t("ldap.field.defaultGroup")} help={t("ldap.help.defaultGroup")}>
-            <SimpleSelect value={ldap.defaultGroup ?? ""} options={[{ value: "", label: "—" }, ...groups.map((g: any) => ({ value: `${g.owner}/${g.name}`, label: g.displayName || g.name }))]} onChange={(v) => set("defaultGroup", v)} />
+            <SimpleSelect value={ldap.defaultGroup ?? ""} options={[{ value: "", label: "—" }, ...groups.map((g) => ({ value: `${g.owner}/${g.name}`, label: g.displayName || g.name }))]} onChange={(v) => set("defaultGroup", v)} />
           </FormField>
           <FormField label={t("ldap.field.autoSync")} help={t("ldap.field.autoSync.help")}>
             <input type="number" value={ldap.autoSync ?? 0} onChange={(e) => set("autoSync", Math.max(0, Number(e.target.value)))} min={0} className={monoInputClass} />

@@ -105,23 +105,26 @@ export default function BizRoleEditPage() {
     }
   };
 
-  useEffect(() => {
-    if (role || !owner || !appName) return;
-    if (isNew) {
-      const r = BizBackend.newBizRole(owner, appName);
-      setRole(r);
-      setOriginalJson(JSON.stringify(r));
-      setPropsEntries([]);
-      return;
+  // Seed the editable draft once (new draft or the loaded role). Done during
+  // render rather than in an effect to avoid a cascading re-render.
+  if (!role && owner && appName) {
+    const seeded = isNew
+      ? BizBackend.newBizRole(owner, appName)
+      : rolesQuery.isLoading
+        ? undefined
+        : (rolesQuery.data ?? []).find((r) => r.name === name);
+    if (seeded) {
+      setRole(seeded);
+      setOriginalJson(JSON.stringify(seeded));
+      if (isNew) setPropsEntries([]);
+      else initPropsEntries(seeded.properties);
     }
-    if (rolesQuery.isLoading) return;
-    const list = rolesQuery.data ?? [];
-    const found = list.find((r) => r.name === name);
-    if (found) {
-      setRole(found);
-      setOriginalJson(JSON.stringify(found));
-      initPropsEntries(found.properties);
-    } else if (rolesQuery.isSuccess) {
+  }
+
+  useEffect(() => {
+    if (role || !owner || !appName || isNew || rolesQuery.isLoading) return;
+    const found = (rolesQuery.data ?? []).find((r) => r.name === name);
+    if (!found && rolesQuery.isSuccess) {
       modal.toast((t("bizRole.notFound") || "Role not found: {name}").replace("{name}", name || ""), "error");
     }
   }, [role, rolesQuery.data, rolesQuery.isLoading, rolesQuery.isSuccess, isNew, owner, appName, name, modal, t]);

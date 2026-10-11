@@ -25,7 +25,7 @@ export default function CartPage() {
   const modal = useModal();
   const [loading, setLoading] = useState(true);
   const [cartItems, setCartItems] = useState<CartItemFull[]>([]);
-  const [fullUser, setFullUser] = useState<any>(null);
+  const [fullUser, setFullUser] = useState<UserBackend.User | null>(null);
   const [checking, setChecking] = useState(false);
   const account = getStoredAccount();
 
@@ -73,7 +73,7 @@ export default function CartPage() {
 
   const saveCart = async (newCart: ProductInfo[]) => {
     if (!fullUser) return;
-    const res = await UserBackend.updateUser(account!.owner, account!.name, { ...fullUser, cart: newCart } as any);
+    const res = await UserBackend.updateUser(account!.owner, account!.name, { ...fullUser, cart: newCart });
     if (res.status === "ok") {
       setFullUser({ ...fullUser, cart: newCart });
     }

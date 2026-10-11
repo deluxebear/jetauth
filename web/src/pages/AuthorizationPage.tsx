@@ -61,13 +61,14 @@ function getInitial(config: BizAppConfig) {
 export default function AuthorizationPage() {
   const { t } = useTranslation();
   const { getRequestOwner, selectedOrg, isAll } = useOrganization();
-  const [loading, setLoading] = useState(true);
+  const [loadedKey, setLoadedKey] = useState<string | null>(null);
   const [cardData, setCardData] = useState<BizAppCardData[]>([]);
   const [refreshKey, setRefreshKey] = useState(0);
+  const loadKey = `${selectedOrg}|${isAll}|${refreshKey}`;
+  const loading = loadedKey !== loadKey;
   const [showWizard, setShowWizard] = useState(false);
 
   useEffect(() => {
-    setLoading(true);
     const owner = getRequestOwner();
 
     // Fetch configs + all applications in parallel
@@ -108,8 +109,8 @@ export default function AuthorizationPage() {
       );
 
       setCardData(data);
-    }).finally(() => setLoading(false));
-  }, [selectedOrg, isAll, refreshKey]);
+    }).finally(() => setLoadedKey(loadKey));
+  }, [selectedOrg, isAll, refreshKey, loadKey]);
 
   if (loading) {
     return (
@@ -378,20 +379,30 @@ function QuickCreateWizard({ open, onClose, onCreated, existingAppNames }: {
 
   const orgName = getNewEntityOwner();
 
+  // Reset wizard state whenever it opens (or the target org changes while open).
+  // Done during render (not in an effect) to avoid a cascading re-render.
+  const openKey = open ? orgName : null;
+  const [prevOpenKey, setPrevOpenKey] = useState<string | null>(null);
+  if (openKey !== prevOpenKey) {
+    setPrevOpenKey(openKey);
+    if (openKey !== null) {
+      setStep(0);
+      setSelectedApp(null);
+      setModelType("casbin");
+      setSelectedPreset("rbac-api");
+      setModelText(DEFAULT_RBAC_MODEL);
+      setShowCustomEditor(false);
+      setPolicyTable("");
+      setCreateDefaults(true);
+      setCreating(false);
+      setLoadingApps(true);
+    }
+  }
+
   useEffect(() => {
     if (!open) return;
-    setStep(0);
-    setSelectedApp(null);
-    setModelType("casbin");
-    setSelectedPreset("rbac-api");
-    setModelText(DEFAULT_RBAC_MODEL);
-    setShowCustomEditor(false);
-    setPolicyTable("");
-    setCreateDefaults(true);
-    setCreating(false);
 
     // Load applications — use org-specific endpoint when a specific org is selected
-    setLoadingApps(true);
     const appsPromise = isAll
       ? ApplicationBackend.getApplications({ owner: "admin" })
       : ApplicationBackend.getApplicationsByOrganization({ owner: "admin", organization: selectedOrg });
@@ -406,11 +417,13 @@ function QuickCreateWizard({ open, onClose, onCreated, existingAppNames }: {
   }, [open, orgName]);
 
   // Auto-generate policy table name when app is selected
-  useEffect(() => {
+  const [prevSelectedApp, setPrevSelectedApp] = useState<Application | null>(null);
+  if (selectedApp !== prevSelectedApp) {
+    setPrevSelectedApp(selectedApp);
     if (selectedApp) {
       setPolicyTable(`biz_${selectedApp.name.replace(/-/g, "_")}_policy`);
     }
-  }, [selectedApp]);
+  }
 
   const handleCreate = async () => {
     if (!selectedApp) return;

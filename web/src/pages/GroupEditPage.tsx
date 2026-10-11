@@ -75,7 +75,7 @@ export default function GroupEditPage() {
       // dropdowns work on first render.
       const [groupRes, allGroupsRes, orgRes] = await Promise.all([
         isNew
-          ? Promise.resolve({ status: "ok" as const, data: GroupBackend.newGroup(owner) })
+          ? Promise.resolve({ status: "ok" as const, msg: "", data: GroupBackend.newGroup(owner) })
           : GroupBackend.getGroup(owner, name),
         GroupBackend.getGroups({ owner }),
         OrgBackend.getOrganizationNames("admin"),
@@ -84,7 +84,7 @@ export default function GroupEditPage() {
         setGroup(groupRes.data);
         setOriginalJson(JSON.stringify(groupRes.data));
       } else {
-        modal.showError((groupRes as any).msg || t("groups.error.loadFailed"));
+        modal.showError(groupRes.msg || t("groups.error.loadFailed"));
         navigate("/groups");
         return;
       }

@@ -55,7 +55,7 @@ export default function AgentEditPage() {
     ApplicationBackend.getApplicationsByOrganization({ owner: "admin", organization: agent.owner })
       .then((res) => {
         if (res.status === "ok" && res.data) {
-          setAppOptions(res.data.map((a) => ({ value: a.name, label: (a as any).displayName || a.name })));
+          setAppOptions(res.data.map((a) => ({ value: a.name, label: a.displayName || a.name })));
         }
       }).catch(() => {});
   }, [agent?.owner]);

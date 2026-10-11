@@ -97,21 +97,24 @@ export default function BizPermissionEditPage() {
     return () => clearTimeout(timer);
   }, [saved]);
 
-  useEffect(() => {
-    if (perm || !owner || !appName) return;
-    if (isNew) {
-      const p = BizBackend.newBizPermission(owner, appName);
-      setPerm(p);
-      setOriginalJson(JSON.stringify(p));
-      return;
+  // Seed the editable draft once (new draft or the loaded permission). Done during
+  // render rather than in an effect to avoid a cascading re-render.
+  if (!perm && owner && appName) {
+    const seeded = isNew
+      ? BizBackend.newBizPermission(owner, appName)
+      : permissionsQuery.isLoading
+        ? undefined
+        : (permissionsQuery.data ?? []).find((p) => p.name === name);
+    if (seeded) {
+      setPerm(seeded);
+      setOriginalJson(JSON.stringify(seeded));
     }
-    if (permissionsQuery.isLoading) return;
-    const list = permissionsQuery.data ?? [];
-    const found = list.find((p) => p.name === name);
-    if (found) {
-      setPerm(found);
-      setOriginalJson(JSON.stringify(found));
-    } else if (permissionsQuery.isSuccess) {
+  }
+
+  useEffect(() => {
+    if (perm || !owner || !appName || isNew || permissionsQuery.isLoading) return;
+    const found = (permissionsQuery.data ?? []).find((p) => p.name === name);
+    if (!found && permissionsQuery.isSuccess) {
       modal.toast((t("bizPerm.notFound") || "Permission not found: {name}").replace("{name}", name || ""), "error");
     }
   }, [perm, permissionsQuery.data, permissionsQuery.isLoading, permissionsQuery.isSuccess, isNew, owner, appName, name, modal, t]);

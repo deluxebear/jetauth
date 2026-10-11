@@ -39,26 +39,31 @@ const fadeUp: Variants = {
   show: { opacity: 1, y: 0, transition: { duration: 0.35, ease: "easeOut" } },
 };
 
+/** Wall-clock helper kept outside the component so render stays lint-pure. */
+const currentTimeMs = () => Date.now();
+
 export default function Dashboard() {
   const { t } = useTranslation();
   const { selectedOrg } = useOrganization();
-  const [data, setData] = useState<DashboardData | null>(null);
-  const [loading, setLoading] = useState(true);
+  // Result is tagged with the org it was fetched for, so switching org shows
+  // the loading state again without a synchronous setState in the effect.
+  const [result, setResult] = useState<{ org: string; data: DashboardData | null } | null>(null);
+  const loading = result?.org !== selectedOrg;
+  const data = result && result.org === selectedOrg ? result.data : null;
   const [records, setRecords] = useState<AuditRecord[]>([]);
 
   useEffect(() => {
-    setLoading(true);
-    setData(null);
+    let fetched: DashboardData | null = null;
     // Dashboard API expects "" for global, org name otherwise (same as original)
     const owner = selectedOrg === "All" ? "" : selectedOrg;
     request<DashboardData>("GET", `/api/get-dashboard?owner=${encodeURIComponent(owner)}`)
       .then((res) => {
         if (res.status === "ok" && res.data) {
-          setData(res.data);
+          fetched = res.data;
         }
       })
       .catch(() => {})
-      .finally(() => setLoading(false));
+      .finally(() => setResult({ org: selectedOrg, data: fetched }));
 
     // Fetch recent activity records
     const recordOwner = selectedOrg === "All" ? "" : selectedOrg;
@@ -143,7 +148,7 @@ export default function Dashboard() {
   // Format relative time
   const formatRelativeTime = (timeStr: string) => {
     if (!timeStr) return "";
-    const now = Date.now();
+    const now = currentTimeMs();
     const then = new Date(timeStr).getTime();
     const diffSec = Math.floor((now - then) / 1000);
     if (diffSec < 60) return t("dashboard.activity.justNow");

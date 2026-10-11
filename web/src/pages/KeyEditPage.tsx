@@ -77,13 +77,13 @@ export default function KeyEditPage() {
     ApplicationBackend.getApplicationsByOrganization({ owner: "admin", organization: key.organization })
       .then((res) => {
         if (res.status === "ok" && res.data) {
-          setAppOptions(res.data.map((a) => ({ value: a.name, label: (a as any).displayName || a.name })));
+          setAppOptions(res.data.map((a) => ({ value: a.name, label: a.displayName || a.name })));
         }
       });
     UserBackend.getUsers({ owner: key.organization })
       .then((res) => {
         if (res.status === "ok" && res.data) {
-          setUserOptions(res.data.map((u) => ({ value: u.name, label: (u as any).displayName || u.name })));
+          setUserOptions(res.data.map((u) => ({ value: u.name, label: u.displayName || u.name })));
         }
       });
   }, [key?.organization]);

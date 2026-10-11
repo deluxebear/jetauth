@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { useQuery, useQueryClient, keepPreviousData } from "@tanstack/react-query";
 import { bizKeys } from "../backend/bizQueryKeys";
-import { useParams, useNavigate, useSearchParams, Link } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams, Link, type NavigateFunction } from "react-router-dom";
 import { motion } from "framer-motion";
 import { ArrowLeft, Plus, Play, Copy, Check, X, RefreshCw, RotateCcw, Pencil, Trash2, LayoutDashboard, Crown, ShieldCheck, FlaskConical, Code, Target, Eye, CheckCircle2, History } from "lucide-react";
 import DataTable, { type Column, useTablePrefs, ColumnsMenu } from "../components/DataTable";
@@ -182,7 +182,7 @@ export default function AppAuthorizationPage() {
   >(null);
 
   const appIcon = useMemo(() => {
-    const app = appMetaQuery.data as any;
+    const app = appMetaQuery.data;
     return app ? pickAppIcon(app) : "";
   }, [appMetaQuery.data]);
   // If the picked URL later fails to load (404, blocked), the detail-page
@@ -474,7 +474,7 @@ function OverviewTab({ config, roles, permissions, allowCount, denyCount, onRefr
   allowCount: number; denyCount: number;
   onRefresh: () => void;
   onJumpTab: (tab: TabKey) => void;
-  t: (key: string) => string; modal: any;
+  t: (key: string) => string; modal: ReturnType<typeof useModal>;
 }) {
   const [editingModel, setEditingModel] = useState(false);
   const [modelDraft, setModelDraft] = useState(config.modelText);
@@ -748,7 +748,7 @@ const PERMISSION_SORT_FIELDS: Record<string, string> = {
 function RolesTab({ roles, onRefresh, appOwner, appName, t, modal, navigate }: {
   roles: BizRole[]; permissions: BizPermission[]; onRefresh: () => void;
   appOwner: string; appName: string;
-  t: (key: string) => string; modal: any; navigate: any;
+  t: (key: string) => string; modal: ReturnType<typeof useModal>; navigate: NavigateFunction;
 }) {
   // Cross-column filters stay OUTSIDE the DataTable — scope is multi-select
   // and status is a radio, neither of which fits the per-column FilterPopover.
@@ -1112,7 +1112,7 @@ function PermissionsTab({ permissions, onRefresh, appOwner, appName, supportsDen
   permissions: BizPermission[]; onRefresh: () => void;
   appOwner: string; appName: string;
   supportsDeny: boolean;
-  t: (key: string) => string; modal: any; navigate: any;
+  t: (key: string) => string; modal: ReturnType<typeof useModal>; navigate: NavigateFunction;
 }) {
   const [effectSel, setEffectSel] = useState<Set<"Allow" | "Deny">>(new Set());
   const [stateSel, setStateSel] = useState<"all" | "Approved" | "Pending" | "Rejected">("all");
@@ -1832,12 +1832,12 @@ function SubjectPicker({ value, onChange, owner, roleCandidates, placeholder, in
         ...(q ? { field: "name", value: q } : {}),
       });
       if (res.status !== "ok") return { items: [] as SubjectCandidate[], total: 0 };
-      const items: SubjectCandidate[] = (res.data as any[] ?? []).map((u) => ({
+      const items: SubjectCandidate[] = (res.data ?? []).map((u) => ({
         id: `${u.owner}/${u.name}`,
         displayName: u.displayName || u.name,
         kind: "user" as const,
       }));
-      const total = typeof (res as any).data2 === "number" ? (res as any).data2 : items.length;
+      const total = typeof res.data2 === "number" ? res.data2 : items.length;
       return { items, total };
     },
   });
@@ -1857,12 +1857,12 @@ function SubjectPicker({ value, onChange, owner, roleCandidates, placeholder, in
         ...(q ? { field: "name", value: q } : {}),
       });
       if (res.status !== "ok") return { items: [] as SubjectCandidate[], total: 0 };
-      const items: SubjectCandidate[] = (res.data as any[] ?? []).map((g) => ({
+      const items: SubjectCandidate[] = (res.data ?? []).map((g) => ({
         id: `${g.owner}/${g.name}`,
         displayName: g.displayName || g.name,
         kind: "group" as const,
       }));
-      const total = typeof (res as any).data2 === "number" ? (res as any).data2 : items.length;
+      const total = typeof res.data2 === "number" ? res.data2 : items.length;
       return { items, total };
     },
   });
@@ -2112,7 +2112,7 @@ function TestResultPanel({ result, error, testing, t }: {
 }
 
 // ═══════ INTEGRATION TAB ═══════
-function IntegrationTab({ config, t, modal }: { config: BizAppConfig; t: (key: string) => string; modal: any }) {
+function IntegrationTab({ config, t, modal }: { config: BizAppConfig; t: (key: string) => string; modal: ReturnType<typeof useModal> }) {
   const [copied, setCopied] = useState<string | null>(null);
   const [policies, setPolicies] = useState<PoliciesExport | null>(null);
   const [loadingPolicies, setLoadingPolicies] = useState(false);
@@ -2328,7 +2328,6 @@ const allowed = await bizEnforce(userId, "/orders", "DELETE");
 
 function RebacOverviewTab({
   appId,
-  t: _t,
   onJumpTab,
 }: {
   appId: string;
@@ -2352,11 +2351,12 @@ function RebacSchemaTab({
   const isNewMode = searchParams.get("mode") === "new";
   const [versions, setVersions] = useState<BizAuthorizationModel[]>([]);
   const [reloadKey, setReloadKey] = useState(0);
-  const [loadingList, setLoadingList] = useState(true);
+  const listKey = `${appId}|${reloadKey}`;
+  const [loadedListKey, setLoadedListKey] = useState<string | null>(null);
+  const loadingList = loadedListKey !== listKey;
 
   useEffect(() => {
     let cancelled = false;
-    setLoadingList(true);
     BizBackend.listBizAuthorizationModels(appId)
       .then((res) => {
         if (cancelled) return;
@@ -2365,12 +2365,12 @@ function RebacSchemaTab({
         }
       })
       .finally(() => {
-        if (!cancelled) setLoadingList(false);
+        if (!cancelled) setLoadedListKey(listKey);
       });
     return () => {
       cancelled = true;
     };
-  }, [appId, reloadKey]);
+  }, [appId, reloadKey, listKey]);
 
   const goToList = () => {
     setSearchParams(
@@ -2461,14 +2461,14 @@ function RebacSchemaTab({
   );
 }
 
-function RebacTuplesTab({ appId, t: _t }: { appId: string; t: (k: string) => string }) {
+function RebacTuplesTab({ appId }: { appId: string; t: (k: string) => string }) {
   return <BizTupleManager appId={appId} />;
 }
 
-function RebacTesterTab({ appId, t: _t, initialRequest }: { appId: string; t: (k: string) => string; initialRequest?: { object: string; relation: string; user: string } }) {
+function RebacTesterTab({ appId, initialRequest }: { appId: string; t: (k: string) => string; initialRequest?: { object: string; relation: string; user: string } }) {
   return <BizReBACTester appId={appId} initialRequest={initialRequest} />;
 }
 
-function RebacIntegrationTab({ appId, t: _t }: { appId: string; t: (k: string) => string }) {
+function RebacIntegrationTab({ appId }: { appId: string; t: (k: string) => string }) {
   return <BizIntegrationTab appId={appId} />;
 }

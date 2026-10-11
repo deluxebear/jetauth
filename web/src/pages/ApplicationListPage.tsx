@@ -109,11 +109,11 @@ export default function ApplicationListPage() {
     {
       key: "providers", title: t("apps.field.providers"), filterable: true,
       render: (_, r) => {
-        const providers = (r.providers as any[]) ?? [];
+        const providers = (r.providers as { name?: string }[] | undefined) ?? [];
         if (providers.length === 0) return <span className="text-text-muted text-[12px]">—</span>;
         return (
           <div className="flex flex-wrap gap-1">
-            {providers.slice(0, 3).map((p: any, i: number) => (
+            {providers.slice(0, 3).map((p, i) => (
               <span key={i} className="rounded bg-surface-3 px-1.5 py-0.5 text-[11px] font-mono text-text-secondary">{p.name}</span>
             ))}
             {providers.length > 3 && <span className="text-[11px] text-text-muted">+{providers.length - 3}</span>}

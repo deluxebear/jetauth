@@ -46,6 +46,27 @@ const CssEditorFallback = () => (
 
 type AppData = Partial<Application>;
 
+/** A provider binding row inside `application.providers`. */
+interface ProviderItem {
+  name?: string;
+  rule?: string;
+  countryCodes?: string[];
+  canSignUp?: boolean;
+  canSignIn?: boolean;
+  canUnlink?: boolean;
+  prompted?: boolean;
+  bindingRule?: string[];
+  signupGroup?: string;
+  [key: string]: unknown;
+}
+
+/** Names already used by the other rows of an items list (signin/forget/signup items). */
+function usedItemNames(items: unknown[] | undefined, rowName: unknown, skipCustom: boolean): unknown[] {
+  return ((items as Record<string, unknown>[] | undefined) ?? [])
+    .filter((it) => (skipCustom ? !it.isCustom : true) && it.name !== rowName)
+    .map((it) => it.name);
+}
+
 const GRANT_TYPES = [
   { id: "authorization_code", name: "Authorization Code" },
   { id: "password", name: "Password" },
@@ -272,7 +293,7 @@ export default function ApplicationEditPage() {
   // posts {section, field}; we close the modal, scroll to the matching
   // CollapsibleCard, and briefly highlight it.
   const [highlightedSection, setHighlightedSection] = useState<string | null>(null);
-  const handleInspect = useCallback((section: string, _field?: string) => {
+  const handleInspect = useCallback((section: string) => {
     setPreviewOpen(false);
     // Defer scroll to next frame so the modal has a chance to unmount and
     // the edit page reclaims the viewport.
@@ -472,7 +493,7 @@ export default function ApplicationEditPage() {
 
   const discardAll = useCallback(() => {
     if (!originalJson) return;
-    try { setApp(JSON.parse(originalJson) as AppData); } catch {}
+    try { setApp(JSON.parse(originalJson) as AppData); } catch { /* originalJson is always our own serialisation; ignore */ }
   }, [originalJson]);
 
   const UI_SECTION_FIELDS: Record<string, string[]> = {
@@ -897,11 +918,11 @@ export default function ApplicationEditPage() {
   );
 
   // ── Providers Tab ──
-  const providerItems = (app.providers as any[]) ?? [];
-  const usedProviderNames = providerItems.map((p: any) => p.name);
+  const providerItems = (app.providers as ProviderItem[] | undefined) ?? [];
+  const usedProviderNames = providerItems.map((p) => p.name);
   const availableProviders = orgProviders.filter((p) => !usedProviderNames.includes(p.name));
 
-  const getProviderObj = (name: string): Provider | undefined =>
+  const getProviderObj = (name: string | undefined): Provider | undefined =>
     orgProviders.find((p) => p.name === name);
 
   const getRuleOptions = (prov: Provider | undefined): { value: string; label: string }[] | null => {
@@ -953,7 +974,7 @@ export default function ApplicationEditPage() {
         {providerItems.length === 0 && (
           <div className="py-6 text-center text-[12px] text-text-muted">{t("common.noData")}</div>
         )}
-        {providerItems.map((item: any, i: number) => {
+        {providerItems.map((item, i) => {
           const prov = getProviderObj(item.name);
           const cat = prov?.category;
           const ruleOptions = getRuleOptions(prov);
@@ -992,7 +1013,7 @@ export default function ApplicationEditPage() {
                   <span className="rounded-full bg-accent/10 px-2 py-0.5 text-[11px] font-medium text-accent">{prov.type}</span>
                 )}
                 <button
-                  onClick={() => set("providers", providerItems.filter((_: any, j: number) => j !== i))}
+                  onClick={() => set("providers", providerItems.filter((_, j) => j !== i))}
                   className="rounded p-1 text-text-muted hover:text-danger hover:bg-danger/10 transition-colors"
                 >
                   <Trash2 size={13} />
@@ -1111,7 +1132,7 @@ export default function ApplicationEditPage() {
 
   // ── UI Customization Tab ──
 
-  const existingSigninMethodNames = ((app.signinMethods as any[]) ?? []).map((m: any) => m.name);
+  const existingSigninMethodNames = ((app.signinMethods as Record<string, unknown>[] | undefined) ?? []).map((m) => m.name);
   const availableSigninMethods = SIGNIN_METHOD_OPTIONS.filter((m) => !existingSigninMethodNames.includes(m.name));
 
   const signinMethodColumns: EditableColumn<Record<string, unknown>>[] = [
@@ -1122,7 +1143,7 @@ export default function ApplicationEditPage() {
         return (
           <SimpleSelect
             value={String(row.name ?? "")}
-            options={available.map((m: any) => ({ value: m.name, label: m.name }))}
+            options={available.map((m) => ({ value: String(m?.name), label: String(m?.name) }))}
             onChange={(v) => {
               const def = SIGNIN_METHOD_OPTIONS.find((m) => m.name === v);
               onChange({
@@ -1154,7 +1175,7 @@ export default function ApplicationEditPage() {
         if (row.isCustom) {
           return <input value={String(row.name ?? "")} disabled className={`${inputClass} !py-1 !text-[12px] opacity-60`} />;
         }
-        const usedNames = ((app.signinItems as any[]) ?? []).filter((it: any) => !it.isCustom && it.name !== row.name).map((it: any) => it.name);
+        const usedNames = usedItemNames(app.signinItems, row.name, true);
         const available = SIGNIN_ITEM_NAMES.filter((n) => !usedNames.includes(n));
         const i18nMeta = SIGNIN_ITEM_I18N[String(row.name)];
         const tooltip = i18nMeta ? t(i18nMeta.desc) : undefined;
@@ -1216,7 +1237,7 @@ export default function ApplicationEditPage() {
         if (row.isCustom) {
           return <input value={String(row.name ?? "")} disabled className={`${inputClass} !py-1 !text-[12px] opacity-60`} />;
         }
-        const usedNames = ((app.forgetItems as any[]) ?? []).filter((it: any) => !it.isCustom && it.name !== row.name).map((it: any) => it.name);
+        const usedNames = usedItemNames(app.forgetItems, row.name, true);
         const available = FORGET_ITEM_NAMES.filter((n) => !usedNames.includes(n));
         const i18nMeta = FORGET_ITEM_I18N[String(row.name)];
         const tooltip = i18nMeta ? t(i18nMeta.desc) : undefined;
@@ -1254,7 +1275,7 @@ export default function ApplicationEditPage() {
     {
       key: "name", title: t("col.name"), width: "22%",
       render: (row, _i, onChange) => {
-        const usedNames = ((app.signupItems as any[]) ?? []).filter((it: any) => it.name !== row.name).map((it: any) => it.name);
+        const usedNames = usedItemNames(app.signupItems, row.name, false);
         const available = SIGNUP_ITEM_NAMES.filter((n) => !usedNames.includes(n));
         return (
           <SimpleSelect
