@@ -1,10 +1,10 @@
 # ReBAC 模块实施状态与能力边界
 
-**基线分支**:`feature/rebac-cp3`(含 CP-1 ~ CP-7 全部落地)
+**基线分支**:`main`(CP-1 ~ CP-8 及后续迭代均已合入;原开发分支 `feature/rebac-cp3`)
 **对应 Spec**:[`rebac-spec.md`](rebac-spec.md)
 **对应 Plan**:[`rebac-plan.md`](rebac-plan.md)
 **对应操作手册**:[`rebac-operations-guide.md`](rebac-operations-guide.md)
-**最后更新**:2026-04-25
+**最后更新**:2026-10-11
 
 > 本文目标:把仓库里"已经能做什么、到哪里为止、哪些事还没做"梳理清楚,作为功能验收、对接评估与排期排障的单一事实源。所有结论都对应到仓库里的真实代码/测试,未落地的项目都标注"未实现/待做"。
 
@@ -13,6 +13,7 @@
 ## 1. 总体结论
 
 - **可用的能力**:OpenFGA v1.1 兼容的 Schema 管理、11 个 ReBAC HTTP 接口、Check/BatchCheck/ListObjects/ListUsers/Expand/WriteTuples/ReadTuples/CountTuples、CEL Conditions、Contextual Tuples、L2/L3 两层缓存(L3 Redis 带 pub/sub 跨实例失效,可按开关启用)、每 `(store,user)` 令牌桶限流(20 rps/40 突发,超限 429 + `Retry-After`)、完整 Prometheus 指标族(6 个 `biz_rebac_*` 指标)、`BizEnforce` 按 `ModelType` 自动分派到 ReBAC 引擎、OQ-2 指引错误体(ReBAC 模式下访问 Casbin-only 接口返 400 + `BIZ_API_NOT_SUPPORTED_IN_REBAC`)、完整前端(DSL+可视化双向编辑、Tuple 管理、Tester、SDK 集成、概览、`useAccessibleResources` 分页 hook)。
+- **2026-10-11 增补**:Schema 保存/激活 compare-and-swap(§4.6,Plan R6 已缓解)、请求 context 贯穿 L2/L3 缓存调用(`ReBACCheckCtx`)、ListObjects 性能优化 B1#2/B1#4(同夹具 193ms → 19ms)、断言/审计表启动建表缺陷修复(`667aa906`)。
 - **基线测试**:OpenFGA `consolidated_1_1_tests.yaml` 当前 **130/134 通过 + 4 条显式 skip(有理由)**(ternary cycle 传播已在 CP-8 C7 里修复,原第 5 条 `true_butnot_cycle_return_false` 解锁)。
 - **是否可供生产使用**:**CP-8 产品级能力全部就位**。最后一个合并前动作是把 `docs/rebac-sla-baseline.md` 的占位数据替换成发布工程师在参考硬件上跑出的真实数值(`make rebac-bench`)。
 
@@ -147,7 +148,7 @@
 | `BizReBACOverview.tsx` | 类型数 / 关系数 / tuple 总量(调 `/api/biz-count-tuples`)/ 当前 Model id / 最近更新时间 |
 | `BizBackend.ts` | 包装 10 个 ReBAC API;i18n 键 86 个,parity 3286/3286 |
 
-### 3.8 HTTP API 现状(11 条路由)
+### 3.8 HTTP API 现状(11 条核心路由;iter-1/2 另增 activate-model、rebac-stats、断言 4 条、tuple-audit)
 
 全部在 `routers/router.go`,控制器在 `controllers/biz_rebac_api.go`:
 
@@ -222,11 +223,25 @@ CP-8 已把原来列在本节的五大缺口全部闭环。下面从"做了什�
 
 **结论**:spec §11.2 要求"100% 通过或豁免书面化",当前 4 条 skip 全部书面化,且均不是纯引擎缺陷。
 
-### 4.6 其他已知限制
+### 4.6 Schema 并发保存 CAS(Plan R6)✅
+
+- `biz-write-authorization-model`(body)与 `biz-activate-authorization-model`(query)接受可选 `expectedModelId`。与应用当前 `CurrentAuthorizationModelId` 不一致时拒绝,错误 `BIZ_REBAC_SCHEMA_STALE`;指针前推本身是原子条件 UPDATE(`5dd853c1`,`object/biz_rebac_model.go`,测试 `biz_rebac_model_cas_db_test.go`)。
+- 省略 `expectedModelId` 保持旧的"后写覆盖"语义(向后兼容)。
+- 前端 Schema 编辑器在保存、强制清理、发布、回退时都会携带 `expectedModelId`,并显示本地化的"schema 已被他人修改"提示(`a3baccfc`,en + zh)。
+
+### 4.7 其他已落地的增强(2026-10-11)
+
+- **context 贯穿**:新增 `ReBACCheckCtx(ctx, req)`;ListObjects/ListUsers 的超时 context 经 `checkContext` 传入 L2/L3 tupleset 缓存调用,Redis 请求随之取消。`ReBACCheck` 签名不变(使用 `context.Background()`)(`f9acb573`)。
+- **ListObjects B1#2**:调用者对对象持有无条件直接 tuple 且 rewrite 对 `this` 单调时,跳过完整 Check。
+- **ListObjects B1#4**:授权模型的解析/parse 与 contextual tuples 校验在每次 list 调用中只做一次(`reBACCheckResolved`),不再每个候选做一次;夹具上 2.1M → 132k allocs、193ms → 19ms。数值与方法见 `docs/rebac-sla-baseline.md`(2026-10-11 复测章节,单次均值,非百分位)(`437d275f`)。
+- **断言/审计表建表修复**:`BizReBACAssertion` 与 `BizReBACTupleAudit` 此前未传入 `Sync2`,全新数据库上断言 Tab、审计 Tab、最近写入卡片报 "no such table";现已在启动时建表(`667aa906`)。
+- **get-user-roles/permissions 在 ReBAC 模式保持不支持**:原因已在代码注释中文档化(`dc5e7af0`)。
+
+### 4.8 其他已知限制
 
 - `/api/biz-count-tuples` 计数**不按筛选**,返回的是整个 store 的 tuple 总量(前端概览用);按条件计数需要自行用 `/biz-read-tuples` 逐页扫。
 - Tuple delete 没有批量前缀接口,所有 delete 必须按完整 `(object, relation, user)` 精确匹配(spec §6.5 约束,不是 bug)。
-- Schema 保存**没有** compare-and-swap 保护(Plan R6 未缓解):两个管理员并发保存不同 schema 时,后写会覆盖前写并把 `CurrentAuthorizationModelId` 前推到后者,前者**仍然入库保留**(append-only 保证),但可能"消失"于当前指针。业务影响低(历史模型可枚举),但要注意。
+- Schema CAS 是**可选**的:不带 `expectedModelId` 的调用方(旧 SDK、脚本)仍是后写覆盖(前者仍保留在 append-only 历史中,只是不再是当前指针)。
 
 ---
 
@@ -295,7 +310,11 @@ web/src/pages/
 | `biz_rebac_list_test.go` / `biz_rebac_list_db_test.go` | cursor 稳定性、超时、PageSize 边界 |
 | `biz_rebac_expand_test.go` | Expand 树、maxDepth 防溢 |
 | `biz_rebac_cache_test.go` | 命中、TTL 过期、精确失效、store flush |
-| `biz_rebac_consolidated_db_test.go` | OpenFGA `consolidated_1_1_tests.yaml` **129/134 pass + 5 skip(有理由)** |
+| `biz_rebac_consolidated_db_test.go` | OpenFGA `consolidated_1_1_tests.yaml`,文档口径 **130/134 pass + 4 skip**(见下方核实提示) |
+| `biz_rebac_model_cas_db_test.go` | Schema CAS(`expectedModelId`)冲突/通过 |
+| `biz_rebac_list_direct_test.go` / `biz_rebac_bench_test.go` | ListObjects 直接授予短路、基准(`make rebac-bench`) |
+
+> **核实提示(2026-10-11)**:测试代码里 `skippedTests` 仍含 5 条(包括 `true_butnot_cycle_return_false`),`expectedSkipCount = 5`;而 CP-8 C7 文档称该用例已解锁(130/134 + 4 skip)。本次仅更新文档,未改测试;请在有数据库的环境跑 `go test -v ./object -run TestConsolidatedSuite` 确认实际数字,并让 `skippedTests`/`expectedSkipCount` 与本文一致。
 
 建议执行:
 
@@ -321,7 +340,7 @@ go test -v $(go list ./...) -tags skipCi   # CI 等价(跳过 DB 集成测试)
 
 ### 7.2 不在 ReBAC 范围、但相关的风险
 
-- **Schema 保存并发覆盖**(Plan R6):考虑在 `SaveAuthorizationModel` 里加 compare-and-swap 的条件更新(WHERE `current_authorization_model_id = <old>`)。代价低,影响面小。
+- **Schema 保存并发覆盖**(Plan R6):**已缓解**(§4.6),仅对携带 `expectedModelId` 的调用方生效。
 - **多实例 Redis 失效广播**(Plan R5):若未来部署多实例,必须接入;单实例时不是 blocker。
 
 ### 7.3 运维层面
@@ -357,8 +376,8 @@ Plus: model-type pill in `AppAuthorizationPage` header (C1), per-app Check QPS r
 
 **Out of scope (deferred to iter-2):**
 
-- Mockup ⑥ "断言 (Assertions)" — needs `biz_rebac_assertion` table + 4 endpoints + UI; the iter-1 Overview reserves a greyed "Assertion pass-rate" hero tile as the placeholder.
-- Mockup ⑦ "审计 (Audit)" — needs `biz_rebac_tuple_audit` table + write hooks + 90-day retention + UI.
+- Mockup ⑥ "断言 (Assertions)" — **since landed**: `/api/biz-list-assertions`, `biz-add-assertion`, `biz-delete-assertion`, `biz-run-assertions` (`controllers/biz_rebac_assertion_api.go`) and `BizAssertionList/Editor.tsx`. The tables were not created on fresh databases until `667aa906`.
+- Mockup ⑦ "审计 (Audit)" — **since landed**: `GET /api/biz-list-tuple-audit` and `BizAuditList.tsx` (table creation fixed in `667aa906`). The 90-day retention is not verified in this review.
 - Per-app environment switcher ("prod"/"staging") — explicit product decision; the header shows only model-type for now.
 
 **Verification at branch tip:**
@@ -372,4 +391,4 @@ Plus: model-type pill in `AppAuthorizationPage` header (C1), per-app Check QPS r
 
 ## 8. 一句话总结
 
-**CP-1 ~ CP-8 已全部闭环**:OpenFGA v1.1 兼容的 Schema / Check / List / Expand 引擎、三态 cycle 传播、CEL Conditions、Contextual Tuples、L2+L3 两层缓存与跨实例 pub/sub 失效、每 `(store,user)` 令牌桶限流、6 个 Prometheus 指标族、按 `ModelType` 自动分派的 `BizEnforce`、OQ-2 指引错误体、`useAccessibleResources` 分页 hook、端到端冒烟与 SLA 压测脚手架;**`feature/rebac-cp3` → `main` 的代码侧 mergeback 准入条件已满足**,发布前只需把 `docs/rebac-sla-baseline.md` 里参考硬件的 p50/p99 实测数据补齐即可。
+**CP-1 ~ CP-8 已全部闭环**:OpenFGA v1.1 兼容的 Schema / Check / List / Expand 引擎、三态 cycle 传播、CEL Conditions、Contextual Tuples、L2+L3 两层缓存与跨实例 pub/sub 失效、每 `(store,user)` 令牌桶限流、6 个 Prometheus 指标族、按 `ModelType` 自动分派的 `BizEnforce`、OQ-2 指引错误体、`useAccessibleResources` 分页 hook、端到端冒烟与 SLA 压测脚手架;代码已在 `main`;`docs/rebac-sla-baseline.md` 已有实测均值(SQLite、M2 Max,2026-10-11 复测 ListObjects 19ms),生产硬件/MySQL 的 p50/p99 仍待补充。
