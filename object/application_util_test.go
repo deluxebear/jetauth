@@ -77,3 +77,35 @@ func TestRedirectUriMatchesPattern(t *testing.T) {
 		}
 	}
 }
+
+func TestExtendApplicationWithSigninItems_LegacyCssLabelMigration(t *testing.T) {
+	const legacyCss = ".login-languages {\n    top: 55px;\n}"
+	app := &Application{SigninItems: []*SigninItem{
+		{Name: "Languages", Label: legacyCss},
+		{Name: "Username", Label: "Employee ID"},
+		{Name: "Password", Label: "Passphrase", CustomCss: ".x {}"},
+		{Name: "Promo", IsCustom: true, Label: "<b>hi</b>"},
+		{Name: "Promo2", IsCustom: true, Label: "a {b}"},
+		nil,
+	}}
+	if err := extendApplicationWithSigninItems(app); err != nil {
+		t.Fatal(err)
+	}
+
+	cases := []struct {
+		idx                int
+		wantLabel, wantCss string
+	}{
+		{0, "", legacyCss},         // legacy CSS-in-Label row is still migrated
+		{1, "Employee ID", ""},     // plain-text override survives without CSS
+		{2, "Passphrase", ".x {}"}, // already has CSS: untouched
+		{3, "<b>hi</b>", ""},       // custom HTML item keeps its label
+		{4, "a {b}", ""},           // custom items are never treated as legacy
+	}
+	for _, c := range cases {
+		item := app.SigninItems[c.idx]
+		if item.Label != c.wantLabel || item.CustomCss != c.wantCss {
+			t.Errorf("item %q: label=%q css=%q, want label=%q css=%q", item.Name, item.Label, item.CustomCss, c.wantLabel, c.wantCss)
+		}
+	}
+}
