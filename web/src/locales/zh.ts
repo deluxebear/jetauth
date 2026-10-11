@@ -141,6 +141,10 @@ const zh: Record<string, string> = {
   "common.rotate": "旋转",
   "common.confirm": "确认",
   "common.cancel": "取消",
+  "common.close": "关闭",
+  "common.noMatches": "没有匹配的结果",
+  "common.parsing": "解析中…",
+  "common.testing": "测试中…",
   "common.clear": "清空",
   "common.ok": "确定",
   "common.success": "成功",
@@ -304,6 +308,7 @@ const zh: Record<string, string> = {
   // Column headers
   "col.name": "名称",
   "col.displayName": "显示名称",
+  "col.description": "描述",
   "col.value": "值",
   "col.organization": "组织",
   "col.created": "创建时间",
@@ -3018,6 +3023,7 @@ const zh: Record<string, string> = {
   "authz.overview.expandModel": "展开",
   "authz.overview.collapseModel": "收起",
   "authz.overview.lines": "行",
+  "authz.header.modelType": "授权模型",
   "common.justNow": "刚刚",
   "common.minAgo": "分钟前",
   "common.hrAgo": "小时前",
@@ -3860,6 +3866,7 @@ const zh: Record<string, string> = {
 
   // Tester
   "rebac.tester.title": "Check 测试",
+  "rebac.tester.matchedRule": "命中规则",
   "rebac.tester.subtitle": "无副作用地查询某个 user 是否拥有对 object 的某个 relation · 返回完整解释树",
   "rebac.tester.run": "执行 (⌘+Enter)",
   "rebac.tester.elapsed": "耗时 {ms} ms",

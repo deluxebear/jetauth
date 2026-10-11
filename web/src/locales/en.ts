@@ -141,6 +141,10 @@ const en = {
   "common.rotate": "Rotate",
   "common.confirm": "Confirm",
   "common.cancel": "Cancel",
+  "common.close": "Close",
+  "common.noMatches": "No matching results",
+  "common.parsing": "Parsing…",
+  "common.testing": "Testing…",
   "common.clear": "Clear",
   "common.ok": "OK",
   "common.success": "Success",
@@ -304,6 +308,7 @@ const en = {
   // Column headers (shared across tables)
   "col.name": "Name",
   "col.displayName": "Display Name",
+  "col.description": "Description",
   "col.value": "Value",
   "col.organization": "Organization",
   "col.created": "Created",
@@ -2939,6 +2944,7 @@ const en = {
   "authz.overview.expandModel": "Expand",
   "authz.overview.collapseModel": "Collapse",
   "authz.overview.lines": "lines",
+  "authz.header.modelType": "Authorization model",
   "common.justNow": "just now",
   "common.minAgo": "min ago",
   "common.hrAgo": "hr ago",
@@ -3870,6 +3876,7 @@ const en = {
 
   // Tester
   "rebac.tester.title": "Check tester",
+  "rebac.tester.matchedRule": "Matched rule",
   "rebac.tester.subtitle": "Side-effect-free query of whether a user has a given relation on an object — returns the full explanation tree",
   "rebac.tester.run": "Execute (⌘+Enter)",
   "rebac.tester.elapsed": "Elapsed: {ms} ms",
