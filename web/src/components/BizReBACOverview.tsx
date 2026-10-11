@@ -27,7 +27,7 @@ interface Props {
   appId: string;
   /** Optional callback when the user clicks "View all" in the recent
       writes card. The Overview's host page maps this to a tab change. */
-  onJumpTab?: (tab: "schema" | "tuples" | "tester") => void;
+  onJumpTab?: (tab: "schema" | "tuples" | "tester" | "assertions") => void;
 }
 
 export default function BizReBACOverview({ appId, onJumpTab }: Props) {
@@ -228,7 +228,7 @@ export default function BizReBACOverview({ appId, onJumpTab }: Props) {
               : t("rebac.overview.assertionsEmpty")
           }
           muted={!assertionStats || assertionStats.total === 0}
-          onClick={onJumpTab ? () => onJumpTab("assertions" as any) : undefined}
+          onClick={onJumpTab ? () => onJumpTab("assertions") : undefined}
         />
       </div>
 

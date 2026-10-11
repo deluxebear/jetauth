@@ -1,5 +1,5 @@
 import { Routes, Route, Navigate, useNavigate } from "react-router-dom";
-import { useEffect, useState, useCallback, type ReactNode } from "react";
+import { useEffect, useState, useCallback, type ComponentProps, type ReactNode } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import Sidebar from "./components/Sidebar";
 import Header from "./components/Header";
@@ -114,6 +114,25 @@ import { entityConfigs } from "./pages/entities/entityConfigs";
 import { getAccount, login as apiLogin, logout as apiLogout } from "./api/client";
 import { isLocalAdmin, isGlobalAdmin } from "./utils/auth";
 
+type OrgThemeData = NonNullable<Parameters<ReturnType<typeof useTheme>["applyOrgTheme"]>[0]>;
+type OrgWithTheme = { themeData?: (OrgThemeData & { isEnabled?: boolean }) | null };
+
+/** Envelope returned by /api/get-account. */
+interface AccountResponse {
+  status?: string;
+  msg?: string;
+  data?: User;
+  data2?: { favicon?: string; displayName?: string; [key: string]: unknown } | null;
+}
+
+/** Envelope returned by /api/login. */
+interface LoginResponse {
+  status?: string;
+  msg?: string;
+  data?: unknown;
+  data2?: (ComponentProps<typeof MfaVerify>["mfaProps"][number])[] | null;
+}
+
 interface User {
   owner: string;
   name: string;
@@ -154,7 +173,7 @@ function Layout({
     }
     OrgBackend.getOrganization("admin", selectedOrg).then((res) => {
       if (res.status === "ok" && res.data) {
-        const td = (res.data as any).themeData;
+        const td = (res.data as OrgWithTheme).themeData;
         if (td?.isEnabled) {
           applyOrgTheme(td);
         } else {
@@ -193,21 +212,32 @@ function Layout({
 }
 
 export default function App() {
+  // Skip auth bootstrap when:
+  // - ?preview / ?previewConfig → rendered in the admin preview iframe
+  // - ?asGuest → admin opened the real login page in a new tab for a visual
+  //   smoke test; without this flag the existing admin session would redirect
+  //   "/login/:org/:app" to "/".
+  const isPreviewMode =
+    typeof window !== "undefined" &&
+    (new URLSearchParams(window.location.search).has("preview") ||
+      new URLSearchParams(window.location.search).has("previewConfig") ||
+      new URLSearchParams(window.location.search).has("asGuest"));
+
   const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [, setLoginError] = useState("");
+  const [loading, setLoading] = useState(!isPreviewMode);
+    const [, setLoginError] = useState("");
   const [justLoggedIn, setJustLoggedIn] = useState(false);
-  const [loginThemeData] = useState<any>(null);
+  const loginThemeData = undefined;
   const [loginOrgBranding] = useState<{ logo?: string; logoDark?: string; favicon?: string; displayName?: string } | null>(null);
   const [mfaState, setMfaState] = useState<{
     type: "setup" | "verify";
     mfaType?: string;
-    mfaProps?: any[];
+    mfaProps?: ComponentProps<typeof MfaVerify>["mfaProps"];
     loginForm: { application: string; organization: string; username: string; encryptedPassword: string };
   } | null>(null);
   const navigate = useNavigate();
 
-  const applyAccountData = useCallback((res: any) => {
+  const applyAccountData = useCallback((res: AccountResponse | null | undefined) => {
     if (res?.status !== "ok" || !res.data) return false;
     setUser(res.data);
     localStorage.setItem("account", JSON.stringify(res.data));
@@ -230,25 +260,11 @@ export default function App() {
     return true;
   }, []);
 
-  // Skip auth bootstrap when:
-  // - ?preview / ?previewConfig → rendered in the admin preview iframe
-  // - ?asGuest → admin opened the real login page in a new tab for a visual
-  //   smoke test; without this flag the existing admin session would redirect
-  //   "/login/:org/:app" to "/".
-  const isPreviewMode =
-    typeof window !== "undefined" &&
-    (new URLSearchParams(window.location.search).has("preview") ||
-      new URLSearchParams(window.location.search).has("previewConfig") ||
-      new URLSearchParams(window.location.search).has("asGuest"));
-
   useEffect(() => {
-    if (isPreviewMode) {
-      setLoading(false);
-      return;
-    }
-    getAccount()
-      .then((res: any) => { applyAccountData(res); })
-      .catch(() => {})
+    if (isPreviewMode) return;
+    getAccount<AccountResponse>()
+      .then((res) => { applyAccountData(res); })
+      .catch(() => { /* not signed in */ })
       .finally(() => setLoading(false));
 
     // Theme is fetched by Login component via onOrganizationChange callback
@@ -258,7 +274,9 @@ export default function App() {
     const userOrg = user?.owner;
     try {
       await apiLogout();
-    } catch {}
+    } catch {
+      // logout request failure is non-fatal; local state is cleared below
+    }
     localStorage.removeItem("account");
     localStorage.removeItem("organizationData");
     localStorage.removeItem("selectedOrganization");
@@ -270,7 +288,7 @@ export default function App() {
   const handleMfaSetupComplete = async () => {
     if (!mfaState) return;
     try {
-      const res: any = await apiLogin({
+      const res = await apiLogin<LoginResponse>({
         application: mfaState.loginForm.application,
         organization: mfaState.loginForm.organization,
         username: mfaState.loginForm.username,
@@ -288,7 +306,7 @@ export default function App() {
           navigate(`/mfa/verify?mfaType=${res.data2?.[0]?.mfaType || "app"}`);
         } else if (res.data !== "RequiredMfa") {
           setMfaState(null);
-          const acc: any = await getAccount();
+          const acc = await getAccount<AccountResponse>();
           if (applyAccountData(acc)) navigate("/");
         }
       } else {
@@ -305,13 +323,13 @@ export default function App() {
   const handleMfaVerified = async () => {
     setMfaState(null);
     try {
-      const acc: any = await getAccount();
+      const acc = await getAccount<AccountResponse>();
       if (applyAccountData(acc)) {
         navigate("/");
       } else {
         // getAccount might fail if session isn't fully established yet, retry once
         await new Promise(r => setTimeout(r, 500));
-        const retry: any = await getAccount();
+        const retry = await getAccount<AccountResponse>();
         if (applyAccountData(retry)) {
           navigate("/");
         } else {
@@ -516,7 +534,7 @@ export default function App() {
 
   const isAdmin = isLocalAdmin(user);
 
-  const mfaAccount = user ? {
+  const mfaAccount: ComponentProps<typeof EnableMfaNotification>["account"] = user ? {
     ...user,
     organization: JSON.parse(localStorage.getItem("organizationData") ?? "null") ?? undefined,
   } : null;
@@ -525,7 +543,7 @@ export default function App() {
   if (!isAdmin) {
     return (
       <Layout user={user} onLogout={handleLogout}>
-        <EnableMfaNotification account={mfaAccount as any} justLoggedIn={justLoggedIn} onDismiss={() => setJustLoggedIn(false)} />
+        <EnableMfaNotification account={mfaAccount} justLoggedIn={justLoggedIn} onDismiss={() => setJustLoggedIn(false)} />
         <Routes>
           <Route path="/" element={<UserHomePage userOrg={user.owner} />} />
           <Route path="/users/:owner/:name" element={<UserEditPage />} />
@@ -542,7 +560,7 @@ export default function App() {
                 themeData={orgData?.themeData}
                 orgBranding={orgData ? { logo: orgData.logo, logoDark: orgData.logoDark, displayName: orgData.displayName } : null}
                 onComplete={async () => {
-                  const acc: any = await getAccount();
+                  const acc = await getAccount<AccountResponse>();
                   applyAccountData(acc);
                   navigate("/");
                 }}
@@ -560,7 +578,7 @@ export default function App() {
 
   return (
     <Layout user={user} onLogout={handleLogout}>
-      <EnableMfaNotification account={mfaAccount as any} justLoggedIn={justLoggedIn} onDismiss={() => setJustLoggedIn(false)} />
+      <EnableMfaNotification account={mfaAccount} justLoggedIn={justLoggedIn} onDismiss={() => setJustLoggedIn(false)} />
       <Routes>
         <Route path="/" element={
           isGlobalAdmin(user)

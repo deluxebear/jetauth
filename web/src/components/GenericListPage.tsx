@@ -8,9 +8,8 @@ import { useBulkDelete } from "../hooks/useBulkDelete";
 import { api } from "../api/client";
 import { useTranslation } from "../i18n";
 
-export interface ListPageColumn<T = Record<string, unknown>> extends Column<T> {
-  // Extended with search/filter capabilities
-}
+// Extended with search/filter capabilities (currently identical to Column).
+export type ListPageColumn<T = Record<string, unknown>> = Column<T>;
 
 interface GenericListPageProps {
   entityType: string; // API entity name, e.g. "users", "organizations"
@@ -101,7 +100,7 @@ export default function GenericListPage({
   };
 
   const finalColumns: ListPageColumn[] = useMemo(() => {
-    const translated = columns.map((col) => ({ ...col, title: t(col.title as any) }));
+    const translated = columns.map((col) => ({ ...col, title: t(col.title) }));
     if (!canDelete) return translated;
     return [
       ...translated,
@@ -128,8 +127,8 @@ export default function GenericListPage({
     <div className="space-y-5">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold tracking-tight">{t(titleKey as any)}</h1>
-          <p className="text-[13px] text-text-muted mt-0.5">{t(subtitleKey as any)}</p>
+          <h1 className="text-xl font-bold tracking-tight">{t(titleKey)}</h1>
+          <p className="text-[13px] text-text-muted mt-0.5">{t(subtitleKey)}</p>
         </div>
         <div className="flex items-center gap-2">
           <motion.button
@@ -148,7 +147,7 @@ export default function GenericListPage({
               className="flex items-center gap-1.5 rounded-lg bg-accent px-3 py-2 text-[13px] font-semibold text-white hover:bg-accent-hover transition-colors"
             >
               <Plus size={15} />
-              {t(addButtonKey as any)}
+              {t(addButtonKey)}
             </button>
           )}
         </div>

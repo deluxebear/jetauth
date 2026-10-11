@@ -57,7 +57,7 @@ export default function ThemePresetCard({ preset, selected, onClick }: ThemePres
 
       {/* Label */}
       <span className={`text-[12px] font-medium ${selected ? "text-accent" : "text-text-secondary"}`}>
-        {t(preset.nameKey as any)}
+        {t(preset.nameKey)}
       </span>
 
       {/* Checkmark badge */}

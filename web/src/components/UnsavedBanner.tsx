@@ -20,7 +20,7 @@ export default function UnsavedBanner({ isAddMode, draftMode }: Props) {
   return (
     <div className="flex items-center gap-2 rounded-lg border border-warning/30 bg-warning/10 px-4 py-2 text-[13px] text-warning">
       <AlertTriangle size={15} className="shrink-0" />
-      <span>{t(key as any)}</span>
+      <span>{t(key)}</span>
     </div>
   );
 }

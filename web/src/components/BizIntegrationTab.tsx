@@ -39,7 +39,7 @@ export default function BizIntegrationTab({ appId }: Props) {
             }`}
             onClick={() => setLang(l)}
           >
-            {t(`rebac.integration.lang.${l}` as any)}
+            {t(`rebac.integration.lang.${l}`)}
           </button>
         ))}
       </div>
@@ -58,7 +58,7 @@ function SnippetBlock({
   t,
 }: {
   snippet: Snippet;
-  t: (k: any) => string;
+  t: (k: string) => string;
 }) {
   const modal = useModal();
   const [copied, setCopied] = useState(false);

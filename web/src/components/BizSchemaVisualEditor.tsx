@@ -131,7 +131,7 @@ function TypeRail({
   onAdd: (name: string) => void;
   onRename: (id: string, name: string) => void;
   onRemove: (id: string) => void;
-  t: (k: any) => string;
+  t: (k: string) => string;
 }) {
   const [draft, setDraft] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -222,7 +222,7 @@ function TypeRailRow({
   onCommitEdit: (name: string) => void;
   onCancelEdit: () => void;
   onRemove: () => void;
-  t: (k: any) => string;
+  t: (k: string) => string;
 }) {
   const [value, setValue] = useState(type.name);
   useEffect(() => {
@@ -318,7 +318,7 @@ function RelationPane({
   onRemove: (relationId: string) => void;
   onSetRewrite: (relationId: string, rewrite: RewriteNode) => void;
   onSetRestrictions: (relationId: string, restrictions: TypeRestriction[]) => void;
-  t: (k: any) => string;
+  t: (k: string) => string;
 }) {
   const [draft, setDraft] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -420,7 +420,7 @@ function RelationRow({
   onRemove: () => void;
   onSetRewrite: (rewrite: RewriteNode) => void;
   onSetRestrictions: (restrictions: TypeRestriction[]) => void;
-  t: (k: any) => string;
+  t: (k: string) => string;
 }) {
   const [value, setValue] = useState(relation.name);
   useEffect(() => {

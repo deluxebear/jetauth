@@ -2332,7 +2332,7 @@ function RebacOverviewTab({
 }: {
   appId: string;
   t: (k: string) => string;
-  onJumpTab: (tab: "schema" | "tuples" | "tester") => void;
+  onJumpTab: (tab: "schema" | "tuples" | "tester" | "assertions") => void;
 }) {
   return <BizReBACOverview appId={appId} onJumpTab={onJumpTab} />;
 }

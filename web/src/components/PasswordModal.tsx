@@ -69,8 +69,8 @@ export default function PasswordModal({
       } else {
         setError(res.msg || t("password.error.failed"));
       }
-    } catch (e: any) {
-      setError(e.message || t("password.error.failed"));
+    } catch (e) {
+      setError((e instanceof Error && e.message) || t("password.error.failed"));
     } finally {
       setLoading(false);
     }

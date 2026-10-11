@@ -60,7 +60,7 @@ export function BizRewriteEditor({
         >
           {ALL_KINDS.filter((k) => allowThis || k !== "this").map((k) => (
             <option key={k} value={k}>
-              {t(`rebac.rewrite.${kindToKey(k)}` as any)}
+              {t(`rebac.rewrite.${kindToKey(k)}`)}
             </option>
           ))}
         </select>

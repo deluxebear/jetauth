@@ -60,8 +60,8 @@ export default function ImageUrlInput({
       } else {
         modal.toast(res.msg || t("common.saveFailed"), "error");
       }
-    } catch (err: any) {
-      modal.toast(err?.message || t("common.saveFailed"), "error");
+    } catch (err) {
+      modal.toast((err instanceof Error && err.message) || t("common.saveFailed"), "error");
     } finally {
       setUploading(false);
     }
@@ -109,8 +109,8 @@ export default function ImageUrlInput({
       } else {
         modal.toast(res.msg || t("common.saveFailed"), "error");
       }
-    } catch (err: any) {
-      modal.toast(err?.message || t("common.saveFailed"), "error");
+    } catch (err) {
+      modal.toast((err instanceof Error && err.message) || t("common.saveFailed"), "error");
     } finally {
       setUploading(false);
       setCropSrc(null);

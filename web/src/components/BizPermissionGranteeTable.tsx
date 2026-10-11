@@ -272,7 +272,7 @@ function AddGranteeModal({
   useEffect(() => {
     UserBackend.getUsers({ owner: organization }).then((res) => {
       if (res.status === "ok" && res.data) {
-        setUsers(res.data.map((u: any) => ({
+        setUsers(res.data.map((u) => ({
           id: `${u.owner}/${u.name}`,
           displayName: u.displayName || u.name,
           email: u.email || "",
@@ -281,7 +281,7 @@ function AddGranteeModal({
     });
     GroupBackend.getGroups({ owner: organization }).then((res) => {
       if (res.status === "ok" && res.data) {
-        setGroups(res.data.map((g: any) => ({
+        setGroups(res.data.map((g) => ({
           id: `${g.owner}/${g.name}`,
           displayName: g.displayName || g.name,
         })));

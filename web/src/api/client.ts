@@ -36,17 +36,17 @@ export async function postForm<T = unknown>(path: string, params: Record<string,
 }
 
 // Auth
-export const login = (values: {
+export const login = <T = unknown>(values: {
   application: string;
   organization: string;
   username: string;
   password: string;
   signinMethod?: string;
   type: string;
-}) => api.post("/api/login", values);
+}) => api.post<T>("/api/login", values);
 
 export const logout = () => api.post("/api/logout");
-export const getAccount = () => api.get("/api/get-account");
+export const getAccount = <T = unknown>() => api.get<T>("/api/get-account");
 
 // Generic CRUD
 export const getItems = (type: string, owner: string, page: number, pageSize: number) =>

@@ -41,7 +41,7 @@ export default function RoleUserDrawer({ role, onClose, onUpdate }: Props) {
     setLoadingUsers(true);
     UserBackend.getUsers({ owner: role.owner }).then((res) => {
       if (res.status === "ok" && res.data) {
-        setOrgUsers(res.data.map((u: any) => ({
+        setOrgUsers(res.data.map((u) => ({
           owner: u.owner,
           name: u.name,
           displayName: u.displayName || u.name,

@@ -11,5 +11,5 @@ const STATUS: Record<string, string> = {
 export default function PermissionStateBadge({ state }: { state?: string }) {
   const { t } = useTranslation();
   if (!state || !STATUS[state]) return <span className="text-text-muted text-[12px]">{"—"}</span>;
-  return <StatusBadge status={STATUS[state]} label={t(`permissions.state${state}` as any)} />;
+  return <StatusBadge status={STATUS[state]} label={t(`permissions.state${state}`)} />;
 }

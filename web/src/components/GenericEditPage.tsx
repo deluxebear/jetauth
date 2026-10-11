@@ -162,7 +162,7 @@ export default function GenericEditPage({
           </button>
           <div>
             <h1 className="text-xl font-bold tracking-tight">
-              {isNew ? t("common.add") : t("common.edit")} {t(titleKey as any)}
+              {isNew ? t("common.add") : t("common.edit")} {t(titleKey)}
             </h1>
             {!isNew && (
               <p className="text-[13px] text-text-muted font-mono mt-0.5">
@@ -205,7 +205,7 @@ export default function GenericEditPage({
           {section.group && (
             <div className="px-5 py-3 border-b border-border-subtle bg-surface-2/30">
               <h3 className="text-[13px] font-semibold text-text-primary">
-                {t(section.group as any)}
+                {t(section.group)}
               </h3>
             </div>
           )}
@@ -216,7 +216,7 @@ export default function GenericEditPage({
                 className={field.span === "full" ? "col-span-2" : "col-span-2 sm:col-span-1"}
               >
                 <label className="block text-[12px] font-medium text-text-secondary mb-1.5">
-                  {t(field.labelKey as any)}
+                  {t(field.labelKey)}
                   {field.required && <span className="text-danger ml-0.5">*</span>}
                 </label>
                 {renderField(field, values, setValue, isDisabled(field), getOptions(field))}

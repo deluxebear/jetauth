@@ -162,13 +162,13 @@ export default function WalletLoginPage() {
         // the second click no-ops because startedRef is still true.
         startedRef.current = false;
       }
-    } catch (err: any) {
+    } catch (err) {
       setPhase("error");
       // EIP-1193 code 4001 = user rejected the request.
-      if (err?.code === 4001) {
+      if ((err as { code?: number } | null)?.code === 4001) {
         setMsg("Signature request was rejected. Try again if you want to continue.");
       } else {
-        setMsg(err?.message || String(err));
+        setMsg((err instanceof Error && err.message) || String(err));
       }
       startedRef.current = false;
     }

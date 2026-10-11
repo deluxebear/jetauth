@@ -57,8 +57,8 @@ export default function TelegramLoginPage() {
           setMsg(res.msg || "Sign-in failed.");
           consumedRef.current = false;
         }
-      } catch (err: any) {
-        setMsg(err?.message || String(err));
+      } catch (err) {
+        setMsg(err instanceof Error && err.message ? err.message : String(err));
         consumedRef.current = false;
       }
     };
