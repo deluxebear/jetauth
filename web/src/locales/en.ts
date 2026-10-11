@@ -164,6 +164,7 @@ const en = {
   "common.of": "of",
   "common.action": "Action",
   "common.confirmDelete": "Are you sure you want to delete this item?",
+  "common.confirmBulkDelete": "Delete the {{count}} selected items?",
   "common.enable": "Enable",
   "common.enabled": "Enabled",
   "common.disabled": "Disabled",

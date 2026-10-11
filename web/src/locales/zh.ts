@@ -164,6 +164,7 @@ const zh: Record<string, string> = {
   "common.of": "/",
   "common.action": "操作",
   "common.confirmDelete": "确定要删除此项吗？",
+  "common.confirmBulkDelete": "确定要删除选中的 {{count}} 项吗？",
   "common.enable": "启用",
   "common.enabled": "已启用",
   "common.disabled": "已禁用",

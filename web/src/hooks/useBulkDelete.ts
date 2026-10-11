@@ -23,9 +23,8 @@ export function useBulkDelete<T>(
   return useCallback(
     (selected: T[], clear: () => void) => {
       if (selected.length === 0) return;
-      const noun = t("common.items") || "项";
       modal.showConfirm(
-        `${t("common.confirmDelete")} ${selected.length} ${noun}?`,
+        t("common.confirmBulkDelete", { count: selected.length }),
         async () => {
           const results = await Promise.allSettled(selected.map(deleteFn));
           const failed = results.filter((r) => {
