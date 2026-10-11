@@ -45,9 +45,10 @@ func (c *ApiController) UploadPermissions() {
 		return
 	}
 
-	affected, err := object.UploadPermissions(owner, path)
+	affected, err := object.UploadPermissions(owner, path, userId, c.isPermissionApprover(owner), c.IsGlobalAdmin())
 	if err != nil {
 		c.ResponseError(err.Error())
+		return
 	}
 
 	if affected {

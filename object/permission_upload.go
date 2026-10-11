@@ -36,7 +36,19 @@ func getPermissionMap(owner string) (map[string]*Permission, error) {
 	return m, err
 }
 
-func UploadPermissions(owner string, path string) (bool, error) {
+// preparePermissionForUpload applies the single-add preparation to one uploaded row.
+func preparePermissionForUpload(permission *Permission, uploaderOwner, operatorId string, isAdmin, isGlobalAdmin bool) error {
+	if !isGlobalAdmin || permission.Owner == "" {
+		permission.Owner = uploaderOwner
+	}
+	return PreparePermissionForAdd(permission, operatorId, isAdmin)
+}
+
+// UploadPermissions imports permissions from an xlsx file. Every row goes through the same
+// preparation as a single add, with the uploader's identity: the approval fields in the file are
+// ignored, non-admins always create Pending permissions, and the owner is forced to the uploader's
+// organization unless the uploader is a global admin (who may keep the file owner).
+func UploadPermissions(owner string, path string, operatorId string, isAdmin bool, isGlobalAdmin bool) (bool, error) {
 	table := xlsx.ReadXlsxFile(path)
 
 	if len(table) == 0 {
@@ -62,6 +74,10 @@ func UploadPermissions(owner string, path string) (bool, error) {
 
 	newPermissions := []*Permission{}
 	for _, permission := range uploadedPermissions {
+		if err = preparePermissionForUpload(permission, owner, operatorId, isAdmin, isGlobalAdmin); err != nil {
+			return false, err
+		}
+
 		if _, ok := oldPermissionMap[permission.GetId()]; !ok {
 			newPermissions = append(newPermissions, permission)
 		}
