@@ -15,7 +15,6 @@ import (
 	"time"
 
 	"github.com/deluxebear/jetauth/object"
-	"github.com/deluxebear/jetauth/util"
 )
 
 // resolveCasbinBizApp parses ?appId=owner/appName, verifies the app exists and
@@ -24,7 +23,7 @@ import (
 // ?appId= to the (owner, appName) target (routers/authz_filter.go).
 func (c *ApiController) resolveCasbinBizApp() (owner, appName string, ok bool) {
 	appId := c.Ctx.Input.Query("appId")
-	owner, appName, err := util.GetOwnerAndNameFromIdWithError(appId)
+	owner, appName, err := c.parseBizAppId(appId)
 	if err != nil {
 		c.ResponseError(err.Error())
 		return "", "", false

@@ -17,7 +17,6 @@ import (
 	"time"
 
 	"github.com/deluxebear/jetauth/object"
-	"github.com/deluxebear/jetauth/util"
 )
 
 // rebacRateLimited finishes the response with HTTP 429 + Retry-After: 1
@@ -64,7 +63,7 @@ type writeAuthorizationModelRequest struct {
 // @Router /biz-write-authorization-model [post]
 func (c *ApiController) BizWriteAuthorizationModel() {
 	appId := c.Ctx.Input.Query("appId")
-	owner, appName, err := util.GetOwnerAndNameFromIdWithError(appId)
+	owner, appName, err := c.parseBizAppId(appId)
 	if err != nil {
 		c.ResponseError(err.Error())
 		return
@@ -131,7 +130,7 @@ func (c *ApiController) BizWriteAuthorizationModel() {
 func (c *ApiController) BizReadAuthorizationModel() {
 	appId := c.Ctx.Input.Query("appId")
 	id := c.Ctx.Input.Query("id")
-	owner, appName, err := util.GetOwnerAndNameFromIdWithError(appId)
+	owner, appName, err := c.parseBizAppId(appId)
 	if err != nil {
 		c.ResponseError(err.Error())
 		return
@@ -181,7 +180,7 @@ func (c *ApiController) BizReadAuthorizationModel() {
 // @Router /biz-list-authorization-models [get]
 func (c *ApiController) BizListAuthorizationModels() {
 	appId := c.Ctx.Input.Query("appId")
-	owner, appName, err := util.GetOwnerAndNameFromIdWithError(appId)
+	owner, appName, err := c.parseBizAppId(appId)
 	if err != nil {
 		c.ResponseError(err.Error())
 		return
@@ -212,7 +211,7 @@ func (c *ApiController) BizGetReBACStats() {
 		c.ResponseError("appId is required")
 		return
 	}
-	owner, appName, err := util.GetOwnerAndNameFromIdWithError(appId)
+	owner, appName, err := c.parseBizAppId(appId)
 	if err != nil {
 		c.ResponseError(err.Error())
 		return
@@ -253,7 +252,7 @@ func (c *ApiController) BizActivateAuthorizationModel() {
 		c.ResponseError("appId and id are required")
 		return
 	}
-	owner, appName, err := util.GetOwnerAndNameFromIdWithError(appId)
+	owner, appName, err := c.parseBizAppId(appId)
 	if err != nil {
 		c.ResponseError(err.Error())
 		return
@@ -334,7 +333,7 @@ func (c *ApiController) BizCheck() {
 		c.ResponseError("appId is required (body or ?appId= query)")
 		return
 	}
-	owner, appName, err := util.GetOwnerAndNameFromIdWithError(body.AppId)
+	owner, appName, err := c.parseBizAppId(body.AppId)
 	if err != nil {
 		c.ResponseError(err.Error())
 		return
@@ -447,7 +446,7 @@ func (c *ApiController) BizListObjects() {
 		c.ResponseError("appId is required (body or ?appId= query)")
 		return
 	}
-	owner, appName, err := util.GetOwnerAndNameFromIdWithError(body.AppId)
+	owner, appName, err := c.parseBizAppId(body.AppId)
 	if err != nil {
 		c.ResponseError(err.Error())
 		return
@@ -514,7 +513,7 @@ func (c *ApiController) BizListUsers() {
 		c.ResponseError("appId is required (body or ?appId= query)")
 		return
 	}
-	owner, appName, err := util.GetOwnerAndNameFromIdWithError(body.AppId)
+	owner, appName, err := c.parseBizAppId(body.AppId)
 	if err != nil {
 		c.ResponseError(err.Error())
 		return
@@ -568,7 +567,7 @@ func (c *ApiController) BizExpand() {
 		c.ResponseError("appId, object, and relation are required")
 		return
 	}
-	owner, appName, err := util.GetOwnerAndNameFromIdWithError(appId)
+	owner, appName, err := c.parseBizAppId(appId)
 	if err != nil {
 		c.ResponseError(err.Error())
 		return
@@ -611,7 +610,7 @@ func (c *ApiController) BizWriteTuples() {
 		c.ResponseError("appId is required (body or ?appId= query)")
 		return
 	}
-	owner, appName, err := util.GetOwnerAndNameFromIdWithError(body.AppId)
+	owner, appName, err := c.parseBizAppId(body.AppId)
 	if err != nil {
 		c.ResponseError(err.Error())
 		return
@@ -722,7 +721,7 @@ func (c *ApiController) BizReadTuples() {
 	if limit == 0 || limit > 1000 {
 		limit = 1000
 	}
-	owner, appName, err := util.GetOwnerAndNameFromIdWithError(appId)
+	owner, appName, err := c.parseBizAppId(appId)
 	if err != nil {
 		c.ResponseError(err.Error())
 		return
@@ -763,7 +762,7 @@ func (c *ApiController) BizCountTuples() {
 		c.ResponseError("appId is required")
 		return
 	}
-	owner, appName, err := util.GetOwnerAndNameFromIdWithError(appId)
+	owner, appName, err := c.parseBizAppId(appId)
 	if err != nil {
 		c.ResponseError(err.Error())
 		return
@@ -824,7 +823,7 @@ func (c *ApiController) BizBatchCheck() {
 		c.ResponseError(fmt.Sprintf("batch size %d exceeds limit of %d", len(body.Checks), maxBizBatchCheckItems))
 		return
 	}
-	owner, appName, err := util.GetOwnerAndNameFromIdWithError(body.AppId)
+	owner, appName, err := c.parseBizAppId(body.AppId)
 	if err != nil {
 		c.ResponseError(err.Error())
 		return

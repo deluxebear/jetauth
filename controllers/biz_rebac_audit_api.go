@@ -12,7 +12,6 @@ import (
 	"strconv"
 
 	"github.com/deluxebear/jetauth/object"
-	"github.com/deluxebear/jetauth/util"
 )
 
 type bizListTupleAuditResponse struct {
@@ -37,7 +36,7 @@ func (c *ApiController) BizListTupleAudit() {
 		c.ResponseError("appId is required")
 		return
 	}
-	owner, appName, err := util.GetOwnerAndNameFromIdWithError(appId)
+	owner, appName, err := c.parseBizAppId(appId)
 	if err != nil {
 		c.ResponseError(err.Error())
 		return

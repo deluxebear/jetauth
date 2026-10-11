@@ -17,6 +17,7 @@ package routers
 import (
 	stdcontext "context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -248,6 +249,7 @@ func getObject(ctx *context.Context) (string, string, error) {
 // identify the target object. All fields are optional; unmarshal failures and
 // zero values simply fall through to the next resolution strategy.
 type bizAuthzBody struct {
+	AppId        string  `json:"appId"`
 	Organization string  `json:"organization"`
 	Owner        string  `json:"owner"`
 	Name         string  `json:"name"`
@@ -257,151 +259,191 @@ type bizAuthzBody struct {
 	Ids          []int64 `json:"ids"` // bulk endpoints (e.g. biz-bulk-delete-role)
 }
 
+// errBizCrossOrg is returned when a biz-* request names more than one
+// organization (e.g. ?appId=orgB/app together with ?owner=orgA). The filter
+// must authorize the same tenant that the handler will act on, so any
+// disagreement between the identifiers is rejected outright.
+var errBizCrossOrg = errors.New("unauthorized operation: request references multiple organizations")
+
+// bizLookup resolves numeric biz object ids to (owner, name). It is a struct
+// of funcs so the resolution logic can be unit-tested without a database.
+type bizLookup struct {
+	role     func(id int64) (owner, name string, ok bool)
+	perm     func(id int64) (owner, name string, ok bool)
+	resource func(id int64) (owner, name string, ok bool)
+}
+
+var dbBizLookup = bizLookup{
+	role: func(id int64) (string, string, bool) {
+		r, err := object.GetBizRoleById(id)
+		if err != nil || r == nil {
+			return "", "", false
+		}
+		return r.Organization, r.Name, true
+	},
+	perm: func(id int64) (string, string, bool) {
+		p, err := object.GetBizPermissionById(id)
+		if err != nil || p == nil {
+			return "", "", false
+		}
+		return p.Owner, p.Name, true
+	},
+	resource: func(id int64) (string, string, bool) {
+		r, err := object.GetBizAppResourceById(id)
+		if err != nil || r == nil {
+			return "", "", false
+		}
+		return r.Owner, r.Name, true
+	},
+}
+
+func isBizRolePath(path string) bool {
+	return strings.Contains(path, "-role") &&
+		!strings.Contains(path, "-role-member") &&
+		!strings.Contains(path, "-role-inheritance")
+}
+
+func isBizPermissionPath(path string) bool {
+	return strings.Contains(path, "-permission") &&
+		!strings.Contains(path, "-permission-grantee")
+}
+
 // getBizAuthzTarget resolves (objOwner, objName) for biz-* endpoints, both
-// GET and POST. Precedence: numeric ?id= → query ?roleId=/?permissionId= →
-// query ?organization=/?owner= → body.ids → body.roleId/parentRoleId →
-// body.permissionId → body.organization → body.owner. Unrecognized shapes
-// return ("", "", nil) so IsAllowed denies non-global admins safely.
+// GET and POST. EVERY tenant-bearing identifier present in the request (query
+// and JSON body: id, roleId, permissionId, organization, owner, appId, and
+// every body ids / roleId / parentRoleId / permissionId) is resolved to an
+// owning organization, and all of them must agree; otherwise errBizCrossOrg is
+// returned. This prevents authorizing against one tenant (e.g. ?owner=orgA)
+// while the handler acts on another (e.g. ?appId=orgB/app). Unresolvable
+// shapes return ("", "", nil) so IsAllowed denies non-global admins safely.
 func getBizAuthzTarget(ctx *context.Context, path string) (string, string, error) {
-	// 1. Numeric ?id= for update/delete of BizRole or BizPermission.
-	if idStr := ctx.Input.Query("id"); idStr != "" {
+	return resolveBizAuthzTarget(path, ctx.Input.Query, ctx.Input.RequestBody, dbBizLookup)
+}
+
+func resolveBizAuthzTarget(path string, query func(string) string, body []byte, lk bizLookup) (string, string, error) {
+	var (
+		owners     []string
+		primaryOwn string
+		primaryNam string
+		havePrim   bool
+		denied     bool // some identifier could not be resolved -> deny
+	)
+	add := func(owner, name string) {
+		owners = append(owners, owner)
+		if !havePrim {
+			primaryOwn, primaryNam, havePrim = owner, name, true
+		} else if primaryNam == "" && owner == primaryOwn {
+			primaryNam = name
+		}
+	}
+	addLookup := func(fn func(int64) (string, string, bool), id int64) {
+		if o, n, ok := fn(id); ok {
+			add(o, n)
+		} else {
+			denied = true
+		}
+	}
+
+	// 1. Numeric ?id= for update/delete of BizRole / BizPermission / resource,
+	// or a composite owner/name string id (biz-update-app-config pattern).
+	if idStr := query("id"); idStr != "" {
 		if id, err := strconv.ParseInt(idStr, 10, 64); err == nil {
-			// "-role" matches update/delete of roles but must NOT match
-			// "-role-member" or "-role-inheritance" (those use body ids).
-			if strings.Contains(path, "-role") &&
-				!strings.Contains(path, "-role-member") &&
-				!strings.Contains(path, "-role-inheritance") {
-				if role, err := object.GetBizRoleById(id); err == nil && role != nil {
-					return role.Organization, role.Name, nil
-				}
-				return "", "", nil
+			switch {
+			case isBizRolePath(path):
+				addLookup(lk.role, id)
+			case isBizPermissionPath(path):
+				addLookup(lk.perm, id)
+			case strings.Contains(path, "-app-resource"):
+				addLookup(lk.resource, id)
 			}
-			if strings.Contains(path, "-permission") &&
-				!strings.Contains(path, "-permission-grantee") {
-				if perm, err := object.GetBizPermissionById(id); err == nil && perm != nil {
-					return perm.Owner, perm.Name, nil
-				}
-				return "", "", nil
-			}
-			if strings.Contains(path, "-app-resource") {
-				if r, err := object.GetBizAppResourceById(id); err == nil && r != nil {
-					return r.Owner, r.Name, nil
-				}
-				return "", "", nil
-			}
-			// Composite string id (existing biz-update-app-config pattern).
-			return util.GetOwnerAndNameFromIdWithError(idStr)
-		}
-		// Non-numeric id: fall back to composite string lookup.
-		if owner, name, err := util.GetOwnerAndNameFromIdWithError(idStr); err == nil {
-			return owner, name, nil
+		} else if owner, name, err := util.GetOwnerAndNameFromIdWithError(idStr); err == nil {
+			add(owner, name)
 		}
 	}
 
-	// 1b. Query params for list/get endpoints (GET has no body).
-	//     biz-list-role-members / -role-parents / -role-children /
-	//     -permissions-by-role → ?roleId=
-	//     biz-list-permission-grantees → ?permissionId=
-	//     biz-get-roles / -list-user-roles / -get-user-roles /
-	//     -get-user-permissions → ?organization=
-	//     biz-get-permissions / -get-app-config(s) → ?owner=
-	if roleIdStr := ctx.Input.Query("roleId"); roleIdStr != "" {
-		if id, err := strconv.ParseInt(roleIdStr, 10, 64); err == nil {
-			if role, err := object.GetBizRoleById(id); err == nil && role != nil {
-				return role.Organization, role.Name, nil
-			}
+	// 2. Query params: roleId / permissionId / organization / owner / appId.
+	if v := query("roleId"); v != "" {
+		if id, err := strconv.ParseInt(v, 10, 64); err == nil {
+			addLookup(lk.role, id)
+		} else {
+			denied = true
 		}
-		return "", "", nil
 	}
-	if permIdStr := ctx.Input.Query("permissionId"); permIdStr != "" {
-		if id, err := strconv.ParseInt(permIdStr, 10, 64); err == nil {
-			if perm, err := object.GetBizPermissionById(id); err == nil && perm != nil {
-				return perm.Owner, perm.Name, nil
-			}
+	if v := query("permissionId"); v != "" {
+		if id, err := strconv.ParseInt(v, 10, 64); err == nil {
+			addLookup(lk.perm, id)
+		} else {
+			denied = true
 		}
-		return "", "", nil
 	}
-	if org := ctx.Input.Query("organization"); org != "" {
-		return org, "", nil
+	if org := query("organization"); org != "" {
+		add(org, "")
 	}
-	if owner := ctx.Input.Query("owner"); owner != "" {
-		return owner, "", nil
+	if owner := query("owner"); owner != "" {
+		add(owner, "")
 	}
-	// biz-{write,read,list}-authorization-model + biz-{check,write-tuples,...}
-	// use ?appId=owner/appName (spec §7.1). Map it through the same composite
-	// id parser as biz-update-app-config so the filter sees the target app.
-	if appId := ctx.Input.Query("appId"); appId != "" {
+	// ?appId=owner/appName (spec 7.1): the app owner is the tenant.
+	if appId := query("appId"); appId != "" {
 		if owner, name, err := util.GetOwnerAndNameFromIdWithError(appId); err == nil {
-			return owner, name, nil
+			add(owner, name)
+		} else {
+			denied = true
 		}
-		return "", "", nil
 	}
 
-	body := ctx.Input.RequestBody
-	if len(body) == 0 {
-		return "", "", nil
-	}
-
-	var b bizAuthzBody
-	if err := json.Unmarshal(body, &b); err != nil {
-		return "", "", nil
-	}
-
-	// 2. Bulk body.ids — resolve from the first id's role/permission to
-	// get a conservative authz check at the filter level. The controller
-	// is still responsible for per-id scope validation so an org admin
-	// can't inject ids from other orgs into the selection.
-	if len(b.Ids) > 0 {
-		if strings.Contains(path, "-role") &&
-			!strings.Contains(path, "-role-member") &&
-			!strings.Contains(path, "-role-inheritance") {
-			if role, err := object.GetBizRoleById(b.Ids[0]); err == nil && role != nil {
-				return role.Organization, role.Name, nil
+	// 3. JSON body.
+	if len(body) > 0 {
+		var b bizAuthzBody
+		if err := json.Unmarshal(body, &b); err != nil {
+			if !havePrim {
+				return "", "", nil
 			}
-			return "", "", nil
-		}
-		if strings.Contains(path, "-permission") &&
-			!strings.Contains(path, "-permission-grantee") {
-			if perm, err := object.GetBizPermissionById(b.Ids[0]); err == nil && perm != nil {
-				return perm.Owner, perm.Name, nil
+		} else {
+			for _, id := range b.Ids {
+				switch {
+				case isBizRolePath(path):
+					addLookup(lk.role, id)
+				case isBizPermissionPath(path):
+					addLookup(lk.perm, id)
+				}
 			}
-			return "", "", nil
+			if b.RoleId != 0 {
+				addLookup(lk.role, b.RoleId)
+			}
+			if b.ParentRoleId != 0 {
+				addLookup(lk.role, b.ParentRoleId)
+			}
+			if b.PermissionId != 0 {
+				addLookup(lk.perm, b.PermissionId)
+			}
+			if b.AppId != "" {
+				if owner, name, err := util.GetOwnerAndNameFromIdWithError(b.AppId); err == nil {
+					add(owner, name)
+				} else {
+					denied = true
+				}
+			}
+			if b.Organization != "" {
+				add(b.Organization, b.Name)
+			}
+			if b.Owner != "" {
+				add(b.Owner, b.Name)
+			}
 		}
 	}
 
-	// 3. Body roleId / parentRoleId — member / inheritance operations.
-	if b.RoleId != 0 {
-		if role, err := object.GetBizRoleById(b.RoleId); err == nil && role != nil {
-			return role.Organization, role.Name, nil
-		}
+	if !havePrim {
 		return "", "", nil
 	}
-	if b.ParentRoleId != 0 {
-		if role, err := object.GetBizRoleById(b.ParentRoleId); err == nil && role != nil {
-			return role.Organization, role.Name, nil
+	for _, o := range owners {
+		if o != primaryOwn {
+			return "", "", errBizCrossOrg
 		}
+	}
+	if denied {
 		return "", "", nil
 	}
-
-	// 3. Body permissionId — grantee operations.
-	if b.PermissionId != 0 {
-		if perm, err := object.GetBizPermissionById(b.PermissionId); err == nil && perm != nil {
-			return perm.Owner, perm.Name, nil
-		}
-		return "", "", nil
-	}
-
-	// 4. Body.organization (BizRole add).
-	if b.Organization != "" {
-		return b.Organization, b.Name, nil
-	}
-
-	// 5. Body.owner (BizPermission add / BizAppConfig add/delete).
-	if b.Owner != "" {
-		return b.Owner, b.Name, nil
-	}
-
-	return "", "", nil
+	return primaryOwn, primaryNam, nil
 }
 
 func willLog(subOwner string, subName string, method string, urlPath string, objOwner string, objName string) bool {

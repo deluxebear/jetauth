@@ -13,7 +13,6 @@ import (
 	"errors"
 
 	"github.com/deluxebear/jetauth/object"
-	"github.com/deluxebear/jetauth/util"
 )
 
 // maxAssertionFieldLen caps the size of object/relation/user/description
@@ -36,7 +35,7 @@ func (c *ApiController) BizListAssertions() {
 		c.ResponseError("appId is required")
 		return
 	}
-	owner, appName, err := util.GetOwnerAndNameFromIdWithError(appId)
+	owner, appName, err := c.parseBizAppId(appId)
 	if err != nil {
 		c.ResponseError(err.Error())
 		return
@@ -71,7 +70,7 @@ func (c *ApiController) BizAddAssertion() {
 		c.ResponseError("appId is required")
 		return
 	}
-	owner, appName, err := util.GetOwnerAndNameFromIdWithError(appId)
+	owner, appName, err := c.parseBizAppId(appId)
 	if err != nil {
 		c.ResponseError(err.Error())
 		return
@@ -120,7 +119,7 @@ func (c *ApiController) BizDeleteAssertion() {
 		c.ResponseError("appId and id are required")
 		return
 	}
-	owner, appName, err := util.GetOwnerAndNameFromIdWithError(appId)
+	owner, appName, err := c.parseBizAppId(appId)
 	if err != nil {
 		c.ResponseError(err.Error())
 		return
@@ -152,7 +151,7 @@ func (c *ApiController) BizRunAssertions() {
 		c.ResponseError("appId is required")
 		return
 	}
-	owner, appName, err := util.GetOwnerAndNameFromIdWithError(appId)
+	owner, appName, err := c.parseBizAppId(appId)
 	if err != nil {
 		c.ResponseError(err.Error())
 		return

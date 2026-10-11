@@ -1413,7 +1413,7 @@ func (c *ApiController) ListPermissionsByUser() {
 func (c *ApiController) BizEnforce() {
 	appId := c.Ctx.Input.Query("appId")
 
-	owner, appName, err := util.GetOwnerAndNameFromIdWithError(appId)
+	owner, appName, err := c.parseBizAppId(appId)
 	if err != nil {
 		c.ResponseError(err.Error())
 		return
@@ -1448,7 +1448,7 @@ func (c *ApiController) BizEnforce() {
 func (c *ApiController) BizEnforceEx() {
 	appId := c.Ctx.Input.Query("appId")
 
-	owner, appName, err := util.GetOwnerAndNameFromIdWithError(appId)
+	owner, appName, err := c.parseBizAppId(appId)
 	if err != nil {
 		c.ResponseError(err.Error())
 		return
@@ -1481,7 +1481,7 @@ func (c *ApiController) BizEnforceEx() {
 func (c *ApiController) BizBatchEnforce() {
 	appId := c.Ctx.Input.Query("appId")
 
-	owner, appName, err := util.GetOwnerAndNameFromIdWithError(appId)
+	owner, appName, err := c.parseBizAppId(appId)
 	if err != nil {
 		c.ResponseError(err.Error())
 		return
@@ -1515,7 +1515,7 @@ func (c *ApiController) BizBatchEnforce() {
 func (c *ApiController) BizGetPolicies() {
 	appId := c.Ctx.Input.Query("appId")
 
-	owner, appName, err := util.GetOwnerAndNameFromIdWithError(appId)
+	owner, appName, err := c.parseBizAppId(appId)
 	if err != nil {
 		c.ResponseError(err.Error())
 		return
@@ -1544,7 +1544,7 @@ func (c *ApiController) BizGetUserRoles() {
 	appId := c.Ctx.Input.Query("appId")
 	userId := c.Ctx.Input.Query("userId")
 
-	owner, appName, err := util.GetOwnerAndNameFromIdWithError(appId)
+	owner, appName, err := c.parseBizAppId(appId)
 	if err != nil {
 		c.ResponseError(err.Error())
 		return
@@ -1590,7 +1590,7 @@ func (c *ApiController) BizGetUserDataScope() {
 	appId := c.Ctx.Input.Query("appId")
 	userId := c.Ctx.Input.Query("userId")
 
-	owner, appName, err := util.GetOwnerAndNameFromIdWithError(appId)
+	owner, appName, err := c.parseBizAppId(appId)
 	if err != nil {
 		c.ResponseError(err.Error())
 		return
@@ -1629,7 +1629,7 @@ func (c *ApiController) BizGetUserPermissions() {
 	appId := c.Ctx.Input.Query("appId")
 	userId := c.Ctx.Input.Query("userId")
 
-	owner, appName, err := util.GetOwnerAndNameFromIdWithError(appId)
+	owner, appName, err := c.parseBizAppId(appId)
 	if err != nil {
 		c.ResponseError(err.Error())
 		return
@@ -1732,7 +1732,7 @@ func (c *ApiController) BizMigrateFromPermission() {
 func (c *ApiController) BizSyncPolicies() {
 	appId := c.Ctx.Input.Query("appId")
 
-	owner, appName, err := util.GetOwnerAndNameFromIdWithError(appId)
+	owner, appName, err := c.parseBizAppId(appId)
 	if err != nil {
 		c.ResponseError(err.Error())
 		return
