@@ -83,6 +83,17 @@ func SyncAppPolicies(owner, appName string) (*SyncStats, error) {
 // rules the triggering CRUD change added. With a nil/untrusted hint the
 // changelog records a full_rebuild marker (manual sync, removals, updates…).
 func syncAppPolicies(owner, appName string, hint *bizChangeHint) (*SyncStats, error) {
+	return bizSyncCoalescer.do(util.GetId(owner, appName), hint, func(h *bizChangeHint) (*SyncStats, error) {
+		return bizSyncRunner(owner, appName, h)
+	})
+}
+
+// bizSyncRunner is the unserialized rebuild; a var so tests can observe it.
+var bizSyncRunner = runSyncAppPolicies
+
+// runSyncAppPolicies does the actual rebuild. Callers must go through
+// syncAppPolicies, which serializes runs per app.
+func runSyncAppPolicies(owner, appName string, hint *bizChangeHint) (*SyncStats, error) {
 	config, err := getBizAppConfigOrError(owner, appName)
 	if err != nil {
 		return nil, err
