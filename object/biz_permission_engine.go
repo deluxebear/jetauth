@@ -13,6 +13,7 @@ import (
 	"regexp"
 
 	"github.com/beego/beego/v2/core/logs"
+	"github.com/deluxebear/jetauth/util"
 )
 
 var validTableNameRe = regexp.MustCompile(`^[a-zA-Z_][a-zA-Z0-9_]{0,63}$`)
@@ -171,7 +172,10 @@ func syncAppPolicies(owner, appName string, hint *bizChangeHint) (*SyncStats, er
 		groupingPolicies = [][]string{}
 	}
 
-	// 7. Persist to policy table
+	// 7. Persist to policy table. Bump the cache generation first so a reader
+	// that starts building while the table is being rewritten is not cached;
+	// the store in step 8 bumps again to cover builds that began afterwards.
+	bizEnforcerCache.Delete(util.GetId(owner, appName))
 	err = e.SavePolicy()
 	if err != nil {
 		return nil, fmt.Errorf("failed to save policies: %w", err)

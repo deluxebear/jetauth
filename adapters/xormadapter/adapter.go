@@ -315,14 +315,13 @@ func (a *Adapter) genPolicyLine(ptype string, rule []string) *CasbinRule {
 	return &line
 }
 
-// SavePolicy saves policy to database.
+// SavePolicy saves policy to database. The rewrite (delete all rows, insert
+// the new set) runs in a single transaction so concurrent LoadPolicy calls
+// observe either the complete old set or the complete new set, never an empty
+// or partial table. The table itself is kept (only ensured to exist), so its
+// name and layout are unchanged.
 func (a *Adapter) SavePolicy(model model.Model) error {
-	err := a.dropTable()
-	if err != nil {
-		return err
-	}
-	err = a.createTable()
-	if err != nil {
+	if err := a.createTable(); err != nil {
 		return err
 	}
 
@@ -342,14 +341,25 @@ func (a *Adapter) SavePolicy(model model.Model) error {
 		}
 	}
 
-	// check whether the policy is empty
-	if len(lines) == 0 {
-		return nil
+	session := a.engine.NewSession()
+	defer session.Close()
+	if err := session.Begin(); err != nil {
+		return err
 	}
 
-	_, err = a.engine.Insert(&lines)
+	if _, err := session.Where("1 = 1").Delete(&CasbinRule{tableName: a.getFullTableName()}); err != nil {
+		_ = session.Rollback()
+		return err
+	}
 
-	return err
+	if len(lines) > 0 {
+		if _, err := session.Insert(&lines); err != nil {
+			_ = session.Rollback()
+			return err
+		}
+	}
+
+	return session.Commit()
 }
 
 // AddPolicy adds a policy rule to the storage.

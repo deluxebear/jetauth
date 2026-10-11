@@ -125,9 +125,14 @@ func GetBizEnforcer(owner, appName string) (*casbin.Enforcer, error) {
 			return nil, err
 		}
 
-		bizEnforcerCache.StoreIfGen(key, e, gen)
+		// Only publish to Redis when this build is still current: if an
+		// invalidation or a sync landed meanwhile, the policies we read may be
+		// stale (or empty, mid-rewrite) and must not reach peers for the
+		// whole bizPolicyCacheTTL.
+		if !bizEnforcerCache.StoreIfGen(key, e, gen) {
+			return e, nil
+		}
 
-		// Write back to Redis
 		policies, grouping := extractPolicies(e)
 		bizPolicyCacheSet(owner, appName, &BizPolicyCacheData{
 			ModelText:        config.ModelText,
@@ -136,6 +141,12 @@ func GetBizEnforcer(owner, appName string) (*casbin.Enforcer, error) {
 			PolicyTable:      config.PolicyTable,
 			UpdatedTime:      config.UpdatedTime,
 		})
+		// An invalidation may have landed between StoreIfGen and the Redis
+		// write; if so our payload could have overwritten the fresher one.
+		// Drop it — a miss just rebuilds from the DB.
+		if bizEnforcerCache.Generation() != gen {
+			bizPolicyCacheClear(owner, appName)
+		}
 
 		return e, nil
 	})
@@ -147,10 +158,12 @@ func GetBizEnforcer(owner, appName string) (*casbin.Enforcer, error) {
 }
 
 // StoreBizEnforcerCache directly stores an enforcer in the cache.
-// Used by SyncAppPolicies to reuse the enforcer it already built.
+// Used by SyncAppPolicies to reuse the enforcer it already built. It bumps the
+// invalidation generation so in-flight GetBizEnforcer builds (which may have
+// read the policy table mid-rewrite) cannot overwrite this fresher enforcer.
 func StoreBizEnforcerCache(owner, appName string, e *casbin.Enforcer) {
 	key := util.GetId(owner, appName)
-	bizEnforcerCache.Store(key, e)
+	bizEnforcerCache.StoreInvalidating(key, e)
 }
 
 // ClearBizEnforcerCache removes the cached enforcer for the given app

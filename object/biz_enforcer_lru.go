@@ -187,6 +187,19 @@ func (c *bizEnforcerLRU) StoreIfGen(key string, value interface{}, gen uint64) b
 	return true
 }
 
+// StoreInvalidating stores value and bumps the invalidation generation under
+// the same lock, so any reader that captured an older generation (and may have
+// built from a half-written policy table) can no longer overwrite value via
+// StoreIfGen.
+func (c *bizEnforcerLRU) StoreInvalidating(key string, value interface{}) {
+	c.loadConf()
+	c.mu.Lock()
+	c.gen.Add(1)
+	c.storeLocked(key, value)
+	c.mu.Unlock()
+	c.startSweeper()
+}
+
 func (c *bizEnforcerLRU) storeLocked(key string, value interface{}) {
 	now := c.now()
 	if el, ok := c.items[key]; ok {
