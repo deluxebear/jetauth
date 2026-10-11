@@ -20,54 +20,41 @@ export default function BackgroundLayer({
   children,
   mobileBreakpoint = 768,
 }: BackgroundLayerProps) {
-  const [resolvedUrl, setResolvedUrl] = useState<string | null>(null);
-  const [loadFailed, setLoadFailed] = useState(false);
+  const [loadedUrl, setLoadedUrl] = useState<string | null>(null);
+  const [failedUrl, setFailedUrl] = useState<string | null>(null);
+  const [isMobile, setIsMobile] = useState(
+    () => typeof window !== "undefined" && window.innerWidth < mobileBreakpoint,
+  );
 
+  // Track the viewport so we swap mobile/desktop backgrounds dynamically.
   useEffect(() => {
-    // Decide which URL to use based on viewport
-    const pick = () => {
-      if (typeof window === "undefined") return url ?? null;
-      const isMobile = window.innerWidth < mobileBreakpoint;
-      return (isMobile && urlMobile ? urlMobile : url) ?? null;
-    };
+    const onResize = () => setIsMobile(window.innerWidth < mobileBreakpoint);
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, [mobileBreakpoint]);
 
-    const candidate = pick();
-    setLoadFailed(false);
+  // Decide which URL to use based on viewport
+  const candidate = (isMobile && urlMobile ? urlMobile : url) ?? null;
 
-    if (!candidate) {
-      setResolvedUrl(null);
-      return;
-    }
-
-    // Preload
+  // Preload so the background doesn't flash in half-loaded.
+  useEffect(() => {
+    if (!candidate) return;
     const img = new Image();
     let cancelled = false;
     img.onload = () => {
-      if (!cancelled) setResolvedUrl(candidate);
+      if (!cancelled) setLoadedUrl(candidate);
     };
     img.onerror = () => {
-      if (!cancelled) {
-        setLoadFailed(true);
-        setResolvedUrl(null);
-      }
+      if (!cancelled) setFailedUrl(candidate);
     };
     img.src = candidate;
-
-    // Also listen to resize so we swap mobile/desktop dynamically
-    const onResize = () => {
-      const next = pick();
-      if (next !== candidate) {
-        // Re-run the effect on the new URL — trigger via state
-        setResolvedUrl(null);
-      }
-    };
-    window.addEventListener("resize", onResize);
-
     return () => {
       cancelled = true;
-      window.removeEventListener("resize", onResize);
     };
-  }, [url, urlMobile, mobileBreakpoint]);
+  }, [candidate]);
+
+  const resolvedUrl = candidate && loadedUrl === candidate ? candidate : null;
+  const loadFailed = !!candidate && failedUrl === candidate;
 
   const style = resolvedUrl
     ? {

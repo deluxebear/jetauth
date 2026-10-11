@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useState, type FormEvent } from "react";
 import { useTranslation } from "../../i18n";
 
 interface OrgChoiceWidgetProps {
@@ -26,19 +26,18 @@ export default function OrgChoiceWidget({ mode, currentOrg }: OrgChoiceWidgetPro
   const { t } = useTranslation();
   const [value, setValue] = useState("");
   const [remember, setRemember] = useState(true);
-  const [recent, setRecent] = useState<string[]>([]);
-
-  useEffect(() => {
+  const [recent] = useState<string[]>(() => {
     try {
       const raw = localStorage.getItem(LS_RECENT_ORGS_KEY);
       if (raw) {
         const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed)) setRecent(parsed.filter((x) => typeof x === "string"));
+        if (Array.isArray(parsed)) return parsed.filter((x): x is string => typeof x === "string");
       }
     } catch {
       // ignore corrupt localStorage
     }
-  }, []);
+    return [];
+  });
 
   if (!mode || mode === "None") return null;
   const isPreview =

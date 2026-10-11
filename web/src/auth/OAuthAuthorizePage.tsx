@@ -28,6 +28,11 @@ export default function OAuthAuthorizePage({ authed }: Props) {
   const [target, setTarget] = useState<string | null>(null);
   const [error, setError] = useState("");
   const ranRef = useRef(false);
+  // Pure input validation is derived during render rather than set from the effect.
+  const paramsError =
+    !searchParams.get("client_id") || !(searchParams.get("redirect_uri") ?? "")
+      ? "Missing client_id or redirect_uri"
+      : "";
 
   useEffect(() => {
     if (ranRef.current) return;
@@ -36,10 +41,7 @@ export default function OAuthAuthorizePage({ authed }: Props) {
     const clientId = searchParams.get("client_id");
     const redirectUri = searchParams.get("redirect_uri") ?? "";
     const state = searchParams.get("state") ?? "";
-    if (!clientId || !redirectUri) {
-      setError("Missing client_id or redirect_uri");
-      return;
-    }
+    if (paramsError || !clientId) return;
 
     const oauthQs = buildOAuthCodeQuery(searchParams);
     (async () => {
@@ -79,14 +81,15 @@ export default function OAuthAuthorizePage({ authed }: Props) {
         setError((e as Error).message ?? "network error");
       }
     })();
-  }, [authed, searchParams]);
+  }, [authed, searchParams, paramsError]);
 
-  if (error) {
+  const shownError = paramsError || error;
+  if (shownError) {
     return (
       <div className="flex min-h-[40vh] items-center justify-center p-6">
         <div className="max-w-md rounded-lg border border-danger/30 bg-danger/10 px-4 py-3 text-[13px] text-danger">
           <div className="font-semibold mb-1">OAuth authorize failed</div>
-          <div className="opacity-80 break-all">{error}</div>
+          <div className="opacity-80 break-all">{shownError}</div>
         </div>
       </div>
     );

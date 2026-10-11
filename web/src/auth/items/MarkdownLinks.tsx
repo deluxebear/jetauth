@@ -9,7 +9,7 @@
 
 import { Fragment, type ReactNode } from "react";
 
-const LINK_RE = /\[([^\]]+)\]\(([^)]+)\)/g;
+const LINK_PATTERN = /\[([^\]]+)\]\(([^)]+)\)/;
 
 function isSafeUrl(raw: string): boolean {
   const url = raw.trim();
@@ -22,9 +22,9 @@ export function MarkdownLinks({ text, className }: { text: string; className?: s
   const out: ReactNode[] = [];
   let cursor = 0;
   let match: RegExpExecArray | null;
-  LINK_RE.lastIndex = 0;
+  const linkRe = new RegExp(LINK_PATTERN.source, "g");
   let i = 0;
-  while ((match = LINK_RE.exec(text)) !== null) {
+  while ((match = linkRe.exec(text)) !== null) {
     const [full, label, url] = match;
     if (match.index > cursor) {
       out.push(<Fragment key={`t${i}`}>{text.slice(cursor, match.index)}</Fragment>);

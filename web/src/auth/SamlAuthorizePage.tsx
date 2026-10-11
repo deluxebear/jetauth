@@ -18,14 +18,12 @@ export default function SamlAuthorizePage() {
   const ranRef = useRef(false);
 
   const { samlRequest, relayState } = readSamlParams(searchParams);
+  const paramsError = !samlRequest || !applicationName ? "Missing samlRequest or application" : "";
 
   useEffect(() => {
     if (ranRef.current) return;
     ranRef.current = true;
-    if (!samlRequest || !applicationName) {
-      setError("Missing samlRequest or application");
-      return;
-    }
+    if (paramsError || !samlRequest || !applicationName) return;
     (async () => {
       try {
         const res = await api.post<LoginApiResponse>("/api/login", {
@@ -51,13 +49,13 @@ export default function SamlAuthorizePage() {
         setError((e as Error).message ?? "network error");
       }
     })();
-  }, [applicationName, organizationName, samlRequest, relayState]);
+  }, [applicationName, organizationName, samlRequest, relayState, paramsError]);
 
   return (
     <div className="flex min-h-[40vh] items-center justify-center">
-      {error ? (
+      {error || paramsError ? (
         <div className="rounded-lg border border-danger/30 bg-danger/10 px-4 py-3 text-[13px] text-danger">
-          {error}
+          {error || paramsError}
         </div>
       ) : (
         <div className="text-[13px] text-text-muted">Completing SAML sign-in…</div>

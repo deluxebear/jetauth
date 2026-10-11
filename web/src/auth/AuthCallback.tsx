@@ -4,6 +4,19 @@ import { decodeState, consumeCodeVerifier, submitProviderLogin } from "./provide
 import { submitSamlResponse, buildOAuthCodeQuery, buildOAuthRedirectUrl, type LoginApiResponse } from "./authPost";
 import { api } from "../api/client";
 
+function parseCallbackParams(searchParams: URLSearchParams) {
+  // Steam uses OpenID 2.0 — returns openid.* params instead of a code. Pack
+  // the full query string as the "code" the backend Steam IdP expects.
+  // DingTalk uses "authCode", WeCom historically used "auth_code".
+  const isSteam = searchParams.has("openid.mode");
+  const code = isSteam
+    ? window.location.search
+    : (searchParams.get("code") ?? searchParams.get("authCode") ?? searchParams.get("auth_code"));
+  const state = searchParams.get("state") ?? "";
+  const errorParam = searchParams.get("error_description") ?? searchParams.get("error");
+  return { code, state, errorParam };
+}
+
 /**
  * Handles the return leg of "Sign in with GitHub / Google / ..." flows.
  *
@@ -21,29 +34,22 @@ export default function AuthCallback() {
   // against a guaranteed "Bad credentials" on the second call. Guard with a
   // ref so the first-mount's fetch wins uncontested.
   const consumedRef = useRef(false);
+  // Pure URL validation is derived during render rather than set from the effect.
+  const parsed = parseCallbackParams(searchParams);
+  const paramsError = parsed.errorParam
+    ? parsed.errorParam
+    : !parsed.code || !parsed.state
+      ? "Missing code or state in callback URL."
+      : null;
+  const shownMsg = paramsError ?? msg;
 
   useEffect(() => {
     if (consumedRef.current) return;
     consumedRef.current = true;
 
-    // Steam uses OpenID 2.0 — returns openid.* params instead of a code. Pack
-    // the full query string as the "code" the backend Steam IdP expects.
-    // DingTalk uses "authCode", WeCom historically used "auth_code".
-    const isSteam = searchParams.has("openid.mode");
-    const code = isSteam
-      ? window.location.search
-      : (searchParams.get("code") ?? searchParams.get("authCode") ?? searchParams.get("auth_code"));
-    const state = searchParams.get("state") ?? "";
-    const errorParam = searchParams.get("error_description") ?? searchParams.get("error");
-
-    if (errorParam) {
-      setMsg(errorParam);
-      return;
-    }
-    if (!code || !state) {
-      setMsg("Missing code or state in callback URL.");
-      return;
-    }
+    if (paramsError) return;
+    const { code, state } = parseCallbackParams(searchParams);
+    if (!code) return;
 
     const inner = decodeState(state);
     const applicationName = inner.get("application") ?? "";
@@ -71,6 +77,8 @@ export default function AuthCallback() {
     // (forged callback) or the flow was started in a different tab. Either
     // way, refuse to exchange the code.
     if (verifier === null) {
+      // consumeCodeVerifier() above is a single-use side effect, so this check cannot be derived during render.
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- one-shot CSRF failure path of a ref-guarded callback effect
       setMsg("Sign-in state could not be verified. Start a new sign-in from the login page.");
       return;
     }
@@ -143,7 +151,7 @@ export default function AuthCallback() {
       .catch((err) => {
         setMsg(String(err));
       });
-  }, [searchParams]);
+  }, [searchParams, paramsError]);
 
   // Prefer the app-scoped login URL so the user lands on the same branded
   // page they started from (`/login/{org}/{app}`). Both fields were packed
@@ -157,7 +165,7 @@ export default function AuthCallback() {
 
   return (
     <div className="flex min-h-dvh items-center justify-center bg-surface-1 p-6">
-      {msg === null ? (
+      {shownMsg === null ? (
         <div className="flex flex-col items-center gap-3 text-text-muted">
           <div className="h-8 w-8 rounded-full border-2 border-accent/30 border-t-accent animate-spin" />
           <span className="text-[13px] font-mono">Signing in...</span>
@@ -165,7 +173,7 @@ export default function AuthCallback() {
       ) : (
         <div className="max-w-md rounded-lg border border-danger/30 bg-danger/10 p-4 text-[13px] text-danger">
           <div className="font-semibold mb-1">Sign-in failed</div>
-          <div className="opacity-80 break-all">{msg}</div>
+          <div className="opacity-80 break-all">{shownMsg}</div>
           <a href={backToLoginUrl} className="mt-3 inline-block text-accent hover:underline">
             Back to login
           </a>

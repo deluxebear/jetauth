@@ -45,12 +45,10 @@ export default function QRBody({ providers, onScanned }: Props) {
   // works with WeChat today; DingTalk / Lark / Custom need the generalized
   // backend from the proposal doc before they can drop in here.
   const qrProvider = providers.find((p) => p.type === "WeChat");
+  const shownError = qrProvider ? error : t("auth.qr.noProvider");
 
   useEffect(() => {
-    if (!qrProvider) {
-      setError(t("auth.qr.noProvider"));
-      return;
-    }
+    if (!qrProvider) return;
     const providerId = `admin/${qrProvider.name}`;
     api
       .get<QRResponse>(`/api/qr/begin?provider=${encodeURIComponent(providerId)}`)
@@ -92,12 +90,12 @@ export default function QRBody({ providers, onScanned }: Props) {
     };
   }, [ticket, scanned, onScanned]);
 
-  if (error) {
+  if (shownError) {
     return (
       <div className="rounded-lg border border-danger/30 bg-danger/10 px-4 py-3 text-[13px] text-danger">
         <div className="flex items-center gap-2">
           <QrCode size={16} />
-          {error}
+          {shownError}
         </div>
       </div>
     );

@@ -40,8 +40,11 @@ function deriveLookup(params: {
 }
 
 export default function AuthShell({ mode }: AuthShellProps) {
-  const params = useParams<{ applicationName?: string; organizationName?: string }>();
-  const lookup = useMemo(() => deriveLookup(params), [params.applicationName, params.organizationName]);
+  const { applicationName, organizationName } = useParams<{ applicationName?: string; organizationName?: string }>();
+  const lookup = useMemo(
+    () => deriveLookup({ applicationName, organizationName }),
+    [applicationName, organizationName],
+  );
 
   return (
     <ThemeProvider lookup={lookup}>

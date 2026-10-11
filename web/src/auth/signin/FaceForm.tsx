@@ -174,7 +174,7 @@ export default function FaceForm({
     <div className="space-y-4">
       {/* Back chip + identifier */}
       <div className="flex items-center gap-2 rounded-lg border border-border bg-surface-1 px-3 py-2">
-        {handleBack && (
+        {onBack && (
           <>
             <button
               type="button"

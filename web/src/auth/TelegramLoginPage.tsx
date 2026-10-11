@@ -25,15 +25,14 @@ export default function TelegramLoginPage() {
   const state = searchParams.get("state") ?? "";
   const botUsername = searchParams.get("bot") ?? "";
 
+  const paramsError = !state
+    ? "Missing state parameter."
+    : !botUsername
+      ? "Missing bot username. Check that the Telegram provider's Client ID is set to the bot's @username."
+      : null;
+
   useEffect(() => {
-    if (!state) {
-      setMsg("Missing state parameter.");
-      return;
-    }
-    if (!botUsername) {
-      setMsg("Missing bot username. Check that the Telegram provider's Client ID is set to the bot's @username.");
-      return;
-    }
+    if (paramsError) return;
 
     window.onTelegramAuth = async (user) => {
       if (consumedRef.current) return;
@@ -79,7 +78,9 @@ export default function TelegramLoginPage() {
       // the container. Wipe the container so a re-mount doesn't stack them.
       if (container) container.replaceChildren();
     };
-  }, [state, botUsername]);
+  }, [state, botUsername, paramsError]);
+
+  const shownMsg = paramsError ?? msg;
 
   return (
     <div className="flex min-h-dvh items-center justify-center bg-surface-1 p-6">
@@ -87,10 +88,10 @@ export default function TelegramLoginPage() {
         <div className="mb-3 text-[13px] font-semibold text-text-primary">
           Sign in with Telegram
         </div>
-        {msg ? (
+        {shownMsg ? (
           <>
             <div className="mb-3 rounded-md border border-danger/30 bg-danger/10 p-3 text-[12px] text-danger break-all">
-              {msg}
+              {shownMsg}
             </div>
             <a href="/login" className="text-[12px] text-accent hover:underline">
               Back to login
