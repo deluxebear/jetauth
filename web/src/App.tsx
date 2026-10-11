@@ -1,4 +1,4 @@
-import { Routes, Route, Navigate, useNavigate } from "react-router-dom";
+import { Routes, Route, Navigate, useNavigate, useParams } from "react-router-dom";
 import { useEffect, useState, useCallback, type ComponentProps, type ReactNode } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import Sidebar from "./components/Sidebar";
@@ -210,6 +210,16 @@ function Layout({
       </motion.div>
     </div>
   );
+}
+
+// Non-admins may only open their own profile; any other /users/:owner/:name
+// is sent back to it instead of rendering another user's edit form.
+function OwnProfileRoute({ user }: { user: User }) {
+  const { owner, name } = useParams();
+  if (owner !== user.owner || name !== user.name) {
+    return <Navigate to={`/users/${user.owner}/${user.name}`} replace />;
+  }
+  return <UserEditPage />;
 }
 
 export default function App() {
@@ -547,7 +557,7 @@ export default function App() {
         <EnableMfaNotification account={mfaAccount} justLoggedIn={justLoggedIn} onDismiss={() => setJustLoggedIn(false)} />
         <Routes>
           <Route path="/" element={<UserHomePage userOrg={user.owner} />} />
-          <Route path="/users/:owner/:name" element={<UserEditPage />} />
+          <Route path="/users/:owner/:name" element={<OwnProfileRoute user={user} />} />
           <Route path="/mfa/setup" element={(() => {
             const orgData = JSON.parse(localStorage.getItem("organizationData") ?? "null");
             return (
