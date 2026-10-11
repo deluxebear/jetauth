@@ -209,3 +209,30 @@ func TestExtractTypeNames_NilReturnsNil(t *testing.T) {
 		t.Fatalf("want nil, got %v", names)
 	}
 }
+
+func TestValidateSchemaSemantics(t *testing.T) {
+	const header = "model\n  schema 1.1\n\ntype user\n\ntype team\n  relations\n    define member: [user]\n\ntype folder\n  relations\n    define viewer: [user]\n\ntype document\n  relations\n    define parent: [folder]\n"
+	cases := map[string]struct {
+		relations string
+		wantErr   bool
+	}{
+		"valid union and ttu":           {"    define owner: [user, team#member]\n    define viewer: [user] or owner or viewer from parent\n", false},
+		"undefined computed relation":   {"    define viewer: [user] or missing\n", true},
+		"undefined tupleset":            {"    define viewer: viewer from nope\n", true},
+		"ttu relation on no target":     {"    define editor: editor from parent\n", true},
+		"undefined restriction type":    {"    define viewer: [robot]\n", true},
+		"undefined userset relation":    {"    define viewer: [team#admin]\n", true},
+		"undefined inside difference":   {"    define viewer: [user] but not banned\n", true},
+		"undefined inside intersection": {"    define viewer: [user] and missing\n", true},
+	}
+	for name, tc := range cases {
+		parsed, err := ParseSchemaDSL(header + tc.relations)
+		if err != nil {
+			t.Fatalf("%s: parse: %v", name, err)
+		}
+		err = ValidateSchemaSemantics(parsed.Proto)
+		if (err != nil) != tc.wantErr {
+			t.Errorf("%s: err=%v, wantErr=%v", name, err, tc.wantErr)
+		}
+	}
+}

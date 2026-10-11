@@ -144,3 +144,88 @@ func ExtractTypeNames(proto *openfgav1.AuthorizationModel) []string {
 
 	return names
 }
+
+// ValidateSchemaSemantics rejects models that parse cleanly but reference
+// names the model never defines — e.g. `define a: [user] or missing`, a
+// `from` over an unknown tupleset, or a `[team#member]` restriction on a
+// type without that relation. OpenFGA refuses these at model-write time;
+// without this check they would be activated and only fail at Check time
+// with a schema-missing error.
+func ValidateSchemaSemantics(model *openfgav1.AuthorizationModel) error {
+	if model == nil {
+		return fmt.Errorf("nil model")
+	}
+	relations := map[string]map[string]*openfgav1.Userset{}
+	for _, td := range model.GetTypeDefinitions() {
+		relations[td.GetType()] = td.GetRelations()
+	}
+
+	for _, td := range model.GetTypeDefinitions() {
+		typeName := td.GetType()
+		meta := td.GetMetadata().GetRelations()
+		for relName, rewrite := range td.GetRelations() {
+			where := typeName + "#" + relName
+			for _, ref := range meta[relName].GetDirectlyRelatedUserTypes() {
+				refRels, ok := relations[ref.GetType()]
+				if !ok {
+					return fmt.Errorf("%s: type %q is not defined", where, ref.GetType())
+				}
+				if r := ref.GetRelation(); r != "" {
+					if _, ok := refRels[r]; !ok {
+						return fmt.Errorf("%s: relation %q is not defined on type %q", where, r, ref.GetType())
+					}
+				}
+			}
+			if err := validateUsersetRefs(relations, meta, typeName, where, rewrite); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func validateUsersetRefs(relations map[string]map[string]*openfgav1.Userset, meta map[string]*openfgav1.RelationMetadata, typeName, where string, us *openfgav1.Userset) error {
+	switch u := us.GetUserset().(type) {
+	case *openfgav1.Userset_ComputedUserset:
+		target := u.ComputedUserset.GetRelation()
+		if _, ok := relations[typeName][target]; !ok {
+			return fmt.Errorf("%s: relation %q is not defined on type %q", where, target, typeName)
+		}
+	case *openfgav1.Userset_TupleToUserset:
+		tupleset := u.TupleToUserset.GetTupleset().GetRelation()
+		if _, ok := relations[typeName][tupleset]; !ok {
+			return fmt.Errorf("%s: relation %q is not defined on type %q", where, tupleset, typeName)
+		}
+		// The computed relation must exist on at least one type the
+		// tupleset can point at, otherwise the `from` can never resolve.
+		computed := u.TupleToUserset.GetComputedUserset().GetRelation()
+		found := false
+		for _, ref := range meta[tupleset].GetDirectlyRelatedUserTypes() {
+			if _, ok := relations[ref.GetType()][computed]; ok {
+				found = true
+				break
+			}
+		}
+		if !found {
+			return fmt.Errorf("%s: relation %q is not defined on any type assignable to %s#%s", where, computed, typeName, tupleset)
+		}
+	case *openfgav1.Userset_Union:
+		for _, child := range u.Union.GetChild() {
+			if err := validateUsersetRefs(relations, meta, typeName, where, child); err != nil {
+				return err
+			}
+		}
+	case *openfgav1.Userset_Intersection:
+		for _, child := range u.Intersection.GetChild() {
+			if err := validateUsersetRefs(relations, meta, typeName, where, child); err != nil {
+				return err
+			}
+		}
+	case *openfgav1.Userset_Difference:
+		if err := validateUsersetRefs(relations, meta, typeName, where, u.Difference.GetBase()); err != nil {
+			return err
+		}
+		return validateUsersetRefs(relations, meta, typeName, where, u.Difference.GetSubtract())
+	}
+	return nil
+}

@@ -251,6 +251,9 @@ func evaluateAuthorizationModel(owner, appName, dsl string) (*SaveAuthorizationM
 	if err != nil {
 		return nil, nil, fmt.Errorf("schema parse: %w", err)
 	}
+	if err := ValidateSchemaSemantics(parsed.Proto); err != nil {
+		return nil, nil, fmt.Errorf("schema invalid: %w", err)
+	}
 
 	hash := computeSchemaHash(dsl)
 	if existing, err := FindLatestBizAuthorizationModelByHash(owner, appName, hash); err != nil {
