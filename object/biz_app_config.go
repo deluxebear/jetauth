@@ -312,6 +312,13 @@ func CompareAndSetBizAppConfigAuthorizationModelId(owner, appName, expected, mod
 	if util.IsStringsEmpty(owner, appName) {
 		return false, nil
 	}
+	// Activating the model that is already current (expected == modelId) makes
+	// the conditional UPDATE a no-op, which MySQL reports as 0 affected rows
+	// (no clientFoundRows). Never rely on affected-rows alone: decide from the
+	// stored value instead.
+	if expected == modelId {
+		return bizAuthModelPointerSettled(owner, appName, modelId)
+	}
 	sess := ormer.Engine.Table(&BizAppConfig{}).Where("owner = ? AND app_name = ?", owner, appName)
 	if expected == "" {
 		sess = sess.And("(current_authorization_model_id = '' OR current_authorization_model_id IS NULL)")
@@ -322,7 +329,23 @@ func CompareAndSetBizAppConfigAuthorizationModelId(owner, appName, expected, mod
 	if err != nil {
 		return false, err
 	}
-	return affected != 0, nil
+	if affected != 0 {
+		return true, nil
+	}
+	// 0 rows: either the pointer moved (stale) or the value already equals the
+	// target. Re-read to tell the two apart.
+	return bizAuthModelPointerSettled(owner, appName, modelId)
+}
+
+// bizAuthModelPointerSettled reports whether the app config row exists and its
+// stored CurrentAuthorizationModelId already equals modelId.
+func bizAuthModelPointerSettled(owner, appName, modelId string) (bool, error) {
+	cur := &BizAppConfig{}
+	exists, err := ormer.Engine.Where("owner = ? AND app_name = ?", owner, appName).Get(cur)
+	if err != nil {
+		return false, err
+	}
+	return exists && cur.CurrentAuthorizationModelId == modelId, nil
 }
 
 func DeleteBizAppConfig(config *BizAppConfig) (bool, error) {
