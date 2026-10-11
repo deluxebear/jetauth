@@ -91,8 +91,19 @@ This document sketches the remaining weeks at the task level. Full TDD-grade pla
 
 ## Estimated timeline
 
-| Week | Calendar | Tasks | Demo |
+| Week | Status (2026-10-11) | Demo | References |
 |---|---|---|---|
+| ✅ W1 | completed | Theme change propagates | `docs/2026-04-18-auth-ui-revamp-plan.md` |
+| ✅ W2a | completed | Password signin works | `docs/2026-04-18-w2a-smoke-log.md` |
+| ✅ W2b | completed | All signin methods work | `docs/2026-04-18-w2b-smoke-log.md` |
+| ✅ W3 | completed | Signup dynamic; 4 layouts | `docs/2026-04-18-w3-smoke-log.md`, `docs/2026-04-18-w3-mobile-audit.md` |
+| ✅ W4 | completed | Admin live preview | `docs/2026-04-18-w4-smoke-log.md` |
+| ✅ W5 | completed (commit `8eafd0dc`) | HTML injection safe | `docs/2026-04-18-auth-ui-revamp-release-notes.md` |
+| ✅ W6 | completed (commit `8eafd0dc`) | Ship | release notes, `docs/2026-04-18-auth-ui-revamp-smoke-checklist.md` |
+
+**Remaining:** none of the planned weeks. Delivered W5/W6 scope (per `8eafd0dc`): DOMPurify rendering of header/footer/signin/signup HTML, `bluemonday` sanitization on Add/UpdateApplication (`object/html_sanitize.go`), `formCss`/`formCssMobile` injection, axe-core audit over 5 auth surfaces, release notes and operator smoke checklist. The sketches above are kept as the original plan; items written there but **not found in the code** at the time of this update and therefore possibly dropped or deferred: `POST /api/validate-html` (W5-T04), CSP headers on auth pages (W5-T06), the field-level HTML audit log (W5-T07), the `JETAUTH_DISABLE_NEW_AUTH_UI` ejection env var (W6-T05), and the 72-snapshot visual regression suite (W6-T02). Verify before relying on them.
+
+---|---|---|---|
 | ✅ W1 | completed | 13 | Theme change propagates |
 | ✅ W2a | completed | 10 | Password signin works |
 | 🟠 W2b | 1 week | ~10 | All signin methods work |
