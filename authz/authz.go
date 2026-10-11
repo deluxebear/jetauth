@@ -52,6 +52,8 @@ p, *, *, POST, /api/sso-logout, *, *
 p, *, *, GET, /api/sso-logout, *, *
 p, *, *, POST, /api/callback, *, *
 p, *, *, POST, /api/device-auth, *, *
+p, *, *, POST, /api/grant-consent, *, *
+p, *, *, POST, /api/revoke-consent, *, *
 p, *, *, GET, /api/get-account, *, *
 p, *, *, GET, /api/userinfo, *, *
 p, *, *, GET, /api/user, *, *

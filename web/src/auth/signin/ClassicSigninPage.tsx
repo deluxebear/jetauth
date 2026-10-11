@@ -24,7 +24,8 @@ import { useSigninItemVisibility } from "../items/useSigninItemVisibility";
 import { MarkdownLinks } from "../items/MarkdownLinks";
 import { useModal } from "../../components/Modal";
 import { resolveTemplate } from "../templates";
-import { submitSamlResponse, readSamlParams, buildOAuthCodeQuery, buildOAuthRedirectUrl, type LoginApiResponse } from "../authPost";
+import { submitSamlResponse, readSamlParams, buildOAuthCodeQuery, buildOAuthRedirectUrl, isConsentRequired, type LoginApiResponse } from "../authPost";
+import OAuthConsentStep from "../OAuthConsentStep";
 import type { AuthApplication, ResolvedProvider } from "../api/types";
 import LoginMfaStep from "./LoginMfaStep";
 import { pendingMfaFrom, type PendingMfa } from "./pendingMfa";
@@ -748,6 +749,7 @@ export default function ClassicSigninPage({ application, providers }: Props) {
   const [username, setUsername] = useState("");
   const [error, setError] = useState("");
   const [pendingMfa, setPendingMfa] = useState<PendingMfa | null>(null);
+  const [consentRequired, setConsentRequired] = useState(false);
 
   const orgName =
     application.organizationObj?.name ?? application.organization ?? "built-in";
@@ -813,6 +815,17 @@ export default function ClassicSigninPage({ application, providers }: Props) {
     return oauthQs ? `/api/login?${oauthQs}` : "/api/login";
   };
 
+  // Every credential flow ends here: consent screen when the OAuth client
+  // still needs it, otherwise the usual SAML / OAuth / home redirect.
+  const finishLogin = (res: LoginApiResponse) => {
+    if (isConsentRequired(res)) {
+      setPendingMfa(null);
+      setConsentRequired(true);
+      return;
+    }
+    handleRedirect(res, searchParams);
+  };
+
   const handlePasswordSubmit = async (password: string) => {
     setError("");
     try {
@@ -821,7 +834,7 @@ export default function ClassicSigninPage({ application, providers }: Props) {
       if (res.status !== "ok") { setError(res.msg ?? t("auth.signin.noMethodError")); return; }
       const mfa = pendingMfaFrom(res, loginUrl(), body);
       if (mfa) { setPendingMfa(mfa); return; }
-      handleRedirect(res, searchParams);
+      finishLogin(res);
     } catch (e: unknown) {
       setError((e as Error).message ?? "network error");
     }
@@ -835,7 +848,7 @@ export default function ClassicSigninPage({ application, providers }: Props) {
       if (res.status !== "ok") { setError(res.msg ?? t("auth.signin.noMethodError")); return; }
       const mfa = pendingMfaFrom(res, loginUrl(), body);
       if (mfa) { setPendingMfa(mfa); return; }
-      handleRedirect(res, searchParams);
+      finishLogin(res);
     } catch (e: unknown) {
       setError((e as Error).message ?? "network error");
     }
@@ -857,6 +870,10 @@ export default function ClassicSigninPage({ application, providers }: Props) {
     (it) => it.name === "Username" && !it.isCustom,
   )?.placeholder;
 
+  if (consentRequired) {
+    return <OAuthConsentStep application={application} searchParams={searchParams} />;
+  }
+
   if (pendingMfa) {
     return (
       <LoginMfaStep
@@ -864,7 +881,7 @@ export default function ClassicSigninPage({ application, providers }: Props) {
         application={application.name}
         organization={orgName}
         orgBranding={{ logo: orgLogo, logoDark: application.organizationObj?.logoDark, displayName: orgDisplay }}
-        onDone={(res) => handleRedirect(res, searchParams)}
+        onDone={finishLogin}
         onPending={setPendingMfa}
         onError={(msg) => { setPendingMfa(null); setError(msg); }}
       />

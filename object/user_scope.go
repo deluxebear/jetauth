@@ -117,3 +117,28 @@ func validateCustomScopes(customScopes []*ScopeDescription, lang string) error {
 	}
 	return nil
 }
+
+// FilterConsentScopes keeps only the granted scopes that were requested (the
+// space-separated OAuth scope parameter) and are defined as custom scopes on
+// the application — the same set CheckConsentRequired asks the user about.
+func FilterConsentScopes(application *Application, requestedScope string, granted []string) []string {
+	custom := make(map[string]bool)
+	for _, customScope := range application.CustomScopes {
+		if customScope != nil && customScope.Scope != "" {
+			custom[customScope.Scope] = true
+		}
+	}
+	allowed := make(map[string]bool)
+	for _, scope := range parseScopes(requestedScope) {
+		if custom[scope] {
+			allowed[scope] = true
+		}
+	}
+	filtered := []string{}
+	for _, scope := range granted {
+		if allowed[scope] {
+			filtered = append(filtered, scope)
+		}
+	}
+	return filtered
+}

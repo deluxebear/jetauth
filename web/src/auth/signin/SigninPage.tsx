@@ -14,7 +14,8 @@ import { useSigninItemVisibility } from "../items/useSigninItemVisibility";
 import CustomTextItems from "../items/CustomTextItems";
 import SafeHtml from "../shell/SafeHtml";
 import { resolveTemplate } from "../templates";
-import { submitSamlResponse, readSamlParams, buildOAuthCodeQuery, buildOAuthRedirectUrl, type LoginApiResponse } from "../authPost";
+import { submitSamlResponse, readSamlParams, buildOAuthCodeQuery, buildOAuthRedirectUrl, isConsentRequired, type LoginApiResponse } from "../authPost";
+import OAuthConsentStep from "../OAuthConsentStep";
 import LoginMfaStep from "./LoginMfaStep";
 import { pendingMfaFrom, type PendingMfa } from "./pendingMfa";
 import type {
@@ -47,6 +48,7 @@ export default function SigninPage({ application, providers }: SigninPageProps) 
   const [userHint, setUserHint] = useState<string>("");
   const [error, setError] = useState<string>("");
   const [pendingMfa, setPendingMfa] = useState<PendingMfa | null>(null);
+  const [consentRequired, setConsentRequired] = useState(false);
 
   const signinItemVis = useSigninItemVisibility(application.signinItems);
 
@@ -116,6 +118,11 @@ export default function SigninPage({ application, providers }: SigninPageProps) 
 
   // Shared tail of every successful sign-in, including after MFA.
   const completeLogin = (res: LoginApiResponse) => {
+    if (isConsentRequired(res)) {
+      setPendingMfa(null);
+      setConsentRequired(true);
+      return;
+    }
     if (handleSamlResponse(res)) return;
     if (res.data && handleOAuthRedirect(res.data)) return;
     // Full page reload so App.tsx re-bootstraps its `user` state via
@@ -214,6 +221,10 @@ export default function SigninPage({ application, providers }: SigninPageProps) 
     application.displayName ||
     application.organizationObj?.displayName ||
     application.name;
+
+  if (consentRequired) {
+    return <OAuthConsentStep application={application} searchParams={searchParams} />;
+  }
 
   if (pendingMfa) {
     return (
