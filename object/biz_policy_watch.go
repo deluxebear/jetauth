@@ -111,15 +111,17 @@ func buildBizWatchResult(owner, appName string, since int64, hasSince bool, curr
 		}
 	}
 
-	// Full snapshot. `current` was read before the export, so the snapshot is
-	// at least as new as the version we report (re-applying a delta is safe).
-	data, err := BizGetPoliciesForExport(owner, appName)
+	// Full snapshot. `current` was read before the rows below, and syncs
+	// persist the policy table BEFORE bumping policy_version, so rows read
+	// from the DB are never older than `current` (re-applying a delta on a
+	// newer snapshot is safe). The Redis / local caches are deliberately
+	// bypassed: another instance may see the new version before its cache is
+	// invalidated, which would label stale data with the new version and keep
+	// the SDK from ever converging.
+	modelText, policies, grouping, err := loadBizPoliciesFromDB(owner, appName)
 	if err != nil {
 		return nil, err
 	}
-	modelText, _ := data["modelText"].(string)
-	policies, _ := data["policies"].([][]string)
-	grouping, _ := data["groupingPolicies"].([][]string)
 	if policies == nil {
 		policies = [][]string{}
 	}
@@ -141,4 +143,19 @@ func GetBizPolicyVersionForApp(owner, appName string) (*BizPolicyVersionResponse
 		return nil, err
 	}
 	return &BizPolicyVersionResponse{Version: v}, nil
+}
+
+// loadBizPoliciesFromDB reads the model text and the persisted policy rows
+// straight from the DB (no cache involved).
+func loadBizPoliciesFromDB(owner, appName string) (string, [][]string, [][]string, error) {
+	config, err := getBizAppConfigOrError(owner, appName)
+	if err != nil {
+		return "", nil, nil, err
+	}
+	e, err := buildBizEnforcer(config)
+	if err != nil {
+		return "", nil, nil, err
+	}
+	policies, grouping := extractPolicies(e)
+	return config.ModelText, policies, grouping, nil
 }
