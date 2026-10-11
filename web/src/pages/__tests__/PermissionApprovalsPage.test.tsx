@@ -16,7 +16,7 @@ vi.mock("../../components/Modal", () => ({
 }));
 
 const pendingItems = [
-  { owner: "org1", name: "perm-a", displayName: "A", resources: ["app1"], actions: ["Read"], submitter: "bob", createdTime: "2026-01-01T00:00:00Z", state: "Pending" },
+  { owner: "org1", name: "perm-a", displayName: "A", resources: ["app1"], actions: ["Read"], submitter: "bob", createdTime: "2026-01-01T00:00:00Z", state: "Pending", contentHash: "hash-1" },
 ];
 
 vi.mock("../../hooks/useEntityList", () => ({
@@ -30,12 +30,14 @@ vi.mock("../../hooks/useEntityList", () => ({
 const approvePermission = vi.fn();
 const rejectPermission = vi.fn();
 const getPermissionsBySubmitter = vi.fn();
+const hasPermissionContentChanged = vi.fn();
 
 vi.mock("../../backend/PermissionBackend", () => ({
   getPendingPermissions: vi.fn(),
   getPermissionsBySubmitter: (...a: unknown[]) => getPermissionsBySubmitter(...a),
   approvePermission: (...a: unknown[]) => approvePermission(...a),
   rejectPermission: (...a: unknown[]) => rejectPermission(...a),
+  hasPermissionContentChanged: (...a: unknown[]) => hasPermissionContentChanged(...a),
 }));
 
 import PermissionApprovalsPage from "../PermissionApprovalsPage";
@@ -58,6 +60,7 @@ describe("PermissionApprovalsPage", () => {
     vi.clearAllMocks();
     localStorage.clear();
     approvePermission.mockResolvedValue({ status: "ok", msg: "", data: null });
+    hasPermissionContentChanged.mockResolvedValue(false);
     rejectPermission.mockResolvedValue({ status: "ok", msg: "", data: null });
     getPermissionsBySubmitter.mockResolvedValue({ status: "ok", msg: "", data: [] });
   });
@@ -68,7 +71,17 @@ describe("PermissionApprovalsPage", () => {
     const btn = screen.getByRole("button", { name: /permissions\.approve/ });
     expect(btn).not.toBeDisabled();
     fireEvent.click(btn);
-    await waitFor(() => expect(approvePermission).toHaveBeenCalledWith("org1", "perm-a"));
+    await waitFor(() => expect(approvePermission).toHaveBeenCalledWith("org1", "perm-a", "hash-1"));
+    expect(refetch).toHaveBeenCalled();
+  });
+
+  it("shows the conflict message and refreshes when the content changed after the review", async () => {
+    setAccount({ owner: "org1", name: "admin1", isAdmin: true });
+    approvePermission.mockResolvedValue({ status: "error", msg: "changed", data: null });
+    hasPermissionContentChanged.mockResolvedValue(true);
+    renderPage();
+    fireEvent.click(screen.getByRole("button", { name: /permissions\.approve/ }));
+    await waitFor(() => expect(toast).toHaveBeenCalledWith("permissions.contentChanged", "error"));
     expect(refetch).toHaveBeenCalled();
   });
 
@@ -77,7 +90,7 @@ describe("PermissionApprovalsPage", () => {
     prompt.mockResolvedValue("too broad");
     renderPage();
     fireEvent.click(screen.getByRole("button", { name: /permissions\.reject/ }));
-    await waitFor(() => expect(rejectPermission).toHaveBeenCalledWith("org1", "perm-a", "too broad"));
+    await waitFor(() => expect(rejectPermission).toHaveBeenCalledWith("org1", "perm-a", "too broad", "hash-1"));
   });
 
   it("does not reject when the prompt is cancelled", async () => {

@@ -2365,6 +2365,7 @@ const en = {
   "permissions.adminOnly": "Only administrators can do this",
   "permissions.approveSuccess": "Permission approved",
   "permissions.approveFailed": "Failed to approve permission",
+  "permissions.contentChanged": "The permission content changed after you opened it. It has been reloaded; review it again before approving or rejecting.",
   "permissions.rejectTitle": "Reject permission",
   "permissions.rejectReasonPlaceholder": "Reason for rejecting this permission",
   "permissions.rejectReasonRequired": "A reject reason is required",

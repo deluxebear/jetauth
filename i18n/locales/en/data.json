@@ -144,6 +144,8 @@
   },
   "permission": {
     "Permission requires at least one action": "Permission requires at least one action",
+    "The permission content changed after it was reviewed, reload it and review it again": "The permission content changed after it was reviewed, reload it and review it again",
+    "A content fingerprint is required to approve a permission": "A content fingerprint is required to approve a permission",
     "Permission requires at least one resource": "Permission requires at least one resource",
     "Permission must have at least one user or role": "Permission must have at least one user or role",
     "The model of the permission has no domain-aware role definition (g = _, _, _), so domains must be empty": "The model of the permission has no domain-aware role definition (g = _, _, _), so domains must be empty",

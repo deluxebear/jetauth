@@ -2445,6 +2445,7 @@ const zh: Record<string, string> = {
   "permissions.adminOnly": "仅管理员可执行此操作",
   "permissions.approveSuccess": "权限已批准",
   "permissions.approveFailed": "批准权限失败",
+  "permissions.contentChanged": "权限内容在你打开后已被修改，已重新加载，请重新审阅后再批准或拒绝。",
   "permissions.rejectTitle": "拒绝权限",
   "permissions.rejectReasonPlaceholder": "请输入拒绝该权限的原因",
   "permissions.rejectReasonRequired": "必须填写拒绝原因",

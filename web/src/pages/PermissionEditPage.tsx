@@ -134,7 +134,7 @@ export default function PermissionEditPage() {
     }).catch(() => {});
   }, [owner, name, isAddMode, logTick]);
 
-  const { entity, loading, invalidateList } = useEntityEdit<Permission>({
+  const { entity, loading, invalidate, invalidateList } = useEntityEdit<Permission>({
     queryKey: "permission",
     owner,
     name,
@@ -197,18 +197,23 @@ export default function PermissionEditPage() {
 
   // Runs an approval action, then merges only the server-owned approval fields
   // so unsaved edits to the rest of the form survive.
-  const runStateAction = async (call: () => Promise<{ status: string; msg: string }>, okKey: Parameters<typeof t>[0], savedForm?: Permission) => {
+  const runStateAction = async (call: () => Promise<{ status: string; msg: string }>, okKey: Parameters<typeof t>[0], savedForm?: Permission, seenHash?: string) => {
     setActionBusy(true);
     try {
       const res = await call();
       if (res.status !== "ok") {
+        if (seenHash !== undefined && await PermissionBackend.hasPermissionContentChanged(permission.owner, permission.name, seenHash)) {
+          modal.toast(t("permissions.contentChanged"), "error");
+          invalidate();
+          return;
+        }
         modal.toast(friendlyError(res.msg, t) || t("permissions.stateChangeFailed"), "error");
         return;
       }
       const fresh = await PermissionBackend.getPermission(permission.owner, permission.name);
       if (fresh.status === "ok" && fresh.data) {
         const f = fresh.data;
-        const merge = (p: Permission): Permission => ({ ...p, state: f.state, approver: f.approver, approveTime: f.approveTime, rejectReason: f.rejectReason ?? "" });
+        const merge = (p: Permission): Permission => ({ ...p, state: f.state, approver: f.approver, approveTime: f.approveTime, rejectReason: f.rejectReason ?? "", contentHash: f.contentHash });
         setPermission((prev) => (prev ? merge(prev) : prev));
         // When the call also saved the current form (revoke/resubmit), the form is now the baseline.
         if (savedForm) setOriginalJson(JSON.stringify(merge(savedForm)));
@@ -222,7 +227,7 @@ export default function PermissionEditPage() {
     }
   };
 
-  const handleApprove = () => runStateAction(() => PermissionBackend.approvePermission(permission.owner, permission.name), "permissions.approveSuccess");
+  const handleApprove = () => runStateAction(() => PermissionBackend.approvePermission(permission.owner, permission.name, permission.contentHash ?? ""), "permissions.approveSuccess", undefined, permission.contentHash);
   const handleReject = async () => {
     const reason = await modal.prompt({
       title: t("permissions.rejectTitle"),
@@ -233,7 +238,7 @@ export default function PermissionEditPage() {
     });
     if (reason === null) return;
     if (!reason.trim()) { modal.toast(t("permissions.rejectReasonRequired"), "error"); return; }
-    await runStateAction(() => PermissionBackend.rejectPermission(permission.owner, permission.name, reason.trim()), "permissions.rejectSuccess");
+    await runStateAction(() => PermissionBackend.rejectPermission(permission.owner, permission.name, reason.trim(), permission.contentHash), "permissions.rejectSuccess", undefined, permission.contentHash);
   };
   // Revoke and resubmit both move the permission back to Pending through the update endpoint,
   // which enforces the state machine server-side.
@@ -261,6 +266,12 @@ export default function PermissionEditPage() {
         setSaved(true);
         setOriginalJson(JSON.stringify(permission));
         setIsAddMode(false);
+        // The saved content has a new fingerprint; approve/reject must use the one the server now holds.
+        void PermissionBackend.getPermission(permission.owner, permission.name).then((fresh) => {
+          if (fresh.status === "ok" && fresh.data) {
+            setPermission((prev) => (prev ? { ...prev, contentHash: fresh.data!.contentHash } : prev));
+          }
+        });
         invalidateList();
         if (permission.name !== name) {
           navigate(`/permissions/${permission.owner}/${permission.name}`, { replace: true });

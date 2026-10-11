@@ -42,9 +42,12 @@ export default function PermissionApprovalsPage() {
   };
 
   const handleApprove = async (r: Permission) => {
-    const res = await PermissionBackend.approvePermission(r.owner, r.name);
+    const res = await PermissionBackend.approvePermission(r.owner, r.name, r.contentHash ?? "");
     if (res.status === "ok") {
       modal.toast(t("permissions.approveSuccess"));
+      refresh();
+    } else if (await PermissionBackend.hasPermissionContentChanged(r.owner, r.name, r.contentHash)) {
+      modal.toast(t("permissions.contentChanged"), "error");
       refresh();
     } else {
       modal.toast(res.msg || t("permissions.approveFailed"), "error");
@@ -64,9 +67,12 @@ export default function PermissionApprovalsPage() {
       modal.toast(t("permissions.rejectReasonRequired"), "error");
       return;
     }
-    const res = await PermissionBackend.rejectPermission(r.owner, r.name, reason.trim());
+    const res = await PermissionBackend.rejectPermission(r.owner, r.name, reason.trim(), r.contentHash);
     if (res.status === "ok") {
       modal.toast(t("permissions.rejectSuccess"));
+      refresh();
+    } else if (await PermissionBackend.hasPermissionContentChanged(r.owner, r.name, r.contentHash)) {
+      modal.toast(t("permissions.contentChanged"), "error");
       refresh();
     } else {
       modal.toast(res.msg || t("permissions.rejectFailed"), "error");

@@ -18,6 +18,58 @@ package object
 
 import "testing"
 
+// setStateWithHash is what the UI does: read the permission, then act on the fingerprint it saw.
+func setStateWithHash(id, to, reason, admin string) (bool, error) {
+	p, err := GetPermission(id)
+	if err != nil || p == nil {
+		return false, err
+	}
+	return SetPermissionState(id, to, reason, admin, true, p.ComputeContentHash())
+}
+
+// M4: approval is bound to the reviewed content.
+func TestSetPermissionStateRejectsSwappedContent(t *testing.T) {
+	owner := newPermissionRbacTestOwner(t)
+
+	role := &Role{Owner: owner, Name: "reader", Users: []string{owner + "/alice"}}
+	if _, err := AddRole(role); err != nil {
+		t.Fatal(err)
+	}
+	perm := newTestPermission(owner, "swap", role.GetId())
+	if _, err := AddPermissionWithApproval(perm, owner+"/mallory", false); err != nil {
+		t.Fatal(err)
+	}
+	admin := owner + "/admin"
+
+	reviewed, err := GetPermission(perm.GetId())
+	if err != nil || reviewed == nil {
+		t.Fatal(err)
+	}
+	reviewedHash := reviewed.ComputeContentHash()
+
+	// the submitter swaps the content while the admin has the page open
+	swapped := *reviewed
+	swapped.Actions = []string{"read", "delete"}
+	if _, err = UpdatePermissionWithApproval(perm.GetId(), &swapped, owner+"/mallory", false); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err = SetPermissionState(perm.GetId(), PermissionStateApproved, "", admin, true, reviewedHash); err == nil {
+		t.Fatal("approving with a stale fingerprint must fail")
+	}
+	if _, err = SetPermissionState(perm.GetId(), PermissionStateApproved, "", admin, true, ""); err == nil {
+		t.Fatal("approving without a fingerprint must fail")
+	}
+	requireRuleCount(t, perm, 0)
+	if _, err = SetPermissionState(perm.GetId(), PermissionStateRejected, "no", admin, true, reviewedHash); err == nil {
+		t.Fatal("rejecting with a stale fingerprint must fail")
+	}
+	// reject without a fingerprint stays possible
+	if _, err = SetPermissionState(perm.GetId(), PermissionStateRejected, "no", admin, true, ""); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func requireRuleCount(t *testing.T, p *Permission, want int) {
 	t.Helper()
 	// The rule table is created lazily by the casbin adapter; a never-approved owner may not have it yet.
@@ -55,7 +107,7 @@ func TestPermissionPolicyRowsFollowApprovalState(t *testing.T) {
 	}
 
 	// approve: rows are written from the stored content
-	if _, err := SetPermissionState(perm.GetId(), PermissionStateApproved, "", admin, true); err != nil {
+	if _, err := setStateWithHash(perm.GetId(), PermissionStateApproved, "", admin); err != nil {
 		t.Fatal(err)
 	}
 	requireRuleCount(t, perm, 1)
@@ -78,14 +130,14 @@ func TestPermissionPolicyRowsFollowApprovalState(t *testing.T) {
 	}
 
 	// approve again, then revoke
-	if _, err = SetPermissionState(perm.GetId(), PermissionStateApproved, "", admin, true); err != nil {
+	if _, err = setStateWithHash(perm.GetId(), PermissionStateApproved, "", admin); err != nil {
 		t.Fatal(err)
 	}
 	requireRuleCount(t, perm, 2)
 	if !mustEnforce(t, perm, alice) {
 		t.Fatal("re-approved permission must be enforced")
 	}
-	if _, err = SetPermissionState(perm.GetId(), PermissionStatePending, "", admin, true); err != nil {
+	if _, err = setStateWithHash(perm.GetId(), PermissionStatePending, "", admin); err != nil {
 		t.Fatal(err)
 	}
 	requireRuleCount(t, perm, 0)
@@ -94,7 +146,7 @@ func TestPermissionPolicyRowsFollowApprovalState(t *testing.T) {
 	}
 
 	// reject keeps it dead
-	if _, err = SetPermissionState(perm.GetId(), PermissionStateRejected, "no", admin, true); err != nil {
+	if _, err = setStateWithHash(perm.GetId(), PermissionStateRejected, "no", admin); err != nil {
 		t.Fatal(err)
 	}
 	requireRuleCount(t, perm, 0)

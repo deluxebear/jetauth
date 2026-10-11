@@ -22,6 +22,8 @@ export interface Permission {
   approveTime: string;
   state: string;
   rejectReason?: string;
+  /** Server-computed fingerprint of the policy-affecting fields; echoed back on approve/reject. */
+  contentHash?: string;
   [key: string]: unknown;
 }
 
@@ -66,12 +68,26 @@ export function getPermissionsBySubmitter() {
   return request<Permission[]>("GET", "/api/get-permissions-by-submitter");
 }
 
-export function approvePermission(owner: string, name: string) {
-  return request("POST", `/api/approve-permission?id=${owner}/${encodeURIComponent(name)}`);
+/** Approving is bound to the reviewed content: contentHash must be the one the reviewer saw. */
+export function approvePermission(owner: string, name: string, contentHash: string) {
+  return request(
+    "POST",
+    `/api/approve-permission?id=${owner}/${encodeURIComponent(name)}&contentHash=${encodeURIComponent(contentHash)}`
+  );
 }
 
-export function rejectPermission(owner: string, name: string, reason: string) {
-  return request("POST", `/api/reject-permission?id=${owner}/${encodeURIComponent(name)}`, { reason });
+export function rejectPermission(owner: string, name: string, reason: string, contentHash?: string) {
+  return request("POST", `/api/reject-permission?id=${owner}/${encodeURIComponent(name)}`, { reason, contentHash });
+}
+
+/** True when the stored content no longer matches the fingerprint the reviewer saw. */
+export async function hasPermissionContentChanged(owner: string, name: string, seenHash: string | undefined) {
+  try {
+    const fresh = await getPermission(owner, name);
+    return fresh.status === "ok" && !!fresh.data && fresh.data.contentHash !== seenHash;
+  } catch {
+    return false;
+  }
 }
 
 export function getPermissionApprovalLogs(owner: string, name: string) {

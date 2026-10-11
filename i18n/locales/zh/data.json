@@ -144,6 +144,8 @@
   },
   "permission": {
     "Permission requires at least one action": "权限必须至少包含一个操作",
+    "The permission content changed after it was reviewed, reload it and review it again": "权限内容在审阅后已被修改，请重新加载并再次审阅",
+    "A content fingerprint is required to approve a permission": "批准权限需要提供内容指纹",
     "Permission requires at least one resource": "权限必须至少包含一个资源",
     "Permission must have at least one user or role": "权限必须至少包含一个用户或角色",
     "The model of the permission has no domain-aware role definition (g = _, _, _), so domains must be empty": "该权限所选模型没有支持域的角色定义 (g = _, _, _)，因此域必须为空",

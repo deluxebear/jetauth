@@ -50,6 +50,10 @@ type Permission struct {
 
 	// RejectReason is set when State is Rejected; cleared on any other state.
 	RejectReason string `xorm:"varchar(500) null" json:"rejectReason"`
+
+	// ContentHash fingerprints the policy-affecting fields. It is computed on read (never stored) so
+	// approve/reject can be bound to the exact content the reviewer saw.
+	ContentHash string `xorm:"-" json:"contentHash"`
 }
 
 func GetPermissionCount(owner, field, value string) (int64, error) {

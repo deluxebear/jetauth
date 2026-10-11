@@ -290,7 +290,7 @@ func demoteOnContentChange(old, permission *Permission, from, to string, isAdmin
 }
 
 // SetPermissionState moves a permission to a new state (used by the approve/reject endpoints).
-func SetPermissionState(id, to, reason, operatorId string, isAdmin bool) (bool, error) {
+func SetPermissionState(id, to, reason, operatorId string, isAdmin bool, contentHash string) (bool, error) {
 	owner, name := util.GetOwnerAndNameFromIdNoCheck(id)
 	oldPermission, err := getPermission(owner, name)
 	if err != nil {
@@ -298,6 +298,9 @@ func SetPermissionState(id, to, reason, operatorId string, isAdmin bool) (bool, 
 	}
 	if oldPermission == nil {
 		return false, fmt.Errorf("the permission: %s does not exist", id)
+	}
+	if err = checkPermissionContentHash(oldPermission, to, contentHash); err != nil {
+		return false, err
 	}
 
 	updated := *oldPermission

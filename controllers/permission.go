@@ -61,6 +61,7 @@ func (c *ApiController) GetPermissions() {
 			return
 		}
 
+		object.FillPermissionContentHash(permissions...)
 		c.ResponseOk(permissions)
 	} else {
 		limit := util.ParseInt(limit)
@@ -77,6 +78,7 @@ func (c *ApiController) GetPermissions() {
 			return
 		}
 
+		object.FillPermissionContentHash(permissions...)
 		c.ResponseOk(permissions, paginator.Nums())
 	}
 }
@@ -98,6 +100,7 @@ func (c *ApiController) GetPermissionsBySubmitter() {
 		c.ResponseError(err.Error())
 		return
 	}
+	object.FillPermissionContentHash(permissions...)
 
 	c.ResponseOk(permissions, len(permissions))
 }
@@ -136,6 +139,7 @@ func (c *ApiController) GetPermission() {
 		return
 	}
 
+	object.FillPermissionContentHash(permission)
 	c.ResponseOk(permission)
 }
 
@@ -223,6 +227,8 @@ func (c *ApiController) DeletePermission() {
 // RejectPermissionRequest is the body of /reject-permission.
 type RejectPermissionRequest struct {
 	Reason string `json:"reason"`
+	// ContentHash is optional for reject: when set, the reject is refused if the content changed.
+	ContentHash string `json:"contentHash"`
 }
 
 // isPermissionApprover reports whether the current user may approve/reject permissions owned by
@@ -235,7 +241,7 @@ func (c *ApiController) isPermissionApprover(owner string) bool {
 	return user != nil && user.IsAdmin && user.Owner == owner
 }
 
-func (c *ApiController) changePermissionState(to, reason string) {
+func (c *ApiController) changePermissionState(to, reason, contentHash string) {
 	id := c.Ctx.Input.Query("id")
 	user, ok := c.RequireSignedInUser()
 	if !ok {
@@ -248,7 +254,16 @@ func (c *ApiController) changePermissionState(to, reason string) {
 		return
 	}
 
-	c.Data["json"] = wrapActionResponse(object.SetPermissionState(id, to, reason, user.GetId(), true))
+	affected, err := object.SetPermissionState(id, to, reason, user.GetId(), true, contentHash)
+	if err != nil {
+		var validationErr *object.PermissionValidationError
+		if errors.As(err, &validationErr) {
+			c.ResponseError(c.T("permission:" + validationErr.Msg))
+			return
+		}
+	}
+
+	c.Data["json"] = wrapActionResponse(affected, err)
 	c.ServeJSON()
 }
 
@@ -256,11 +271,12 @@ func (c *ApiController) changePermissionState(to, reason string) {
 // @Summary ApprovePermission
 // @Tags Permission API
 // @Description approve a pending permission (global admin or admin of the permission's organization only)
+// @Param   contentHash query string true "The contentHash of the permission as the reviewer saw it"
 // @Param   id     query    string  true        "The id ( owner/name ) of the permission"
 // @Success 200 {object} ActionResponse "Action result"
 // @Router /approve-permission [post]
 func (c *ApiController) ApprovePermission() {
-	c.changePermissionState(object.PermissionStateApproved, "")
+	c.changePermissionState(object.PermissionStateApproved, "", c.Ctx.Input.Query("contentHash"))
 }
 
 // RejectPermission
@@ -280,7 +296,7 @@ func (c *ApiController) RejectPermission() {
 		}
 	}
 
-	c.changePermissionState(object.PermissionStateRejected, req.Reason)
+	c.changePermissionState(object.PermissionStateRejected, req.Reason, req.ContentHash)
 }
 
 // PermissionApprovalLogListResponse represents the response for the approval log API
