@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { CheckCircle2, XCircle, Clock, AlertTriangle, ShoppingBag, FileText } from "lucide-react";
@@ -13,54 +13,42 @@ export default function PaymentResultPage() {
   const { t } = useTranslation();
   const [payment, setPayment] = useState<Payment | null>(null);
   const [loading, setLoading] = useState(true);
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
-  const fetchPayment = useCallback(async () => {
-    if (!owner || !name) return;
-    const res = await PaymentBackend.getPayment(owner, name);
-    if (res.status === "ok" && res.data) {
-      setPayment(res.data as Payment);
-    }
-    setLoading(false);
-  }, [owner, name]);
 
   // Initial load
   useEffect(() => {
-    fetchPayment();
-  }, [fetchPayment]);
+    if (!owner || !name) return;
+    let cancelled = false;
+    (async () => {
+      const res = await PaymentBackend.getPayment(owner, name);
+      if (cancelled) return;
+      if (res.status === "ok" && res.data) {
+        setPayment(res.data as Payment);
+      }
+      setLoading(false);
+    })();
+    return () => { cancelled = true; };
+  }, [owner, name]);
+
+  const paymentState = payment?.state;
 
   // Poll when state is "Created"
   useEffect(() => {
-    if (!payment || payment.state !== "Created") {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-        intervalRef.current = null;
-      }
-      return;
-    }
+    if (paymentState !== "Created") return;
 
-    intervalRef.current = setInterval(async () => {
+    const id = setInterval(async () => {
       try {
         await PaymentBackend.notifyPayment(owner!, name!);
         const res = await PaymentBackend.getPayment(owner!, name!);
         if (res.status === "ok" && res.data) {
           const p = res.data as Payment;
           setPayment(p);
-          if (p.state !== "Created" && intervalRef.current) {
-            clearInterval(intervalRef.current);
-            intervalRef.current = null;
-          }
+          if (p.state !== "Created") clearInterval(id);
         }
       } catch { /* ignore polling errors */ }
     }, 2000);
 
-    return () => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-        intervalRef.current = null;
-      }
-    };
-  }, [payment?.state, owner, name]);
+    return () => clearInterval(id);
+  }, [paymentState, owner, name]);
 
   if (loading || !payment) {
     return (

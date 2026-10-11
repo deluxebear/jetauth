@@ -5,6 +5,7 @@ import { LogOut, Trash2, Send, X } from "lucide-react";
 import StickyEditHeader from "../components/StickyEditHeader";
 import { FormField, FormSection, inputClass, monoInputClass } from "../components/FormSection";
 import { useTranslation } from "../i18n";
+import { errMsg } from "../types/lint-pages-nz";
 import { useModal } from "../components/Modal";
 import { useEntityEdit } from "../hooks/useEntityEdit";
 import * as TicketBackend from "../backend/TicketBackend";
@@ -31,7 +32,7 @@ export default function TicketEditPage() {
   const [messageText, setMessageText] = useState("");
   const [sending, setSending] = useState(false);
   // Detect if this is a new ticket being created (navigated from Add button)
-  const [isAddMode, setIsAddMode] = useState((location.state as any)?.mode === "add");
+  const [isAddMode, setIsAddMode] = useState((location.state as { mode?: string } | null)?.mode === "add");
 
   const { entity, loading, invalidate, invalidateList } = useEntityEdit<Ticket>({
     queryKey: "ticket",
@@ -81,8 +82,8 @@ export default function TicketEditPage() {
       } else {
         modal.toast(friendlyError(res.msg, t) || t("common.saveFailed"), "error");
       }
-    } catch (e: any) {
-      modal.toast(e?.message || t("common.saveFailed"), "error");
+    } catch (e) {
+      modal.toast(errMsg(e) || t("common.saveFailed"), "error");
     } finally {
       setSaving(false);
     }
@@ -100,8 +101,8 @@ export default function TicketEditPage() {
       } else {
         modal.toast(friendlyError(res.msg, t) || t("common.saveFailed"), "error");
       }
-    } catch (e: any) {
-      modal.toast(e?.message || t("common.saveFailed"), "error");
+    } catch (e) {
+      modal.toast(errMsg(e) || t("common.saveFailed"), "error");
     } finally {
       setSaving(false);
     }

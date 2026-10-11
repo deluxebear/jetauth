@@ -5,6 +5,7 @@ import { Trash2, RefreshCw, X, LogOut, Copy, Check } from "lucide-react";
 import StickyEditHeader from "../components/StickyEditHeader";
 import { FormField, FormSection, inputClass, monoInputClass, Switch } from "../components/FormSection";
 import { useTranslation } from "../i18n";
+import { errMsg } from "../types/lint-pages-nz";
 import { useModal } from "../components/Modal";
 import { useEntityEdit } from "../hooks/useEntityEdit";
 import * as ServerBackend from "../backend/ServerBackend";
@@ -22,7 +23,7 @@ export default function ServerEditPage() {
   const { owner, name } = useParams<{ owner: string; name: string }>();
   const navigate = useNavigate();
   const location = useLocation();
-  const [isAddMode, setIsAddMode] = useState((location.state as any)?.mode === "add");
+  const [isAddMode, setIsAddMode] = useState((location.state as { mode?: string } | null)?.mode === "add");
   const { t } = useTranslation();
   const modal = useModal();
   const [server, setServer] = useState<Server | null>(null);
@@ -57,7 +58,7 @@ export default function ServerEditPage() {
     ApplicationBackend.getApplicationsByOrganization({ owner: "admin", organization: server.owner })
       .then((res) => {
         if (res.status === "ok" && res.data) {
-          setAppOptions(res.data.map((a) => ({ value: a.name, label: (a as any).displayName || a.name })));
+          setAppOptions(res.data.map((a) => ({ value: a.name, label: a.displayName || a.name })));
         }
       }).catch(() => {});
   }, [server?.owner]);
@@ -126,8 +127,8 @@ export default function ServerEditPage() {
       } else {
         modal.toast(friendlyError(res.msg, t) || t("common.saveFailed"), "error");
       }
-    } catch (e: any) {
-      modal.toast(e?.message || t("common.saveFailed"), "error");
+    } catch (e) {
+      modal.toast(errMsg(e) || t("common.saveFailed"), "error");
     } finally {
       setSaving(false);
     }

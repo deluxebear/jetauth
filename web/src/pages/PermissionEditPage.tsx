@@ -8,6 +8,7 @@ import SimpleSelect from "../components/SimpleSelect";
 import SingleSearchSelect from "../components/SingleSearchSelect";
 import MultiSearchSelect from "../components/MultiSearchSelect";
 import { useTranslation } from "../i18n";
+import { errMsg } from "../types/lint-pages-nz";
 import { useModal } from "../components/Modal";
 import { useEntityEdit } from "../hooks/useEntityEdit";
 import * as PermissionBackend from "../backend/PermissionBackend";
@@ -44,7 +45,7 @@ export default function PermissionEditPage() {
   const { owner, name } = useParams<{ owner: string; name: string }>();
   const navigate = useNavigate();
   const location = useLocation();
-  const [isAddMode, setIsAddMode] = useState((location.state as any)?.mode === "add");
+  const [isAddMode, setIsAddMode] = useState((location.state as { mode?: string } | null)?.mode === "add");
   const { t } = useTranslation();
   const modal = useModal();
   const [permission, setPermission] = useState<Permission | null>(null);
@@ -76,19 +77,19 @@ export default function PermissionEditPage() {
         ]);
       }
     });
-  }, [isAdmin]);
+  }, [isAdmin, t]);
 
   // Load models and adapters
   useEffect(() => {
     if (!permission?.owner) return;
     ModelBackend.getModels({ owner: permission.owner }).then((res) => {
       if (res.status === "ok" && res.data) {
-        setModelOptions(res.data.map((m) => ({ value: `${(m as any).owner}/${m.name}`, label: `${(m as any).owner}/${m.name}` })));
+        setModelOptions(res.data.map((m) => ({ value: `${m.owner}/${m.name}`, label: `${m.owner}/${m.name}` })));
       }
     });
     AdapterBackend.getAdapters({ owner: permission.owner }).then((res) => {
       if (res.status === "ok" && res.data) {
-        setAdapterOptions(res.data.map((a) => ({ value: `${(a as any).owner}/${a.name}`, label: `${(a as any).owner}/${a.name}` })));
+        setAdapterOptions(res.data.map((a) => ({ value: `${a.owner}/${a.name}`, label: `${a.owner}/${a.name}` })));
       }
     });
   }, [permission?.owner]);
@@ -100,13 +101,13 @@ export default function PermissionEditPage() {
     UserBackend.getUsers({ owner: ow }).then((res) => {
       if (res.status === "ok" && res.data) {
         const all = { value: "*", label: t("common.all") || "All" };
-        setUserOptions([all, ...res.data.map((u) => ({ value: `${(u as any).owner}/${u.name}`, label: `${(u as any).owner}/${u.name}` }))]);
+        setUserOptions([all, ...res.data.map((u) => ({ value: `${u.owner}/${u.name}`, label: `${u.owner}/${u.name}` }))]);
       }
     });
     GroupBackend.getGroups({ owner: ow }).then((res) => {
       if (res.status === "ok" && res.data) {
         const all = { value: "*", label: t("common.all") || "All" };
-        setGroupOptions([all, ...res.data.map((g) => ({ value: `${(g as any).owner}/${g.name}`, label: `${(g as any).owner}/${g.name}` }))]);
+        setGroupOptions([all, ...res.data.map((g) => ({ value: `${g.owner}/${g.name}`, label: `${g.owner}/${g.name}` }))]);
       }
     });
     RoleBackend.getRoles({ owner: ow }).then((res) => {
@@ -118,10 +119,10 @@ export default function PermissionEditPage() {
     ApplicationBackend.getApplicationsByOrganization({ owner: "admin", organization: ow }).then((res) => {
       if (res.status === "ok" && res.data) {
         const all = { value: "*", label: t("common.all") || "All" };
-        setAppOptions([all, ...res.data.map((a) => ({ value: a.name, label: (a as any).displayName || a.name }))]);
+        setAppOptions([all, ...res.data.map((a) => ({ value: a.name, label: a.displayName || a.name }))]);
       }
     });
-  }, [permission?.owner]);
+  }, [permission?.owner, t]);
 
   const [logs, setLogs] = useState<PermissionBackend.PermissionApprovalLog[]>([]);
   const [logTick, setLogTick] = useState(0);
@@ -133,7 +134,7 @@ export default function PermissionEditPage() {
     }).catch(() => {});
   }, [owner, name, isAddMode, logTick]);
 
-  const { entity, loading, invalidate: _invalidate, invalidateList } = useEntityEdit<Permission>({
+  const { entity, loading, invalidateList } = useEntityEdit<Permission>({
     queryKey: "permission",
     owner,
     name,
@@ -285,8 +286,8 @@ export default function PermissionEditPage() {
       } else {
         modal.toast(friendlyError(res.msg, t) || t("common.saveFailed"), "error");
       }
-    } catch (e: any) {
-      modal.toast(e?.message || t("common.saveFailed"), "error");
+    } catch (e) {
+      modal.toast(errMsg(e) || t("common.saveFailed"), "error");
     } finally {
       setSaving(false);
     }
@@ -408,7 +409,7 @@ export default function PermissionEditPage() {
           <MultiSearchSelect selected={permission.actions || []} options={actionOpts} onChange={(v) => set("actions", v)} placeholder={t("common.search")} />
         </FormField>
         <FormField label={t("permissions.field.effect")} tooltip={t("permissions.tooltip.effect")}>
-          <SimpleSelect value={permission.effect} options={EFFECT_OPTIONS.map((o) => ({ value: o.value, label: t(`permissions.effect${o.label}` as any) }))} onChange={(v) => set("effect", v)} />
+          <SimpleSelect value={permission.effect} options={EFFECT_OPTIONS.map((o) => ({ value: o.value, label: t(`permissions.effect${o.label}`) }))} onChange={(v) => set("effect", v)} />
         </FormField>
         <FormField label={t("col.isEnabled")}>
           <Switch checked={permission.isEnabled} onChange={(v) => set("isEnabled", v)} />

@@ -150,7 +150,7 @@ export default function ProductStorePage() {
     }),
   });
 
-  const allProducts = res?.status === "ok" && Array.isArray(res.data) ? res.data : [];
+  const allProducts = useMemo(() => res?.status === "ok" && Array.isArray(res.data) ? res.data : [], [res]);
 
   // Client-side search
   const filteredProducts = useMemo(() => {

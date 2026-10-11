@@ -5,6 +5,7 @@ import { Trash2, LogOut, Plus, ArrowUp, ArrowDown, RotateCcw } from "lucide-reac
 import StickyEditHeader from "../components/StickyEditHeader";
 import { FormField, FormSection, inputClass, monoInputClass, Switch } from "../components/FormSection";
 import { useTranslation } from "../i18n";
+import { errMsg } from "../types/lint-pages-nz";
 import { useModal } from "../components/Modal";
 import { useEntityEdit } from "../hooks/useEntityEdit";
 import * as RuleBackend from "../backend/RuleBackend";
@@ -75,7 +76,7 @@ export default function RuleEditPage() {
   const { owner, name } = useParams<{ owner: string; name: string }>();
   const navigate = useNavigate();
   const location = useLocation();
-  const [isAddMode, setIsAddMode] = useState((location.state as any)?.mode === "add");
+  const [isAddMode, setIsAddMode] = useState((location.state as { mode?: string } | null)?.mode === "add");
   const { t } = useTranslation();
   const modal = useModal();
   const [rule, setRule] = useState<Rule | null>(null);
@@ -133,14 +134,14 @@ export default function RuleEditPage() {
         const currentId = `${owner}/${name}`;
         setAvailableRules(
           res.data
-            .filter((r: any) => `${r.owner}/${r.name}` !== currentId)
-            .map((r: any) => ({ value: `${r.owner}/${r.name}`, label: r.name }))
+            .filter((r) => `${r.owner}/${r.name}` !== currentId)
+            .map((r) => ({ value: `${r.owner}/${r.name}`, label: r.name }))
         );
       }
     }).catch(() => {});
-  }, [rule?.owner]); // owner/name are URL params, stable during component lifecycle
+  }, [rule?.owner, owner, name]);
 
-  const { entity, loading, invalidate: _invalidate, invalidateList } = useEntityEdit<Rule>({
+  const { entity, loading, invalidateList } = useEntityEdit<Rule>({
     queryKey: "rule",
     owner,
     name,
@@ -235,8 +236,8 @@ export default function RuleEditPage() {
       } else {
         modal.toast(friendlyError(res.msg, t) || t("common.saveFailed"), "error");
       }
-    } catch (e: any) {
-      modal.toast(e?.message || t("common.saveFailed"), "error");
+    } catch (e) {
+      modal.toast(errMsg(e) || t("common.saveFailed"), "error");
     } finally {
       setSaving(false);
     }

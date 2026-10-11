@@ -1,3 +1,4 @@
+import type { ThemeData } from "../theme-presets";
 import { request, paginationQuery } from "./request";
 
 export interface Organization {
@@ -39,6 +40,17 @@ export interface Organization {
   userBalance: number;
   balanceCredit: number;
   accountItems: AccountItem[];
+  mfaItems?: { name: string; rule: string }[];
+  themeData?: Partial<ThemeData>;
+  widgetItems?: string[];
+  navItems?: string[];
+  userNavItems?: string[];
+  ldapAttributes?: string[];
+  orgAdminEditableFields?: string[];
+  kerberosKeytab?: string;
+  kerberosServiceName?: string;
+  kerberosRealm?: string;
+  kerberosKdcHost?: string;
   [key: string]: unknown;
 }
 

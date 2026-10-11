@@ -5,6 +5,7 @@ import { Trash2, LogOut} from "lucide-react";
 import StickyEditHeader from "../components/StickyEditHeader";
 import { FormField, FormSection, inputClass, monoInputClass, Switch } from "../components/FormSection";
 import { useTranslation } from "../i18n";
+import { errMsg } from "../types/lint-pages-nz";
 import { useModal } from "../components/Modal";
 import { useEntityEdit } from "../hooks/useEntityEdit";
 import { useOrganization } from "../OrganizationContext";
@@ -61,7 +62,7 @@ export default function SyncerEditPage() {
   const { owner, name } = useParams<{ owner: string; name: string }>();
   const navigate = useNavigate();
   const location = useLocation();
-  const [isAddMode, setIsAddMode] = useState((location.state as any)?.mode === "add");
+  const [isAddMode, setIsAddMode] = useState((location.state as { mode?: string } | null)?.mode === "add");
   const { t } = useTranslation();
   const modal = useModal();
   const { isGlobalAdmin } = useOrganization();
@@ -72,7 +73,7 @@ export default function SyncerEditPage() {
   const [originalJson, setOriginalJson] = useState("");
   const [testDbLoading, setTestDbLoading] = useState(false);
 
-  const { entity, loading, invalidate: _invalidate, invalidateList } = useEntityEdit<Syncer>({
+  const { entity, loading, invalidateList } = useEntityEdit<Syncer>({
     queryKey: "syncer",
     owner: owner,
     name: name,
@@ -129,8 +130,8 @@ export default function SyncerEditPage() {
       } else {
         modal.toast(friendlyError(res.msg, t) || t("common.saveFailed"), "error");
       }
-    } catch (e: any) {
-      modal.toast(e?.message || t("common.saveFailed"), "error");
+    } catch (e) {
+      modal.toast(errMsg(e) || t("common.saveFailed"), "error");
     } finally {
       setSaving(false);
     }

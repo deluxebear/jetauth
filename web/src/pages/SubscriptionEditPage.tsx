@@ -5,6 +5,7 @@ import { Trash2, LogOut} from "lucide-react";
 import StickyEditHeader from "../components/StickyEditHeader";
 import { FormField, FormSection, inputClass, monoInputClass } from "../components/FormSection";
 import { useTranslation } from "../i18n";
+import { errMsg } from "../types/lint-pages-nz";
 import { useModal } from "../components/Modal";
 import { useEntityEdit } from "../hooks/useEntityEdit";
 import * as SubscriptionBackend from "../backend/SubscriptionBackend";
@@ -33,7 +34,7 @@ export default function SubscriptionEditPage() {
   const { owner, name } = useParams<{ owner: string; name: string }>();
   const navigate = useNavigate();
   const location = useLocation();
-  const [isAddMode, setIsAddMode] = useState((location.state as any)?.mode === "add");
+  const [isAddMode, setIsAddMode] = useState((location.state as { mode?: string } | null)?.mode === "add");
   const { t } = useTranslation();
   const modal = useModal();
   const [sub, setSub] = useState<Subscription | null>(null);
@@ -42,7 +43,7 @@ export default function SubscriptionEditPage() {
   useEffect(() => { if (saved) { const t = setTimeout(() => setSaved(false), 1500); return () => clearTimeout(t); } }, [saved]);
   const [originalJson, setOriginalJson] = useState("");
 
-  const { entity, loading, invalidate: _invalidate, invalidateList } = useEntityEdit<Subscription>({
+  const { entity, loading, invalidateList } = useEntityEdit<Subscription>({
     queryKey: "subscription",
     owner,
     name,
@@ -101,8 +102,8 @@ export default function SubscriptionEditPage() {
       } else {
         modal.toast(friendlyError(res.msg, t) || t("common.saveFailed"), "error");
       }
-    } catch (e: any) {
-      modal.toast(e?.message || t("common.saveFailed"), "error");
+    } catch (e) {
+      modal.toast(errMsg(e) || t("common.saveFailed"), "error");
     } finally {
       setSaving(false);
     }

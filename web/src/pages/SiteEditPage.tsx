@@ -9,6 +9,7 @@ import {
 import StickyEditHeader from "../components/StickyEditHeader";
 import { FormField, FormSection, inputClass, monoInputClass, Switch } from "../components/FormSection";
 import { useTranslation } from "../i18n";
+import { errMsg } from "../types/lint-pages-nz";
 import { useModal } from "../components/Modal";
 import { useEntityEdit } from "../hooks/useEntityEdit";
 import * as SiteBackend from "../backend/SiteBackend";
@@ -88,7 +89,7 @@ export default function SiteEditPage() {
   const { owner, name } = useParams<{ owner: string; name: string }>();
   const navigate = useNavigate();
   const location = useLocation();
-  const [isAddMode, setIsAddMode] = useState((location.state as any)?.mode === "add");
+  const [isAddMode, setIsAddMode] = useState((location.state as { mode?: string } | null)?.mode === "add");
   const { t } = useTranslation();
   const modal = useModal();
   const [site, setSite] = useState<Site | null>(null);
@@ -132,13 +133,13 @@ export default function SiteEditPage() {
       ProviderBackend.getProviders({ owner: site.owner, pageSize: -1 }),
     ]).then(([appRes, ruleRes, certRes, provRes]) => {
       if (appRes.status === "ok" && appRes.data) {
-        setAppOptions(appRes.data.map((a) => ({ value: a.name, label: (a as any).displayName || a.name })));
+        setAppOptions(appRes.data.map((a) => ({ value: a.name, label: a.displayName || a.name })));
       }
       if (ruleRes.status === "ok" && ruleRes.data) {
-        setRuleOptions(ruleRes.data.map((r: any) => ({ value: `${r.owner}/${r.name}`, label: r.displayName || r.name })));
+        setRuleOptions(ruleRes.data.map((r) => ({ value: `${r.owner}/${r.name}`, label: (r.displayName as string | undefined) || r.name })));
       }
       if (certRes.status === "ok" && certRes.data) {
-        setCertOptions(certRes.data.map((c: any) => ({ value: c.name, label: c.displayName || c.name })));
+        setCertOptions(certRes.data.map((c) => ({ value: c.name, label: c.displayName || c.name })));
       }
       if (provRes.status === "ok" && Array.isArray(provRes.data)) {
         setNotifyProviderOptions(
@@ -153,7 +154,7 @@ export default function SiteEditPage() {
     }).catch(() => {});
   }, [site?.owner]);
 
-  const { entity, loading, invalidate: _invalidate, invalidateList } = useEntityEdit<Site>({
+  const { entity, loading, invalidateList } = useEntityEdit<Site>({
     queryKey: "site",
     owner,
     name,
@@ -221,8 +222,8 @@ export default function SiteEditPage() {
       } else {
         modal.toast(friendlyError(res.msg, t) || t("common.saveFailed"), "error");
       }
-    } catch (e: any) {
-      modal.toast(e?.message || t("common.saveFailed"), "error");
+    } catch (e) {
+      modal.toast(errMsg(e) || t("common.saveFailed"), "error");
     } finally {
       setSaving(false);
     }

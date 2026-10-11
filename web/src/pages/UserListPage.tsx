@@ -8,6 +8,7 @@ import { BulkDeleteBar } from "../components/BulkDeleteBar";
 import { useBulkDelete } from "../hooks/useBulkDelete";
 import StatusBadge from "../components/StatusBadge";
 import { useTranslation } from "../i18n";
+import { errMsg } from "../types/lint-pages-nz";
 import { useModal } from "../components/Modal";
 import { useEntityList } from "../hooks/useEntityList";
 import { useOrganization } from "../OrganizationContext";
@@ -34,6 +35,8 @@ export default function UserListPage() {
     if (ownerParam && ownerParam !== selectedOrg) {
       setSelectedOrg(ownerParam);
     }
+  // Only react to URL changes; re-running on selectedOrg would fight the org switcher.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
 
   // Original: "All" → getGlobalUsers(), specific org → getUsers(orgName)
@@ -43,9 +46,9 @@ export default function UserListPage() {
       : await UserBackend.getUsers({ ...params, owner: selectedOrg });
     if (res.status === "ok" && Array.isArray(res.data)) {
       if (userFilter === "active") {
-        res.data = res.data.filter((u: any) => !u.isDeleted);
+        res.data = res.data.filter((u) => !u.isDeleted);
       } else if (userFilter === "deleted") {
-        res.data = res.data.filter((u: any) => u.isDeleted);
+        res.data = res.data.filter((u) => u.isDeleted);
       }
     }
     return res;
@@ -93,7 +96,7 @@ export default function UserListPage() {
       return;
     }
     modal.showConfirm(`${t("users.impersonate.confirm")} "${record.owner}/${record.name}"?`, async () => {
-      const res: any = await UserBackend.impersonateUser(record.owner, record.name);
+      const res = await UserBackend.impersonateUser(record.owner, record.name);
       if (res.status === "ok") {
         window.location.href = "/";
       } else {
@@ -131,7 +134,7 @@ export default function UserListPage() {
   const getUserColumnLabel = (field: string): string => {
     // Try i18n key first
     const i18nKey = `userField.${field}`;
-    const translated = t(i18nKey as any);
+    const translated = t(i18nKey);
     if (translated !== i18nKey) return `${translated}#${field}`;
 
     // Fallback: auto-generate label from field name
@@ -177,8 +180,8 @@ export default function UserListPage() {
         setUploadColumns(cols);
         setUploadFile(file);
         setShowUploadModal(true);
-      } catch (err: any) {
-        modal.toast(err.message || t("users.upload.parseFailed"), "error");
+      } catch (err) {
+        modal.toast(errMsg(err) || t("users.upload.parseFailed"), "error");
       }
     };
     reader.readAsArrayBuffer(file);
@@ -198,8 +201,8 @@ export default function UserListPage() {
       } else {
         modal.toast(res.msg || t("users.upload.failed"), "error");
       }
-    } catch (err: any) {
-      modal.toast(err.message || t("users.upload.failed"), "error");
+    } catch (err) {
+      modal.toast(errMsg(err) || t("users.upload.failed"), "error");
     } finally {
       setUploading(false);
       setShowUploadModal(false);

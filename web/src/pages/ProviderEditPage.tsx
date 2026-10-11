@@ -10,6 +10,7 @@ import SimpleSelect from "../components/SimpleSelect";
 import { BodyTemplateEditor } from "../components/BodyTemplateEditor";
 import { PresetPicker } from "../components/PresetPicker";
 import { useTranslation } from "../i18n";
+import { errMsg } from "../types/lint-pages-nz";
 import { useModal } from "../components/Modal";
 import { useOrganization } from "../OrganizationContext";
 import * as ProvBackend from "../backend/ProviderBackend";
@@ -612,7 +613,7 @@ export default function ProviderEditPage() {
   const isNew = !name || name === "new";
   const navigate = useNavigate();
   const location = useLocation();
-  const [isAddMode, setIsAddMode] = useState((location.state as any)?.mode === "add");
+  const [isAddMode, setIsAddMode] = useState((location.state as { mode?: string } | null)?.mode === "add");
   const { t } = useTranslation();
   const modal = useModal();
   const { orgOptions, isGlobalAdmin } = useOrganization();
@@ -647,7 +648,7 @@ export default function ProviderEditPage() {
     try {
       const res = await ProvBackend.getProvider(owner!, name!);
       if (res.status === "ok" && res.data) { setProv(res.data); setOriginalJson(JSON.stringify(res.data)); }
-    } catch (e: any) { modal.toast(e?.message || t("common.saveFailed"), "error"); }
+    } catch (e) { modal.toast(errMsg(e) || t("common.saveFailed"), "error"); }
     finally { setLoading(false); }
   }, [owner, name, isNew]);
 
@@ -730,7 +731,7 @@ export default function ProviderEditPage() {
       } else {
         modal.toast(friendlyError(res.msg, t) || t("common.saveFailed"), "error");
       }
-    } catch (e: any) { modal.toast(e?.message || t("common.saveFailed"), "error"); }
+    } catch (e) { modal.toast(errMsg(e) || t("common.saveFailed"), "error"); }
     finally { setSaving(false); }
   };
 
@@ -747,8 +748,8 @@ export default function ProviderEditPage() {
       } else {
         modal.toast(friendlyError(res.msg, t) || t("common.saveFailed"), "error");
       }
-    } catch (e: any) {
-      modal.toast(e?.message || t("common.saveFailed"), "error");
+    } catch (e) {
+      modal.toast(errMsg(e) || t("common.saveFailed"), "error");
     } finally { setSaving(false); }
   };
 
@@ -770,8 +771,8 @@ export default function ProviderEditPage() {
         } else {
           modal.toast(res.msg || t("common.deleteFailed"), "error");
         }
-      } catch (e: any) {
-        modal.toast(e?.message || t("common.deleteFailed"), "error");
+      } catch (e) {
+        modal.toast(errMsg(e) || t("common.deleteFailed"), "error");
       }
     });
   };
@@ -833,7 +834,7 @@ export default function ProviderEditPage() {
   };
 
   // ── Provider configuration guides (all categories) ──
-  const gk = (key: string) => t(`providers.guide.${key}` as any);
+  const gk = (key: string) => t(`providers.guide.${key}`);
   type GuideEntry = { title: string; steps: string[]; links?: { label: string; url: string }[] };
   const PROVIDER_GUIDE: Record<string, GuideEntry> = {
     // OAuth
@@ -949,7 +950,7 @@ export default function ProviderEditPage() {
     return (
       <>
         {cfg.domain && (
-          <FormField label={t("providers.field.domain")} help={t(cfg.domain.hintKey as any)} span="full">
+          <FormField label={t("providers.field.domain")} help={t(cfg.domain.hintKey)} span="full">
             <input
               value={String(prov.domain ?? "")}
               onChange={(e) => set("domain", e.target.value)}
@@ -969,7 +970,7 @@ export default function ProviderEditPage() {
           </FormField>
         )}
         {cfg.disableSslLabel && (
-          <FormField label={t(cfg.disableSslLabel as any)}>
+          <FormField label={t(cfg.disableSslLabel)}>
             <Switch checked={!!prov.disableSsl} onChange={(v) => set("disableSsl", v)} />
           </FormField>
         )}
@@ -1010,10 +1011,10 @@ export default function ProviderEditPage() {
           </FormSection>
           <FormSection title={t("providers.section.userMapping")}>
             {OAUTH_MAPPING_FIELDS.map((field) => (
-              <FormField key={field} label={t(`providers.mapping.${field}` as any)} required={OAUTH_MAPPING_REQUIRED.includes(field)}>
+              <FormField key={field} label={t(`providers.mapping.${field}`)} required={OAUTH_MAPPING_REQUIRED.includes(field)}>
                 <input
-                  value={String((prov.userMapping as any)?.[field] ?? "")}
-                  onChange={(e) => set("userMapping", { ...(prov.userMapping as any ?? {}), [field]: e.target.value })}
+                  value={String((prov.userMapping as Record<string, string> | undefined)?.[field] ?? "")}
+                  onChange={(e) => set("userMapping", { ...((prov.userMapping as Record<string, string> | undefined) ?? {}), [field]: e.target.value })}
                   className={monoInputClass}
                   placeholder={field}
                 />
@@ -1088,8 +1089,8 @@ export default function ProviderEditPage() {
       } else {
         modal.toast(data.msg || t("common.saveFailed"), "error");
       }
-    } catch (e: any) {
-      modal.toast(e?.message || t("common.saveFailed"), "error");
+    } catch (e) {
+      modal.toast(errMsg(e) || t("common.saveFailed"), "error");
     }
   };
 
@@ -1305,10 +1306,10 @@ export default function ProviderEditPage() {
           </FormField>
           {/* SMS mapping fields */}
           {["phoneNumber", "content"].map((field) => (
-            <FormField key={field} label={t(`providers.smsMapping.${field}` as any)}>
+            <FormField key={field} label={t(`providers.smsMapping.${field}`)}>
               <input
-                value={String((prov.userMapping as any)?.[field] ?? "")}
-                onChange={(e) => set("userMapping", { ...(prov.userMapping as any ?? {}), [field]: e.target.value })}
+                value={String((prov.userMapping as Record<string, string> | undefined)?.[field] ?? "")}
+                onChange={(e) => set("userMapping", { ...((prov.userMapping as Record<string, string> | undefined) ?? {}), [field]: e.target.value })}
                 className={monoInputClass}
                 placeholder={field}
               />
@@ -1365,8 +1366,8 @@ export default function ProviderEditPage() {
       const xml = await res.text();
       set("metadata", xml);
       modal.toast(t("common.saveSuccess"));
-    } catch (e: any) {
-      modal.toast(e?.message || "Failed to fetch metadata", "error");
+    } catch (e) {
+      modal.toast(errMsg(e) || "Failed to fetch metadata", "error");
     } finally { setSamlMetadataLoading(false); }
   };
 
@@ -1499,8 +1500,8 @@ export default function ProviderEditPage() {
         // Third-party captcha — show notice
         modal.toast(t("providers.captcha.thirdPartyNotice"));
       }
-    } catch (e: any) {
-      modal.toast(e?.message || "Failed to load captcha", "error");
+    } catch (e) {
+      modal.toast(errMsg(e) || "Failed to load captcha", "error");
     }
   };
 
@@ -1616,13 +1617,13 @@ export default function ProviderEditPage() {
       } else {
         modal.toast(data.msg || t("common.saveFailed"), "error");
       }
-    } catch (e: any) {
-      modal.toast(e?.message || t("common.saveFailed"), "error");
+    } catch (e) {
+      modal.toast(errMsg(e) || t("common.saveFailed"), "error");
     }
   };
 
   // Notification guides — merged into PROVIDER_GUIDE with "Notification:" prefix for disambiguation
-  const ng = (key: string) => t(`providers.notif.guide.${key}` as any);
+  const ng = (key: string) => t(`providers.notif.guide.${key}`);
   Object.assign(PROVIDER_GUIDE, {
     "Notification:Telegram": { title: ng("telegram.title"), steps: [ng("telegram.step1"), ng("telegram.step2"), ng("telegram.step3"), ng("telegram.step4")], links: [{ label: "BotFather", url: "https://t.me/BotFather" }, { label: "@userinfobot", url: "https://t.me/userinfobot" }] },
     "Notification:Discord": { title: ng("discord.title"), steps: [ng("discord.step1"), ng("discord.step2"), ng("discord.step3"), ng("discord.step4"), ng("discord.step5")], links: [{ label: "Developer Portal", url: "https://discord.com/developers/applications" }] },

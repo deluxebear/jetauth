@@ -177,7 +177,7 @@ export default function OrganizationListPage() {
       sortable: true,
       render: (_, r) => (
         <span className="font-mono text-[12px] text-text-muted">
-          {(r as any).orgBalance ?? 0}
+          {r.orgBalance ?? 0}
         </span>
       ),
     },
@@ -188,7 +188,7 @@ export default function OrganizationListPage() {
       sortable: true,
       render: (_, r) => (
         <span className="font-mono text-[12px] text-text-muted">
-          {(r as any).userBalance ?? 0}
+          {r.userBalance ?? 0}
         </span>
       ),
     },
@@ -199,7 +199,7 @@ export default function OrganizationListPage() {
       sortable: true,
       render: (_, r) => (
         <span className="font-mono text-[12px] text-text-muted">
-          {(r as any).balanceCredit ?? 0}
+          {r.balanceCredit ?? 0}
         </span>
       ),
     },
@@ -210,7 +210,7 @@ export default function OrganizationListPage() {
       sortable: true,
       render: (_, r) => (
         <span className="font-mono text-[12px] text-text-muted">
-          {(r as any).balanceCurrency || "USD"}
+          {r.balanceCurrency || "USD"}
         </span>
       ),
     },

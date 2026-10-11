@@ -5,6 +5,7 @@ import { Trash2, LogOut} from "lucide-react";
 import StickyEditHeader from "../components/StickyEditHeader";
 import { FormField, FormSection, inputClass, monoInputClass, Switch } from "../components/FormSection";
 import { useTranslation } from "../i18n";
+import { errMsg } from "../types/lint-pages-nz";
 import { useModal } from "../components/Modal";
 import { useEntityEdit } from "../hooks/useEntityEdit";
 import * as PlanBackend from "../backend/PlanBackend";
@@ -24,7 +25,7 @@ export default function PlanEditPage() {
   const { owner, name } = useParams<{ owner: string; name: string }>();
   const navigate = useNavigate();
   const location = useLocation();
-  const [isAddMode, setIsAddMode] = useState((location.state as any)?.mode === "add");
+  const [isAddMode, setIsAddMode] = useState((location.state as { mode?: string } | null)?.mode === "add");
   const { t } = useTranslation();
   const modal = useModal();
   const [plan, setPlan] = useState<Plan | null>(null);
@@ -33,7 +34,7 @@ export default function PlanEditPage() {
   useEffect(() => { if (saved) { const t = setTimeout(() => setSaved(false), 1500); return () => clearTimeout(t); } }, [saved]);
   const [originalJson, setOriginalJson] = useState("");
 
-  const { entity, loading, invalidate: _invalidate, invalidateList } = useEntityEdit<Plan>({
+  const { entity, loading, invalidateList } = useEntityEdit<Plan>({
     queryKey: "plan",
     owner,
     name,
@@ -92,8 +93,8 @@ export default function PlanEditPage() {
       } else {
         modal.toast(friendlyError(res.msg, t) || t("common.saveFailed"), "error");
       }
-    } catch (e: any) {
-      modal.toast(e?.message || t("common.saveFailed"), "error");
+    } catch (e) {
+      modal.toast(errMsg(e) || t("common.saveFailed"), "error");
     } finally {
       setSaving(false);
     }

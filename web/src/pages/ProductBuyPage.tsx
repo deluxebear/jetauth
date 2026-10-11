@@ -118,7 +118,7 @@ export default function ProductBuyPage() {
         });
       }
 
-      const updateRes = await UserBackend.updateUser(account.owner, account.name, { ...fullUser, cart } as any);
+      const updateRes = await UserBackend.updateUser(account.owner, account.name, { ...fullUser, cart });
       if (updateRes.status === "ok") {
         modal.toast(t("buy.addedToCart"), "success");
       } else {

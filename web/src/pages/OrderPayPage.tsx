@@ -9,6 +9,7 @@ import * as OrderBackend from "../backend/OrderBackend";
 import * as ProductBackend from "../backend/ProductBackend";
 import type { Order } from "../backend/OrderBackend";
 import type { Product } from "../backend/ProductBackend";
+import type { Payment } from "../backend/PaymentBackend";
 import { useQuery } from "@tanstack/react-query";
 
 import { formatPrice } from "../utils/price";
@@ -75,7 +76,7 @@ export default function OrderPayPage() {
       const paymentEnv = getPaymentEnv();
       const res = await OrderBackend.payOrder(owner!, name!, selectedProvider, paymentEnv);
       if (res.status === "ok") {
-        const payment = (res as any).data;
+        const payment = res.data as Payment | undefined;
         const payUrl = payment?.payUrl;
 
         if (payment?.state === "Paid") {
@@ -86,7 +87,7 @@ export default function OrderPayPage() {
           window.location.href = payUrl;
         } else {
           // Fallback to result page
-          navigate(`/payments/${payment.owner}/${payment.name}/result`);
+          navigate(`/payments/${payment!.owner}/${payment!.name}/result`);
         }
       } else {
         modal.toast(res.msg || t("orderPay.payFailed"), "error");

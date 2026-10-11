@@ -60,7 +60,7 @@ export default function WebhookEventListPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, pageSize, statusFilter, sortField, sortOrder, modal]);
+  }, [page, pageSize, statusFilter, sortField, sortOrder, modal, t]);
 
   useEffect(() => { fetchData(1); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 

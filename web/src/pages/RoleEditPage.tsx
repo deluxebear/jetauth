@@ -5,6 +5,7 @@ import { Trash2, LogOut } from "lucide-react";
 import StickyEditHeader from "../components/StickyEditHeader";
 import { FormField, FormSection, inputClass, monoInputClass, Switch } from "../components/FormSection";
 import { useTranslation } from "../i18n";
+import { errMsg } from "../types/lint-pages-nz";
 import { useModal } from "../components/Modal";
 import { useEntityEdit } from "../hooks/useEntityEdit";
 import * as RoleBackend from "../backend/RoleBackend";
@@ -24,7 +25,7 @@ export default function RoleEditPage() {
   const { owner, name } = useParams<{ owner: string; name: string }>();
   const navigate = useNavigate();
   const location = useLocation();
-  const [isAddMode, setIsAddMode] = useState((location.state as any)?.mode === "add");
+  const [isAddMode, setIsAddMode] = useState((location.state as { mode?: string } | null)?.mode === "add");
   const { t } = useTranslation();
   const modal = useModal();
   const [role, setRole] = useState<Role | null>(null);
@@ -53,19 +54,19 @@ export default function RoleEditPage() {
         ]);
       }
     });
-  }, [isAdmin]);
+  }, [isAdmin, t]);
 
   // Load users, groups, roles when role.owner changes
   useEffect(() => {
     if (!role?.owner) return;
     UserBackend.getUsers({ owner: role.owner }).then((res) => {
       if (res.status === "ok" && res.data) {
-        setUserOptions(res.data.map((u) => ({ value: `${(u as any).owner}/${u.name}`, label: `${(u as any).owner}/${u.name}` })));
+        setUserOptions(res.data.map((u) => ({ value: `${u.owner}/${u.name}`, label: `${u.owner}/${u.name}` })));
       }
     });
     GroupBackend.getGroups({ owner: role.owner }).then((res) => {
       if (res.status === "ok" && res.data) {
-        setGroupOptions(res.data.map((g) => ({ value: `${(g as any).owner}/${g.name}`, label: `${(g as any).owner}/${g.name}` })));
+        setGroupOptions(res.data.map((g) => ({ value: `${g.owner}/${g.name}`, label: `${g.owner}/${g.name}` })));
       }
     });
     RoleBackend.getRoles({ owner: role.owner }).then((res) => {
@@ -80,7 +81,7 @@ export default function RoleEditPage() {
     });
   }, [role?.owner, role?.name]);
 
-  const { entity, loading, invalidate: _invalidate, invalidateList } = useEntityEdit<Role>({
+  const { entity, loading, invalidateList } = useEntityEdit<Role>({
     queryKey: "role",
     owner,
     name,
@@ -139,8 +140,8 @@ export default function RoleEditPage() {
       } else {
         modal.toast(friendlyError(res.msg, t) || t("common.saveFailed"), "error");
       }
-    } catch (e: any) {
-      modal.toast(e?.message || t("common.saveFailed"), "error");
+    } catch (e) {
+      modal.toast(errMsg(e) || t("common.saveFailed"), "error");
     } finally {
       setSaving(false);
     }
