@@ -113,6 +113,7 @@ import SwaggerPage from "./pages/SwaggerPage";
 import { entityConfigs } from "./pages/entities/entityConfigs";
 import { getAccount, login as apiLogin, logout as apiLogout } from "./api/client";
 import { isLocalAdmin, isGlobalAdmin } from "./utils/auth";
+import PageErrorBoundary from "./components/PageErrorBoundary";
 
 type OrgThemeData = NonNullable<Parameters<ReturnType<typeof useTheme>["applyOrgTheme"]>[0]>;
 type OrgWithTheme = { themeData?: (OrgThemeData & { isEnabled?: boolean }) | null };
@@ -202,7 +203,7 @@ function Layout({
               exit={{ opacity: 0 }}
               transition={{ duration: 0.2 }}
             >
-              {children}
+              <PageErrorBoundary key={location.pathname}>{children}</PageErrorBoundary>
             </motion.div>
           </AnimatePresence>
         </main>

@@ -149,6 +149,7 @@ const zh: Record<string, string> = {
   "common.ok": "确定",
   "common.success": "成功",
   "common.error": "错误",
+  "common.pageError": "页面出错了",
   "common.unsavedChanges": "有未保存的更改",
   "common.discardChanges": "放弃更改",
   "common.modifiedBadge": "已修改",

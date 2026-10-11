@@ -149,6 +149,7 @@ const en = {
   "common.ok": "OK",
   "common.success": "Success",
   "common.error": "Error",
+  "common.pageError": "Something went wrong on this page",
   "common.unsavedChanges": "You have unsaved changes",
   "common.discardChanges": "Discard",
   "common.modifiedBadge": "Modified",
