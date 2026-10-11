@@ -12,8 +12,8 @@ import {
 import {
   BizRewriteEditor,
   BizTypeRestrictionsEditor,
-  rewriteTouchesThis,
 } from "./BizRewriteEditor";
+import { rewriteTouchesThis } from "./bizRewriteUtils";
 
 // Controlled visual editor. State (AST + selection) lives in the
 // parent BizSchemaEditor so the DSL and Visual tabs share a single

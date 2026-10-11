@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent, waitFor, act } from "@testing-library/react";
-import { ModalProvider, useModal } from "../Modal";
+import { ModalProvider } from "../ModalProvider";
+import { useModal } from "../Modal";
 
 vi.mock("../../i18n", () => ({
   useTranslation: () => ({

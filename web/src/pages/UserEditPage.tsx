@@ -9,7 +9,7 @@ import { errMsg, errName } from "../types/lint-pages-nz";
 import { useOrganization } from "../OrganizationContext";
 import { useModal } from "../components/Modal";
 import { useEntityEdit } from "../hooks/useEntityEdit";
-import { COUNTRIES, getCountriesByLocale } from "../components/CountryCodeSelect";
+import { COUNTRIES, getCountriesByLocale } from "../components/countries";
 import * as UserBackend from "../backend/UserBackend";
 import * as GroupBackend from "../backend/GroupBackend";
 import * as AppBackend from "../backend/ApplicationBackend";

@@ -1,8 +1,7 @@
-import { createContext, useContext, useState, useCallback, type ReactNode } from "react";
+import { useState, useCallback, type ReactNode } from "react";
 import en from "./locales/en";
 import zh from "./locales/zh";
-
-type Locale = "en" | "zh";
+import { I18nContext, type I18nContextType, type Locale } from "./i18n";
 
 const locales: Record<Locale, Record<string, string>> = { en, zh };
 
@@ -10,15 +9,6 @@ const localeLabels: Record<Locale, string> = {
   en: "English",
   zh: "中文",
 };
-
-interface I18nContextType {
-  locale: Locale;
-  setLocale: (l: Locale) => void;
-  t: (key: string, params?: Record<string, string | number>) => string;
-  locales: { value: Locale; label: string }[];
-}
-
-const I18nContext = createContext<I18nContextType>(null!);
 
 function getInitialLocale(): Locale {
   const saved = localStorage.getItem("locale");
@@ -61,8 +51,4 @@ export function I18nProvider({ children }: { children: ReactNode }) {
   };
 
   return <I18nContext.Provider value={value}>{children}</I18nContext.Provider>;
-}
-
-export function useTranslation() {
-  return useContext(I18nContext);
 }

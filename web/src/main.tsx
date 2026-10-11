@@ -2,11 +2,11 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { I18nProvider } from "./i18n";
-import { ThemeProvider } from "./theme";
-import { ModalProvider } from "./components/Modal";
-import { SidebarProvider } from "./SidebarContext";
-import { OrganizationProvider } from "./OrganizationContext";
+import { I18nProvider } from "./I18nProvider";
+import { ThemeProvider } from "./ThemeProvider";
+import { ModalProvider } from "./components/ModalProvider";
+import { SidebarProvider } from "./SidebarProvider";
+import { OrganizationProvider } from "./OrganizationProvider";
 import "./index.css";
 import App from "./App";
 

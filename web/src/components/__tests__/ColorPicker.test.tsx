@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
-import ColorPicker, { contrastRatio } from "../ColorPicker";
+import ColorPicker from "../ColorPicker";
+import { contrastRatio } from "../colorContrast";
 
 vi.mock("../../i18n", () => ({
   useTranslation: () => ({ t: (k: string) => k }),

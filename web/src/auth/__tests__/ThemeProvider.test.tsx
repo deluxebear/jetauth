@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
-import { ThemeProvider, useAuthTheme } from "../ThemeProvider";
+import { ThemeProvider } from "../ThemeProvider";
+import { useAuthTheme } from "../authThemeContext";
 
 vi.mock("../api/getResolvedTheme", () => ({
   getResolvedTheme: vi.fn().mockResolvedValue({

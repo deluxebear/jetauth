@@ -1,23 +1,6 @@
-import { createContext, useContext, useState, useCallback, useEffect, useRef, type ReactNode } from "react";
+import { useState, useCallback, useEffect, useRef, type ReactNode } from "react";
 import { deriveThemeVars, type ThemeVars } from "./lib/theme-utils";
-
-type Theme = "dark" | "light";
-
-interface OrgThemeData {
-  themeType: string;
-  colorPrimary: string;
-  borderRadius: number;
-  isCompact: boolean;
-}
-
-interface ThemeContextType {
-  theme: Theme;
-  toggle: () => void;
-  applyOrgTheme: (themeData: OrgThemeData | null) => void;
-  clearOrgTheme: () => void;
-}
-
-const ThemeContext = createContext<ThemeContextType>(null!);
+import { ThemeContext, type OrgThemeData, type Theme } from "./theme";
 
 function getSystemTheme(): Theme {
   return window.matchMedia?.("(prefers-color-scheme: dark)").matches ? "dark" : "light";
@@ -104,8 +87,4 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       {children}
     </ThemeContext.Provider>
   );
-}
-
-export function useTheme() {
-  return useContext(ThemeContext);
 }

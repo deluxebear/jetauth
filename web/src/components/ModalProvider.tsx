@@ -1,7 +1,8 @@
-import { createContext, useContext, useState, useCallback, useRef, type ReactNode } from "react";
+import { useState, useCallback, useRef, type ReactNode } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { AlertTriangle, CheckCircle, Info, XCircle, X } from "lucide-react";
 import { useTranslation } from "../i18n";
+import { ModalContext, type PromptOptions } from "./Modal";
 
 type ModalType = "confirm" | "success" | "error" | "info";
 
@@ -20,16 +21,6 @@ interface ToastItem {
   message: string;
 }
 
-export interface PromptOptions {
-  title: string;
-  message?: ReactNode;
-  placeholder?: string;
-  defaultValue?: string;
-  maxLength?: number;
-  confirmLabel?: string;
-  cancelLabel?: string;
-}
-
 interface PromptState {
   open: boolean;
   title: string;
@@ -38,21 +29,6 @@ interface PromptState {
   maxLength?: number;
   confirmLabel: string;
   cancelLabel: string;
-}
-
-interface ModalContextType {
-  showConfirm: (message: ReactNode, onConfirm: () => void, title?: string) => void;
-  showSuccess: (message: ReactNode, title?: string) => void;
-  showError: (message: ReactNode, title?: string) => void;
-  showInfo: (message: ReactNode, title?: string) => void;
-  toast: (message: string, type?: "success" | "error" | "info") => void;
-  prompt: (opts: PromptOptions) => Promise<string | null>;
-}
-
-const ModalContext = createContext<ModalContextType>(null!);
-
-export function useModal() {
-  return useContext(ModalContext);
 }
 
 let toastCounter = 0;

@@ -1,18 +1,7 @@
-import {
-  createContext,
-  useContext,
-  useEffect,
-  useState,
-  type ReactNode,
-} from "react";
+import { useEffect, useState, type ReactNode } from "react";
+import { AuthThemeContext } from "./authThemeContext";
 import { getResolvedTheme, type AuthLookup } from "./api/getResolvedTheme";
 import type { ResolvedTheme } from "./api/types";
-
-const ThemeContext = createContext<ResolvedTheme | null>(null);
-
-export function useAuthTheme(): ResolvedTheme | null {
-  return useContext(ThemeContext);
-}
 
 interface ThemeProviderProps {
   lookup: AuthLookup;
@@ -57,5 +46,5 @@ export function ThemeProvider({ lookup, children }: ThemeProviderProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key]);
 
-  return <ThemeContext.Provider value={theme}>{children}</ThemeContext.Provider>;
+  return <AuthThemeContext.Provider value={theme}>{children}</AuthThemeContext.Provider>;
 }

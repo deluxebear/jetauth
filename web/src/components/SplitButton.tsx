@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { ChevronDown } from "lucide-react";
-import { SaveStateIcon, saveButtonToneClass } from "./SaveButton";
+import { SaveStateIcon } from "./SaveButton";
+import { saveButtonToneClass } from "./saveButtonTone";
 
 export type SplitButtonAction = {
   key: string;

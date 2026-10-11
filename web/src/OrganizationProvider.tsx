@@ -1,35 +1,7 @@
-import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from "react";
+import { useState, useEffect, useCallback, type ReactNode } from "react";
 import * as OrgBackend from "./backend/OrganizationBackend";
 import { isGlobalAdmin as checkGlobalAdmin, getStoredAccount, type Account } from "./utils/auth";
-
-interface OrgOption {
-  name: string;
-  displayName: string;
-}
-
-interface OrganizationContextType {
-  /** Currently selected org name, or "All" */
-  selectedOrg: string;
-  setSelectedOrg: (org: string) => void;
-  /** Organization list for dropdown */
-  orgOptions: OrgOption[];
-  /** The owner param to pass to list APIs: returns "" when "All", otherwise the org name */
-  getRequestOwner: () => string;
-  /** The owner to use when creating new entities: returns "built-in" when "All", otherwise the org name */
-  getNewEntityOwner: () => string;
-  /** Refresh the organization options dropdown */
-  refreshOrgOptions: () => void;
-  /** Whether "All" is selected */
-  isAll: boolean;
-  /** Whether the current user is a global admin (built-in org) */
-  isGlobalAdmin: boolean;
-}
-
-const OrganizationContext = createContext<OrganizationContextType>(null!);
-
-export function useOrganization() {
-  return useContext(OrganizationContext);
-}
+import { OrganizationContext, type OrgOption } from "./OrganizationContext";
 
 const STORAGE_KEY = "organization";
 
@@ -95,11 +67,10 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
   }, [refreshOrgOptions]);
 
   // Force non-global admins to their own org when account changes
-  useEffect(() => {
-    if (!isGA) {
-      setSelectedOrgState(userOrg);
-    }
-  }, [isGA, userOrg]);
+  // (adjusting state during render instead of in an effect).
+  if (!isGA && selectedOrg !== userOrg) {
+    setSelectedOrgState(userOrg);
+  }
 
   const isAll = isGA && selectedOrg === "All";
   const getRequestOwner = useCallback(() => {

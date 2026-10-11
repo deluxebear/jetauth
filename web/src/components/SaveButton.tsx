@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { Save, Check } from "lucide-react";
+import { saveButtonToneClass } from "./saveButtonTone";
 
 // Shared spinner / success-check / fallback icon used by SaveButton and
 // SplitButton so both evolve in lock-step.
@@ -16,11 +17,6 @@ export function SaveStateIcon({
   if (saved) return <Check size={14} />;
   return <>{fallback ?? <Save size={14} />}</>;
 }
-
-export const saveButtonToneClass = (saved: boolean) =>
-  saved
-    ? "border-success text-success bg-success/10"
-    : "border-accent text-accent hover:bg-accent/10";
 
 export default function SaveButton({ onClick, saving, saved, label, disabled }: {
   onClick: () => void;
