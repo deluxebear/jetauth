@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { SortState, FilterState } from "../components/DataTable";
 import type { ApiResponse } from "../backend/request";
@@ -38,7 +38,11 @@ export function useEntityList<T>({ queryKey, fetchFn, owner: explicitOwner, page
   const queryClient = useQueryClient();
 
   // Reset to page 1 when org changes
-  useEffect(() => { setPage(1); }, [selectedOrg]);
+  const [prevOrg, setPrevOrg] = useState(selectedOrg);
+  if (prevOrg !== selectedOrg) {
+    setPrevOrg(selectedOrg);
+    setPage(1);
+  }
 
   const { data: res, isLoading, isFetching } = useQuery({
     queryKey: [queryKey, owner, page, pageSize, sortState, filterState, ...extraKeys],

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Shield, X } from "lucide-react";
 import { useTranslation } from "../i18n";
@@ -42,9 +42,11 @@ export default function EnableMfaNotification({ account, justLoggedIn, onDismiss
   const navigate = useNavigate();
   const [visible, setVisible] = useState(false);
   const [promptedTypes, setPromptedTypes] = useState<string[]>([]);
+  const [shownKey, setShownKey] = useState("");
 
-  useEffect(() => {
-    if (!justLoggedIn || !account) return;
+  // Which prompted MFA types still need setup (derived from props each render).
+  const needSetupTypes = ((): string[] => {
+    if (!justLoggedIn || !account) return [];
 
     // Determine effective mfaItems (user-level overrides org-level)
     let mfaItems = account.organization?.mfaItems ?? [];
@@ -59,15 +61,23 @@ export default function EnableMfaNotification({ account, justLoggedIn, onDismiss
 
     // Further filter: only items where MFA is NOT yet enabled on user
     const multiFactorAuths = account.multiFactorAuths ?? [];
-    const needSetup = promptedOrRequired.filter((item) =>
-      multiFactorAuths.some((mfa) => mfa.mfaType === item.name && !mfa.enabled)
-    );
+    return promptedOrRequired
+      .filter((item) => multiFactorAuths.some((mfa) => mfa.mfaType === item.name && !mfa.enabled))
+      .map((i) => i.name);
+  })();
 
-    if (needSetup.length > 0) {
-      setPromptedTypes(needSetup.map((i) => i.name));
+  // Show the banner when the set of types needing setup changes to something
+  // non-empty; it stays until dismissed (state adjusted during render rather
+  // than in an effect). `shownKey` remembers what was last shown so a dismissed
+  // banner does not pop back up until the inputs actually change.
+  const needSetupKey = needSetupTypes.join("|");
+  if (needSetupKey !== shownKey) {
+    setShownKey(needSetupKey);
+    if (needSetupTypes.length > 0) {
+      setPromptedTypes(needSetupTypes);
       setVisible(true);
     }
-  }, [justLoggedIn, account]);
+  }
 
   if (!visible) return null;
 

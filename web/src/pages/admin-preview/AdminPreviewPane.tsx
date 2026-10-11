@@ -39,7 +39,9 @@ export default function AdminPreviewPane({
   const [theme, setTheme] = useState<PreviewTheme>("light");
   const [collapsed, setCollapsed] = useState(initiallyCollapsed);
   const iframeRef = useRef<HTMLIFrameElement>(null);
-  const [iframeReady, setIframeReady] = useState(false);
+  // The iframe is "ready" only for the src it reported ready for; a new src
+  // (iframe re-created) therefore starts un-ready without resetting state.
+  const [readySrc, setReadySrc] = useState<string | null>(null);
 
   const orgName =
     application.organizationObj?.name ?? application.organization ?? "built-in";
@@ -60,7 +62,7 @@ export default function AdminPreviewPane({
     const handler = (e: MessageEvent) => {
       if (e.origin !== window.location.origin) return;
       if (e.data?.type === PREVIEW_READY_TYPE) {
-        setIframeReady(true);
+        setReadySrc(src);
         return;
       }
       if (e.data?.type === PREVIEW_INSPECT_TYPE) {
@@ -73,12 +75,9 @@ export default function AdminPreviewPane({
     };
     window.addEventListener("message", handler);
     return () => window.removeEventListener("message", handler);
-  }, [onInspect]);
+  }, [onInspect, src]);
 
-  // Reset ready state when src changes (iframe re-creates).
-  useEffect(() => {
-    setIframeReady(false);
-  }, [src]);
+  const iframeReady = readySrc === src;
 
   // Push the current config to the iframe whenever it's ready + on every
   // application change thereafter.

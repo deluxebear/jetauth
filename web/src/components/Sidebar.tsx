@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
@@ -114,7 +114,8 @@ function SidebarOrgSelector({
 }) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
-  const [favicon, setFavicon] = useState<string | null>(null);
+  // Favicon fetched from the API, keyed by the org it belongs to.
+  const [fetchedFavicon, setFetchedFavicon] = useState<{ org: string; url: string | null } | null>(null);
   const ref = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
 
@@ -129,20 +130,37 @@ function SidebarOrgSelector({
     if (open) requestAnimationFrame(() => searchRef.current?.focus());
   }, [open]);
 
-  // Fetch favicon for the selected org
-  useEffect(() => {
-    if (selectedOrg === "All") { setFavicon(null); return; }
-    // Try localStorage first (user's own org)
+  // Favicon for the selected org: the user's own org comes from localStorage,
+  // other orgs are fetched from the API.
+  const localFavicon = useMemo(() => {
+    if (selectedOrg === "All") return null;
     try {
       const orgData = JSON.parse(localStorage.getItem("organizationData") ?? "null");
-      if (orgData?.name === selectedOrg && orgData?.favicon) { setFavicon(orgData.favicon); return; }
-    } catch {}
-    // Fetch from API for other orgs
+      if (orgData?.name === selectedOrg && orgData?.favicon) return orgData.favicon as string;
+    } catch {
+      // corrupt localStorage — fall through to the API
+    }
+    return null;
+  }, [selectedOrg]);
+
+  useEffect(() => {
+    if (selectedOrg === "All" || localFavicon) return;
+    let cancelled = false;
     fetch(`/api/get-organization?id=admin/${encodeURIComponent(selectedOrg)}`, { credentials: "include" })
       .then((r) => r.json())
-      .then((res) => { if (res.status === "ok" && res.data?.favicon) setFavicon(res.data.favicon); else setFavicon(null); })
-      .catch(() => setFavicon(null));
-  }, [selectedOrg]);
+      .then((res) => {
+        if (!cancelled) setFetchedFavicon({ org: selectedOrg, url: res.status === "ok" && res.data?.favicon ? res.data.favicon : null });
+      })
+      .catch(() => {
+        if (!cancelled) setFetchedFavicon({ org: selectedOrg, url: null });
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedOrg, localFavicon]);
+
+  const favicon =
+    selectedOrg === "All" ? null : localFavicon ?? (fetchedFavicon?.org === selectedOrg ? fetchedFavicon.url : null);
 
   const currentLabel = selectedOrg === "All"
     ? t("common.all")

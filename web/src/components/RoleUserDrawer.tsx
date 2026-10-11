@@ -23,23 +23,30 @@ export default function RoleUserDrawer({ role, onClose, onUpdate }: Props) {
   const [showAddModal, setShowAddModal] = useState(false);
   const [addSearch, setAddSearch] = useState("");
   const [orgUsers, setOrgUsers] = useState<{ owner: string; name: string; displayName: string; email?: string }[]>([]);
-  const [loadingUsers, setLoadingUsers] = useState(false);
+  // Key of the org whose user list has finished loading for the open add-modal.
+  const [loadedOwner, setLoadedOwner] = useState<string | null>(null);
 
   const isOpen = !!role;
+  const roleOwner = role?.owner;
+  const loadingUsers = showAddModal && !!roleOwner && loadedOwner !== roleOwner;
 
-  // Reset state when role changes
-  useEffect(() => {
+  // Reset state when role changes (adjusted during render rather than in an effect).
+  const roleName = role?.name;
+  const [prevRoleName, setPrevRoleName] = useState(roleName);
+  if (prevRoleName !== roleName) {
+    setPrevRoleName(roleName);
     setSearch("");
     setPage(0);
     setShowAddModal(false);
     setAddSearch("");
-  }, [role?.name]);
+  }
 
   // Load org users when add modal opens
   useEffect(() => {
-    if (!showAddModal || !role) return;
-    setLoadingUsers(true);
-    UserBackend.getUsers({ owner: role.owner }).then((res) => {
+    if (!showAddModal || !roleOwner) return;
+    let cancelled = false;
+    UserBackend.getUsers({ owner: roleOwner }).then((res) => {
+      if (cancelled) return;
       if (res.status === "ok" && res.data) {
         setOrgUsers(res.data.map((u) => ({
           owner: u.owner,
@@ -48,19 +55,26 @@ export default function RoleUserDrawer({ role, onClose, onUpdate }: Props) {
           email: u.email,
         })));
       }
-    }).finally(() => setLoadingUsers(false));
-  }, [showAddModal, role?.owner]);
+    }).finally(() => {
+      if (!cancelled) setLoadedOwner(roleOwner);
+    });
+    return () => {
+      cancelled = true;
+      setLoadedOwner(null);
+    };
+  }, [showAddModal, roleOwner]);
 
+  const roleUsers = role?.users;
   const users = useMemo(() => {
-    if (!role?.users) return [];
-    const list = role.users.map((u) => {
+    if (!roleUsers) return [];
+    const list = roleUsers.map((u) => {
       const parts = u.split("/");
       return { id: u, owner: parts[0] || "", name: parts[1] || parts[0] || "" };
     });
     if (!search) return list;
     const q = search.toLowerCase();
     return list.filter((u) => u.name.toLowerCase().includes(q) || u.id.toLowerCase().includes(q));
-  }, [role?.users, search]);
+  }, [roleUsers, search]);
 
   const totalPages = Math.ceil(users.length / PAGE_SIZE);
   const pageUsers = users.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
@@ -95,15 +109,15 @@ export default function RoleUserDrawer({ role, onClose, onUpdate }: Props) {
 
   // Users available to add (not already in role)
   const availableUsers = useMemo(() => {
-    if (!role) return [];
-    const existing = new Set(role.users || []);
+    if (!roleOwner) return [];
+    const existing = new Set(roleUsers || []);
     let list = orgUsers.filter((u) => !existing.has(`${u.owner}/${u.name}`));
     if (addSearch) {
       const q = addSearch.toLowerCase();
       list = list.filter((u) => u.name.toLowerCase().includes(q) || u.displayName.toLowerCase().includes(q) || (u.email || "").toLowerCase().includes(q));
     }
     return list.slice(0, 50);
-  }, [orgUsers, role?.users, addSearch]);
+  }, [orgUsers, roleOwner, roleUsers, addSearch]);
 
   const [selectedToAdd, setSelectedToAdd] = useState<Set<string>>(new Set());
 

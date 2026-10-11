@@ -29,18 +29,19 @@ interface Props {
 
 export default function UserPermissionOverview({ userOwner, userName }: Props) {
   const { t } = useTranslation();
-  const [loading, setLoading] = useState(true);
+  const [loadedFor, setLoadedFor] = useState<string | null>(null);
   const [blocks, setBlocks] = useState<AppPermBlock[]>([]);
   const userId = `${userOwner}/${userName}`;
+  const loading = loadedFor !== userId;
 
   useEffect(() => {
-    setLoading(true);
-
+    let cancelled = false;
     Promise.all([
       ApplicationBackend.getApplicationsByOrganization({ owner: "admin", organization: userOwner }),
       PermissionBackend.getPermissions({ owner: userOwner }),
       RoleBackend.getRoles({ owner: userOwner }),
     ]).then(([appsRes, permsRes, rolesRes]) => {
+      if (cancelled) return;
       const apps = appsRes.status === "ok" && appsRes.data ? appsRes.data : [];
       const allPerms = permsRes.status === "ok" && permsRes.data ? permsRes.data : [];
       const allRoles = rolesRes.status === "ok" && rolesRes.data ? rolesRes.data : [];
@@ -108,8 +109,13 @@ export default function UserPermissionOverview({ userOwner, userName }: Props) {
       }));
 
       setBlocks([...result, ...emptyApps]);
-    }).finally(() => setLoading(false));
-  }, [userOwner, userName]);
+    }).finally(() => {
+      if (!cancelled) setLoadedFor(userId);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [userOwner, userName, userId]);
 
   if (loading) {
     return (

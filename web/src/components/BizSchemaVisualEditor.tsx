@@ -225,9 +225,12 @@ function TypeRailRow({
   t: (k: string) => string;
 }) {
   const [value, setValue] = useState(type.name);
-  useEffect(() => {
+  // Re-seed the draft when editing starts or the name changes (adjusted during render).
+  const [seed, setSeed] = useState({ editing, name: type.name });
+  if (seed.editing !== editing || seed.name !== type.name) {
+    setSeed({ editing, name: type.name });
     if (editing) setValue(type.name);
-  }, [editing, type.name]);
+  }
 
   return (
     <div
@@ -423,9 +426,12 @@ function RelationRow({
   t: (k: string) => string;
 }) {
   const [value, setValue] = useState(relation.name);
-  useEffect(() => {
+  // Re-seed the draft when editing starts or the name changes (adjusted during render).
+  const [seed, setSeed] = useState({ editing, name: relation.name });
+  if (seed.editing !== editing || seed.name !== relation.name) {
+    setSeed({ editing, name: relation.name });
     if (editing) setValue(relation.name);
-  }, [editing, relation.name]);
+  }
 
   return (
     <div className="p-3 flex flex-col gap-2">

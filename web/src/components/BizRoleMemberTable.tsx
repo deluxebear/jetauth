@@ -276,7 +276,13 @@ function AddMemberModal({
   }, [organization]);
 
   // Tab-switch clears the selection so the commit button's count always reflects the visible tab.
-  useEffect(() => { setSelected(new Set()); setSearch(""); }, [tab]);
+  // Reset selection/search when the tab changes (adjusted during render, not in an effect).
+  const [prevTab, setPrevTab] = useState(tab);
+  if (prevTab !== tab) {
+    setPrevTab(tab);
+    setSelected(new Set());
+    setSearch("");
+  }
 
   const items = useMemo(() => {
     const pool = tab === "user"

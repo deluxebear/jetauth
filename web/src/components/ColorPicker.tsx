@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useTranslation } from "../i18n";
 import { contrastRatio } from "./colorContrast";
 
@@ -80,10 +80,13 @@ export default function ColorPicker({ value, onChange, palette }: ColorPickerPro
   const [hexInput, setHexInput] = useState(value);
   const [hexError, setHexError] = useState(false);
 
-  useEffect(() => {
+  // Sync the text field when the controlled value changes (adjusted during render).
+  const [prevValue, setPrevValue] = useState(value);
+  if (prevValue !== value) {
+    setPrevValue(value);
     setHexInput(value);
     setHexError(false);
-  }, [value]);
+  }
 
   const rgb = parseHex(value) ?? ([37, 99, 235] as [number, number, number]);
   const [h, s, l] = rgbToHsl(...rgb);

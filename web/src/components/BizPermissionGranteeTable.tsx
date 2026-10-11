@@ -294,7 +294,13 @@ function AddGranteeModal({
     });
   }, [organization, appName]);
 
-  useEffect(() => { setSelected(new Set()); setSearch(""); }, [tab]);
+  // Reset selection/search when the tab changes (adjusted during render, not in an effect).
+  const [prevTab, setPrevTab] = useState(tab);
+  if (prevTab !== tab) {
+    setPrevTab(tab);
+    setSelected(new Set());
+    setSearch("");
+  }
 
   const items = useMemo(() => {
     const q = search.trim().toLowerCase();

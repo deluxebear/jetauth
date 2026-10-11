@@ -40,7 +40,6 @@ export default function CountryCodeSelect({ selected, onChange }: {
 
   useEffect(() => {
     if (open) {
-      updatePos();
       window.addEventListener("scroll", updatePos, true);
       window.addEventListener("resize", updatePos);
       return () => {
@@ -70,7 +69,7 @@ export default function CountryCodeSelect({ selected, onChange }: {
     <div ref={ref}>
       <div
         ref={triggerRef}
-        onClick={() => setOpen(!open)}
+        onClick={() => { if (!open) updatePos(); setOpen(!open); }}
         className={`flex flex-wrap gap-1.5 rounded-lg border bg-surface-2 px-2.5 py-2 min-h-[38px] cursor-pointer transition-colors ${
           open ? "border-accent ring-1 ring-accent/30" : "border-border"
         }`}
